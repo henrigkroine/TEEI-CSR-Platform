@@ -1,0 +1,68 @@
+### Q2Q AI Service - Test HTTP Requests
+### Run these with REST Client extension in VS Code or similar tool
+
+@baseUrl = http://localhost:3005
+
+###
+# Health Check
+GET {{baseUrl}}/health
+Content-Type: application/json
+
+###
+# Get Taxonomy - Outcome Dimension Definitions
+GET {{baseUrl}}/taxonomy
+Content-Type: application/json
+
+###
+# Classify Text - Sample learner response
+POST {{baseUrl}}/classify/text
+Content-Type: application/json
+
+{
+  "text": "I feel much more confident in my ability to speak English now. The classes have really helped me connect with other students and I feel like I belong here. I've been practicing my interview skills and I think I'm ready to apply for jobs. Overall, I'm feeling positive about my future.",
+  "userId": "550e8400-e29b-41d4-a716-446655440000",
+  "contextType": "survey",
+  "contextId": "650e8400-e29b-41d4-a716-446655440000"
+}
+
+###
+# Classify Text - Short positive response
+POST {{baseUrl}}/classify/text
+Content-Type: application/json
+
+{
+  "text": "I learned a lot today and made new friends!",
+  "userId": "550e8400-e29b-41d4-a716-446655440001",
+  "contextType": "conversation"
+}
+
+###
+# Classify Text - Longer reflective response
+POST {{baseUrl}}/classify/text
+Content-Type: application/json
+
+{
+  "text": "When I first arrived, I didn't know anyone and felt very alone. But through the program, I've met wonderful people who are going through similar experiences. The teachers are supportive and patient. I've improved my English significantly - I can now have conversations without feeling anxious. I've also completed a resume workshop and have started applying to entry-level positions in my field. I'm optimistic about finding work soon. The biggest change has been in my confidence - I now believe I can succeed here.",
+  "userId": "550e8400-e29b-41d4-a716-446655440002",
+  "contextType": "assessment",
+  "contextId": "750e8400-e29b-41d4-a716-446655440000"
+}
+
+###
+# Classify Text - Missing required fields (should return 400 error)
+POST {{baseUrl}}/classify/text
+Content-Type: application/json
+
+{
+  "text": "This is a test"
+}
+
+###
+# Classify Text - Empty text (should return 400 error)
+POST {{baseUrl}}/classify/text
+Content-Type: application/json
+
+{
+  "text": "",
+  "userId": "550e8400-e29b-41d4-a716-446655440000"
+}

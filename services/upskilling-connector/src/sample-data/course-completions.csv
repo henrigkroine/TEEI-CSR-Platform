@@ -1,0 +1,5 @@
+user_email,provider,course_id,course_name,completed_at,final_score,credential_ref
+alice@example.com,ecornell,EXEC-101,Executive Leadership Program,2025-10-15T14:30:00Z,92.5,CERT-EXEC-101-2025
+bob@example.com,itslearning,DATA-201,Data Analytics Fundamentals,2025-10-20T09:00:00Z,88.0,CERT-DATA-201-2025
+charlie@volunteer.org,ecornell,MGT-301,Strategic Management,2025-11-01T16:45:00Z,95.0,CERT-MGT-301-2025
+alice@example.com,itslearning,TECH-101,Technology Essentials,2025-11-05T11:20:00Z,87.5,

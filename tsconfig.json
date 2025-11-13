@@ -1,38 +1,26 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "lib": ["ES2022"],
     "module": "ESNext",
+    "lib": ["ES2022"],
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "allowJs": true,
     "checkJs": false,
-    "outDir": "dist",
-    "rootDir": ".",
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true,
-    "noUncheckedIndexedAccess": true,
-    "forceConsistentCasingInFileNames": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "allowSyntheticDefaultImports": true,
-    "isolatedModules": true,
+    "outDir": "./dist",
+    "rootDir": "./",
+    "composite": true,
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "incremental": true,
-    "paths": {
-      "@teei/shared-schema": ["./packages/shared-schema/src"],
-      "@teei/shared-schema/*": ["./packages/shared-schema/src/*"],
-      "@teei/event-contracts": ["./packages/event-contracts/src"],
-      "@teei/event-contracts/*": ["./packages/event-contracts/src/*"],
-      "@teei/shared-types": ["./packages/shared-types/src"],
-      "@teei/shared-types/*": ["./packages/shared-types/src/*"],
-      "@teei/shared-utils": ["./packages/shared-utils/src"],
-      "@teei/shared-utils/*": ["./packages/shared-utils/src/*"]
-    }
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "skipLibCheck": true,
+    "types": ["node"]
   },
-  "exclude": ["node_modules", "dist", "build", ".next", ".astro", ".turbo"]
+  "exclude": ["node_modules", "dist", "**/*.test.ts"]
 }

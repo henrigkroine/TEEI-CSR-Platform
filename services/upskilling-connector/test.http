@@ -1,0 +1,24 @@
+### Health Check
+GET http://localhost:3004/health
+
+### Import Course Completions CSV
+POST http://localhost:3004/import/course-completions
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="course-completions.csv"
+Content-Type: text/csv
+
+< ./src/sample-data/course-completions.csv
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### Import Credentials CSV
+POST http://localhost:3004/import/credentials
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="credentials.csv"
+Content-Type: text/csv
+
+< ./src/sample-data/credentials.csv
+------WebKitFormBoundary7MA4YWxkTrZu0gW--

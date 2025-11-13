@@ -1,59 +1,35 @@
 {
   "name": "teei-csr-platform",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
-  "description": "TEEI CSR Platform - Unified stakeholder management and impact tracking",
-  "engines": {
-    "node": ">=18.0.0",
-    "pnpm": ">=8.0.0"
-  },
-  "packageManager": "pnpm@8.15.0",
+  "description": "TEEI CSR Platform - Unified impact measurement ecosystem",
   "scripts": {
-    "dev": "turbo run dev --parallel",
-    "build": "turbo run build",
-    "typecheck": "turbo run typecheck",
-    "lint": "turbo run lint",
-    "lint:fix": "turbo run lint:fix",
-    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
-    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
-    "test": "turbo run test",
-    "test:watch": "turbo run test:watch",
-    "clean": "turbo run clean && rm -rf node_modules",
-    "commit": "cz",
-    "prepare": "husky install",
-    "db:generate": "turbo run db:generate",
-    "db:migrate": "turbo run db:migrate",
-    "db:studio": "turbo run db:studio"
+    "dev": "concurrently -n gateway,profile,kintell,buddy,upskilling,q2q,safety \"pnpm --filter @teei/api-gateway dev\" \"pnpm --filter @teei/unified-profile dev\" \"pnpm --filter @teei/kintell-connector dev\" \"pnpm --filter @teei/buddy-service dev\" \"pnpm --filter @teei/upskilling-connector dev\" \"pnpm --filter @teei/q2q-ai dev\" \"pnpm --filter @teei/safety-moderation dev\"",
+    "build": "pnpm -r --filter './packages/**' build && pnpm -r --filter './services/**' build",
+    "test": "pnpm -r test",
+    "test:unit": "pnpm -r test:unit",
+    "test:integration": "pnpm -r test:integration",
+    "db:migrate": "pnpm --filter @teei/shared-schema db:migrate",
+    "db:seed": "pnpm --filter @teei/shared-schema db:seed",
+    "db:reset": "pnpm --filter @teei/shared-schema db:reset",
+    "db:studio": "pnpm --filter @teei/shared-schema db:studio",
+    "lint": "pnpm -r lint",
+    "format": "prettier --write \"**/*.{ts,tsx,js,json,md}\"",
+    "clean": "pnpm -r clean && rm -rf node_modules"
   },
   "devDependencies": {
-    "@commitlint/cli": "^18.6.0",
-    "@commitlint/config-conventional": "^18.6.0",
     "@types/node": "^20.11.5",
-    "@typescript-eslint/eslint-plugin": "^6.19.1",
-    "@typescript-eslint/parser": "^6.19.1",
-    "commitizen": "^4.3.0",
-    "cz-conventional-changelog": "^3.3.0",
+    "@typescript-eslint/eslint-plugin": "^6.19.0",
+    "@typescript-eslint/parser": "^6.19.0",
+    "concurrently": "^8.2.2",
     "eslint": "^8.56.0",
-    "eslint-config-prettier": "^9.1.0",
-    "eslint-plugin-import": "^2.29.1",
-    "husky": "^8.0.3",
-    "lint-staged": "^15.2.0",
     "prettier": "^3.2.4",
-    "turbo": "^1.12.2",
-    "typescript": "^5.3.3"
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3",
+    "vitest": "^1.2.1"
   },
-  "config": {
-    "commitizen": {
-      "path": "./node_modules/cz-conventional-changelog"
-    }
-  },
-  "lint-staged": {
-    "*.{ts,tsx,js,jsx}": [
-      "eslint --fix",
-      "prettier --write"
-    ],
-    "*.{json,md,yml,yaml}": [
-      "prettier --write"
-    ]
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=8.0.0"
   }
 }

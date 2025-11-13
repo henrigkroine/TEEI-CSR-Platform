@@ -1,236 +1,329 @@
-# MULTI-AGENT PLAN: TEEI CSR Platform
+# Worker 2 Multi-Agent Execution Plan
 
-**Version:** 1.0
-**Last Updated:** 2025-11-13
-**Coordinator:** Worker 1 (Tech Lead Orchestrator)
-
-## 🎯 Mission
-
-Bootstrap a production-ready monorepo for the TEEI CSR Platform that enables Workers 2 and 3 to build services and UI in parallel with confidence. Establish shared context, 30-agent team, dev tooling, CI/CD, and local infrastructure.
-
-## 📋 Plan Status
-
-- **Phase:** Foundation Bootstrap
-- **Worker:** Worker 1
-- **Branch:** `claude/bootstrap-monorepo-governance-011CV5pUpY9oJLAZEYYh3EvN`
-- **Overall Progress:** In Progress
-
-## 🏗️ Architecture Overview
-
-```
-teei-csr-platform/
-├── apps/
-│   └── corp-cockpit-astro/          # Corporate admin dashboard
-├── services/
-│   ├── buddy-service/                # Buddy matching & management
-│   ├── kintell-connector/            # Language/Mentorship integration
-│   ├── upskilling-connector/         # Training platform integration
-│   ├── unified-profile/              # Aggregated stakeholder data
-│   ├── q2q-ai/                       # Question-to-question AI
-│   ├── reporting/                    # Impact & analytics
-│   ├── safety-moderation/            # Content moderation
-│   ├── discord-bot/                  # Community engagement
-│   ├── notifications/                # Multi-channel notifications
-│   └── api-gateway/                  # Unified API layer
-├── packages/
-│   ├── shared-schema/                # Drizzle schemas & migrations
-│   ├── event-contracts/              # Event-driven contracts
-│   ├── shared-types/                 # TypeScript types
-│   └── shared-utils/                 # Common utilities
-└── reports/                          # Agent deliverable reports
-```
-
-## 🤖 Agent Team Structure (30 Agents)
-
-### Lead Agents (5)
-
-1. **Frontend Lead** - Manages Astro, React, UI/UX specialists
-2. **Backend Lead** - Manages Node.js, API, service specialists
-3. **Data Lead** - Manages DB, schema, analytics specialists
-4. **AI Lead** - Manages NLP, ML, embeddings specialists
-5. **QA/DevEx Lead** - Manages testing, CI/CD, tooling specialists
-
-### Specialist Agents (~25)
-
-Each lead manages 4-8 specialists. See `.claude/agents/` for full definitions.
-
-**Frontend Specialists (6):**
-- astro-specialist
-- react-specialist
-- tailwind-specialist
-- accessibility-specialist
-- state-management-specialist
-- frontend-testing-specialist
-
-**Backend Specialists (7):**
-- nodejs-api-specialist
-- event-driven-specialist
-- auth-specialist
-- integration-specialist
-- api-gateway-specialist
-- service-mesh-specialist
-- backend-testing-specialist
-
-**Data Specialists (5):**
-- postgres-specialist
-- drizzle-orm-specialist
-- clickhouse-specialist
-- data-migration-specialist
-- analytics-specialist
-
-**AI Specialists (4):**
-- nlp-specialist
-- embeddings-specialist
-- prompt-engineering-specialist
-- ai-safety-specialist
-
-**QA/DevEx Specialists (5):**
-- ci-cd-specialist
-- docker-specialist
-- monitoring-specialist
-- performance-specialist
-- security-specialist
-
-## 📦 Deliverables Tracker
-
-### ✅ Completed
-
-- [x] Monorepo directory structure
-- [x] PNPM workspace configuration
-- [x] Turbo build system setup
-
-### 🚧 In Progress
-
-- [ ] MULTI_AGENT_PLAN.md (this file)
-- [ ] AGENTS.md (architecture & standards)
-- [ ] Agent team bootstrap
-
-### ⏳ Pending
-
-- [ ] Root configuration files
-- [ ] ESLint/Prettier/TypeScript setup
-- [ ] Husky + commitlint
-- [ ] GitHub Actions CI
-- [ ] Docker Compose infrastructure
-- [ ] Shared schema with Drizzle
-- [ ] Environment variables template
-- [ ] Governance docs
-- [ ] Architecture documentation
-- [ ] PR templates
-- [ ] Verification tests
-
-## 🔄 Communication Protocol
-
-### File-Based Coordination
-
-1. **Read MULTI_AGENT_PLAN.md** before starting any task
-2. **Update status** when beginning/completing tasks
-3. **Write reports** to `/reports/<agent-name>_<task>.md`
-4. **Reference AGENTS.md** for standards and patterns
-5. **No direct agent-to-agent calls** - communicate through files
-
-### Agent Invocation Pattern
-
-```markdown
-When: <condition>
-Invoked by: @<lead-agent>
-Reads: AGENTS.md, MULTI_AGENT_PLAN.md, relevant package files
-Writes: /reports/<deliverable>.md, code to proper paths
-Updates: This plan with completion status
-```
-
-## 🎯 Success Criteria
-
-### Build Validation
-- [ ] `pnpm install` succeeds without errors
-- [ ] `pnpm -w typecheck` passes
-- [ ] `pnpm -w lint` passes
-- [ ] `pnpm -w build` succeeds
-
-### Infrastructure Validation
-- [ ] `docker compose up` launches all services
-- [ ] Health checks pass for Postgres, ClickHouse, MinIO, NATS
-- [ ] Database migrations run successfully
-
-### Documentation Validation
-- [ ] AGENTS.md complete with architecture & standards
-- [ ] CLAUDE.md references @AGENTS.md
-- [ ] 30 agent definitions with actionable descriptions
-- [ ] All services have README.md with purpose
-
-### Security Validation
-- [ ] `.env.example` created (no secrets)
-- [ ] `.gitignore` prevents secret commits
-- [ ] SECURITY.md with reporting process
-- [ ] CODEOWNERS assigned
-
-## 📊 Task Ownership Map
-
-| Task Category | Lead Agent | Specialists | Status |
-|---------------|------------|-------------|--------|
-| Monorepo Setup | QA/DevEx Lead | ci-cd, docker | In Progress |
-| Agent Bootstrap | Tech Lead Orchestrator | config-generator | In Progress |
-| Frontend Scaffold | Frontend Lead | astro, react | Pending |
-| Backend Scaffold | Backend Lead | nodejs-api, event-driven | Pending |
-| Schema Design | Data Lead | postgres, drizzle-orm | Pending |
-| AI Foundation | AI Lead | embeddings, prompt-engineering | Pending |
-| CI/CD Pipeline | QA/DevEx Lead | ci-cd, security | Pending |
-| Local Infra | QA/DevEx Lead | docker, postgres | Pending |
-
-## 🔐 Security Baseline
-
-### Privacy by Design
-- All PII stored encrypted at rest
-- Field-level encryption for sensitive data
-- GDPR compliance patterns in shared-schema
-- No secrets in code or git history
-
-### Dependency Security
-- Automated vulnerability scanning in CI
-- Lock files committed for reproducibility
-- Regular dependency updates via Renovate
-
-### Access Control
-- CODEOWNERS for service ownership
-- Branch protection on main
-- Required PR reviews before merge
-
-## 🚀 Next Steps
-
-1. **Immediate (Worker 1):**
-   - Complete AGENTS.md
-   - Generate 30 agent definitions
-   - Set up CI/CD and Docker
-   - Verify build pipeline
-
-2. **Handoff to Worker 2 (Services):**
-   - unified-profile service
-   - API gateway
-   - Event contracts
-   - Service authentication
-
-3. **Handoff to Worker 3 (Frontend):**
-   - Corp Cockpit UI shell
-   - Design system
-   - Dashboard layouts
-   - State management
-
-## 📝 Notes
-
-- **No matching implementation** - Kintell remains the booking system
-- **Event-driven by default** - Use NATS for service communication
-- **Privacy first** - Encryption patterns in shared-schema
-- **Test coverage required** - Minimum 80% for shared packages
-- **Type safety enforced** - Strict TypeScript mode enabled
-
-## 🔗 Key References
-
-- Architecture: `docs/Platform_Architecture.md`
-- Standards: `AGENTS.md`
-- Team Config: `.claude/agents/`
-- Reports: `reports/`
+**Status**: 🚧 In Progress
+**Branch**: `worker2/services-schema-ingestion`
+**Started**: 2025-11-13
+**Target Completion**: TBD
 
 ---
 
-**Last Action:** Created MULTI_AGENT_PLAN.md foundation
-**Next Action:** Create AGENTS.md with standards and patterns
+## Phase 1: Foundation Setup ⏳
+
+### 1.1 Monorepo Structure
+- [ ] Create pnpm workspace configuration
+- [ ] Set up TypeScript project references
+- [ ] Configure ESLint + Prettier
+- [ ] Set up shared tsconfig.json
+- [ ] Create .env.example files
+
+**Assigned**: Infrastructure Lead
+**Status**: Not Started
+
+### 1.2 Documentation
+- [x] Create AGENTS.md
+- [x] Create MULTI_AGENT_PLAN.md
+- [ ] Create reports/worker2_services.md
+- [ ] Update docs/Platform_Architecture.md
+- [ ] Update docs/System_Diagram.md
+
+**Assigned**: Tech Lead Orchestrator
+**Status**: In Progress
+
+---
+
+## Phase 2: Data Layer 📊
+
+### 2.1 Event Contracts Package
+- [ ] Initialize packages/event-contracts
+- [ ] Define buddy.* event types (match.created, event.logged, checkin.completed, feedback.submitted)
+- [ ] Define kintell.* event types (session.completed, rating.created, session.scheduled)
+- [ ] Define upskilling.* event types (course.completed, credential.issued, progress.updated)
+- [ ] Define orchestration.* event types (journey.milestone.reached, profile.updated)
+- [ ] Define safety.* event types (flag.raised, review.completed)
+- [ ] Add Zod schemas for all payloads
+- [ ] Implement event versioning (v1, v2, etc.)
+- [ ] Write unit tests for validators
+
+**Assigned**: Data Modeling Lead → Contract Designer, Validation Engineer
+**Status**: Not Started
+**Dependencies**: None
+
+### 2.2 Shared Schema Package
+- [ ] Initialize packages/shared-schema with Drizzle
+- [ ] Create core tables: users, companies, company_users
+- [ ] Create program_enrollments table
+- [ ] Create kintell_sessions table (language|mentorship, mapping fields)
+- [ ] Create buddy_* tables (matches, events, checkins, feedback)
+- [ ] Create learning_progress table
+- [ ] Create outcome_scores table (dimension, score, confidence)
+- [ ] Create evidence_snippets table (hash, embedding pointers)
+- [ ] Create metrics_company_period table (aggregates, sroi_ratio, vis_score)
+- [ ] Add indexes for performance
+- [ ] Implement PII partitioning strategy
+- [ ] Create initial migration (0000_init.sql)
+- [ ] Create seed script with sample data
+
+**Assigned**: Data Modeling Lead → Schema Architect, Migration Engineer, Data Privacy
+**Status**: Not Started
+**Dependencies**: None
+
+### 2.3 Event Bus SDK
+- [ ] Initialize packages/shared-utils
+- [ ] Create event-bus.ts with NATS client wrapper
+- [ ] Implement publish() helper with validation
+- [ ] Implement subscribe() helper with type safety
+- [ ] Add connection pooling and retry logic
+- [ ] Create logger utility
+- [ ] Add correlation ID tracking
+- [ ] Write unit tests
+
+**Assigned**: Core Services Lead → Event Bus Engineer
+**Status**: Not Started
+**Dependencies**: 2.1 (Event Contracts)
+
+---
+
+## Phase 3: Core Services 🚀
+
+### 3.1 Unified Profile Service
+- [ ] Initialize services/unified-profile (Fastify + TS)
+- [ ] Implement GET /profile/:id (aggregated view)
+- [ ] Implement PUT /profile/:id (update flags)
+- [ ] Implement POST /profile/mapping (link kintell_id, discord_id, etc.)
+- [ ] Add journey flag management (is_buddy_matched, has_completed_language, etc.)
+- [ ] Subscribe to events that update profile (course.completed, etc.)
+- [ ] Add health endpoint
+- [ ] Create .http test file
+- [ ] Write unit tests
+
+**Assigned**: Core Services Lead → Profile Service Engineer
+**Status**: Not Started
+**Dependencies**: 2.2 (Schema), 2.3 (Event Bus)
+
+### 3.2 Kintell Connector Service
+- [ ] Initialize services/kintell-connector
+- [ ] Create webhook receiver endpoints (POST /webhooks/session, /webhooks/rating)
+- [ ] Implement CSV import endpoint (POST /import/kintell-sessions)
+- [ ] Create column mapper with normalization rules
+- [ ] Add validation for incoming data
+- [ ] Emit kintell.session.completed event
+- [ ] Emit kintell.rating.created event
+- [ ] Create mapping configuration file
+- [ ] Add health endpoint
+- [ ] Create .http test file
+- [ ] Write unit tests for mapper
+- [ ] Create sample CSV files
+
+**Assigned**: Connector Services Lead → Kintell Integration, CSV Parser, Mapper
+**Status**: Not Started
+**Dependencies**: 2.1 (Contracts), 2.2 (Schema), 2.3 (Event Bus)
+
+### 3.3 Buddy Service
+- [ ] Initialize services/buddy-service
+- [ ] Create CSV/API importer for matches
+- [ ] Create CSV/API importer for events
+- [ ] Create CSV/API importer for checkins
+- [ ] Create CSV/API importer for feedback
+- [ ] Add schema validators for each data type
+- [ ] Emit buddy.match.created event
+- [ ] Emit buddy.event.logged event
+- [ ] Emit buddy.checkin.completed event
+- [ ] Emit buddy.feedback.submitted event
+- [ ] Add health endpoint
+- [ ] Create .http test file
+- [ ] Write unit tests
+- [ ] Create sample CSV files
+
+**Assigned**: Connector Services Lead → Buddy Integration, Event Publisher
+**Status**: Not Started
+**Dependencies**: 2.1, 2.2, 2.3
+
+### 3.4 Upskilling Connector Service
+- [ ] Initialize services/upskilling-connector
+- [ ] Create endpoint POST /import/course-completions
+- [ ] Create endpoint POST /import/credentials
+- [ ] Add provider-specific adapters (eCornell, itslearning)
+- [ ] Emit upskilling.course.completed event
+- [ ] Emit upskilling.credential.issued event
+- [ ] Add health endpoint
+- [ ] Create .http test file
+- [ ] Write unit tests
+- [ ] Create sample data
+
+**Assigned**: Connector Services Lead → Upskilling Integration, API Client
+**Status**: Not Started
+**Dependencies**: 2.1, 2.2, 2.3
+
+### 3.5 Q2Q AI Service (Skeleton)
+- [ ] Initialize services/q2q-ai
+- [ ] Define outcome taxonomy (confidence, belonging, lang_level_proxy, job_readiness)
+- [ ] Create outcome dimension enum
+- [ ] Implement classifier stub (placeholder function)
+- [ ] Add text tagging interface
+- [ ] Implement outcome_scores write logic
+- [ ] Implement evidence_snippets write logic (with hash)
+- [ ] Create abstracted model provider interface
+- [ ] Add configuration for model selection
+- [ ] Add health endpoint
+- [ ] Create .http test file with dummy texts
+- [ ] Write unit tests for taxonomy
+
+**Assigned**: Core Services Lead → Q2Q AI Architect
+**Status**: Not Started
+**Dependencies**: 2.2 (Schema)
+
+### 3.6 Safety/Moderation Service (Stub)
+- [ ] Initialize services/safety-moderation
+- [ ] Create text screening interface
+- [ ] Implement placeholder content policy rules
+- [ ] Emit safety.flag.raised event
+- [ ] Add human review queue stub
+- [ ] Create policy configuration file
+- [ ] Add health endpoint
+- [ ] Create .http test file
+- [ ] Write unit tests
+
+**Assigned**: Core Services Lead → Safety Engineer
+**Status**: Not Started
+**Dependencies**: 2.1 (Contracts), 2.3 (Event Bus)
+
+### 3.7 API Gateway
+- [ ] Initialize services/api-gateway
+- [ ] Implement JWT session middleware
+- [ ] Implement RBAC role checking (admin, company_user, participant)
+- [ ] Create reverse proxy to internal services
+- [ ] Add rate limiting
+- [ ] Add request logging with correlation IDs
+- [ ] Expose health endpoints for all services (GET /health/*)
+- [ ] Create .http test file
+- [ ] Write unit tests for auth middleware
+
+**Assigned**: Core Services Lead → API Gateway Engineer, Config Management
+**Status**: Not Started
+**Dependencies**: All services must have health endpoints
+
+---
+
+## Phase 4: Infrastructure & Testing 🏗️
+
+### 4.1 Docker Infrastructure
+- [ ] Create docker-compose.yml (Postgres, NATS, pgAdmin)
+- [ ] Configure Postgres with extensions (pgvector, uuid-ossp)
+- [ ] Configure NATS with monitoring
+- [ ] Add connection health checks
+- [ ] Create .env.example with all required vars
+
+**Assigned**: Infrastructure Lead → DevOps, Database Admin
+**Status**: Not Started
+**Dependencies**: None
+
+### 4.2 Development Scripts
+- [ ] Create pnpm workspace root package.json
+- [ ] Add "pnpm -w dev" script (starts all services + hot reload)
+- [ ] Add "pnpm -w build" script
+- [ ] Add "pnpm -w test" script
+- [ ] Add "pnpm -w db:migrate" script
+- [ ] Add "pnpm -w db:seed" script
+- [ ] Add "pnpm -w db:reset" script
+- [ ] Document usage in README
+
+**Assigned**: Infrastructure Lead → Deployment Specialist
+**Status**: Not Started
+**Dependencies**: 4.1
+
+### 4.3 Unit Tests
+- [ ] Test event contract Zod validators
+- [ ] Test Kintell CSV mapper normalization
+- [ ] Test Buddy data validators
+- [ ] Test Q2Q outcome taxonomy
+- [ ] Test API Gateway auth middleware
+- [ ] Configure Vitest/Jest
+- [ ] Achieve >80% coverage on mappers
+
+**Assigned**: Quality & Testing Lead → Unit Test Engineer
+**Status**: Not Started
+**Dependencies**: All services implemented
+
+### 4.4 Integration Tests
+- [ ] Create test: Ingest Kintell CSV → normalized rows in DB
+- [ ] Create test: CSV ingestion → events published to NATS
+- [ ] Create test: Event received → profile updated
+- [ ] Create test: End-to-end flow (CSV → events → profile → API)
+- [ ] Add test fixtures and sample data
+- [ ] Configure test database (separate from dev)
+
+**Assigned**: Quality & Testing Lead → Integration Test Engineer
+**Status**: Not Started
+**Dependencies**: All services + 4.1, 4.2
+
+---
+
+## Phase 5: Documentation & PR 📝
+
+### 5.1 Architecture Documentation
+- [ ] Update docs/Platform_Architecture.md with service map
+- [ ] Update docs/System_Diagram.md with data flow
+- [ ] Create docs/Event_Catalog.md
+- [ ] Create docs/Database_Schema.md
+- [ ] Document API endpoints in each service
+- [ ] Create ER diagram (Mermaid or PNG)
+
+**Assigned**: Data Modeling Lead → Documentation Writer
+**Status**: Not Started
+**Dependencies**: All implementation complete
+
+### 5.2 Reports
+- [ ] Create reports/worker2_services.md with summary
+- [ ] Include acceptance criteria checklist
+- [ ] Document any deviations or decisions
+- [ ] Add performance notes
+- [ ] List known limitations
+
+**Assigned**: Tech Lead Orchestrator
+**Status**: Not Started
+**Dependencies**: All tasks complete
+
+### 5.3 Pull Request
+- [ ] Review all commits
+- [ ] Ensure branch is up to date
+- [ ] Create PR with comprehensive description
+- [ ] Add checklist from acceptance criteria
+- [ ] Tag reviewers
+- [ ] Link to reports/worker2_services.md
+
+**Assigned**: Tech Lead Orchestrator
+**Status**: Not Started
+**Dependencies**: 5.1, 5.2
+
+---
+
+## Blockers & Decisions
+
+### Open Questions
+- [ ] Which NATS deployment model? (Embedded vs separate container)
+- [ ] JWT signing strategy? (Symmetric vs asymmetric keys)
+- [ ] Embedding model for evidence_snippets? (OpenAI vs local)
+- [ ] CSV upload size limits?
+
+### Decisions Made
+- ✅ Use Drizzle ORM for type safety
+- ✅ Use Zod for runtime validation
+- ✅ Use Fastify for performance
+- ✅ NATS for event bus (not Kafka/RabbitMQ)
+- ✅ Separate packages for contracts/schema/utils (enforces boundaries)
+
+---
+
+## Progress Tracking
+
+**Overall**: 2 / 100 tasks complete (2%)
+
+| Phase | Tasks | Complete | %  |
+|-------|-------|----------|----|
+| 1. Foundation | 10 | 2 | 20% |
+| 2. Data Layer | 35 | 0 | 0% |
+| 3. Core Services | 72 | 0 | 0% |
+| 4. Infrastructure | 20 | 0 | 0% |
+| 5. Documentation | 13 | 0 | 0% |
+
+**Last Updated**: 2025-11-13 (Auto-updated by orchestrator)

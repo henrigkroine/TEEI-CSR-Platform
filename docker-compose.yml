@@ -1,100 +1,60 @@
-version: '3.8'
+version: '3.9'
 
 services:
   postgres:
-    image: postgres:16-alpine
+    image: postgres:15-alpine
     container_name: teei-postgres
+    restart: unless-stopped
     environment:
-      POSTGRES_DB: teei_dev
-      POSTGRES_USER: teei_user
+      POSTGRES_DB: teei_platform
+      POSTGRES_USER: teei
       POSTGRES_PASSWORD: teei_dev_password
     ports:
-      - '5432:5432'
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U teei_user -d teei_dev']
+      test: ["CMD-SHELL", "pg_isready -U teei"]
       interval: 10s
       timeout: 5s
       retries: 5
-    networks:
-      - teei-network
-
-  clickhouse:
-    image: clickhouse/clickhouse-server:latest
-    container_name: teei-clickhouse
-    environment:
-      CLICKHOUSE_DB: teei_analytics
-      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
-    ports:
-      - '8123:8123'
-      - '9000:9000'
-    volumes:
-      - clickhouse_data:/var/lib/clickhouse
-    healthcheck:
-      test: ['CMD', 'wget', '--spider', '-q', 'localhost:8123/ping']
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - teei-network
-
-  minio:
-    image: minio/minio:latest
-    container_name: teei-minio
-    environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
-    command: server /data --console-address ':9001'
-    ports:
-      - '9000:9000'
-      - '9001:9001'
-    volumes:
-      - minio_data:/data
-    healthcheck:
-      test: ['CMD', 'curl', '-f', 'http://localhost:9000/minio/health/live']
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - teei-network
 
   nats:
-    image: nats:alpine
+    image: nats:2.10-alpine
     container_name: teei-nats
-    command: '-js -m 8222'
+    restart: unless-stopped
     ports:
-      - '4222:4222'
-      - '8222:8222'
+      - "4222:4222"  # Client connections
+      - "8222:8222"  # HTTP monitoring
+      - "6222:6222"  # Cluster routing
+    command:
+      - "-js"        # Enable JetStream
+      - "-m"
+      - "8222"       # Enable monitoring
     healthcheck:
-      test: ['CMD', 'wget', '--spider', '-q', 'localhost:8222/healthz']
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8222/healthz"]
       interval: 10s
       timeout: 5s
       retries: 5
-    networks:
-      - teei-network
 
-  redis:
-    image: redis:7-alpine
-    container_name: teei-redis
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: teei-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@teei.local
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
     ports:
-      - '6379:6379'
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ['CMD', 'redis-cli', 'ping']
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - teei-network
+      - "5050:80"
+    depends_on:
+      - postgres
 
 volumes:
   postgres_data:
-  clickhouse_data:
-  minio_data:
-  redis_data:
+    driver: local
 
 networks:
-  teei-network:
-    driver: bridge
+  default:
+    name: teei-network

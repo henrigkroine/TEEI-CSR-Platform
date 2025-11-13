@@ -1,0 +1,237 @@
+### TEEI CSR Platform API Gateway - HTTP Tests
+### Base URL
+@baseUrl = http://localhost:3000
+@jwtToken = your-jwt-token-here
+
+### ============================================
+### Root Endpoint - Gateway Information
+### ============================================
+GET {{baseUrl}}/
+Content-Type: application/json
+
+### ============================================
+### HEALTH CHECK ENDPOINTS
+### ============================================
+
+### Gateway Self Health Check
+GET {{baseUrl}}/health
+Content-Type: application/json
+
+### Aggregated Health Check - All Services
+GET {{baseUrl}}/health/all
+Content-Type: application/json
+
+### Individual Service Health Checks
+
+### Unified Profile Service Health
+GET {{baseUrl}}/health/profile
+Content-Type: application/json
+
+### Kintell Connector Health
+GET {{baseUrl}}/health/kintell
+Content-Type: application/json
+
+### Buddy Service Health
+GET {{baseUrl}}/health/buddy
+Content-Type: application/json
+
+### Upskilling Connector Health
+GET {{baseUrl}}/health/upskilling
+Content-Type: application/json
+
+### Q2Q AI Service Health
+GET {{baseUrl}}/health/q2q
+Content-Type: application/json
+
+### Safety & Moderation Service Health
+GET {{baseUrl}}/health/safety
+Content-Type: application/json
+
+### ============================================
+### PROXIED REQUESTS - UNIFIED PROFILE SERVICE
+### ============================================
+
+### Get User Profile (Protected)
+GET {{baseUrl}}/profile/users/me
+Content-Type: application/json
+Authorization: Bearer {{jwtToken}}
+
+### Update User Profile (Protected)
+PUT {{baseUrl}}/profile/users/me
+Content-Type: application/json
+Authorization: Bearer {{jwtToken}}
+
+{
+  "firstName": "John",
+  "lastName": "Doe",
+  "email": "john.doe@example.com"
+}
+
+### Get All Users (Admin Only)
+GET {{baseUrl}}/profile/users
+Content-Type: application/json
+Authorization: Bearer {{jwtToken}}
+
+### ============================================
+### PROXIED REQUESTS - KINTELL CONNECTOR
+### ============================================
+
+### Search Skills in Kintell Taxonomy
+GET {{baseUrl}}/kintell/skills/search?q=python
+Content-Type: application/json
+Authorization: Bearer {{jwtToken}}
+
+### Get Skill Details
+GET {{baseUrl}}/kintell/skills/skill-id-123
+Content-Type: application/json
+Authorization: Bearer {{jwtToken}}
+
+### Sync Skills from Kintell
+POST {{baseUrl}}/kintell/sync
+Content-Type: application/json
+Authorization: Bearer {{jwtToken}}
+
+{
+  "force": false
+}
+
+### ============================================
+### PROXIED REQUESTS - BUDDY SERVICE
+### ============================================
+
+### Find Buddy Matches
+GET {{baseUrl}}/buddy/matches?userId=user-123
+Content-Type: application/json
+Authorization: Bearer {{jwtToken}}
+
+### Create Buddy Request
+POST {{baseUrl}}/buddy/requests
+Content-Type: application/json
+Authorization: Bearer {{jwtToken}}
+
+{
+  "targetUserId": "user-456",
+  "message": "I would like to connect with you for mentorship"
+}
+
+### Get Buddy Connections
+GET {{baseUrl}}/buddy/connections
+Content-Type: application/json
+Authorization: Bearer {{jwtToken}}
+
+### ============================================
+### PROXIED REQUESTS - UPSKILLING CONNECTOR
+### ============================================
+
+### Get Available Courses
+GET {{baseUrl}}/upskilling/courses?category=technology
+Content-Type: application/json
+Authorization: Bearer {{jwtToken}}
+
+### Enroll in Course
+POST {{baseUrl}}/upskilling/enrollments
+Content-Type: application/json
+Authorization: Bearer {{jwtToken}}
+
+{
+  "courseId": "course-123",
+  "userId": "user-123"
+}
+
+### Get User Progress
+GET {{baseUrl}}/upskilling/progress/user-123
+Content-Type: application/json
+Authorization: Bearer {{jwtToken}}
+
+### ============================================
+### PROXIED REQUESTS - Q2Q AI SERVICE
+### ============================================
+
+### Start Conversation
+POST {{baseUrl}}/q2q/conversations
+Content-Type: application/json
+Authorization: Bearer {{jwtToken}}
+
+{
+  "userId": "user-123",
+  "initialMessage": "I need career guidance"
+}
+
+### Send Message
+POST {{baseUrl}}/q2q/conversations/conv-123/messages
+Content-Type: application/json
+Authorization: Bearer {{jwtToken}}
+
+{
+  "message": "What skills should I learn for a data analyst role?"
+}
+
+### Get Conversation History
+GET {{baseUrl}}/q2q/conversations/conv-123
+Content-Type: application/json
+Authorization: Bearer {{jwtToken}}
+
+### ============================================
+### PROXIED REQUESTS - SAFETY & MODERATION
+### ============================================
+
+### Check Content Safety
+POST {{baseUrl}}/safety/check
+Content-Type: application/json
+Authorization: Bearer {{jwtToken}}
+
+{
+  "content": "This is a test message to check for safety",
+  "contentType": "text",
+  "userId": "user-123"
+}
+
+### Report Content
+POST {{baseUrl}}/safety/reports
+Content-Type: application/json
+Authorization: Bearer {{jwtToken}}
+
+{
+  "contentId": "content-123",
+  "contentType": "message",
+  "reason": "inappropriate",
+  "description": "Contains offensive language"
+}
+
+### Get Moderation Queue (Admin Only)
+GET {{baseUrl}}/safety/moderation/queue
+Content-Type: application/json
+Authorization: Bearer {{jwtToken}}
+
+### ============================================
+### AUTHENTICATION TESTS
+### ============================================
+
+### Test Unauthorized Access (No Token)
+GET {{baseUrl}}/profile/users/me
+Content-Type: application/json
+
+### Test Invalid Token
+GET {{baseUrl}}/profile/users/me
+Content-Type: application/json
+Authorization: Bearer invalid-token-here
+
+### ============================================
+### RATE LIMITING TESTS
+### ============================================
+
+### Test Rate Limit (Send this multiple times quickly)
+GET {{baseUrl}}/health
+Content-Type: application/json
+
+### ============================================
+### ERROR HANDLING TESTS
+### ============================================
+
+### Test 404 - Invalid Route
+GET {{baseUrl}}/invalid/route
+Content-Type: application/json
+
+### Test Invalid Method
+POST {{baseUrl}}/health
+Content-Type: application/json

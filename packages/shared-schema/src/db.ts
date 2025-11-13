@@ -1,14 +1,17 @@
-import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
+import { drizzle } from 'drizzle-orm/postgres-js';
+import * as schema from './schema/index.js';
 
-const connectionString =
-  process.env.DATABASE_URL || 'postgres://teei_user:teei_dev_password@localhost:5432/teei_dev';
+const connectionString = process.env.DATABASE_URL || 'postgresql://teei:teei_dev_password@localhost:5432/teei_platform';
 
-// Create the PostgreSQL connection
-export const sql = postgres(connectionString, { max: 10 });
+// Create postgres connection
+export const sql = postgres(connectionString, {
+  max: parseInt(process.env.DATABASE_POOL_MAX || '10'),
+  idle_timeout: 20,
+  connect_timeout: 10,
+});
 
-// Create the Drizzle instance
-export const db = drizzle(sql);
+// Create drizzle instance
+export const db = drizzle(sql, { schema });
 
-// Export types
 export type Database = typeof db;

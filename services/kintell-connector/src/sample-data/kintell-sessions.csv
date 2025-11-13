@@ -1,0 +1,4 @@
+session_id,session_type,participant_email,volunteer_email,date,duration_min,rating,feedback_text,language_level
+KINTELL-001,Language Connect,alice@example.com,charlie@volunteer.org,2025-11-01T15:00:00Z,60,5,Great session! Very helpful with grammar,B1
+KINTELL-002,Mentorship,bob@example.com,diana@volunteer.org,2025-11-02T10:00:00Z,60,4,Good career advice,
+KINTELL-003,Language Connect,alice@example.com,charlie@volunteer.org,2025-11-08T15:00:00Z,60,5,Excellent progress with pronunciation,B2
