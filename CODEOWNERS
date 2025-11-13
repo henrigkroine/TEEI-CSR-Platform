@@ -1,0 +1,37 @@
+# CODEOWNERS - Code ownership and review requirements
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Global owners (infrastructure, root configs)
+* @teei-platform/tech-leads
+/.github/ @teei-platform/devops-team
+/docker-compose.yml @teei-platform/devops-team
+/turbo.json @teei-platform/devops-team
+/AGENTS.md @teei-platform/tech-leads
+/MULTI_AGENT_PLAN.md @teei-platform/tech-leads
+
+# Frontend
+/apps/corp-cockpit-astro/ @teei-platform/frontend-team
+
+# Backend Services
+/services/buddy-service/ @teei-platform/backend-team
+/services/kintell-connector/ @teei-platform/backend-team @teei-platform/integration-team
+/services/upskilling-connector/ @teei-platform/backend-team @teei-platform/integration-team
+/services/unified-profile/ @teei-platform/backend-team @teei-platform/data-team
+/services/q2q-ai/ @teei-platform/ai-team
+/services/reporting/ @teei-platform/data-team
+/services/safety-moderation/ @teei-platform/ai-team
+/services/discord-bot/ @teei-platform/backend-team
+/services/notifications/ @teei-platform/backend-team
+/services/api-gateway/ @teei-platform/backend-team
+
+# Shared Packages
+/packages/shared-schema/ @teei-platform/data-team
+/packages/event-contracts/ @teei-platform/backend-team
+/packages/shared-types/ @teei-platform/backend-team
+/packages/shared-utils/ @teei-platform/backend-team
+
+# Documentation
+/docs/ @teei-platform/tech-leads
+/README.md @teei-platform/tech-leads
+/SECURITY.md @teei-platform/security-team
+/CONTRIBUTING.md @teei-platform/tech-leads
