@@ -1,0 +1,58 @@
+### Health Check
+GET http://localhost:3003/health
+
+### Import Buddy Matches
+POST http://localhost:3003/import/matches
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="buddy-matches.csv"
+Content-Type: text/csv
+
+participant_email,buddy_email,matched_at,status,language,interests,location
+john.doe@example.com,buddy.smith@example.com,2024-01-15T10:00:00Z,active,English,"hiking,cooking,photography",Toronto
+jane.wilson@example.com,mentor.jones@example.com,2024-01-20T14:30:00Z,active,Spanish,"reading,music,volunteering",Vancouver
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### Import Buddy Events
+POST http://localhost:3003/import/events
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="buddy-events.csv"
+Content-Type: text/csv
+
+match_id,event_type,event_date,description,location,attendees
+550e8400-e29b-41d4-a716-446655440000,hangout,2024-01-20T15:00:00Z,Coffee meetup,Downtown Cafe,550e8400-e29b-41d4-a716-446655440000
+550e8400-e29b-41d4-a716-446655440001,activity,2024-01-25T10:00:00Z,Hiking trip,Mountain Trail,550e8400-e29b-41d4-a716-446655440001
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### Import Buddy Checkins
+POST http://localhost:3003/import/checkins
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="buddy-checkins.csv"
+Content-Type: text/csv
+
+match_id,checkin_date,mood,notes,question_responses
+550e8400-e29b-41d4-a716-446655440000,2024-01-22T12:00:00Z,great,"Having a wonderful experience with my buddy","{\"helpful\":true,\"engaged\":true}"
+550e8400-e29b-41d4-a716-446655440001,2024-01-27T14:00:00Z,good,"Good progress, enjoying the activities","{\"helpful\":true,\"engaged\":true}"
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### Import Buddy Feedback
+POST http://localhost:3003/import/feedback
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="buddy-feedback.csv"
+Content-Type: text/csv
+
+match_id,from_role,rating,feedback_text,submitted_at,communication,helpfulness,engagement
+550e8400-e29b-41d4-a716-446655440000,participant,0.95,"Excellent buddy, very helpful and supportive",2024-02-01T10:00:00Z,0.95,0.98,0.92
+550e8400-e29b-41d4-a716-446655440001,buddy,0.88,"Great participant, engaged and motivated",2024-02-01T11:00:00Z,0.90,0.85,0.90
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW--

@@ -1,0 +1,31 @@
+### Health Check
+GET http://localhost:3006/health
+
+### Screen Text Content - Safe
+POST http://localhost:3006/screen/text
+Content-Type: application/json
+
+{
+  "contentId": "00000000-0000-0000-0000-000000000001",
+  "contentType": "feedback_text",
+  "text": "This is a safe and appropriate message."
+}
+
+### Screen Text Content - Potentially Unsafe (will be safe in stub)
+POST http://localhost:3006/screen/text
+Content-Type: application/json
+
+{
+  "contentId": "00000000-0000-0000-0000-000000000002",
+  "contentType": "message",
+  "text": "This message would trigger safety checks in production."
+}
+
+### Get Review Queue
+GET http://localhost:3006/review-queue
+
+### Mark Review Complete (replace with actual flagId from screen response)
+PUT http://localhost:3006/review/00000000-0000-0000-0000-000000000001
+Content-Type: application/json
+
+{}

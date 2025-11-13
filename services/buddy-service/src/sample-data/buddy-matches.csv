@@ -1,0 +1,6 @@
+participant_email,buddy_email,matched_at,status,language,interests,location
+john.doe@example.com,buddy.smith@example.com,2024-01-15T10:00:00Z,active,English,"hiking,cooking,photography",Toronto
+jane.wilson@example.com,mentor.jones@example.com,2024-01-20T14:30:00Z,active,Spanish,"reading,music,volunteering",Vancouver
+alex.brown@example.com,guide.garcia@example.com,2024-02-01T09:15:00Z,active,French,"sports,travel,technology",Montreal
+maria.lopez@example.com,support.chen@example.com,2024-02-10T16:45:00Z,inactive,English,"art,cooking,gardening",Calgary
+david.martin@example.com,helper.kim@example.com,2024-03-05T11:20:00Z,active,Mandarin,"gaming,coding,movies",Edmonton

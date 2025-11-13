@@ -1,0 +1,23 @@
+### Health Check
+GET http://localhost:3001/health
+
+### Get Profile (replace with actual UUID from seed data)
+GET http://localhost:3001/profile/00000000-0000-0000-0000-000000000001
+
+### Update Profile
+PUT http://localhost:3001/profile/00000000-0000-0000-0000-000000000001
+Content-Type: application/json
+
+{
+  "firstName": "UpdatedName"
+}
+
+### Create External ID Mapping
+POST http://localhost:3001/profile/mapping
+Content-Type: application/json
+
+{
+  "userId": "00000000-0000-0000-0000-000000000001",
+  "externalSystem": "discord",
+  "externalId": "DISCORD-123456789"
+}

@@ -1,0 +1,24 @@
+### Health Check
+GET http://localhost:3002/health
+
+### Import Kintell Sessions CSV
+POST http://localhost:3002/import/kintell-sessions
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="kintell-sessions.csv"
+Content-Type: text/csv
+
+< ./src/sample-data/kintell-sessions.csv
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### Test Session Webhook (Placeholder)
+POST http://localhost:3002/webhooks/session
+Content-Type: application/json
+
+{
+  "session_id": "KINTELL-TEST-001",
+  "session_type": "language",
+  "participant_id": "12345",
+  "volunteer_id": "67890"
+}
