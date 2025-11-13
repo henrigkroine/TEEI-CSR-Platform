@@ -304,12 +304,12 @@
 - [x] DBA Optimizer - Performance tuning
 
 ### Compliance Lead Progress
-- [ ] Audit Engineer - Audit logs
-- [ ] PII Architect - Encryption schema
-- [ ] GDPR Engineer - Privacy endpoints
-- [ ] DSR Orchestrator - Request workflows
-- [ ] Compliance Documenter - Checklists
-- [ ] Access Control Specialist - Tenant isolation
+- [x] Audit Engineer - Audit logs
+- [x] PII Architect - Encryption schema
+- [x] GDPR Engineer - Privacy endpoints
+- [x] DSR Orchestrator - Request workflows
+- [x] Compliance Documenter - Checklists
+- [x] Access Control Specialist - Tenant isolation
 
 ### QA Lead Progress
 - [ ] Integration Test Engineer - Webhook tests
@@ -338,9 +338,9 @@
 - [x] Migration rollback scripts
 - [x] Backup/restore automation
 - [x] CSV validation + quarantine pipelines
-- [ ] Audit log implementation
-- [ ] PII encryption schema
-- [ ] GDPR privacy endpoints (stubs)
+- [x] Audit log implementation
+- [x] PII encryption schema
+- [x] GDPR privacy endpoints (stubs)
 
 ### Tests
 - [ ] Integration test: signed webhook → profile
@@ -356,15 +356,15 @@
 - [x] `/docs/SRE_Dashboards.md`
 - [x] `/docs/DB_Backup_Restore.md`
 - [x] `/docs/Migration_Playbook.md`
-- [ ] `/docs/GDPR_Compliance.md`
-- [ ] `/docs/Audit_Log_Specification.md`
+- [x] `/docs/GDPR_Compliance.md`
+- [x] `/docs/Audit_Log_Specification.md`
 - [ ] `/reports/phaseB_worker1_hardening.md` (MASTER REPORT)
 - [ ] `/reports/perf_baseline.md`
 - [ ] `/reports/security_lead_report.md`
 - [ ] `/reports/platform_lead_report.md`
 - [x] `/reports/reliability_lead_report.md`
 - [x] `/reports/data_lead_report.md`
-- [ ] `/reports/compliance_lead_report.md`
+- [x] `/reports/compliance_lead_report.md`
 - [ ] `/reports/qa_lead_report.md`
 
 ### CI/CD
@@ -403,10 +403,10 @@
 - [x] ER diagram generated
 
 ### Compliance ✅
-- Audit logs capture key actions
-- PII fields encrypted
-- GDPR endpoints reachable (stubs)
-- Tenant isolation verified
+- ✅ Audit logs capture key actions
+- ✅ PII fields encrypted
+- ✅ GDPR endpoints reachable (stubs)
+- ✅ Tenant isolation verified
 
 ### Testing ✅
 - Integration tests pass (webhook → profile)
