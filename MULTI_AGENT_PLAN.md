@@ -272,12 +272,12 @@
 ## Status Tracking
 
 ### Security Lead Progress
-- [ ] JWT Architect - RS256 + JWKS
-- [ ] OIDC Engineer - SSO implementation
-- [ ] WAF Specialist - Rate limits + firewall
-- [ ] Webhook Security Engineer - HMAC validation
-- [ ] Service Auth Engineer - Internal auth
-- [ ] Secrets Manager - Config loaders
+- [x] JWT Architect - RS256 + JWKS
+- [x] OIDC Engineer - SSO implementation
+- [x] WAF Specialist - Rate limits + firewall
+- [x] Webhook Security Engineer - HMAC validation
+- [x] Service Auth Engineer - Internal auth
+- [x] Secrets Manager - Config loaders
 
 ### Platform Lead Progress
 - [ ] API Versioning Engineer - /v1 routes
