@@ -1,0 +1,26 @@
+id: followup_needed_001
+name: Followup Needed
+description: No activity in last 14 days despite active enrollment
+flag: followup_needed
+priority: 20
+active: true
+conditions:
+  - type: time_since
+    entity: buddy_events
+    field: last_activity
+    duration: 14 days
+  - type: exists
+    entity: program_enrollments
+    field: status
+    operator: '='
+    value: active
+actions:
+  - type: set_flag
+    flag: followup_needed
+    value: true
+  - type: emit_event
+    event: orchestration.flag.updated
+    payload:
+      flag: followup_needed
+      value: true
+      reason: No activity in 14 days

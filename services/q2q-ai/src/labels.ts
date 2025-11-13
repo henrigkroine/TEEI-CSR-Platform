@@ -60,6 +60,9 @@ export const ClassificationOutputSchema = z.object({
   // Risk cues (can have multiple)
   risk_cues: z.array(z.nativeEnum(RiskCue)).describe('Indicators of potential disengagement or distress'),
 
+  // Topics (optional, added in v2)
+  topics: z.array(z.string()).optional().describe('Detected topics: CV, interview, PM, dev, networking, mentorship'),
+
   // Evidence snippets with reasoning
   evidence: z.array(z.object({
     snippet: z.string().describe('Specific text excerpt supporting the classification'),

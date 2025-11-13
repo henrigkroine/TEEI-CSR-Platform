@@ -18,6 +18,7 @@
     "@teei/shared-utils": "workspace:*",
     "fastify": "^4.25.2",
     "openai": "^4.75.0",
+    "yaml": "^2.3.4",
     "zod": "^3.22.4"
   },
   "devDependencies": {

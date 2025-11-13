@@ -1,11 +1,20 @@
 import Fastify from 'fastify';
 import { createServiceLogger } from '@teei/shared-utils';
 import { classifyRoutes } from './routes/classify.js';
+import { initializeModelRegistry } from './registry/persist.js';
 
 const logger = createServiceLogger('q2q-ai');
 const PORT = parseInt(process.env.PORT_Q2Q_AI || '3005');
 
 async function start() {
+  // Initialize model registry on startup
+  try {
+    await initializeModelRegistry();
+  } catch (err) {
+    logger.error('Failed to initialize model registry:', err);
+    // Continue startup even if registry init fails
+  }
+
   const app = Fastify({
     logger: logger as any,
   });
@@ -27,6 +36,10 @@ async function start() {
   const { calibrationRoutes } = await import('./routes/calibration.js');
   app.register(calibrationRoutes);
 
+  // Import and register model registry routes
+  const { registryRoutes } = await import('./routes/registry.js');
+  app.register(registryRoutes);
+
   // Start server
   try {
     await app.listen({ port: PORT, host: '0.0.0.0' });
@@ -41,6 +54,11 @@ async function start() {
     logger.info(`  GET  /q2q/eval/results - List all evaluation runs`);
     logger.info(`  GET  /q2q/eval/results/:id - Get evaluation results`);
     logger.info(`  GET  /q2q/eval/results/:id/report - Get human-readable report`);
+    logger.info(`  GET  /q2q/registry/models - List all models`);
+    logger.info(`  GET  /q2q/registry/models/:id - Get model by ID`);
+    logger.info(`  POST /q2q/registry/models/:id/activate - Activate model`);
+    logger.info(`  GET  /q2q/registry/models/active/:provider - Get active model`);
+    logger.info(`  POST /q2q/registry/sync - Sync models from YAML`);
   } catch (err) {
     logger.error(err);
     process.exit(1);

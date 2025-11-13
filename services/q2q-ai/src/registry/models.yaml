@@ -1,0 +1,65 @@
+models:
+  - id: q2q-claude-v1
+    provider: claude
+    model: claude-3-5-sonnet-20241022
+    prompt_version: v1.0
+    thresholds:
+      confidence_increase: 0.7
+      confidence_decrease: 0.7
+      belonging_increase: 0.7
+      belonging_decrease: 0.7
+      language_comfort_high: 0.8
+      language_comfort_low: 0.3
+      employability_min_signals: 1
+      risk_min_cues: 1
+    effective_from: "2025-11-01T00:00:00Z"
+    active: true
+
+  - id: q2q-openai-v1
+    provider: openai
+    model: gpt-4o-mini
+    prompt_version: v1.0
+    thresholds:
+      confidence_increase: 0.7
+      confidence_decrease: 0.7
+      belonging_increase: 0.7
+      belonging_decrease: 0.7
+      language_comfort_high: 0.8
+      language_comfort_low: 0.3
+      employability_min_signals: 1
+      risk_min_cues: 1
+    effective_from: "2025-11-01T00:00:00Z"
+    active: false
+
+  - id: q2q-gemini-v1
+    provider: gemini
+    model: gemini-1.5-flash
+    prompt_version: v1.0
+    thresholds:
+      confidence_increase: 0.7
+      confidence_decrease: 0.7
+      belonging_increase: 0.7
+      belonging_decrease: 0.7
+      language_comfort_high: 0.8
+      language_comfort_low: 0.3
+      employability_min_signals: 1
+      risk_min_cues: 1
+    effective_from: "2025-11-01T00:00:00Z"
+    active: false
+
+  - id: q2q-claude-v2-multilingual
+    provider: claude
+    model: claude-3-5-sonnet-20241022
+    prompt_version: v2.0
+    thresholds:
+      confidence_increase: 0.75
+      confidence_decrease: 0.75
+      belonging_increase: 0.75
+      belonging_decrease: 0.75
+      language_comfort_high: 0.85
+      language_comfort_low: 0.25
+      employability_min_signals: 1
+      risk_min_cues: 1
+    effective_from: "2025-11-13T00:00:00Z"
+    active: false
+    description: "Multilingual Q2Q classifier with support for EN, UK, NO languages"

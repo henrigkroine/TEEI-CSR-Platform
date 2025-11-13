@@ -5,6 +5,8 @@ import { createServiceLogger } from '@teei/shared-utils';
 import { deliverRoutes } from './routes/deliver.js';
 import { deliveriesRoutes } from './routes/deliveries.js';
 import { featuresRoutes } from './routes/features.js';
+import { schedulesRoutes } from './routes/schedules.js';
+import { startScheduler } from './scheduler/cron.js';
 
 const logger = createServiceLogger('impact-in');
 const PORT = parseInt(process.env.PORT_IMPACT_IN || '3008');
@@ -48,6 +50,7 @@ async function start() {
   await app.register(deliverRoutes, { prefix: '/impact-in' });
   await app.register(deliveriesRoutes, { prefix: '/impact-in' });
   await app.register(featuresRoutes, { prefix: '/impact-in' });
+  await app.register(schedulesRoutes, { prefix: '/impact-in' });
 
   // Start server
   try {
@@ -59,7 +62,18 @@ async function start() {
     logger.info('  POST /impact-in/replay/:deliveryId - Replay failed delivery');
     logger.info('  GET  /impact-in/features/:companyId - Get feature flags');
     logger.info('  POST /impact-in/features/:companyId - Update feature flags');
+    logger.info('  POST /impact-in/schedules - Create scheduled delivery');
+    logger.info('  GET  /impact-in/schedules - List all schedules');
+    logger.info('  GET  /impact-in/schedules/:id - Get specific schedule');
+    logger.info('  PUT  /impact-in/schedules/:id - Update schedule');
+    logger.info('  DELETE /impact-in/schedules/:id - Delete schedule');
+    logger.info('  POST /impact-in/schedules/:id/run-now - Trigger immediate run');
+    logger.info('  GET  /impact-in/schedules/:id/preview - Preview payload');
+    logger.info('  GET  /impact-in/schedules/stats - Delivery statistics');
     logger.info('  GET  /health - Service health check');
+
+    // Start the scheduler daemon
+    startScheduler();
   } catch (err) {
     logger.error(err);
     process.exit(1);

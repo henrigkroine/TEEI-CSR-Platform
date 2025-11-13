@@ -1,30 +1,19 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { ValidationError } from '@teei/shared-utils';
-import { getEventBus } from '@teei/shared-utils';
+import { getEventBus, createServiceLogger } from '@teei/shared-utils';
+import { db, safetyFlags, safetyReviewQueue } from '@teei/shared-schema';
+import { eq } from 'drizzle-orm';
 import { runAllPolicyChecks } from '../policy.js';
-import { randomUUID } from 'crypto';
+import { screenText } from '../screening/rules.js';
+
+const logger = createServiceLogger('safety-screen');
 
 const ScreenTextSchema = z.object({
   contentId: z.string().uuid(),
   contentType: z.enum(['feedback_text', 'checkin_note', 'message', 'other']),
   text: z.string().min(1),
 });
-
-// In-memory store for review queue (in production, use a database)
-interface ReviewItem {
-  id: string;
-  contentId: string;
-  contentType: string;
-  text: string;
-  flagReason: string;
-  confidence: number;
-  status: 'pending' | 'reviewed';
-  raisedAt: string;
-  reviewedAt?: string;
-}
-
-const reviewQueue: Map<string, ReviewItem> = new Map();
 
 export async function screenRoutes(app: FastifyInstance) {
   // POST /screen/text - Screen text content for safety violations
@@ -37,25 +26,42 @@ export async function screenRoutes(app: FastifyInstance) {
 
     const { contentId, contentType, text } = parsed.data;
 
-    // Run policy checks
+    // Run enhanced screening rules
+    const screeningResult = screenText(text);
+
+    // Also run legacy policy checks for backward compatibility
     const violation = runAllPolicyChecks(text);
 
-    if (violation.violated && violation.reason) {
-      const flagId = randomUUID();
-      const requiresHumanReview = (violation.confidence || 0.5) < 0.9;
+    const isViolated = !screeningResult.safe || violation.violated;
+
+    if (isViolated) {
+      const flagReasons = screeningResult.flags.map(f => f.type).join(', ') || violation.reason;
+      const confidence = screeningResult.overallConfidence || violation.confidence || 0.5;
+      const requiresHumanReview = screeningResult.requiresReview || confidence < 0.9;
+
+      // Create safety flag in database
+      const [flag] = await db
+        .insert(safetyFlags)
+        .values({
+          contentId,
+          contentType,
+          flagReason: flagReasons || 'unknown',
+          confidence: confidence.toString(),
+          requiresHumanReview,
+          reviewStatus: 'pending',
+        })
+        .returning();
 
       // Add to review queue if human review is required
       if (requiresHumanReview) {
-        reviewQueue.set(flagId, {
-          id: flagId,
-          contentId,
-          contentType,
-          text,
-          flagReason: violation.reason,
-          confidence: violation.confidence || 0.5,
-          status: 'pending',
-          raisedAt: new Date().toISOString(),
-        });
+        await db
+          .insert(safetyReviewQueue)
+          .values({
+            flagId: flag.id,
+            status: 'pending',
+          });
+
+        logger.info(`Added flag ${flag.id} to review queue`);
       }
 
       // Emit safety.flag.raised event
@@ -63,13 +69,14 @@ export async function screenRoutes(app: FastifyInstance) {
       await eventBus.emit({
         type: 'safety.flag.raised',
         data: {
-          flagId,
+          flagId: flag.id,
           contentId,
           contentType,
-          flagReason: violation.reason,
-          confidence: violation.confidence || 0.5,
+          flagReason: flagReasons,
+          confidence,
           requiresHumanReview,
           raisedAt: new Date().toISOString(),
+          flags: screeningResult.flags,
         },
         timestamp: new Date().toISOString(),
         source: 'safety-moderation',
@@ -77,23 +84,30 @@ export async function screenRoutes(app: FastifyInstance) {
 
       return {
         safe: false,
-        flagId,
-        reason: violation.reason,
-        confidence: violation.confidence || 0.5,
+        flagId: flag.id,
+        reason: flagReasons,
+        confidence,
         requiresHumanReview,
+        flags: screeningResult.flags,
       };
     }
 
     return {
       safe: true,
+      flags: [],
     };
   });
 
   // GET /review-queue - Get pending review items
   app.get('/review-queue', async (request, reply) => {
-    const pendingReviews = Array.from(reviewQueue.values()).filter(
-      (item) => item.status === 'pending'
-    );
+    const pendingReviews = await db
+      .select({
+        queueItem: safetyReviewQueue,
+        flag: safetyFlags,
+      })
+      .from(safetyReviewQueue)
+      .leftJoin(safetyFlags, eq(safetyReviewQueue.flagId, safetyFlags.id))
+      .where(eq(safetyReviewQueue.status, 'pending'));
 
     return {
       items: pendingReviews,
@@ -107,7 +121,11 @@ export async function screenRoutes(app: FastifyInstance) {
     async (request, reply) => {
       const { id } = request.params;
 
-      const reviewItem = reviewQueue.get(id);
+      const [reviewItem] = await db
+        .select()
+        .from(safetyReviewQueue)
+        .where(eq(safetyReviewQueue.id, id));
+
       if (!reviewItem) {
         return reply.status(404).send({
           error: 'Review item not found',
@@ -120,13 +138,19 @@ export async function screenRoutes(app: FastifyInstance) {
         });
       }
 
-      reviewItem.status = 'reviewed';
-      reviewItem.reviewedAt = new Date().toISOString();
+      const [updated] = await db
+        .update(safetyReviewQueue)
+        .set({
+          status: 'reviewed',
+          reviewedAt: new Date(),
+        })
+        .where(eq(safetyReviewQueue.id, id))
+        .returning();
 
       return {
-        id: reviewItem.id,
-        status: reviewItem.status,
-        reviewedAt: reviewItem.reviewedAt,
+        id: updated.id,
+        status: updated.status,
+        reviewedAt: updated.reviewedAt,
       };
     }
   );

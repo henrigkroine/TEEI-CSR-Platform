@@ -1,0 +1,40 @@
+{
+  "name": "@teei/clients",
+  "version": "1.0.0",
+  "description": "Typed TypeScript clients for TEEI CSR Platform services",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    "./reporting": {
+      "import": "./dist/reporting.js",
+      "types": "./dist/reporting.d.ts"
+    },
+    "./journey": {
+      "import": "./dist/journey.js",
+      "types": "./dist/journey.d.ts"
+    },
+    "./q2q": {
+      "import": "./dist/q2q.js",
+      "types": "./dist/q2q.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "test": "vitest"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^20.11.5",
+    "typescript": "^5.3.3",
+    "vitest": "^1.2.1"
+  },
+  "keywords": [
+    "teei",
+    "csr",
+    "client",
+    "sdk",
+    "typescript"
+  ]
+}
