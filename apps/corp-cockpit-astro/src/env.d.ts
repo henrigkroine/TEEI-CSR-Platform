@@ -27,5 +27,11 @@ declare namespace App {
       lang: string;
       validatedAt: string;
     };
+    sessionMetadata?: {
+      sessionId?: string;
+      createdAt?: string;
+      lastActivityAt: string;
+      ipAddress?: string;
+    };
   }
 }
