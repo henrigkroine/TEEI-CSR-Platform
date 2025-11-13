@@ -1,6 +1,7 @@
 ---
 import CockpitLayout from '@layouts/CockpitLayout.astro';
 import MetricCard from '@components/shared/MetricCard';
+import DashboardActions from '@components/dashboard/DashboardActions';
 
 const { companyId } = Astro.params;
 
@@ -107,27 +108,14 @@ const company = {
       <!-- Quick Actions -->
       <div class="card">
         <h2 class="mb-4 text-xl font-semibold">Quick Actions</h2>
-        <div class="space-y-3">
-          <a href={`/en/cockpit/${companyId}/reports`} class="btn-primary w-full">
-            Generate Report
-          </a>
-          <a href={`/en/cockpit/${companyId}/evidence`} class="btn-secondary w-full">
-            View Evidence
-          </a>
-          <a href={`/en/cockpit/${companyId}/exports`} class="btn-secondary w-full">
-            Export Data
-          </a>
-          <a href={`/en/cockpit/${companyId}/admin`} class="btn-secondary w-full">
-            Admin Settings
-          </a>
-        </div>
+        <DashboardActions companyId={companyId!} client:load />
       </div>
     </div>
 
     <!-- Phase C Notice -->
     <div class="mt-8 rounded-lg bg-primary/10 p-4 text-center">
       <p class="text-sm font-medium">
-        🚀 Phase C pilot features coming soon: Evidence Explorer, AI-powered reporting, and more!
+        🎉 Phase C pilot features are now live: Evidence Explorer, AI-powered reporting with mandatory citations, and lineage tracing!
       </p>
     </div>
   </div>
