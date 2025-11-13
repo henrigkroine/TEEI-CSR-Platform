@@ -6,6 +6,7 @@ import SROIPanel from '../../../../components/widgets/SROIPanel.tsx';
 import VISPanel from '../../../../components/widgets/VISPanel.tsx';
 import Q2QFeed from '../../../../components/widgets/Q2QFeed.tsx';
 import ExportButtons from '../../../../components/widgets/ExportButtons.tsx';
+import DashboardActions from '../../../../components/DashboardActions.tsx';
 
 // Extract route parameters
 const { lang, companyId } = Astro.params;
@@ -24,6 +25,8 @@ if (tenantContext.companyId !== companyId || tenantContext.lang !== lang) {
 
 const canExport = hasPermission(user.role, 'EXPORT_DATA');
 const canViewAdmin = hasPermission(user.role, 'ADMIN_CONSOLE');
+const canGenerateReports = hasPermission(user.role, 'GENERATE_REPORTS');
+const canViewEvidence = hasPermission(user.role, 'VIEW_EVIDENCE');
 ---
 
 <BaseLayout title={`Dashboard - TEEI Corporate Cockpit`} lang={lang}>
@@ -53,6 +56,14 @@ const canViewAdmin = hasPermission(user.role, 'ADMIN_CONSOLE');
     <Q2QFeed companyId={companyId} limit={10} client:load />
     {canExport && <ExportButtons companyId={companyId} client:load />}
   </div>
+
+  <DashboardActions
+    companyId={companyId}
+    canGenerateReports={canGenerateReports}
+    canViewEvidence={canViewEvidence}
+    canExport={canExport}
+    client:load
+  />
 </BaseLayout>
 
 <style>

@@ -36,6 +36,8 @@ const { sseRoutes } = await import('./routes/sse.js');
 await fastify.register(sseRoutes);
 const { evidenceRoutes } = await import('./routes/evidence.js');
 await fastify.register(evidenceRoutes);
+const { reportRoutes } = await import('./routes/reports.js');
+await fastify.register(reportRoutes);
 
 // Graceful shutdown
 const gracefulShutdown = async () => {
