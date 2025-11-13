@@ -34,6 +34,8 @@ const { impactInRoutes } = await import('./routes/impact-in.js');
 await fastify.register(impactInRoutes);
 const { sseRoutes } = await import('./routes/sse.js');
 await fastify.register(sseRoutes);
+const { evidenceRoutes } = await import('./routes/evidence.js');
+await fastify.register(evidenceRoutes);
 
 // Graceful shutdown
 const gracefulShutdown = async () => {
