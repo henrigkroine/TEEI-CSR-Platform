@@ -14,6 +14,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { memoize, useMemoizedSelector } from '../../utils/memoization';
 import type { PermissionGateProps } from '../PermissionGate';
+import LineageDrawer from './LineageDrawer';
 
 interface Evidence {
   id: string;
@@ -533,85 +534,6 @@ const EvidenceRow = memoize<{
     </tr>
   );
 });
-
-/**
- * Lineage Drawer Component (placeholder)
- */
-function LineageDrawer({
-  companyId,
-  evidenceId,
-  onClose,
-}: {
-  companyId: string;
-  evidenceId: string;
-  onClose: () => void;
-}) {
-  return (
-    <div className="drawer-overlay" onClick={onClose}>
-      <div className="drawer" onClick={(e) => e.stopPropagation()}>
-        <div className="drawer-header">
-          <h3>Evidence Lineage</h3>
-          <button onClick={onClose} className="close-btn">
-            ×
-          </button>
-        </div>
-        <div className="drawer-content">
-          <p>Lineage view for evidence: {evidenceId}</p>
-          <p>Coming in B.3...</p>
-        </div>
-        <style>{`
-          .drawer-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 1000;
-          }
-
-          .drawer {
-            position: fixed;
-            right: 0;
-            top: 0;
-            bottom: 0;
-            width: 600px;
-            max-width: 90vw;
-            background: white;
-            box-shadow: -4px 0 16px rgba(0, 0, 0, 0.1);
-            overflow-y: auto;
-          }
-
-          .drawer-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 20px 24px;
-            border-bottom: 1px solid var(--color-border);
-          }
-
-          .drawer-header h3 {
-            font-size: 1.25rem;
-            margin: 0;
-          }
-
-          .close-btn {
-            background: none;
-            border: none;
-            font-size: 2rem;
-            cursor: pointer;
-            color: var(--color-text-secondary);
-            line-height: 1;
-          }
-
-          .drawer-content {
-            padding: 24px;
-          }
-        `}</style>
-      </div>
-    </div>
-  );
-}
 
 /**
  * Format helpers
