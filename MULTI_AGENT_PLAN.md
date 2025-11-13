@@ -1,329 +1,260 @@
-# Worker 2 Multi-Agent Execution Plan
+# Worker 2 Phase B: Analytics Cockpit & Q2Q Production
+**Mission**: Replace stubs with production analytics and UI: operational Q2Q NLP pipeline, auditable evidence lineage, calibrated SROI and VIS, polished Corporate Cockpit with i18n/a11y, and first working Impact-In connectors.
 
-**Status**: 🚧 In Progress
-**Branch**: `worker2/services-schema-ingestion`
-**Started**: 2025-11-13
-**Target Completion**: TBD
-
----
-
-## Phase 1: Foundation Setup ⏳
-
-### 1.1 Monorepo Structure
-- [ ] Create pnpm workspace configuration
-- [ ] Set up TypeScript project references
-- [ ] Configure ESLint + Prettier
-- [ ] Set up shared tsconfig.json
-- [ ] Create .env.example files
-
-**Assigned**: Infrastructure Lead
-**Status**: Not Started
-
-### 1.2 Documentation
-- [x] Create AGENTS.md
-- [x] Create MULTI_AGENT_PLAN.md
-- [ ] Create reports/worker2_services.md
-- [ ] Update docs/Platform_Architecture.md
-- [ ] Update docs/System_Diagram.md
-
-**Assigned**: Tech Lead Orchestrator
-**Status**: In Progress
+**Branch**: `claude/worker2-analytics-cockpit-phase-b-011CV5sjVL1wWrVkHZxkULHk`
+**Orchestrator**: Tech Lead (30 agents, 5 leads)
+**Status**: 🚀 IN PROGRESS
 
 ---
 
-## Phase 2: Data Layer 📊
+## 🎯 PHASE B OBJECTIVES
 
-### 2.1 Event Contracts Package
-- [ ] Initialize packages/event-contracts
-- [ ] Define buddy.* event types (match.created, event.logged, checkin.completed, feedback.submitted)
-- [ ] Define kintell.* event types (session.completed, rating.created, session.scheduled)
-- [ ] Define upskilling.* event types (course.completed, credential.issued, progress.updated)
-- [ ] Define orchestration.* event types (journey.milestone.reached, profile.updated)
-- [ ] Define safety.* event types (flag.raised, review.completed)
-- [ ] Add Zod schemas for all payloads
-- [ ] Implement event versioning (v1, v2, etc.)
-- [ ] Write unit tests for validators
+### Baseline (From Phase A)
+✅ All 7 backend services operational
+✅ Event-driven architecture with NATS
+✅ Complete database schema with analytics tables
+✅ Sample data with feedback text
+✅ Comprehensive documentation
 
-**Assigned**: Data Modeling Lead → Contract Designer, Validation Engineer
-**Status**: Not Started
-**Dependencies**: None
-
-### 2.2 Shared Schema Package
-- [ ] Initialize packages/shared-schema with Drizzle
-- [ ] Create core tables: users, companies, company_users
-- [ ] Create program_enrollments table
-- [ ] Create kintell_sessions table (language|mentorship, mapping fields)
-- [ ] Create buddy_* tables (matches, events, checkins, feedback)
-- [ ] Create learning_progress table
-- [ ] Create outcome_scores table (dimension, score, confidence)
-- [ ] Create evidence_snippets table (hash, embedding pointers)
-- [ ] Create metrics_company_period table (aggregates, sroi_ratio, vis_score)
-- [ ] Add indexes for performance
-- [ ] Implement PII partitioning strategy
-- [ ] Create initial migration (0000_init.sql)
-- [ ] Create seed script with sample data
-
-**Assigned**: Data Modeling Lead → Schema Architect, Migration Engineer, Data Privacy
-**Status**: Not Started
-**Dependencies**: None
-
-### 2.3 Event Bus SDK
-- [ ] Initialize packages/shared-utils
-- [ ] Create event-bus.ts with NATS client wrapper
-- [ ] Implement publish() helper with validation
-- [ ] Implement subscribe() helper with type safety
-- [ ] Add connection pooling and retry logic
-- [ ] Create logger utility
-- [ ] Add correlation ID tracking
-- [ ] Write unit tests
-
-**Assigned**: Core Services Lead → Event Bus Engineer
-**Status**: Not Started
-**Dependencies**: 2.1 (Event Contracts)
+### Phase B Deliverables
+1. **Q2Q NLP Pipeline (Production)** - Real AI model, not stubs
+2. **Evidence Lineage & Auditability** - Traceable metrics → evidence
+3. **Metrics & Calculators** - SROI v1.0, VIS v1.0 with tests
+4. **Corporate Cockpit** - Astro app with dashboards, i18n, a11y
+5. **Impact-In Connectors** - Benevity/Goodera/Workday (feature-flagged)
+6. **Performance & Caching** - Sub-second cockpit, Redis cache
+7. **Documentation** - Metrics catalog, demos, operator guides
 
 ---
 
-## Phase 3: Core Services 🚀
+## 🏗️ TEAM STRUCTURE (5 Leads × 6 Specialists = 30 Agents)
 
-### 3.1 Unified Profile Service
-- [ ] Initialize services/unified-profile (Fastify + TS)
-- [ ] Implement GET /profile/:id (aggregated view)
-- [ ] Implement PUT /profile/:id (update flags)
-- [ ] Implement POST /profile/mapping (link kintell_id, discord_id, etc.)
-- [ ] Add journey flag management (is_buddy_matched, has_completed_language, etc.)
-- [ ] Subscribe to events that update profile (course.completed, etc.)
-- [ ] Add health endpoint
-- [ ] Create .http test file
-- [ ] Write unit tests
+### 1. NLP Lead (6 agents) - **Q2Q Pipeline**
+**Mission**: Replace random score stub with production NLP; evidence lineage; calibration harness.
 
-**Assigned**: Core Services Lead → Profile Service Engineer
-**Status**: Not Started
-**Dependencies**: 2.2 (Schema), 2.3 (Event Bus)
+#### Specialists
+1. **Label Set Designer** - Define production labels
+2. **Inference Driver Engineer** - Provider-agnostic adapters (Claude/Gemini/OpenAI)
+3. **Storage Engineer** - Enhance schema for embeddings
+4. **Embedding Specialist** - Generate embeddings for evidence
+5. **Calibration Harness Engineer** - Build eval harness
+6. **Q2Q Test Engineer** - Unit and integration tests
 
-### 3.2 Kintell Connector Service
-- [ ] Initialize services/kintell-connector
-- [ ] Create webhook receiver endpoints (POST /webhooks/session, /webhooks/rating)
-- [ ] Implement CSV import endpoint (POST /import/kintell-sessions)
-- [ ] Create column mapper with normalization rules
-- [ ] Add validation for incoming data
-- [ ] Emit kintell.session.completed event
-- [ ] Emit kintell.rating.created event
-- [ ] Create mapping configuration file
-- [ ] Add health endpoint
-- [ ] Create .http test file
-- [ ] Write unit tests for mapper
-- [ ] Create sample CSV files
+### 2. Analytics Lead (6 agents) - **Metrics & Calculators**
+**Mission**: Implement SROI v1.0, VIS v1.0, aggregation pipelines.
 
-**Assigned**: Connector Services Lead → Kintell Integration, CSV Parser, Mapper
-**Status**: Not Started
-**Dependencies**: 2.1 (Contracts), 2.2 (Schema), 2.3 (Event Bus)
+#### Specialists
+1. **SROI Calculator Developer** - Conservative SROI formula
+2. **VIS Calculator Developer** - Weighted hours × quality score
+3. **Aggregation Pipeline Engineer** - Nightly aggregation jobs
+4. **Metrics Service API Developer** - Analytics service endpoints
+5. **Integration Score Specialist** - Composite integration metric
+6. **Metrics Test Engineer** - Property-based testing
 
-### 3.3 Buddy Service
-- [ ] Initialize services/buddy-service
-- [ ] Create CSV/API importer for matches
-- [ ] Create CSV/API importer for events
-- [ ] Create CSV/API importer for checkins
-- [ ] Create CSV/API importer for feedback
-- [ ] Add schema validators for each data type
-- [ ] Emit buddy.match.created event
-- [ ] Emit buddy.event.logged event
-- [ ] Emit buddy.checkin.completed event
-- [ ] Emit buddy.feedback.submitted event
-- [ ] Add health endpoint
-- [ ] Create .http test file
-- [ ] Write unit tests
-- [ ] Create sample CSV files
+### 3. Frontend Lead (6 agents) - **Corporate Cockpit**
+**Mission**: Build Astro app with dashboards, i18n (en/uk/no), a11y (WCAG 2.2 AA).
 
-**Assigned**: Connector Services Lead → Buddy Integration, Event Publisher
-**Status**: Not Started
-**Dependencies**: 2.1, 2.2, 2.3
+#### Specialists
+1. **Astro Setup Engineer** - Initialize app with Tailwind/shadcn
+2. **Dashboard Components Developer** - KPI cards, charts
+3. **Evidence Drawer Specialist** - Anonymized evidence UI
+4. **i18n Engineer** - en/uk/no translations
+5. **A11y Specialist** - WCAG 2.2 AA compliance
+6. **Export & PDF Engineer** - CSV/PDF exports
 
-### 3.4 Upskilling Connector Service
-- [ ] Initialize services/upskilling-connector
-- [ ] Create endpoint POST /import/course-completions
-- [ ] Create endpoint POST /import/credentials
-- [ ] Add provider-specific adapters (eCornell, itslearning)
-- [ ] Emit upskilling.course.completed event
-- [ ] Emit upskilling.credential.issued event
-- [ ] Add health endpoint
-- [ ] Create .http test file
-- [ ] Write unit tests
-- [ ] Create sample data
+### 4. Connectors Lead (6 agents) - **Impact-In Integration**
+**Mission**: Build Benevity/Goodera/Workday outbound connectors.
 
-**Assigned**: Connector Services Lead → Upskilling Integration, API Client
-**Status**: Not Started
-**Dependencies**: 2.1, 2.2, 2.3
+#### Specialists
+1. **Benevity Mapper Engineer** - Benevity API integration
+2. **Goodera Mapper Engineer** - Goodera API integration
+3. **Workday Mapper Engineer** - Workday Volunteer API
+4. **Feature Flag & Config Engineer** - Company-level flags
+5. **Delivery Log & Replay Specialist** - Audit and retry logic
+6. **Impact-In Test Engineer** - Mock external APIs
 
-### 3.5 Q2Q AI Service (Skeleton)
-- [ ] Initialize services/q2q-ai
-- [ ] Define outcome taxonomy (confidence, belonging, lang_level_proxy, job_readiness)
-- [ ] Create outcome dimension enum
-- [ ] Implement classifier stub (placeholder function)
-- [ ] Add text tagging interface
-- [ ] Implement outcome_scores write logic
-- [ ] Implement evidence_snippets write logic (with hash)
-- [ ] Create abstracted model provider interface
-- [ ] Add configuration for model selection
-- [ ] Add health endpoint
-- [ ] Create .http test file with dummy texts
-- [ ] Write unit tests for taxonomy
+### 5. QA & Performance Lead (6 agents) - **Caching, Testing**
+**Mission**: Query optimization, Redis caching, k6 load testing.
 
-**Assigned**: Core Services Lead → Q2Q AI Architect
-**Status**: Not Started
-**Dependencies**: 2.2 (Schema)
-
-### 3.6 Safety/Moderation Service (Stub)
-- [ ] Initialize services/safety-moderation
-- [ ] Create text screening interface
-- [ ] Implement placeholder content policy rules
-- [ ] Emit safety.flag.raised event
-- [ ] Add human review queue stub
-- [ ] Create policy configuration file
-- [ ] Add health endpoint
-- [ ] Create .http test file
-- [ ] Write unit tests
-
-**Assigned**: Core Services Lead → Safety Engineer
-**Status**: Not Started
-**Dependencies**: 2.1 (Contracts), 2.3 (Event Bus)
-
-### 3.7 API Gateway
-- [ ] Initialize services/api-gateway
-- [ ] Implement JWT session middleware
-- [ ] Implement RBAC role checking (admin, company_user, participant)
-- [ ] Create reverse proxy to internal services
-- [ ] Add rate limiting
-- [ ] Add request logging with correlation IDs
-- [ ] Expose health endpoints for all services (GET /health/*)
-- [ ] Create .http test file
-- [ ] Write unit tests for auth middleware
-
-**Assigned**: Core Services Lead → API Gateway Engineer, Config Management
-**Status**: Not Started
-**Dependencies**: All services must have health endpoints
+#### Specialists
+1. **Database Optimization Specialist** - Indices and query tuning
+2. **Redis Caching Engineer** - Cache layer with TTLs
+3. **k6 Load Test Engineer** - Performance budgets
+4. **Integration Test Lead** - End-to-end tests
+5. **Acceptance Criteria Validator** - Validate all deliverables
+6. **QA Coordinator** - Smoke tests and final report
 
 ---
 
-## Phase 4: Infrastructure & Testing 🏗️
+## 📋 EXECUTION PHASES (7 Phases)
 
-### 4.1 Docker Infrastructure
-- [ ] Create docker-compose.yml (Postgres, NATS, pgAdmin)
-- [ ] Configure Postgres with extensions (pgvector, uuid-ossp)
-- [ ] Configure NATS with monitoring
-- [ ] Add connection health checks
-- [ ] Create .env.example with all required vars
+### Phase 1: Core Infrastructure (Days 1-2)
+- [ ] Create `/services/analytics/` service (port 3007)
+- [ ] Create `/packages/metrics/` library (SROI/VIS/Integration)
+- [ ] Initialize `/apps/corp-cockpit-astro/` with Astro 5
+- [ ] Add Redis to `docker-compose.yml`
+- [ ] Add database indices for hot queries
 
-**Assigned**: Infrastructure Lead → DevOps, Database Admin
-**Status**: Not Started
-**Dependencies**: None
+### Phase 2: Q2Q Production Pipeline (Days 3-4)
+- [ ] Define production label set (confidence↑/↓, belonging↑/↓, etc.)
+- [ ] Build provider-agnostic inference driver
+- [ ] Enhance schema: `evidence_snippets.embedding`, `outcome_scores.method`
+- [ ] Generate embeddings for evidence
+- [ ] Build calibration harness (`/q2q/eval/`)
+- [ ] Write Q2Q tests and calibration report
 
-### 4.2 Development Scripts
-- [ ] Create pnpm workspace root package.json
-- [ ] Add "pnpm -w dev" script (starts all services + hot reload)
-- [ ] Add "pnpm -w build" script
-- [ ] Add "pnpm -w test" script
-- [ ] Add "pnpm -w db:migrate" script
-- [ ] Add "pnpm -w db:seed" script
-- [ ] Add "pnpm -w db:reset" script
-- [ ] Document usage in README
+### Phase 3: Metrics & Aggregations (Days 5-6)
+- [ ] Implement SROI v1.0 calculator with tests
+- [ ] Implement VIS v1.0 calculator with tests
+- [ ] Build aggregation pipeline: events → `metrics_company_period`
+- [ ] Create analytics service API endpoints
+- [ ] Add Redis caching to metrics endpoints
+- [ ] Integration test: seed → aggregate → validate
 
-**Assigned**: Infrastructure Lead → Deployment Specialist
-**Status**: Not Started
-**Dependencies**: 4.1
+### Phase 4: Cockpit UI (Days 7-8)
+- [ ] Build dashboard pages (At-a-glance, Trends, Q2Q Feed, SROI, VIS)
+- [ ] Build Evidence Drawer component with redaction
+- [ ] i18n setup: en/uk/no translation files
+- [ ] Run axe/Pa11y, fix a11y issues
+- [ ] CSV and PDF export functionality
+- [ ] Document in `/reports/cockpit_demo_walkthrough.md`
 
-### 4.3 Unit Tests
-- [ ] Test event contract Zod validators
-- [ ] Test Kintell CSV mapper normalization
-- [ ] Test Buddy data validators
-- [ ] Test Q2Q outcome taxonomy
-- [ ] Test API Gateway auth middleware
-- [ ] Configure Vitest/Jest
-- [ ] Achieve >80% coverage on mappers
+### Phase 5: Impact-In Connectors (Days 9-10)
+- [ ] Create `/services/impact-in/` service (port 3008)
+- [ ] Implement Benevity/Goodera/Workday mappers
+- [ ] Feature flag system (env + database)
+- [ ] Delivery log and replay tool
+- [ ] Rate limiting (100 req/min)
+- [ ] Document in `/reports/impact_in_specs.md`
 
-**Assigned**: Quality & Testing Lead → Unit Test Engineer
-**Status**: Not Started
-**Dependencies**: All services implemented
+### Phase 6: Performance & QA (Days 11-12)
+- [ ] Query optimization and documentation
+- [ ] Create k6 load test scenario
+- [ ] Run k6 test, validate p75 < 500ms
+- [ ] End-to-end integration test
+- [ ] Validate acceptance criteria
+- [ ] Write comprehensive report
 
-### 4.4 Integration Tests
-- [ ] Create test: Ingest Kintell CSV → normalized rows in DB
-- [ ] Create test: CSV ingestion → events published to NATS
-- [ ] Create test: Event received → profile updated
-- [ ] Create test: End-to-end flow (CSV → events → profile → API)
-- [ ] Add test fixtures and sample data
-- [ ] Configure test database (separate from dev)
-
-**Assigned**: Quality & Testing Lead → Integration Test Engineer
-**Status**: Not Started
-**Dependencies**: All services + 4.1, 4.2
-
----
-
-## Phase 5: Documentation & PR 📝
-
-### 5.1 Architecture Documentation
-- [ ] Update docs/Platform_Architecture.md with service map
-- [ ] Update docs/System_Diagram.md with data flow
-- [ ] Create docs/Event_Catalog.md
-- [ ] Create docs/Database_Schema.md
-- [ ] Document API endpoints in each service
-- [ ] Create ER diagram (Mermaid or PNG)
-
-**Assigned**: Data Modeling Lead → Documentation Writer
-**Status**: Not Started
-**Dependencies**: All implementation complete
-
-### 5.2 Reports
-- [ ] Create reports/worker2_services.md with summary
-- [ ] Include acceptance criteria checklist
-- [ ] Document any deviations or decisions
-- [ ] Add performance notes
-- [ ] List known limitations
-
-**Assigned**: Tech Lead Orchestrator
-**Status**: Not Started
-**Dependencies**: All tasks complete
-
-### 5.3 Pull Request
-- [ ] Review all commits
-- [ ] Ensure branch is up to date
-- [ ] Create PR with comprehensive description
-- [ ] Add checklist from acceptance criteria
-- [ ] Tag reviewers
-- [ ] Link to reports/worker2_services.md
-
-**Assigned**: Tech Lead Orchestrator
-**Status**: Not Started
-**Dependencies**: 5.1, 5.2
+### Phase 7: Documentation (Days 13-14)
+- [ ] `/docs/Q2Q_Label_Taxonomy.md`
+- [ ] `/docs/Metrics_Catalog.md`
+- [ ] `/docs/VIS_Model.md`
+- [ ] `/docs/Evidence_Lineage.md`
+- [ ] `/docs/Database_Optimization.md`
+- [ ] `/docs/impact_in/` - Specs for all platforms
+- [ ] `/reports/phaseB_worker2_q2q_and_cockpit.md`
+- [ ] `/reports/q2q_eval.md`
+- [ ] `/reports/cockpit_perf.md`
+- [ ] `/reports/a11y_audit.md`
+- [ ] `/reports/acceptance_validation.md`
 
 ---
 
-## Blockers & Decisions
+## ✅ ACCEPTANCE CRITERIA
 
-### Open Questions
-- [ ] Which NATS deployment model? (Embedded vs separate container)
-- [ ] JWT signing strategy? (Symmetric vs asymmetric keys)
-- [ ] Embedding model for evidence_snippets? (OpenAI vs local)
-- [ ] CSV upload size limits?
-
-### Decisions Made
-- ✅ Use Drizzle ORM for type safety
-- ✅ Use Zod for runtime validation
-- ✅ Use Fastify for performance
-- ✅ NATS for event bus (not Kafka/RabbitMQ)
-- ✅ Separate packages for contracts/schema/utils (enforces boundaries)
+### Must-Have (Blockers)
+- [ ] Q2Q pipeline live with real AI model (not random scores)
+- [ ] Calibration harness computes F1 scores; results in `/reports/q2q_eval.md`
+- [ ] Cockpit displays live metrics with charts
+- [ ] Evidence drawers show anonymized snippets (no PII)
+- [ ] i18n complete for en/uk/no; language switcher works
+- [ ] A11y: axe/Pa11y pass; WCAG 2.2 AA documented
+- [ ] SROI v1.0 and VIS v1.0 calculators with 100% test coverage
+- [ ] Impact-In service delivers to mock endpoints (feature-flagged)
+- [ ] k6 test passes: p75 < 500ms for cockpit queries
+- [ ] All 13 documentation files complete
 
 ---
 
-## Progress Tracking
+## 📊 SERVICES & PACKAGES STATUS
 
-**Overall**: 2 / 100 tasks complete (2%)
+### New Services (Phase B)
+| Service | Port | Status | Lead |
+|---------|------|--------|------|
+| **analytics** | 3007 | 🚀 TO BUILD | Analytics Lead |
+| **impact-in** | 3008 | 🚀 TO BUILD | Connectors Lead |
 
-| Phase | Tasks | Complete | %  |
-|-------|-------|----------|----|
-| 1. Foundation | 10 | 2 | 20% |
-| 2. Data Layer | 35 | 0 | 0% |
-| 3. Core Services | 72 | 0 | 0% |
-| 4. Infrastructure | 20 | 0 | 0% |
-| 5. Documentation | 13 | 0 | 0% |
+### New Apps (Phase B)
+| App | URL | Status | Lead |
+|-----|-----|--------|------|
+| **corp-cockpit-astro** | http://localhost:4321 | 🚀 TO BUILD | Frontend Lead |
 
-**Last Updated**: 2025-11-13 (Auto-updated by orchestrator)
+### New Packages (Phase B)
+| Package | Status | Lead |
+|---------|--------|------|
+| **metrics** | 🚀 TO BUILD | Analytics Lead |
+
+### Existing Services (Phase A - Enhance)
+| Service | Port | Enhancement | Lead |
+|---------|------|-------------|------|
+| q2q-ai | 3005 | Replace stub with real AI | NLP Lead |
+
+---
+
+## 🔗 KEY FILES TO CREATE
+
+### Services
+```
+/services/analytics/               # NEW: Metrics aggregation
+/services/impact-in/               # NEW: Outbound connectors
+```
+
+### Apps
+```
+/apps/corp-cockpit-astro/          # NEW: Astro dashboard
+```
+
+### Packages
+```
+/packages/metrics/                 # NEW: SROI/VIS calculators
+  /src/sroi/calculator.ts
+  /src/sroi/config.ts
+  /src/vis/calculator.ts
+  /src/integration/score.ts
+  /tests/
+```
+
+### Documentation
+```
+/docs/Q2Q_Label_Taxonomy.md
+/docs/Metrics_Catalog.md
+/docs/VIS_Model.md
+/docs/Evidence_Lineage.md
+/docs/Database_Optimization.md
+/docs/impact_in/benevity_spec.md
+/docs/impact_in/goodera_spec.md
+/docs/impact_in/workday_spec.md
+```
+
+### Reports
+```
+/reports/phaseB_worker2_q2q_and_cockpit.md
+/reports/q2q_eval.md
+/reports/cockpit_perf.md
+/reports/impact_in_specs.md
+/reports/cockpit_demo_walkthrough.md
+/reports/a11y_audit.md
+/reports/acceptance_validation.md
+```
+
+### Tests
+```
+/tests/k6/cockpit-load.js
+/tests/integration/e2e-cockpit.test.ts
+```
+
+---
+
+## ✨ SUCCESS DEFINITION
+
+Phase B is **COMPLETE** when:
+1. ✅ Q2Q pipeline classifies real feedback; F1 scores documented
+2. ✅ Cockpit displays live metrics; evidence drawers work
+3. ✅ i18n (en/uk/no) + a11y (WCAG 2.2 AA) complete
+4. ✅ SROI/VIS v1.0 tested and documented
+5. ✅ Impact-In delivers to mock endpoints
+6. ✅ k6 shows p75 < 500ms
+7. ✅ All documentation and reports complete
+8. ✅ Demo walkthrough with screenshots
+
+**LET'S BUILD! 🚀**

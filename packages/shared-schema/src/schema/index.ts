@@ -6,3 +6,4 @@ export * from './upskilling.js';
 export * from './q2q.js';
 export * from './metrics.js';
 export * from './safety.js';
+export * from './impact-in.js';

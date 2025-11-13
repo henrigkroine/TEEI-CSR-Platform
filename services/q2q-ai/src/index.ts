@@ -23,6 +23,10 @@ async function start() {
   // Register routes
   app.register(classifyRoutes);
 
+  // Import and register calibration routes
+  const { calibrationRoutes } = await import('./routes/calibration.js');
+  app.register(calibrationRoutes);
+
   // Start server
   try {
     await app.listen({ port: PORT, host: '0.0.0.0' });
@@ -31,6 +35,12 @@ async function start() {
     logger.info(`  GET  /health - Health check`);
     logger.info(`  POST /classify/text - Classify text and store outcome scores`);
     logger.info(`  GET  /taxonomy - Get outcome dimension definitions`);
+    logger.info(`  POST /q2q/eval/upload - Upload calibration dataset`);
+    logger.info(`  GET  /q2q/eval/datasets - List calibration datasets`);
+    logger.info(`  POST /q2q/eval/run - Run evaluation on dataset`);
+    logger.info(`  GET  /q2q/eval/results - List all evaluation runs`);
+    logger.info(`  GET  /q2q/eval/results/:id - Get evaluation results`);
+    logger.info(`  GET  /q2q/eval/results/:id/report - Get human-readable report`);
   } catch (err) {
     logger.error(err);
     process.exit(1);

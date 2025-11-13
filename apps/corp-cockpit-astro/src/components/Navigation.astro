@@ -1,0 +1,67 @@
+---
+import { t, type Language } from '../lib/i18n';
+import LanguageSwitcher from './LanguageSwitcher';
+
+interface Props {
+  currentPath: string;
+  lang: Language;
+  user?: {
+    email: string;
+    role: string;
+  };
+}
+
+const { currentPath, lang, user } = Astro.props;
+
+const navItems = [
+  { href: '/', label: t(lang, 'nav.dashboard'), icon: 'home' },
+  { href: '/trends', label: t(lang, 'nav.trends'), icon: 'chart' },
+  { href: '/q2q', label: t(lang, 'nav.q2q'), icon: 'feed' },
+  { href: '/sroi', label: t(lang, 'nav.sroi'), icon: 'dollar' },
+  { href: '/vis', label: t(lang, 'nav.vis'), icon: 'star' },
+];
+---
+
+<nav class="bg-white dark:bg-gray-800 shadow-lg">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex justify-between h-16">
+      <div class="flex">
+        <div class="flex-shrink-0 flex items-center">
+          <h1 class="text-xl font-bold text-primary-600 dark:text-primary-400">
+            {t(lang, 'app.title')}
+          </h1>
+        </div>
+        <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
+          {navItems.map((item) => (
+            <a
+              href={item.href}
+              class={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
+                currentPath === item.href
+                  ? 'border-primary-500 text-gray-900 dark:text-white'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:border-gray-300 hover:text-gray-700 dark:hover:text-gray-300'
+              }`}
+            >
+              {item.label}
+            </a>
+          ))}
+        </div>
+      </div>
+      <div class="flex items-center space-x-4">
+        <LanguageSwitcher client:load currentLang={lang} />
+        {user && (
+          <div class="flex items-center space-x-3">
+            <span class="text-sm text-gray-700 dark:text-gray-300">
+              {user.email}
+            </span>
+            <a
+              href="/logout"
+              class="text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+            >
+              {t(lang, 'nav.logout')}
+            </a>
+          </div>
+        )}
+      </div>
+    </div>
+  </div>
+</nav>

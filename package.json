@@ -4,8 +4,8 @@
   "private": true,
   "description": "TEEI CSR Platform - Unified impact measurement ecosystem",
   "scripts": {
-    "dev": "concurrently -n gateway,profile,kintell,buddy,upskilling,q2q,safety \"pnpm --filter @teei/api-gateway dev\" \"pnpm --filter @teei/unified-profile dev\" \"pnpm --filter @teei/kintell-connector dev\" \"pnpm --filter @teei/buddy-service dev\" \"pnpm --filter @teei/upskilling-connector dev\" \"pnpm --filter @teei/q2q-ai dev\" \"pnpm --filter @teei/safety-moderation dev\"",
-    "build": "pnpm -r --filter './packages/**' build && pnpm -r --filter './services/**' build",
+    "dev": "concurrently -n gateway,profile,kintell,buddy,upskilling,q2q,safety,cockpit \"pnpm --filter @teei/api-gateway dev\" \"pnpm --filter @teei/unified-profile dev\" \"pnpm --filter @teei/kintell-connector dev\" \"pnpm --filter @teei/buddy-service dev\" \"pnpm --filter @teei/upskilling-connector dev\" \"pnpm --filter @teei/q2q-ai dev\" \"pnpm --filter @teei/safety-moderation dev\" \"pnpm --filter @teei/corp-cockpit-astro dev\"",
+    "build": "pnpm -r --filter './packages/**' build && pnpm -r --filter './services/**' build && pnpm -r --filter './apps/**' build",
     "test": "pnpm -r test",
     "test:unit": "pnpm -r test:unit",
     "test:integration": "pnpm -r test:integration",

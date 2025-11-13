@@ -1,0 +1,170 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Q2QFeedList from '../components/Q2QFeedList';
+import { detectLanguage, t } from '../lib/i18n';
+import { createApiClient } from '../lib/api';
+
+const lang = detectLanguage(Astro.request);
+
+// Get company ID from cookies or default
+const companyId = Astro.cookies.get('companyId')?.value || 'demo-company';
+
+// Get auth token from cookies
+const token = Astro.cookies.get('auth_token')?.value;
+
+// Fetch summary statistics
+const apiClient = createApiClient(token);
+
+let themeStats: any[] = [];
+let sentimentStats: any = null;
+let error: string | null = null;
+
+try {
+  // Fetch Q2Q summary statistics
+  const summaryData = await apiClient.get(`/metrics/company/${companyId}/q2q-summary`);
+
+  if (summaryData) {
+    themeStats = summaryData.themes || [];
+    sentimentStats = summaryData.sentiment || {
+      positive: 0,
+      neutral: 0,
+      negative: 0,
+    };
+  }
+} catch (e: any) {
+  error = e.message || 'Failed to load Q2Q summary';
+  console.error('Q2Q summary error:', e);
+}
+
+// Default sentiment if not loaded
+if (!sentimentStats) {
+  sentimentStats = { positive: 0, neutral: 0, negative: 0 };
+}
+
+// Calculate total for percentages
+const totalSentiment = sentimentStats.positive + sentimentStats.neutral + sentimentStats.negative;
+
+const sentimentPercentages = {
+  positive: totalSentiment > 0 ? ((sentimentStats.positive / totalSentiment) * 100).toFixed(0) : 0,
+  neutral: totalSentiment > 0 ? ((sentimentStats.neutral / totalSentiment) * 100).toFixed(0) : 0,
+  negative: totalSentiment > 0 ? ((sentimentStats.negative / totalSentiment) * 100).toFixed(0) : 0,
+};
+---
+
+<Layout title={t(lang, 'q2q.title')}>
+  <div class="space-y-8">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
+          {t(lang, 'q2q.title')}
+        </h1>
+        <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+          {t(lang, 'q2q.qualitativeInsights')}
+        </p>
+      </div>
+      <div class="flex space-x-3">
+        <button
+          id="exportCsvBtn"
+          class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700"
+        >
+          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+          </svg>
+          {t(lang, 'common.exportCsv')}
+        </button>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="lg:col-span-2">
+        <Q2QFeedList client:load companyId={companyId} token={token} lang={lang} />
+      </div>
+
+      <div class="space-y-6">
+        {themeStats.length > 0 && (
+          <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+              {t(lang, 'q2q.themes')}
+            </h2>
+            <div class="space-y-3">
+              {themeStats.slice(0, 5).map((theme: any) => {
+                const maxCount = Math.max(...themeStats.map((t: any) => t.count || 0));
+                const percentage = maxCount > 0 ? (theme.count / maxCount) * 100 : 0;
+
+                return (
+                  <div class="flex items-center justify-between">
+                    <div class="flex-1">
+                      <p class="text-sm font-medium text-gray-900 dark:text-white">
+                        {theme.name || theme.dimension}
+                      </p>
+                      <div class="mt-1 w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                        <div
+                          class="bg-primary-600 h-2 rounded-full"
+                          style={`width: ${percentage}%`}
+                        ></div>
+                      </div>
+                    </div>
+                    <div class="ml-3 text-right">
+                      <p class="text-sm font-semibold text-gray-900 dark:text-white">
+                        {theme.count || 0}
+                      </p>
+                      {theme.trend && (
+                        <p class="text-xs text-green-600 dark:text-green-400">
+                          {theme.trend}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+          <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            {t(lang, 'q2q.sentiment')}
+          </h2>
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-gray-600 dark:text-gray-400">{t(lang, 'q2q.positive')}</span>
+              <span class="text-sm font-semibold text-green-600 dark:text-green-400">{sentimentPercentages.positive}%</span>
+            </div>
+            <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+              <div class="bg-green-500 h-2 rounded-full" style={`width: ${sentimentPercentages.positive}%`}></div>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-gray-600 dark:text-gray-400">{t(lang, 'q2q.neutral')}</span>
+              <span class="text-sm font-semibold text-yellow-600 dark:text-yellow-400">{sentimentPercentages.neutral}%</span>
+            </div>
+            <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+              <div class="bg-yellow-500 h-2 rounded-full" style={`width: ${sentimentPercentages.neutral}%`}></div>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-gray-600 dark:text-gray-400">{t(lang, 'q2q.negative')}</span>
+              <span class="text-sm font-semibold text-red-600 dark:text-red-400">{sentimentPercentages.negative}%</span>
+            </div>
+            <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+              <div class="bg-red-500 h-2 rounded-full" style={`width: ${sentimentPercentages.negative}%`}></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    import { exportQ2QFeedToCSV } from '../lib/export';
+
+    // CSV Export button
+    document.getElementById('exportCsvBtn')?.addEventListener('click', async () => {
+      try {
+        const companyId = 'demo-company';
+        await exportQ2QFeedToCSV(companyId);
+      } catch (error) {
+        console.error('Export failed:', error);
+        alert('Failed to export CSV. Please try again.');
+      }
+    });
+  </script>
+</Layout>

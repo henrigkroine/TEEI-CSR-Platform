@@ -1,0 +1,77 @@
+### Analytics Service API Tests
+### Port: 3007
+@baseUrl = http://localhost:3007
+
+### Health Check
+GET {{baseUrl}}/health
+Content-Type: application/json
+
+###
+
+### Get period metrics for a company - Monthly
+### Replace {companyId} with actual UUID
+@companyId = 00000000-0000-0000-0000-000000000001
+
+GET {{baseUrl}}/metrics/company/{{companyId}}/period/2024-01
+Content-Type: application/json
+
+###
+
+### Get period metrics for a company - Quarterly
+GET {{baseUrl}}/metrics/company/{{companyId}}/period/2024-Q1
+Content-Type: application/json
+
+###
+
+### Get SROI report for a company
+GET {{baseUrl}}/metrics/sroi/{{companyId}}
+Content-Type: application/json
+
+###
+
+### Get SROI report with date range
+GET {{baseUrl}}/metrics/sroi/{{companyId}}?startDate=2024-01-01&endDate=2024-12-31
+Content-Type: application/json
+
+###
+
+### Get VIS report for a company
+GET {{baseUrl}}/metrics/vis/{{companyId}}
+Content-Type: application/json
+
+###
+
+### Get VIS report with date range
+GET {{baseUrl}}/metrics/vis/{{companyId}}?startDate=2024-01-01&endDate=2024-12-31
+Content-Type: application/json
+
+###
+
+### Trigger aggregation for all companies
+POST {{baseUrl}}/metrics/aggregate
+Content-Type: application/json
+
+{}
+
+###
+
+### Trigger aggregation for specific company
+POST {{baseUrl}}/metrics/aggregate
+Content-Type: application/json
+
+{
+  "companyId": "{{companyId}}"
+}
+
+###
+
+### Trigger aggregation for specific period
+POST {{baseUrl}}/metrics/aggregate
+Content-Type: application/json
+
+{
+  "companyId": "{{companyId}}",
+  "period": "2024-01"
+}
+
+###

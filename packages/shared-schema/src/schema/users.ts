@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, timestamp, text } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, timestamp, jsonb } from 'drizzle-orm/pg-core';
 
 export const users = pgTable('users', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -15,6 +15,7 @@ export const companies = pgTable('companies', {
   name: varchar('name', { length: 255 }).notNull(),
   industry: varchar('industry', { length: 100 }),
   country: varchar('country', { length: 100 }),
+  features: jsonb('features'), // Feature flags: { impactIn: { benevity: true, goodera: false, workday: true } }
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
