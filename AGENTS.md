@@ -1,96 +1,103 @@
-# Multi-Agent Team Structure
+# Multi-Agent Orchestration Structure
 
-## Worker 2: Backend Services & Data Contracts
+## Worker 3: Corporate Cockpit & Metrics Team
 
-**Tech Lead Orchestrator** - You are here
-**Mission**: Stand up backend service layer, shared data contracts, Postgres schema, event contracts, and data ingestion paths.
+**Tech Lead Orchestrator**: Coordinates 30 specialist agents across 5 teams
 
-### Team Structure (30 agents / 5 leads)
+## Team Structure (30 Agents / 5 Leads)
 
-#### 1. **Data Modeling Lead** (6 agents)
-- Schema Architect: Design Drizzle models for all entities
-- Migration Engineer: Create versioned migrations + seed scripts
-- Data Privacy Specialist: Ensure PII partitioning and surrogate keys
-- Contract Designer: Define event contracts with versioning
-- Validation Engineer: Zod schemas for all payloads
-- Documentation Writer: Schema docs and ER diagrams
+### Team 1: Frontend Engineering (6 agents)
+**Lead**: Frontend Architect
+- **Agent 1.1**: Astro 5 Setup Specialist (routing, SSR, islands)
+- **Agent 1.2**: React Component Developer (widgets, charts)
+- **Agent 1.3**: UI/UX Designer (layouts, responsive design)
+- **Agent 1.4**: A11y Specialist (WCAG 2.2 AA compliance)
+- **Agent 1.5**: i18n Engineer (en/uk/no, SEO, hreflang)
+- **Agent 1.6**: State Management Developer (auth, RBAC, context)
 
-#### 2. **Connector Services Lead** (8 agents)
-- Kintell Integration Engineer: Webhook receivers + CSV importer
-- Buddy Integration Engineer: Match/event/checkin/feedback adapters
-- Upskilling Integration Engineer: Course completion ingestion
-- Mapper Specialist: Normalization rules for external data
-- Event Publisher: Ensure all connectors emit proper events
-- Test Engineer: Integration tests for each connector
-- CSV Parser Specialist: Robust parsing with validation
-- API Client Developer: External API adapters
+### Team 2: Backend & Data Services (7 agents)
+**Lead**: Backend Architect
+- **Agent 2.1**: Reporting API Engineer (metrics endpoints)
+- **Agent 2.2**: Database Schema Designer (PostgreSQL models)
+- **Agent 2.3**: SROI Calculator Engineer (formula implementation)
+- **Agent 2.4**: VIS Calculator Engineer (volunteer scoring)
+- **Agent 2.5**: Export Service Developer (CSV/JSON/PDF)
+- **Agent 2.6**: Rate Limiting & Security Engineer
+- **Agent 2.7**: API Documentation Specialist (OpenAPI/Swagger)
 
-#### 3. **Core Services Lead** (8 agents)
-- Profile Service Engineer: GET/PUT profile, ID mapping
-- Q2Q AI Architect: Outcome taxonomy + classifier skeleton
-- Safety/Moderation Engineer: Text screening interface
-- Event Bus Engineer: NATS client wrapper + SDK
-- API Gateway Engineer: JWT auth, RBAC, reverse proxy
-- Service Mesh Specialist: Inter-service communication
-- Health Check Engineer: Monitoring endpoints
-- Config Management: Environment-aware configuration
+### Team 3: Integration & External APIs (6 agents)
+**Lead**: Integration Architect
+- **Agent 3.1**: Impact-In API Developer (outbound push)
+- **Agent 3.2**: Benevity Connector Engineer (stub + mapper)
+- **Agent 3.3**: Goodera Connector Engineer (stub + mapper)
+- **Agent 3.4**: Workday Connector Engineer (stub + mapper)
+- **Agent 3.5**: Discord Bot Developer (feedback hooks)
+- **Agent 3.6**: Webhook & Event System Engineer
 
-#### 4. **Infrastructure Lead** (4 agents)
-- DevOps Engineer: Docker Compose setup (Postgres, NATS)
-- Database Admin: Connection pooling, query optimization
-- Deployment Specialist: Local dev scripts (pnpm -w dev)
-- Observability Engineer: Logging and tracing setup
+### Team 4: AI & Q2Q Pipeline (5 agents)
+**Lead**: AI/ML Engineer
+- **Agent 4.1**: Q2Q Feed Generator (qualitative to quantitative)
+- **Agent 4.2**: Evidence Lineage Tracker (provenance)
+- **Agent 4.3**: Insight Scoring Engine (confidence ratings)
+- **Agent 4.4**: NLP Preprocessor (feedback analysis)
+- **Agent 4.5**: ML Model Evaluator (quality metrics)
 
-#### 5. **Quality & Testing Lead** (4 agents)
-- Unit Test Engineer: Mappers and contracts tests
-- Integration Test Engineer: End-to-end CSV → events → profile
-- API Test Engineer: .http files for smoke tests
-- QA Coordinator: Acceptance criteria validation
+### Team 5: DevOps, QA & Documentation (6 agents)
+**Lead**: QA & DevOps Lead
+- **Agent 5.1**: Test Engineer (unit, integration tests)
+- **Agent 5.2**: E2E Test Specialist (Playwright scenarios)
+- **Agent 5.3**: CI/CD Engineer (build, deploy pipelines)
+- **Agent 5.4**: Technical Writer (docs, playbooks)
+- **Agent 5.5**: Demo & Sample Data Engineer
+- **Agent 5.6**: Performance & Monitoring Engineer
 
----
+## Orchestration Workflow
 
-## Deliverables Ownership
+### Phase 1: Foundation (Leads 1, 2, 5)
+1. Frontend Lead: Set up Astro 5 app structure
+2. Backend Lead: Create service skeletons
+3. QA Lead: Initialize test frameworks
 
-| Deliverable | Lead | Specialists |
-|------------|------|-------------|
-| Event Contracts | Data Modeling | Contract Designer, Validation Engineer |
-| Shared Schema | Data Modeling | Schema Architect, Migration Engineer, Data Privacy |
-| Event Bus SDK | Core Services | Event Bus Engineer, Service Mesh |
-| Unified Profile | Core Services | Profile Service Engineer, Health Check |
-| Kintell Connector | Connector Services | Kintell Integration, CSV Parser, Mapper |
-| Buddy Service | Connector Services | Buddy Integration, Event Publisher |
-| Upskilling Connector | Connector Services | Upskilling Integration, API Client |
-| Q2Q AI Skeleton | Core Services | Q2Q AI Architect |
-| Safety/Moderation | Core Services | Safety Engineer |
-| API Gateway | Core Services | API Gateway Engineer, Config Management |
-| Docker/Local Dev | Infrastructure | DevOps, Database Admin, Deployment |
-| Tests | Quality & Testing | All test engineers |
+### Phase 2: Core Services (Leads 2, 4)
+1. Backend Lead: Implement reporting endpoints
+2. AI Lead: Build Q2Q pipeline
+3. Backend Lead: SROI/VIS calculators
 
----
+### Phase 3: UI & Integration (Leads 1, 3)
+1. Frontend Lead: Build dashboard widgets
+2. Integration Lead: Create Impact-In API
+3. Integration Lead: Discord bot setup
+
+### Phase 4: Polish & Demo (All Leads)
+1. Frontend Lead: A11y audit and i18n
+2. Integration Lead: Test all connectors
+3. QA Lead: Sample data and demo
+4. QA Lead: Documentation review
 
 ## Communication Protocol
 
-1. **Orchestrator → Leads**: Task decomposition with acceptance criteria
-2. **Leads → Specialists**: Specific implementation instructions
-3. **Specialists → Leads**: Completed artifacts (code, tests, docs)
-4. **Leads → Orchestrator**: Integration report + blockers
-5. **All outputs**: File commits to repository
-
----
-
-## Branch Strategy
-
-**Development Branch**: `worker2/services-schema-ingestion`
-**Commit Strategy**: Small, incremental commits per deliverable
-**PR Target**: Main branch with comprehensive checklist
-
----
+- **Daily**: Lead standup (5 mins)
+- **Blockers**: Escalate to Tech Lead immediately
+- **Commits**: Small, atomic, tested slices
+- **Documentation**: Update `MULTI_AGENT_PLAN.md` after each milestone
 
 ## Success Criteria
 
-- ✅ Migrations run; seed data loads
-- ✅ Importers accept sample CSVs; events published
-- ✅ Q2Q skeleton writes tags/scores for dummy texts
-- ✅ API Gateway exposes health endpoints for all services
-- ✅ Integration test passes end-to-end
-- ✅ All services documented in Platform_Architecture.md
+✅ All endpoints return shaped data
+✅ UI builds and runs with `pnpm -w dev`
+✅ SROI/VIS formulas tested and documented
+✅ Discord bot receives feedback
+✅ Demo dashboard renders with mock data
+✅ A11y baseline passes (WCAG 2.2 AA)
+✅ i18n works for en/uk/no
+✅ Export functions download files
+✅ No secrets in repo
+✅ PR ready with screenshots
+
+## Agent Coordination Rules
+
+1. **No specialist does the Tech Lead's orchestration**
+2. **No implementation overlap** - clear ownership
+3. **Dependencies mapped** - blocked work escalated early
+4. **Test coverage required** - no merges without tests
+5. **Documentation mandatory** - every formula, API, decision documented

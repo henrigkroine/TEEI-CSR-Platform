@@ -1,0 +1,97 @@
+---
+// Navigation component for authenticated users
+const currentPath = Astro.url.pathname;
+
+const navItems = [
+  { href: '/dashboard', label: 'Dashboard', icon: '📊' },
+  { href: '/reports', label: 'Reports', icon: '📈' },
+  { href: '/export', label: 'Export', icon: '📥' },
+  { href: '/settings', label: 'Settings', icon: '⚙️' },
+];
+---
+
+<nav class="main-nav" aria-label="Main navigation">
+  <ul role="list">
+    {navItems.map((item) => (
+      <li>
+        <a
+          href={item.href}
+          class:list={['nav-item', { active: currentPath === item.href }]}
+          aria-current={currentPath === item.href ? 'page' : undefined}
+        >
+          <span class="nav-icon" aria-hidden="true">{item.icon}</span>
+          <span class="nav-label">{item.label}</span>
+        </a>
+      </li>
+    ))}
+  </ul>
+</nav>
+
+<style>
+  .main-nav {
+    width: 100%;
+  }
+
+  ul {
+    list-style: none;
+    display: flex;
+    gap: calc(var(--spacing-unit) * 2);
+    flex-wrap: wrap;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: calc(var(--spacing-unit) * 1);
+    padding: calc(var(--spacing-unit) * 1.5) calc(var(--spacing-unit) * 2);
+    border-radius: var(--border-radius);
+    text-decoration: none;
+    color: var(--color-text-secondary);
+    font-weight: 500;
+    transition: all 0.2s;
+    background-color: transparent;
+  }
+
+  .nav-item:hover {
+    background-color: var(--color-bg-secondary);
+    color: var(--color-primary);
+  }
+
+  .nav-item:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+
+  .nav-item.active {
+    color: var(--color-primary);
+    background-color: var(--color-bg-secondary);
+    font-weight: 600;
+  }
+
+  .nav-icon {
+    font-size: 1.25rem;
+    line-height: 1;
+  }
+
+  .nav-label {
+    font-size: 0.9375rem;
+  }
+
+  @media (max-width: 768px) {
+    ul {
+      justify-content: center;
+    }
+
+    .nav-label {
+      display: none;
+    }
+
+    .nav-item {
+      padding: calc(var(--spacing-unit) * 1.5);
+    }
+
+    .nav-icon {
+      font-size: 1.5rem;
+    }
+  }
+</style>

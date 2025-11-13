@@ -93,6 +93,10 @@ venv/
 docs/_build/
 docs/.vitepress/dist/
 
+# Astro
+.astro/
+dist-astro/
+
 # Secrets and credentials
 *.pem
 *.key

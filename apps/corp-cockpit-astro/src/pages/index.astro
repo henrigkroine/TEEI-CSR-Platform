@@ -1,0 +1,168 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="Welcome to TEEI Corporate Cockpit">
+  <div class="hero">
+    <h1>Welcome to TEEI Corporate Cockpit</h1>
+    <p class="subtitle">
+      Transform qualitative social impact into quantifiable business outcomes
+    </p>
+    <div class="cta-buttons">
+      <a href="/login" class="btn btn-primary">Sign In</a>
+      <a href="/dashboard" class="btn btn-secondary">View Demo</a>
+    </div>
+  </div>
+
+  <section class="features">
+    <h2>Key Features</h2>
+    <div class="features-grid">
+      <div class="feature-card">
+        <span class="feature-icon">📊</span>
+        <h3>Real-time Impact Metrics</h3>
+        <p>Track SROI, VIS, and outcome dimensions in real-time</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">🎯</span>
+        <h3>Q2Q AI Engine</h3>
+        <p>Convert qualitative feedback into quantitative insights</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">📈</span>
+        <h3>Executive Dashboards</h3>
+        <p>Beautiful, accessible dashboards for decision-makers</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">🔗</span>
+        <h3>Integration Ready</h3>
+        <p>Connect with Benevity, Goodera, and Workday</p>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .hero {
+    text-align: center;
+    padding: calc(var(--spacing-unit) * 8) 0;
+  }
+
+  h1 {
+    font-size: 3rem;
+    font-weight: 700;
+    color: var(--color-text);
+    margin-bottom: calc(var(--spacing-unit) * 2);
+  }
+
+  .subtitle {
+    font-size: 1.25rem;
+    color: var(--color-text-secondary);
+    max-width: 600px;
+    margin: 0 auto calc(var(--spacing-unit) * 4);
+  }
+
+  .cta-buttons {
+    display: flex;
+    gap: calc(var(--spacing-unit) * 2);
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    display: inline-block;
+    padding: calc(var(--spacing-unit) * 1.5) calc(var(--spacing-unit) * 3);
+    border-radius: var(--border-radius);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 1rem;
+    transition: all 0.2s;
+    cursor: pointer;
+    border: 2px solid transparent;
+  }
+
+  .btn:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+
+  .btn-primary {
+    background-color: var(--color-primary);
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background-color: #0052a3;
+  }
+
+  .btn-secondary {
+    background-color: transparent;
+    color: var(--color-primary);
+    border-color: var(--color-primary);
+  }
+
+  .btn-secondary:hover {
+    background-color: var(--color-primary);
+    color: white;
+  }
+
+  .features {
+    padding: calc(var(--spacing-unit) * 6) 0;
+  }
+
+  .features h2 {
+    text-align: center;
+    font-size: 2rem;
+    margin-bottom: calc(var(--spacing-unit) * 5);
+  }
+
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: calc(var(--spacing-unit) * 3);
+  }
+
+  .feature-card {
+    background-color: var(--color-bg);
+    padding: calc(var(--spacing-unit) * 3);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-md);
+    text-align: center;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+
+  .feature-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .feature-icon {
+    font-size: 3rem;
+    display: block;
+    margin-bottom: calc(var(--spacing-unit) * 2);
+  }
+
+  .feature-card h3 {
+    font-size: 1.25rem;
+    margin-bottom: calc(var(--spacing-unit) * 1);
+    color: var(--color-text);
+  }
+
+  .feature-card p {
+    color: var(--color-text-secondary);
+    line-height: 1.5;
+  }
+
+  @media (max-width: 768px) {
+    h1 {
+      font-size: 2rem;
+    }
+
+    .subtitle {
+      font-size: 1rem;
+    }
+
+    .features-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

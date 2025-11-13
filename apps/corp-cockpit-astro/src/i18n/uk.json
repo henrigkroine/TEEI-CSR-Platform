@@ -1,0 +1,47 @@
+{
+  "nav": {
+    "dashboard": "Панель керування",
+    "reports": "Звіти",
+    "export": "Експорт",
+    "settings": "Налаштування"
+  },
+  "auth": {
+    "signIn": "Увійти",
+    "signOut": "Вийти",
+    "email": "Електронна пошта",
+    "password": "Пароль",
+    "welcomeBack": "З поверненням",
+    "signInPrompt": "Увійдіть, щоб отримати доступ до корпоративної панелі",
+    "invalidCredentials": "Невірні облікові дані. Будь ласка, спробуйте ще раз.",
+    "demoCredentials": "Демонстраційні облікові дані"
+  },
+  "dashboard": {
+    "title": "Панель корпоративного впливу",
+    "welcome": "Ласкаво просимо, {name}",
+    "atAGlance": "Швидкий огляд метрик",
+    "outcomeTrends": "Тенденції результатів",
+    "q2qInsights": "Q2Q аналітика",
+    "sroiPanel": "Панель SROI",
+    "visLeaderboard": "Таблиця лідерів VIS",
+    "exportData": "Експорт даних"
+  },
+  "metrics": {
+    "volunteers": "Волонтери",
+    "hours": "Години",
+    "sessions": "Сесії",
+    "participants": "Учасники",
+    "integration": "Інтеграція",
+    "language": "Мова",
+    "jobReadiness": "Готовність до роботи"
+  },
+  "common": {
+    "loading": "Завантаження...",
+    "error": "Сталася помилка",
+    "noData": "Дані відсутні",
+    "comingSoon": "Незабаром",
+    "back": "Назад",
+    "next": "Далі",
+    "save": "Зберегти",
+    "cancel": "Скасувати"
+  }
+}

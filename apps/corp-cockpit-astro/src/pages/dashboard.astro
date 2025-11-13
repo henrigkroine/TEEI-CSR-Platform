@@ -1,0 +1,142 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { hasPermission } from '../utils/rbac';
+import AtAGlance from '../components/widgets/AtAGlance.tsx';
+import SROIPanel from '../components/widgets/SROIPanel.tsx';
+import VISPanel from '../components/widgets/VISPanel.tsx';
+import Q2QFeed from '../components/widgets/Q2QFeed.tsx';
+import ExportButtons from '../components/widgets/ExportButtons.tsx';
+
+const user = Astro.locals.user;
+
+if (!user) {
+  return Astro.redirect('/login');
+}
+
+const canExport = hasPermission(user.role, 'EXPORT_DATA');
+---
+
+<BaseLayout title="Dashboard - TEEI Corporate Cockpit">
+  <div class="dashboard-header">
+    <div>
+      <h1>Corporate Impact Dashboard</h1>
+      <p class="welcome">Welcome back, {user.name}</p>
+    </div>
+    <div class="header-actions">
+      <span class="role-badge">{user.role}</span>
+      <form method="POST" action="/api/logout">
+        <button type="submit" class="btn btn-secondary">Sign Out</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="dashboard-grid">
+    <AtAGlance companyId={user.company_id} client:load />
+    <SROIPanel companyId={user.company_id} client:load />
+    <VISPanel companyId={user.company_id} client:load />
+    <Q2QFeed companyId={user.company_id} limit={10} client:load />
+    {canExport && <ExportButtons companyId={user.company_id} client:load />}
+  </div>
+</BaseLayout>
+
+<style>
+  .dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: calc(var(--spacing-unit) * 4);
+    flex-wrap: wrap;
+    gap: calc(var(--spacing-unit) * 2);
+  }
+
+  h1 {
+    font-size: 2rem;
+    margin-bottom: calc(var(--spacing-unit) * 0.5);
+  }
+
+  .welcome {
+    color: var(--color-text-secondary);
+    font-size: 1rem;
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: calc(var(--spacing-unit) * 2);
+  }
+
+  .role-badge {
+    padding: calc(var(--spacing-unit) * 1) calc(var(--spacing-unit) * 2);
+    background-color: var(--color-primary);
+    color: white;
+    border-radius: calc(var(--border-radius) / 2);
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .btn {
+    padding: calc(var(--spacing-unit) * 1.5) calc(var(--spacing-unit) * 2);
+    border: none;
+    border-radius: var(--border-radius);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-secondary {
+    background-color: var(--color-bg-secondary);
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+  }
+
+  .btn-secondary:hover {
+    background-color: var(--color-border);
+  }
+
+  .dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: calc(var(--spacing-unit) * 3);
+  }
+
+  .widget-placeholder {
+    background-color: var(--color-bg);
+    padding: calc(var(--spacing-unit) * 3);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-md);
+    border: 2px dashed var(--color-border);
+    text-align: center;
+  }
+
+  .widget-placeholder h2 {
+    font-size: 1.25rem;
+    margin-bottom: calc(var(--spacing-unit) * 1);
+  }
+
+  .widget-placeholder p {
+    color: var(--color-text-secondary);
+    margin-bottom: calc(var(--spacing-unit) * 2);
+  }
+
+  .coming-soon {
+    padding: calc(var(--spacing-unit) * 2);
+    background-color: var(--color-bg-secondary);
+    border-radius: var(--border-radius);
+    color: var(--color-text-secondary);
+    font-style: italic;
+    font-size: 0.875rem;
+  }
+
+  @media (max-width: 768px) {
+    .dashboard-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .dashboard-header {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+  }
+</style>

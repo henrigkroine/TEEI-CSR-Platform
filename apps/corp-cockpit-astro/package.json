@@ -1,0 +1,25 @@
+{
+  "name": "@teei/corp-cockpit-astro",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev --port 4321",
+    "build": "astro check && astro build",
+    "preview": "astro preview",
+    "astro": "astro",
+    "typecheck": "astro check"
+  },
+  "dependencies": {
+    "@astrojs/react": "^3.0.9",
+    "@astrojs/node": "^8.2.0",
+    "astro": "^4.2.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.48",
+    "@types/react-dom": "^18.2.18",
+    "typescript": "^5.3.3"
+  }
+}
