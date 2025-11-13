@@ -1,0 +1,206 @@
+---
+import BaseLayout from '../../../../../layouts/BaseLayout.astro';
+import { hasPermission } from '../../../../../types/roles';
+import APIKeyManager from '../../../../../components/admin/APIKeyManager.tsx';
+import ImpactInToggles from '../../../../../components/admin/ImpactInToggles.tsx';
+import WeightOverrides from '../../../../../components/admin/WeightOverrides.tsx';
+import AuditLog from '../../../../../components/admin/AuditLog.tsx';
+
+// Extract route parameters
+const { lang, companyId } = Astro.params;
+const user = Astro.locals.user;
+const tenantContext = Astro.locals.tenantContext;
+
+// Middleware handles auth/tenant validation, but double-check
+if (!user || !tenantContext) {
+  return Astro.redirect('/login');
+}
+
+// Verify user has admin console access
+if (!hasPermission(user.role, 'ADMIN_CONSOLE')) {
+  return Astro.redirect(`/${lang}/cockpit/401?reason=insufficient_permissions`);
+}
+
+const canManageAPIKeys = hasPermission(user.role, 'MANAGE_API_KEYS');
+const canManageIntegrations = hasPermission(user.role, 'MANAGE_INTEGRATIONS');
+const canOverrideWeights = hasPermission(user.role, 'OVERRIDE_WEIGHTS');
+---
+
+<BaseLayout title="Admin Console - TEEI Corporate Cockpit" lang={lang}>
+  <div class="admin-header">
+    <div>
+      <h1>Admin Console</h1>
+      <p class="breadcrumb">
+        <a href={`/${lang}/cockpit/${companyId}`}>Dashboard</a>
+        <span class="separator">›</span>
+        <span>Admin</span>
+      </p>
+    </div>
+    <div class="role-indicator">
+      <span class="role-badge">{user.role}</span>
+    </div>
+  </div>
+
+  <div class="admin-grid">
+    <!-- API Key Management -->
+    {canManageAPIKeys && (
+      <section class="admin-section">
+        <h2>
+          <span class="icon">🔑</span>
+          API Keys
+        </h2>
+        <p class="section-description">
+          Manage API keys for programmatic access to your company's data.
+        </p>
+        <APIKeyManager companyId={companyId} client:load />
+      </section>
+    )}
+
+    <!-- Impact-In Integrations -->
+    {canManageIntegrations && (
+      <section class="admin-section">
+        <h2>
+          <span class="icon">📡</span>
+          Impact-In Integrations
+        </h2>
+        <p class="section-description">
+          Configure which third-party platforms receive your impact data.
+        </p>
+        <ImpactInToggles companyId={companyId} client:load />
+      </section>
+    )}
+
+    <!-- SROI/VIS Weight Overrides -->
+    {canOverrideWeights && (
+      <section class="admin-section">
+        <h2>
+          <span class="icon">⚖️</span>
+          Calculation Weight Overrides
+        </h2>
+        <p class="section-description">
+          Customize SROI and VIS calculation weights for your organization.
+        </p>
+        <WeightOverrides companyId={companyId} client:load />
+      </section>
+    )}
+
+    <!-- Audit Log -->
+    <section class="admin-section full-width">
+      <h2>
+        <span class="icon">📜</span>
+        Audit Log
+      </h2>
+      <p class="section-description">
+        Track administrative actions and configuration changes.
+      </p>
+      <AuditLog companyId={companyId} limit={20} client:load />
+    </section>
+  </div>
+</BaseLayout>
+
+<style>
+  .admin-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: calc(var(--spacing-unit) * 4);
+    flex-wrap: wrap;
+    gap: calc(var(--spacing-unit) * 2);
+    padding-bottom: calc(var(--spacing-unit) * 3);
+    border-bottom: 2px solid var(--color-border);
+  }
+
+  h1 {
+    font-size: 2rem;
+    margin-bottom: calc(var(--spacing-unit) * 1);
+    color: var(--color-text);
+  }
+
+  .breadcrumb {
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+  }
+
+  .breadcrumb a {
+    color: var(--color-primary);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+
+  .breadcrumb a:hover {
+    color: var(--color-primary-dark);
+  }
+
+  .separator {
+    margin: 0 calc(var(--spacing-unit) * 1);
+  }
+
+  .role-indicator {
+    display: flex;
+    align-items: center;
+    gap: calc(var(--spacing-unit) * 2);
+  }
+
+  .role-badge {
+    padding: calc(var(--spacing-unit) * 1) calc(var(--spacing-unit) * 2);
+    background-color: var(--color-primary);
+    color: white;
+    border-radius: calc(var(--border-radius) / 2);
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .admin-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+    gap: calc(var(--spacing-unit) * 4);
+  }
+
+  .admin-section {
+    background-color: var(--color-bg);
+    padding: calc(var(--spacing-unit) * 4);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--color-border);
+  }
+
+  .admin-section.full-width {
+    grid-column: 1 / -1;
+  }
+
+  .admin-section h2 {
+    font-size: 1.5rem;
+    margin-bottom: calc(var(--spacing-unit) * 1);
+    color: var(--color-text);
+    display: flex;
+    align-items: center;
+    gap: calc(var(--spacing-unit) * 1.5);
+  }
+
+  .admin-section .icon {
+    font-size: 1.75rem;
+  }
+
+  .section-description {
+    color: var(--color-text-secondary);
+    margin-bottom: calc(var(--spacing-unit) * 3);
+    line-height: 1.5;
+    font-size: 0.9375rem;
+  }
+
+  @media (max-width: 768px) {
+    .admin-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .admin-header {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .admin-section {
+      padding: calc(var(--spacing-unit) * 3);
+    }
+  }
+</style>
