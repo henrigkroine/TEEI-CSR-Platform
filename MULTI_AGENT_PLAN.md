@@ -280,12 +280,12 @@
 - [x] Secrets Manager - Config loaders
 
 ### Platform Lead Progress
-- [ ] API Versioning Engineer - /v1 routes
-- [ ] OpenAPI Specialist - Spec generation
-- [ ] Contract Test Engineer - Pact tests
-- [ ] Idempotency Engineer - Deduplication
-- [ ] DLQ Architect - Dead-letter queues
-- [ ] Circuit Breaker Engineer - Resilience patterns
+- [x] API Versioning Engineer - /v1 routes
+- [x] OpenAPI Specialist - Spec generation
+- [x] Contract Test Engineer - Pact tests
+- [x] Idempotency Engineer - Deduplication
+- [x] DLQ Architect - Dead-letter queues
+- [x] Circuit Breaker Engineer - Resilience patterns
 
 ### Reliability Lead Progress
 - [ ] OTel Engineer - Tracing + metrics
@@ -327,11 +327,11 @@
 - [ ] All services use RS256 JWT with JWKS
 - [ ] OIDC SSO routes implemented
 - [ ] Webhook HMAC validation in connectors
-- [ ] All APIs versioned with `/v1` prefix
-- [ ] OpenAPI specs generated + merged
-- [ ] Idempotency tables + deduplication logic
-- [ ] DLQ + retry logic for NATS
-- [ ] Circuit breakers on inter-service HTTP
+- [x] All APIs versioned with `/v1` prefix
+- [x] OpenAPI specs generated + merged
+- [x] Idempotency tables + deduplication logic
+- [x] DLQ + retry logic for NATS
+- [x] Circuit breakers on inter-service HTTP
 - [ ] OTel instrumentation in all services
 - [ ] Sentry error tracking configured
 - [ ] Health endpoints (liveness/readiness)
