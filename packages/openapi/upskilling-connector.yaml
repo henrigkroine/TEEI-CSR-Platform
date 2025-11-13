@@ -1,0 +1,71 @@
+openapi: 3.0.3
+info:
+  title: Upskilling Connector Service API
+  version: 1.0.0
+  description: |
+    Upskilling Connector integrates with external learning platforms,
+    handling course completions, progress updates, and credential issuance.
+  contact:
+    name: TEEI Platform Team
+servers:
+  - url: http://localhost:3004
+    description: Local development
+  - url: http://localhost:3000/v1/upskilling
+    description: Via API Gateway (local)
+paths:
+  /health:
+    get:
+      summary: Health check endpoint
+      operationId: getHealth
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  service:
+                    type: string
+                  timestamp:
+                    type: string
+                    format: date-time
+  /v1/import/completions:
+    post:
+      summary: Import course completions from CSV
+      operationId: importCompletions
+      tags:
+        - Import
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: CSV file containing course completion data
+      responses:
+        '200':
+          description: Import successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  imported:
+                    type: integer
+                  failed:
+                    type: integer
+        '400':
+          description: Invalid file or format

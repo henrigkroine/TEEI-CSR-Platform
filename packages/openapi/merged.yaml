@@ -1,0 +1,268 @@
+openapi: 3.0.3
+info:
+  title: TEEI CSR Platform - Complete API Reference
+  version: 1.0.0
+  description: |
+    Complete API reference for the TEEI CSR Platform, merging all microservice endpoints.
+    All endpoints are versioned with /v1 prefix for stability and backward compatibility.
+
+    ## Services:
+    - **API Gateway** - Unified entry point with JWT auth and rate limiting
+    - **Unified Profile** - User profile management and identity unification
+    - **Kintell Connector** - Skills taxonomy integration
+    - **Buddy Service** - Peer mentorship program management
+    - **Upskilling Connector** - Learning platform integration
+    - **Q2Q AI** - Outcome classification and taxonomy
+    - **Safety & Moderation** - Content screening and policy enforcement
+
+  contact:
+    name: TEEI Platform Team
+servers:
+  - url: http://localhost:3000
+    description: Local development (via API Gateway)
+tags:
+  - name: Gateway
+    description: API Gateway endpoints
+  - name: Health
+    description: Health check endpoints
+  - name: Profile
+    description: User profile management
+  - name: Kintell
+    description: Skills taxonomy integration
+  - name: Buddy
+    description: Peer mentorship
+  - name: Upskilling
+    description: Learning platform integration
+  - name: Q2Q
+    description: AI classification
+  - name: Safety
+    description: Content moderation
+paths:
+  # API Gateway
+  /:
+    get:
+      summary: API Gateway information
+      tags: [Gateway]
+      responses:
+        '200':
+          description: Gateway info
+  /health:
+    get:
+      summary: Gateway health
+      tags: [Health]
+      responses:
+        '200':
+          description: Healthy
+  /health/all:
+    get:
+      summary: All services health
+      tags: [Health]
+      responses:
+        '200':
+          description: Health status
+
+  # Unified Profile Service
+  /v1/profile/{id}:
+    get:
+      summary: Get user profile
+      tags: [Profile]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Profile retrieved
+    put:
+      summary: Update user profile
+      tags: [Profile]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Profile updated
+  /v1/profile/mapping:
+    post:
+      summary: Create external ID mapping
+      tags: [Profile]
+      responses:
+        '200':
+          description: Mapping created
+
+  # Kintell Connector
+  /v1/kintell/import/sessions:
+    post:
+      summary: Import sessions from CSV
+      tags: [Kintell]
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Import successful
+  /v1/kintell/webhooks/session-scheduled:
+    post:
+      summary: Session scheduled webhook
+      tags: [Kintell]
+      responses:
+        '200':
+          description: Event processed
+  /v1/kintell/webhooks/session-completed:
+    post:
+      summary: Session completed webhook
+      tags: [Kintell]
+      responses:
+        '200':
+          description: Event processed
+
+  # Buddy Service
+  /v1/buddy/import/matches:
+    post:
+      summary: Import buddy matches
+      tags: [Buddy]
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Import successful
+  /v1/buddy/import/events:
+    post:
+      summary: Import buddy events
+      tags: [Buddy]
+      responses:
+        '200':
+          description: Import successful
+  /v1/buddy/import/checkins:
+    post:
+      summary: Import check-ins
+      tags: [Buddy]
+      responses:
+        '200':
+          description: Import successful
+  /v1/buddy/import/feedback:
+    post:
+      summary: Import feedback
+      tags: [Buddy]
+      responses:
+        '200':
+          description: Import successful
+
+  # Upskilling Connector
+  /v1/upskilling/import/completions:
+    post:
+      summary: Import course completions
+      tags: [Upskilling]
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Import successful
+
+  # Q2Q AI Service
+  /v1/q2q/classify/text:
+    post:
+      summary: Classify text content
+      tags: [Q2Q]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text, userId]
+              properties:
+                text:
+                  type: string
+                userId:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Text classified
+  /v1/q2q/taxonomy:
+    get:
+      summary: Get outcome taxonomy
+      tags: [Q2Q]
+      responses:
+        '200':
+          description: Taxonomy retrieved
+
+  # Safety & Moderation
+  /v1/safety/screen/text:
+    post:
+      summary: Screen text for violations
+      tags: [Safety]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [contentId, contentType, text]
+              properties:
+                contentId:
+                  type: string
+                  format: uuid
+                contentType:
+                  type: string
+                text:
+                  type: string
+      responses:
+        '200':
+          description: Text screened
+  /v1/safety/review-queue:
+    get:
+      summary: Get review queue
+      tags: [Safety]
+      responses:
+        '200':
+          description: Queue retrieved
+  /v1/safety/review/{id}:
+    put:
+      summary: Complete review
+      tags: [Safety]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Review completed
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT authentication via API Gateway
+security:
+  - bearerAuth: []

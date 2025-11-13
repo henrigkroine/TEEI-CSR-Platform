@@ -1,0 +1,143 @@
+openapi: 3.0.3
+info:
+  title: Kintell Connector Service API
+  version: 1.0.0
+  description: |
+    Kintell Connector integrates with external skills taxonomy systems,
+    handling CSV imports and webhook events for session scheduling and ratings.
+  contact:
+    name: TEEI Platform Team
+servers:
+  - url: http://localhost:3002
+    description: Local development
+  - url: http://localhost:3000/v1/kintell
+    description: Via API Gateway (local)
+paths:
+  /health:
+    get:
+      summary: Health check endpoint
+      operationId: getHealth
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  service:
+                    type: string
+                  timestamp:
+                    type: string
+                    format: date-time
+  /v1/import/sessions:
+    post:
+      summary: Import session data from CSV
+      operationId: importSessions
+      tags:
+        - Import
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: CSV file containing session data
+      responses:
+        '200':
+          description: Import successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  imported:
+                    type: integer
+                  failed:
+                    type: integer
+                  errors:
+                    type: array
+                    items:
+                      type: object
+        '400':
+          description: Invalid file or format
+  /v1/webhooks/session-scheduled:
+    post:
+      summary: Webhook for session scheduled events
+      operationId: sessionScheduled
+      tags:
+        - Webhooks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SessionScheduledPayload'
+      responses:
+        '200':
+          description: Event processed successfully
+        '400':
+          description: Invalid payload
+  /v1/webhooks/session-completed:
+    post:
+      summary: Webhook for session completed events
+      operationId: sessionCompleted
+      tags:
+        - Webhooks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SessionCompletedPayload'
+      responses:
+        '200':
+          description: Event processed successfully
+components:
+  schemas:
+    SessionScheduledPayload:
+      type: object
+      required:
+        - sessionId
+        - participantId
+        - scheduledAt
+      properties:
+        sessionId:
+          type: string
+        participantId:
+          type: string
+        scheduledAt:
+          type: string
+          format: date-time
+        topic:
+          type: string
+    SessionCompletedPayload:
+      type: object
+      required:
+        - sessionId
+        - participantId
+        - completedAt
+      properties:
+        sessionId:
+          type: string
+        participantId:
+          type: string
+        completedAt:
+          type: string
+          format: date-time
+        rating:
+          type: number
+          minimum: 1
+          maximum: 5
