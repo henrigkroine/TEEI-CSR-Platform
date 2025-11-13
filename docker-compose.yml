@@ -1,0 +1,100 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: teei-postgres
+    environment:
+      POSTGRES_DB: teei_dev
+      POSTGRES_USER: teei_user
+      POSTGRES_PASSWORD: teei_dev_password
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U teei_user -d teei_dev']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - teei-network
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    container_name: teei-clickhouse
+    environment:
+      CLICKHOUSE_DB: teei_analytics
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+    ports:
+      - '8123:8123'
+      - '9000:9000'
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+    healthcheck:
+      test: ['CMD', 'wget', '--spider', '-q', 'localhost:8123/ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - teei-network
+
+  minio:
+    image: minio/minio:latest
+    container_name: teei-minio
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server /data --console-address ':9001'
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:9000/minio/health/live']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - teei-network
+
+  nats:
+    image: nats:alpine
+    container_name: teei-nats
+    command: '-js -m 8222'
+    ports:
+      - '4222:4222'
+      - '8222:8222'
+    healthcheck:
+      test: ['CMD', 'wget', '--spider', '-q', 'localhost:8222/healthz']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - teei-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: teei-redis
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - teei-network
+
+volumes:
+  postgres_data:
+  clickhouse_data:
+  minio_data:
+  redis_data:
+
+networks:
+  teei-network:
+    driver: bridge

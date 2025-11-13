@@ -1,0 +1,9 @@
+node_modules
+dist
+build
+.next
+.astro
+.turbo
+coverage
+*.config.js
+*.config.ts

@@ -2,6 +2,7 @@
 node_modules/
 bower_components/
 vendor/
+.pnpm-store/
 
 # Build outputs
 dist/
@@ -12,6 +13,8 @@ out/
 .vuepress/dist
 .serverless/
 .fusebox/
+.astro/
+.turbo/
 
 # Logs
 logs/
@@ -60,6 +63,9 @@ temp/
 *.db
 *.sqlite
 *.sqlite3
+postgres_data/
+drizzle/
+.drizzle/
 
 # Backup files
 *.backup

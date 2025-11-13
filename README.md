@@ -1,8 +1,6 @@
 # TEEI CSR Platform
 
-## 🚀 Overview
-
-The TEEI CSR Platform is a unified impact measurement and AI-powered ecosystem for corporate social responsibility and youth empowerment. It integrates Buddy, Language Connect (via Kintell), Mentorship (via Kintell), and Upskilling into a single CSR-grade impact and reporting stack.
+A unified platform for managing Corporate Social Responsibility (CSR) initiatives, connecting corporate employees with refugees and asylum seekers through mentorship, language exchange, and upskilling programs.
 
 **Mission**: Transform qualitative social impact into quantifiable business outcomes that corporates can measure, report, and optimize.
 
@@ -17,41 +15,100 @@ The TEEI CSR Platform is a unified impact measurement and AI-powered ecosystem f
 
 ## 🏗️ Architecture
 
-```
-Corporate Cockpit (UI) → Reporting Layer → Services → Data Layer
-```
-
-Key components:
-- Buddy Service (social integration)
-- Kintell Connector (language & mentorship)
-- Upskilling Connector (credentials & courses)
-- Q2Q AI Engine (qualitative to quantitative)
-- Safety & Moderation Service
+- **Monorepo**: PNPM workspaces with Turbo for efficient builds
+- **Frontend**: Astro + React + TypeScript (Corp Cockpit dashboard)
+- **Backend**: Node.js + tRPC for type-safe APIs
+- **Database**: PostgreSQL with Drizzle ORM
+- **Analytics**: ClickHouse for time-series data
+- **Messaging**: NATS for event-driven communication
+- **Storage**: MinIO (S3-compatible)
+- **AI**: OpenAI for Q2Q AI and embeddings
 
 ## 📂 Project Structure
 
 ```
-TEEI_CSR_Platform/
-├── 00_Overview/          # Architecture and system documentation
-├── 01_Services/          # Service-specific documentation
-├── 02_Data_Models/       # Data schemas and models
-├── 03_Corporate_Cockpit/ # Dashboard and reporting specs
-├── 04_Discord_Integration/
-├── 05_AI_Models/
-├── 06_Security_Privacy/
-├── 07_Roadmap/           # Development phases
-└── 99_Notes/             # Research and ideas
+teei-csr-platform/
+├── apps/
+│   └── corp-cockpit-astro/        # Corporate admin dashboard
+├── services/
+│   ├── buddy-service/              # Buddy matching & lifecycle
+│   ├── kintell-connector/          # Kintell integration
+│   ├── upskilling-connector/       # Training platform integration
+│   ├── unified-profile/            # Aggregated stakeholder data
+│   ├── q2q-ai/                     # Question-to-Question AI
+│   ├── reporting/                  # Impact analytics
+│   ├── safety-moderation/          # Content moderation
+│   ├── discord-bot/                # Community engagement
+│   ├── notifications/              # Multi-channel notifications
+│   └── api-gateway/                # Unified API gateway
+├── packages/
+│   ├── shared-schema/              # Drizzle schemas & migrations
+│   ├── event-contracts/            # Event definitions
+│   ├── shared-types/               # TypeScript types
+│   └── shared-utils/               # Common utilities
+└── docs/                           # Documentation
 ```
 
-## 🛠️ Tech Stack
+## 🚀 Quick Start
 
-- **Frontend**: Astro 5 + React islands
-- **Backend**: Node.js/TypeScript + Fastify
-- **Database**: PostgreSQL (Neon) + pgvector
-- **Analytics**: ClickHouse/BigQuery
-- **AI/ML**: OpenAI APIs, custom NLP models
-- **Message Queue**: NATS/Cloudflare Queues
-- **Monitoring**: OpenTelemetry + Grafana
+### Prerequisites
+
+- Node.js 18+
+- PNPM 8+
+- Docker & Docker Compose
+
+### Setup
+
+```bash
+# Install dependencies
+pnpm install
+
+# Copy environment variables
+cp .env.example .env
+
+# Start infrastructure
+docker compose up -d
+
+# Run migrations
+pnpm db:migrate
+
+# Start all services
+pnpm dev
+```
+
+### Verify Setup
+
+```bash
+pnpm typecheck
+pnpm lint
+pnpm test
+pnpm build
+```
+
+## Development
+
+### Scripts
+
+```bash
+pnpm dev              # Start all services in dev mode
+pnpm build            # Build all packages
+pnpm typecheck        # Type check all packages
+pnpm lint             # Lint all packages
+pnpm lint:fix         # Fix linting issues
+pnpm test             # Run all tests
+pnpm format           # Format code with Prettier
+pnpm commit           # Guided conventional commit
+pnpm db:generate      # Generate database migrations
+pnpm db:migrate       # Run database migrations
+pnpm db:studio        # Open Drizzle Studio
+```
+
+### Agent System
+
+This project uses a 30-agent swarm architecture for development. See:
+- `@AGENTS.md` - Architecture & standards (reference with `@AGENTS.md` in Claude)
+- `MULTI_AGENT_PLAN.md` - Task coordination
+- `.claude/agents/` - Agent definitions
 
 ## 📊 Impact Metrics
 
@@ -61,58 +118,33 @@ TEEI_CSR_Platform/
 - **VIS**: Volunteer Impact Score
 - **SROI**: Social Return on Investment ratio
 
-## 🚦 Development Phases
+## 🤝 Contributing
 
-### Phase A - Foundations ✅
-- Unified Profile Service
-- Kintell Connector
-- Basic Q2Q Pipeline
-- Corporate Cockpit v1
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines on:
+- Development workflow
+- Branch naming
+- Commit conventions
+- Pull request process
+- Code standards
 
-### Phase B - Outcomes & Reporting 🔄
-- Upskilling Connector
-- SROI & VIS Calculators
-- Evidence Lineage
-- Impact-In API
+## 🔐 Security
 
-### Phase C - Orchestration 📋
-- Journey Engine
-- Discord Bot Integration
-- Safety/Moderation Service
-
-### Phase D - Enterprise Polish 🎯
-- Advanced Analytics
-- Generative Reporting
-- Custom KPI Tools
-
-## 🔐 Security & Privacy
-
-- Privacy-by-design architecture
-- PII/PHI data segmentation
-- Field-level encryption
-- Consent management
-- RBAC & tenant isolation
-
-## 🤝 Integration Partners
-
-- **Kintell**: Language Connect & Mentorship platform
-- **Benevity/Goodera**: CSR reporting platforms
-- **Discord**: Community engagement
-- **eCornell/itslearning**: Upskilling providers
+See [SECURITY.md](./SECURITY.md) for:
+- Reporting vulnerabilities
+- Security best practices
+- Implemented security features
 
 ## 📚 Documentation
 
-For detailed documentation, see the [Platform Documentation](./00_Overview/Platform_Architecture.md) or browse individual service docs in their respective folders.
+- [Platform Architecture](./docs/Platform_Architecture.md)
+- [System Diagram](./docs/System_Diagram.md)
+- [Journey Funnel](./docs/Journey_Funnel.md)
+- [Glossary](./docs/Glossary.md)
 
 ## 🛡️ License
 
-Proprietary - TEEI (The Extraordinarily Empowering Initiative)
-
-## 👥 Team
-
-Owner: TEEI Platform (Henrik Røine)
+MIT License - see [LICENSE](./LICENSE)
 
 ---
 
-**Status**: Active Development
-**Last Updated**: 2025-11-13
+**Built with ❤️ for social impact**
