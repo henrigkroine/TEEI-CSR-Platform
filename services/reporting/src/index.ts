@@ -28,6 +28,8 @@ await fastify.register(setupSwagger);
 
 // Register routes
 await fastify.register(healthRoutes);
+const { companyRoutes } = await import('./routes/companies.js');
+await fastify.register(companyRoutes);
 
 // Graceful shutdown
 const gracefulShutdown = async () => {
