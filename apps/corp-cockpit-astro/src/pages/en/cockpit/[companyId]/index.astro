@@ -1,0 +1,122 @@
+---
+import CockpitLayout from '@layouts/CockpitLayout.astro';
+
+const { companyId } = Astro.params;
+
+// TODO: Fetch company data and verify access
+// const company = await fetchCompany(companyId);
+// if (!company) return Astro.redirect('/en');
+
+// Mock company data
+const company = {
+  id: companyId,
+  name: 'Pilot Corp Inc.',
+};
+---
+
+<CockpitLayout
+  title="Dashboard"
+  lang="en"
+  companyId={companyId}
+  companyName={company.name}
+>
+  <div class="mx-auto max-w-7xl p-6">
+    <!-- Header -->
+    <div class="mb-8">
+      <h1 class="mb-2 text-3xl font-bold">CSR Dashboard</h1>
+      <p class="text-foreground/60">
+        Welcome to your Corporate Social Responsibility dashboard
+      </p>
+    </div>
+
+    <!-- Quick stats grid -->
+    <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
+      <!-- SROI Card -->
+      <div class="card">
+        <div class="mb-2 text-sm font-medium text-foreground/60">SROI</div>
+        <div class="text-3xl font-bold">3.2x</div>
+        <div class="mt-2 text-sm text-green-600">+12% from last quarter</div>
+      </div>
+
+      <!-- VIS Card -->
+      <div class="card">
+        <div class="mb-2 text-sm font-medium text-foreground/60">VIS Score</div>
+        <div class="text-3xl font-bold">85</div>
+        <div class="mt-2 text-sm text-green-600">+5 pts from last quarter</div>
+      </div>
+
+      <!-- Participants Card -->
+      <div class="card">
+        <div class="mb-2 text-sm font-medium text-foreground/60">Active Participants</div>
+        <div class="text-3xl font-bold">247</div>
+        <div class="mt-2 text-sm text-foreground/60">Across all programs</div>
+      </div>
+
+      <!-- Integration Score Card -->
+      <div class="card">
+        <div class="mb-2 text-sm font-medium text-foreground/60">Integration Score</div>
+        <div class="text-3xl font-bold">0.78</div>
+        <div class="mt-2 text-sm text-green-600">+8% from last quarter</div>
+      </div>
+    </div>
+
+    <!-- Main content area -->
+    <div class="grid gap-6 lg:grid-cols-3">
+      <!-- Program Overview -->
+      <div class="card lg:col-span-2">
+        <h2 class="mb-4 text-xl font-semibold">Program Overview</h2>
+        <div class="space-y-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="font-medium">Buddy Program</div>
+              <div class="text-sm text-foreground/60">89% completion rate</div>
+            </div>
+            <div class="text-2xl font-bold text-primary">142</div>
+          </div>
+          <div class="h-px bg-border"></div>
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="font-medium">Language Connect</div>
+              <div class="text-sm text-foreground/60">67 sessions completed</div>
+            </div>
+            <div class="text-2xl font-bold text-primary">67</div>
+          </div>
+          <div class="h-px bg-border"></div>
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="font-medium">Upskilling</div>
+              <div class="text-sm text-foreground/60">38 courses in progress</div>
+            </div>
+            <div class="text-2xl font-bold text-primary">38</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="card">
+        <h2 class="mb-4 text-xl font-semibold">Quick Actions</h2>
+        <div class="space-y-3">
+          <a href={`/en/cockpit/${companyId}/reports`} class="btn-primary w-full">
+            Generate Report
+          </a>
+          <a href={`/en/cockpit/${companyId}/evidence`} class="btn-secondary w-full">
+            View Evidence
+          </a>
+          <a href={`/en/cockpit/${companyId}/exports`} class="btn-secondary w-full">
+            Export Data
+          </a>
+          <a href={`/en/cockpit/${companyId}/admin`} class="btn-secondary w-full">
+            Admin Settings
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Phase C Notice -->
+    <div class="mt-8 rounded-lg bg-primary/10 p-4 text-center">
+      <p class="text-sm font-medium">
+        🚀 Phase C pilot features coming soon: Evidence Explorer, AI-powered reporting, and more!
+      </p>
+    </div>
+  </div>
+</CockpitLayout>

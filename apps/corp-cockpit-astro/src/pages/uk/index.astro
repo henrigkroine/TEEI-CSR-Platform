@@ -1,0 +1,21 @@
+---
+import BaseLayout from '@layouts/BaseLayout.astro';
+import TenantSelector from '@components/tenant/TenantSelector';
+
+// Redirect authenticated users with saved tenant
+const savedTenantId = Astro.cookies.get('tenantId')?.value;
+if (savedTenantId) {
+  return Astro.redirect(`/uk/cockpit/${savedTenantId}`);
+}
+---
+
+<BaseLayout title="Виберіть компанію" lang="uk">
+  <TenantSelector
+    lang="uk"
+    onSelect={(companyId) => {
+      document.cookie = `tenantId=${companyId}; path=/; max-age=31536000`;
+      window.location.href = `/uk/cockpit/${companyId}`;
+    }}
+    client:load
+  />
+</BaseLayout>

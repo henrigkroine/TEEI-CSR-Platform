@@ -1,0 +1,171 @@
+---
+import CockpitLayout from '@layouts/CockpitLayout.astro';
+
+const { companyId } = Astro.params;
+
+// TODO: Verify admin access
+// const hasAdminAccess = await verifyAdminAccess(companyId);
+// if (!hasAdminAccess) return Astro.redirect(`/en/cockpit/${companyId}`);
+
+// Mock company data
+const company = {
+  id: companyId,
+  name: 'Pilot Corp Inc.',
+};
+---
+
+<CockpitLayout
+  title="Admin Console"
+  lang="en"
+  companyId={companyId}
+  companyName={company.name}
+>
+  <div class="mx-auto max-w-7xl p-6">
+    <!-- Header -->
+    <div class="mb-8">
+      <h1 class="mb-2 text-3xl font-bold">Admin Console</h1>
+      <p class="text-foreground/60">
+        Manage company settings, API keys, and configuration
+      </p>
+    </div>
+
+    <!-- Settings grid -->
+    <div class="space-y-6">
+      <!-- API Keys Section -->
+      <div class="card">
+        <h2 class="mb-4 text-xl font-semibold">API Keys</h2>
+        <p class="mb-4 text-sm text-foreground/60">
+          Manage API keys for external integrations
+        </p>
+        <div class="space-y-3">
+          <div class="flex items-center justify-between rounded-md border border-border p-4">
+            <div>
+              <div class="font-medium">Production API Key</div>
+              <div class="mt-1 font-mono text-sm text-foreground/60">
+                teei_prod_**********************
+              </div>
+            </div>
+            <div class="flex gap-2">
+              <button class="btn-secondary">Reveal</button>
+              <button class="btn-secondary text-red-600">Revoke</button>
+            </div>
+          </div>
+          <button class="btn-primary">
+            Generate New API Key
+          </button>
+        </div>
+      </div>
+
+      <!-- Impact-In Configuration -->
+      <div class="card">
+        <h2 class="mb-4 text-xl font-semibold">Impact-In Integrations</h2>
+        <p class="mb-4 text-sm text-foreground/60">
+          Enable or disable data pushes to external platforms
+        </p>
+        <div class="space-y-4">
+          <!-- Benevity -->
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="font-medium">Benevity</div>
+              <div class="text-sm text-foreground/60">Push impact data to Benevity platform</div>
+            </div>
+            <label class="relative inline-flex cursor-pointer items-center">
+              <input type="checkbox" class="peer sr-only" checked />
+              <div class="peer h-6 w-11 rounded-full bg-border after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:bg-primary peer-checked:after:translate-x-full peer-focus:ring-2 peer-focus:ring-primary"></div>
+              <span class="sr-only">Toggle Benevity integration</span>
+            </label>
+          </div>
+
+          <!-- Goodera -->
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="font-medium">Goodera</div>
+              <div class="text-sm text-foreground/60">Push impact data to Goodera platform</div>
+            </div>
+            <label class="relative inline-flex cursor-pointer items-center">
+              <input type="checkbox" class="peer sr-only" />
+              <div class="peer h-6 w-11 rounded-full bg-border after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:bg-primary peer-checked:after:translate-x-full peer-focus:ring-2 peer-focus:ring-primary"></div>
+              <span class="sr-only">Toggle Goodera integration</span>
+            </label>
+          </div>
+
+          <!-- Workday -->
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="font-medium">Workday</div>
+              <div class="text-sm text-foreground/60">Push impact data to Workday platform</div>
+            </div>
+            <label class="relative inline-flex cursor-pointer items-center">
+              <input type="checkbox" class="peer sr-only" />
+              <div class="peer h-6 w-11 rounded-full bg-border after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:bg-primary peer-checked:after:translate-x-full peer-focus:ring-2 peer-focus:ring-primary"></div>
+              <span class="sr-only">Toggle Workday integration</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Metrics Configuration -->
+      <div class="card">
+        <h2 class="mb-4 text-xl font-semibold">SROI/VIS Calculation Weights</h2>
+        <p class="mb-4 text-sm text-foreground/60">
+          Customize metric calculation weights for your organization
+        </p>
+        <div class="space-y-4">
+          <div>
+            <label for="sroi-weight" class="mb-2 block text-sm font-medium">
+              SROI Weight
+            </label>
+            <input
+              id="sroi-weight"
+              type="range"
+              min="0"
+              max="100"
+              value="50"
+              class="w-full"
+              aria-label="SROI Weight"
+            />
+            <div class="mt-1 text-right text-sm text-foreground/60">50%</div>
+          </div>
+
+          <div>
+            <label for="vis-weight" class="mb-2 block text-sm font-medium">
+              VIS Weight
+            </label>
+            <input
+              id="vis-weight"
+              type="range"
+              min="0"
+              max="100"
+              value="50"
+              class="w-full"
+              aria-label="VIS Weight"
+            />
+            <div class="mt-1 text-right text-sm text-foreground/60">50%</div>
+          </div>
+
+          <button class="btn-primary mt-4">
+            Save Configuration
+          </button>
+        </div>
+      </div>
+
+      <!-- Branding -->
+      <div class="card">
+        <h2 class="mb-4 text-xl font-semibold">Branding & Theming</h2>
+        <p class="mb-4 text-sm text-foreground/60">
+          Customize the look and feel of your dashboard
+        </p>
+        <a href={`/en/cockpit/${companyId}/admin/theme`} class="btn-primary">
+          Open Theme Editor
+        </a>
+      </div>
+
+      <!-- Back to Dashboard -->
+      <div class="text-center">
+        <a href={`/en/cockpit/${companyId}`} class="text-primary hover:underline">
+          ← Back to Dashboard
+        </a>
+      </div>
+    </div>
+  </div>
+</CockpitLayout>
