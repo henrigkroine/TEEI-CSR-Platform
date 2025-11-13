@@ -1,6 +1,11 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { hasPermission } from '../utils/rbac';
+import AtAGlance from '../components/widgets/AtAGlance.tsx';
+import SROIPanel from '../components/widgets/SROIPanel.tsx';
+import VISPanel from '../components/widgets/VISPanel.tsx';
+import Q2QFeed from '../components/widgets/Q2QFeed.tsx';
+import ExportButtons from '../components/widgets/ExportButtons.tsx';
 
 const user = Astro.locals.user;
 
@@ -26,43 +31,11 @@ const canExport = hasPermission(user.role, 'EXPORT_DATA');
   </div>
 
   <div class="dashboard-grid">
-    <div class="widget-placeholder">
-      <h2>📊 At-a-Glance Metrics</h2>
-      <p>Inputs vs. Outcomes</p>
-      <div class="coming-soon">Widget coming in Slice 10</div>
-    </div>
-
-    <div class="widget-placeholder">
-      <h2>📈 Outcome Trends</h2>
-      <p>Quarterly Time Series</p>
-      <div class="coming-soon">Widget coming in Slice 10</div>
-    </div>
-
-    <div class="widget-placeholder">
-      <h2>💡 Q2Q Insights</h2>
-      <p>Latest AI-Generated Insights</p>
-      <div class="coming-soon">Widget coming in Slice 10</div>
-    </div>
-
-    <div class="widget-placeholder">
-      <h2>💰 SROI Panel</h2>
-      <p>Social Return on Investment</p>
-      <div class="coming-soon">Widget coming in Slice 10</div>
-    </div>
-
-    <div class="widget-placeholder">
-      <h2>⭐ VIS Leaderboard</h2>
-      <p>Top Volunteers by Impact</p>
-      <div class="coming-soon">Widget coming in Slice 10</div>
-    </div>
-
-    {canExport && (
-      <div class="widget-placeholder">
-        <h2>📥 Export Data</h2>
-        <p>CSRD Compliance Reports</p>
-        <div class="coming-soon">Widget coming in Slice 10</div>
-      </div>
-    )}
+    <AtAGlance companyId={user.company_id} client:load />
+    <SROIPanel companyId={user.company_id} client:load />
+    <VISPanel companyId={user.company_id} client:load />
+    <Q2QFeed companyId={user.company_id} limit={10} client:load />
+    {canExport && <ExportButtons companyId={user.company_id} client:load />}
   </div>
 </BaseLayout>
 
