@@ -1,0 +1,6 @@
+session_id,volunteer_id,volunteer_email,volunteer_name,ngo_name,ngo_id,activity_type,session_date,hours_contributed,location,description,skills_used,impact_area
+S001,V001,john.doe@example.com,John Doe,Green Earth Foundation,NGO001,Tree Planting,2024-01-15,4.5,Central Park,Planted 50 trees in the community park,"Teamwork,Physical Labor",Environmental
+S002,V002,jane.smith@example.com,Jane Smith,Tech for Good,NGO002,Coding Workshop,2024-01-16,3.0,Community Center,Taught basic coding to underprivileged children,"Programming,Teaching",Education
+S003,V003,bob.wilson@example.com,Bob Wilson,Food Bank Alliance,NGO003,Food Distribution,2024-01-17,6.0,Downtown Center,Distributed food packages to 100 families,"Organization,Logistics",Poverty Alleviation
+S004,V001,john.doe@example.com,John Doe,Animal Shelter,NGO004,Pet Care,2024-01-18,2.5,Local Shelter,Cared for rescue animals,"Animal Care,Patience",Animal Welfare
+S005,V004,alice.brown@example.com,Alice Brown,Senior Center,NGO005,Companionship,2024-01-19,5.0,Senior Living,Spent time with elderly residents,"Communication,Empathy",Elderly Care

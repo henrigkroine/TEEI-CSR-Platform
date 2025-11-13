@@ -1,0 +1,34 @@
+{
+  "event_type": "session.updated",
+  "event_id": "evt_kintell_002",
+  "timestamp": 1705420800,
+  "delivery_id": "delivery_002",
+  "data": {
+    "session_id": "S001",
+    "volunteer": {
+      "id": "V001",
+      "email": "john.doe@example.com",
+      "name": "John Doe",
+      "company_id": "C001"
+    },
+    "ngo": {
+      "id": "NGO001",
+      "name": "Green Earth Foundation",
+      "location": "Central Park"
+    },
+    "activity": {
+      "type": "Tree Planting",
+      "date": "2024-01-15T10:00:00Z",
+      "hours": 5.0,
+      "description": "Planted 50 trees in the community park (updated hours)",
+      "skills_used": ["Teamwork", "Physical Labor"],
+      "impact_area": "Environmental"
+    },
+    "changes": {
+      "hours": {
+        "from": 4.5,
+        "to": 5.0
+      }
+    }
+  }
+}

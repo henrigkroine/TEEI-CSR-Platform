@@ -1,0 +1,30 @@
+{
+  "event_type": "course.completed",
+  "event_id": "evt_upskill_001",
+  "timestamp": 1705507200,
+  "delivery_id": "delivery_upskill_001",
+  "data": {
+    "user": {
+      "id": "V002",
+      "email": "jane.smith@example.com",
+      "name": "Jane Smith",
+      "company_id": "C001"
+    },
+    "course": {
+      "id": "COURSE_001",
+      "title": "Introduction to Python Programming",
+      "provider": "LinkedIn Learning",
+      "category": "Technology",
+      "duration_hours": 12,
+      "completion_date": "2024-01-17T15:30:00Z",
+      "certificate_url": "https://example.com/certificates/cert_001"
+    },
+    "skills_acquired": [
+      "Python",
+      "Programming Fundamentals",
+      "Data Structures"
+    ],
+    "completion_percentage": 100,
+    "final_score": 95
+  }
+}

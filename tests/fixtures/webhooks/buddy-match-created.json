@@ -1,0 +1,28 @@
+{
+  "event_type": "match.created",
+  "event_id": "evt_buddy_001",
+  "timestamp": 1705593600,
+  "delivery_id": "delivery_buddy_001",
+  "data": {
+    "match_id": "MATCH_001",
+    "mentor": {
+      "id": "V001",
+      "email": "john.doe@example.com",
+      "name": "John Doe",
+      "company_id": "C001"
+    },
+    "mentee": {
+      "id": "V003",
+      "email": "bob.wilson@example.com",
+      "name": "Bob Wilson",
+      "company_id": "C001"
+    },
+    "program": {
+      "id": "PROG_001",
+      "name": "Career Development Mentorship",
+      "start_date": "2024-01-18T00:00:00Z",
+      "expected_duration_weeks": 12
+    },
+    "created_at": "2024-01-18T10:00:00Z"
+  }
+}

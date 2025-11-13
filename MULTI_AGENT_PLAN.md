@@ -312,12 +312,12 @@
 - [x] Access Control Specialist - Tenant isolation
 
 ### QA Lead Progress
-- [ ] Integration Test Engineer - Webhook tests
-- [ ] Idempotency Test Engineer - Replay tests
-- [ ] Load Test Engineer - k6 scripts
-- [ ] Contract Test Engineer - Pact CI
-- [ ] E2E Test Engineer - Full flow tests
-- [ ] CI Gate Engineer - Coverage gates
+- [x] Integration Test Engineer - Webhook tests
+- [x] Idempotency Test Engineer - Replay tests
+- [x] Load Test Engineer - k6 scripts
+- [x] Contract Test Engineer - Pact CI
+- [x] E2E Test Engineer - Full flow tests
+- [x] CI Gate Engineer - Coverage gates
 
 ---
 
@@ -343,12 +343,12 @@
 - [x] GDPR privacy endpoints (stubs)
 
 ### Tests
-- [ ] Integration test: signed webhook → profile
-- [ ] Integration test: idempotent re-delivery
-- [ ] Integration test: circuit breaker fallback
-- [ ] Load test: k6 baseline established
-- [ ] Contract tests: Gateway ↔ services
-- [ ] E2E test: CSV → events → Q2Q → API
+- [x] Integration test: signed webhook → profile
+- [x] Integration test: idempotent re-delivery
+- [x] Integration test: circuit breaker fallback
+- [x] Load test: k6 baseline established
+- [x] Contract tests: Gateway ↔ services
+- [x] E2E test: CSV → events → Q2Q → API
 
 ### Documentation
 - [ ] `/docs/Security_Hardening_Checklist.md`
@@ -359,18 +359,18 @@
 - [x] `/docs/GDPR_Compliance.md`
 - [x] `/docs/Audit_Log_Specification.md`
 - [ ] `/reports/phaseB_worker1_hardening.md` (MASTER REPORT)
-- [ ] `/reports/perf_baseline.md`
+- [x] `/reports/perf_baseline.md`
 - [ ] `/reports/security_lead_report.md`
 - [ ] `/reports/platform_lead_report.md`
 - [x] `/reports/reliability_lead_report.md`
 - [x] `/reports/data_lead_report.md`
 - [x] `/reports/compliance_lead_report.md`
-- [ ] `/reports/qa_lead_report.md`
+- [x] `/reports/qa_lead_report.md`
 
 ### CI/CD
-- [ ] Test coverage threshold enforced
-- [ ] OTel route coverage check
-- [ ] Contract tests in CI pipeline
+- [x] Test coverage threshold enforced
+- [x] OTel route coverage check
+- [x] Contract tests in CI pipeline
 - [ ] Backup restore drill documented
 
 ---
@@ -409,11 +409,11 @@
 - ✅ Tenant isolation verified
 
 ### Testing ✅
-- Integration tests pass (webhook → profile)
-- Idempotency replay test passes
-- Circuit breaker test passes
-- k6 baseline documented
-- CI gates enforced
+- ✅ Integration tests pass (webhook → profile)
+- ✅ Idempotency replay test passes
+- ✅ Circuit breaker test passes
+- ✅ k6 baseline documented
+- ✅ CI gates enforced
 
 ---
 
