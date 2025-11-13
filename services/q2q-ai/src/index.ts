@@ -20,8 +20,8 @@ async function start() {
     };
   });
 
-  // Register routes
-  app.register(classifyRoutes);
+  // Register routes with API versioning
+  app.register(classifyRoutes, { prefix: '/v1' });
 
   // Start server
   try {

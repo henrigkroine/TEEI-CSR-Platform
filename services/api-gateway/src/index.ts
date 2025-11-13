@@ -153,12 +153,16 @@ async function initializeGateway() {
         endpoints: {
           health: '/health',
           healthAll: '/health/all',
-          profile: '/profile/*',
-          kintell: '/kintell/*',
-          buddy: '/buddy/*',
-          upskilling: '/upskilling/*',
-          q2q: '/q2q/*',
-          safety: '/safety/*'
+          profile: '/v1/profile/*',
+          kintell: '/v1/kintell/*',
+          buddy: '/v1/buddy/*',
+          upskilling: '/v1/upskilling/*',
+          q2q: '/v1/q2q/*',
+          safety: '/v1/safety/*'
+        },
+        apiVersion: 'v1',
+        deprecation: {
+          unversionedEndpoints: 'Deprecated - use /v1/* prefixed endpoints'
         }
       };
     });

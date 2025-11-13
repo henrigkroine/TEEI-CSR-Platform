@@ -1,329 +1,448 @@
-# Worker 2 Multi-Agent Execution Plan
+# Phase B Hardening: Multi-Agent Orchestration Plan
 
-**Status**: 🚧 In Progress
-**Branch**: `worker2/services-schema-ingestion`
-**Started**: 2025-11-13
-**Target Completion**: TBD
+**Mission**: Transform Phase A foundations into production-grade services with security, observability, resilience, and compliance.
 
----
-
-## Phase 1: Foundation Setup ⏳
-
-### 1.1 Monorepo Structure
-- [ ] Create pnpm workspace configuration
-- [ ] Set up TypeScript project references
-- [ ] Configure ESLint + Prettier
-- [ ] Set up shared tsconfig.json
-- [ ] Create .env.example files
-
-**Assigned**: Infrastructure Lead
-**Status**: Not Started
-
-### 1.2 Documentation
-- [x] Create AGENTS.md
-- [x] Create MULTI_AGENT_PLAN.md
-- [ ] Create reports/worker2_services.md
-- [ ] Update docs/Platform_Architecture.md
-- [ ] Update docs/System_Diagram.md
-
-**Assigned**: Tech Lead Orchestrator
-**Status**: In Progress
+**Orchestrator**: Tech Lead (Worker 1)
+**Team Size**: 30 agents (5 leads × 6 specialists each)
+**Branch**: `claude/phase-b-hardening-011CV5sicbJ5JUw8qXjjCsYW`
+**Timeline**: Sequential lead deployment with parallel specialist execution
 
 ---
 
-## Phase 2: Data Layer 📊
+## Executive Summary
 
-### 2.1 Event Contracts Package
-- [ ] Initialize packages/event-contracts
-- [ ] Define buddy.* event types (match.created, event.logged, checkin.completed, feedback.submitted)
-- [ ] Define kintell.* event types (session.completed, rating.created, session.scheduled)
-- [ ] Define upskilling.* event types (course.completed, credential.issued, progress.updated)
-- [ ] Define orchestration.* event types (journey.milestone.reached, profile.updated)
-- [ ] Define safety.* event types (flag.raised, review.completed)
-- [ ] Add Zod schemas for all payloads
-- [ ] Implement event versioning (v1, v2, etc.)
-- [ ] Write unit tests for validators
+### Phase A Assets (7 Services)
+1. **API Gateway** - JWT auth, RBAC, routing
+2. **Unified Profile Service** - Identity unification
+3. **Kintell Connector** - CSV/webhook ingestion
+4. **Buddy Service** - Mentorship event adapter
+5. **Upskilling Connector** - Course completion ingestion
+6. **Q2Q AI Service** - Outcome classification stub
+7. **Safety Service** - Content moderation stub
 
-**Assigned**: Data Modeling Lead → Contract Designer, Validation Engineer
-**Status**: Not Started
-**Dependencies**: None
-
-### 2.2 Shared Schema Package
-- [ ] Initialize packages/shared-schema with Drizzle
-- [ ] Create core tables: users, companies, company_users
-- [ ] Create program_enrollments table
-- [ ] Create kintell_sessions table (language|mentorship, mapping fields)
-- [ ] Create buddy_* tables (matches, events, checkins, feedback)
-- [ ] Create learning_progress table
-- [ ] Create outcome_scores table (dimension, score, confidence)
-- [ ] Create evidence_snippets table (hash, embedding pointers)
-- [ ] Create metrics_company_period table (aggregates, sroi_ratio, vis_score)
-- [ ] Add indexes for performance
-- [ ] Implement PII partitioning strategy
-- [ ] Create initial migration (0000_init.sql)
-- [ ] Create seed script with sample data
-
-**Assigned**: Data Modeling Lead → Schema Architect, Migration Engineer, Data Privacy
-**Status**: Not Started
-**Dependencies**: None
-
-### 2.3 Event Bus SDK
-- [ ] Initialize packages/shared-utils
-- [ ] Create event-bus.ts with NATS client wrapper
-- [ ] Implement publish() helper with validation
-- [ ] Implement subscribe() helper with type safety
-- [ ] Add connection pooling and retry logic
-- [ ] Create logger utility
-- [ ] Add correlation ID tracking
-- [ ] Write unit tests
-
-**Assigned**: Core Services Lead → Event Bus Engineer
-**Status**: Not Started
-**Dependencies**: 2.1 (Event Contracts)
+### Critical Gaps Identified
+- ❌ Zero automated tests
+- ❌ HS256 JWT (need RS256 + JWKS)
+- ❌ No webhook signature verification
+- ❌ No service-to-service auth
+- ❌ No observability (OTel, metrics, tracing)
+- ❌ No API versioning or OpenAPI docs
+- ❌ No PII encryption or GDPR compliance
+- ❌ No database backups or migration rollbacks
+- ❌ No idempotency or DLQ handling
+- ❌ In-memory rate limiting (non-scalable)
 
 ---
 
-## Phase 3: Core Services 🚀
+## Team Structure
 
-### 3.1 Unified Profile Service
-- [ ] Initialize services/unified-profile (Fastify + TS)
-- [ ] Implement GET /profile/:id (aggregated view)
-- [ ] Implement PUT /profile/:id (update flags)
-- [ ] Implement POST /profile/mapping (link kintell_id, discord_id, etc.)
-- [ ] Add journey flag management (is_buddy_matched, has_completed_language, etc.)
-- [ ] Subscribe to events that update profile (course.completed, etc.)
-- [ ] Add health endpoint
-- [ ] Create .http test file
-- [ ] Write unit tests
+### Lead 1: Security Lead (6 specialists)
+**Mission**: Auth, tokens, ingress hardening, webhook authenticity
 
-**Assigned**: Core Services Lead → Profile Service Engineer
-**Status**: Not Started
-**Dependencies**: 2.2 (Schema), 2.3 (Event Bus)
+#### Specialists:
+1. **JWT Architect** - Replace HS256 with RS256 + JWKS endpoint; key rotation
+2. **OIDC Engineer** - Implement SSO (Google/Azure AD) for company_admin; callback routes
+3. **WAF Specialist** - API Gateway rate limits, payload size checks, basic firewall rules
+4. **Webhook Security Engineer** - HMAC-SHA256 signature validation (Kintell, Upskilling)
+5. **Service Auth Engineer** - Internal JWT/mTLS for service-to-service calls
+6. **Secrets Manager** - Secure config loaders, .env.example, vault integration planning
 
-### 3.2 Kintell Connector Service
-- [ ] Initialize services/kintell-connector
-- [ ] Create webhook receiver endpoints (POST /webhooks/session, /webhooks/rating)
-- [ ] Implement CSV import endpoint (POST /import/kintell-sessions)
-- [ ] Create column mapper with normalization rules
-- [ ] Add validation for incoming data
-- [ ] Emit kintell.session.completed event
-- [ ] Emit kintell.rating.created event
-- [ ] Create mapping configuration file
-- [ ] Add health endpoint
-- [ ] Create .http test file
-- [ ] Write unit tests for mapper
-- [ ] Create sample CSV files
+**Deliverables**:
+- `/services/api-gateway/auth/jwks.ts` - RS256 + JWKS
+- `/services/api-gateway/middleware/oidc.ts` - SSO flows
+- `/services/api-gateway/middleware/waf.ts` - Rate limits + WAF
+- `/services/kintell-connector/webhooks/signature.ts` - HMAC validation
+- `/services/upskilling-connector/webhooks/signature.ts` - HMAC validation
+- `/packages/auth/service-auth.ts` - Inter-service auth SDK
+- `/docs/Security_Hardening_Checklist.md`
+- `/reports/security_lead_report.md`
 
-**Assigned**: Connector Services Lead → Kintell Integration, CSV Parser, Mapper
-**Status**: Not Started
-**Dependencies**: 2.1 (Contracts), 2.2 (Schema), 2.3 (Event Bus)
-
-### 3.3 Buddy Service
-- [ ] Initialize services/buddy-service
-- [ ] Create CSV/API importer for matches
-- [ ] Create CSV/API importer for events
-- [ ] Create CSV/API importer for checkins
-- [ ] Create CSV/API importer for feedback
-- [ ] Add schema validators for each data type
-- [ ] Emit buddy.match.created event
-- [ ] Emit buddy.event.logged event
-- [ ] Emit buddy.checkin.completed event
-- [ ] Emit buddy.feedback.submitted event
-- [ ] Add health endpoint
-- [ ] Create .http test file
-- [ ] Write unit tests
-- [ ] Create sample CSV files
-
-**Assigned**: Connector Services Lead → Buddy Integration, Event Publisher
-**Status**: Not Started
-**Dependencies**: 2.1, 2.2, 2.3
-
-### 3.4 Upskilling Connector Service
-- [ ] Initialize services/upskilling-connector
-- [ ] Create endpoint POST /import/course-completions
-- [ ] Create endpoint POST /import/credentials
-- [ ] Add provider-specific adapters (eCornell, itslearning)
-- [ ] Emit upskilling.course.completed event
-- [ ] Emit upskilling.credential.issued event
-- [ ] Add health endpoint
-- [ ] Create .http test file
-- [ ] Write unit tests
-- [ ] Create sample data
-
-**Assigned**: Connector Services Lead → Upskilling Integration, API Client
-**Status**: Not Started
-**Dependencies**: 2.1, 2.2, 2.3
-
-### 3.5 Q2Q AI Service (Skeleton)
-- [ ] Initialize services/q2q-ai
-- [ ] Define outcome taxonomy (confidence, belonging, lang_level_proxy, job_readiness)
-- [ ] Create outcome dimension enum
-- [ ] Implement classifier stub (placeholder function)
-- [ ] Add text tagging interface
-- [ ] Implement outcome_scores write logic
-- [ ] Implement evidence_snippets write logic (with hash)
-- [ ] Create abstracted model provider interface
-- [ ] Add configuration for model selection
-- [ ] Add health endpoint
-- [ ] Create .http test file with dummy texts
-- [ ] Write unit tests for taxonomy
-
-**Assigned**: Core Services Lead → Q2Q AI Architect
-**Status**: Not Started
-**Dependencies**: 2.2 (Schema)
-
-### 3.6 Safety/Moderation Service (Stub)
-- [ ] Initialize services/safety-moderation
-- [ ] Create text screening interface
-- [ ] Implement placeholder content policy rules
-- [ ] Emit safety.flag.raised event
-- [ ] Add human review queue stub
-- [ ] Create policy configuration file
-- [ ] Add health endpoint
-- [ ] Create .http test file
-- [ ] Write unit tests
-
-**Assigned**: Core Services Lead → Safety Engineer
-**Status**: Not Started
-**Dependencies**: 2.1 (Contracts), 2.3 (Event Bus)
-
-### 3.7 API Gateway
-- [ ] Initialize services/api-gateway
-- [ ] Implement JWT session middleware
-- [ ] Implement RBAC role checking (admin, company_user, participant)
-- [ ] Create reverse proxy to internal services
-- [ ] Add rate limiting
-- [ ] Add request logging with correlation IDs
-- [ ] Expose health endpoints for all services (GET /health/*)
-- [ ] Create .http test file
-- [ ] Write unit tests for auth middleware
-
-**Assigned**: Core Services Lead → API Gateway Engineer, Config Management
-**Status**: Not Started
-**Dependencies**: All services must have health endpoints
+**Acceptance**:
+- RS256 JWT + `/auth/jwks` endpoint live
+- OIDC SSO works with test Google Workspace tenant
+- Webhook signature validation proven with replay tests
+- Service-to-service calls require JWT
 
 ---
 
-## Phase 4: Infrastructure & Testing 🏗️
+### Lead 2: Platform Lead (6 specialists)
+**Mission**: API versioning, contracts, idempotency, resilience patterns
 
-### 4.1 Docker Infrastructure
-- [ ] Create docker-compose.yml (Postgres, NATS, pgAdmin)
-- [ ] Configure Postgres with extensions (pgvector, uuid-ossp)
-- [ ] Configure NATS with monitoring
-- [ ] Add connection health checks
-- [ ] Create .env.example with all required vars
+#### Specialists:
+1. **API Versioning Engineer** - `/v1` prefix on all routes; deprecation headers
+2. **OpenAPI Specialist** - Generate specs per service; merged index at `/packages/openapi/`
+3. **Contract Test Engineer** - Pact tests between Gateway ↔ services; CI integration
+4. **Idempotency Engineer** - Deduplication tables; eventId/deliveryId tracking
+5. **DLQ Architect** - Dead-letter queues for NATS; retry + exponential backoff
+6. **Circuit Breaker Engineer** - Timeouts, bulkheads, breakers on HTTP calls (undici, p-retry)
 
-**Assigned**: Infrastructure Lead → DevOps, Database Admin
-**Status**: Not Started
-**Dependencies**: None
+**Deliverables**:
+- All routes updated: `/v1/profiles`, `/v1/events`, etc.
+- `/packages/openapi/index.md` - OpenAPI catalog
+- `/packages/openapi/merged.yaml` - Combined spec
+- `/packages/contracts/pact-tests/` - Contract tests
+- `/packages/db/schema/idempotency.ts` - Deduplication tables
+- `/packages/events/dlq.ts` - DLQ + retry logic
+- `/packages/http-client/resilience.ts` - Circuit breaker SDK
+- `/reports/platform_lead_report.md`
 
-### 4.2 Development Scripts
-- [ ] Create pnpm workspace root package.json
-- [ ] Add "pnpm -w dev" script (starts all services + hot reload)
-- [ ] Add "pnpm -w build" script
-- [ ] Add "pnpm -w test" script
-- [ ] Add "pnpm -w db:migrate" script
-- [ ] Add "pnpm -w db:seed" script
-- [ ] Add "pnpm -w db:reset" script
-- [ ] Document usage in README
-
-**Assigned**: Infrastructure Lead → Deployment Specialist
-**Status**: Not Started
-**Dependencies**: 4.1
-
-### 4.3 Unit Tests
-- [ ] Test event contract Zod validators
-- [ ] Test Kintell CSV mapper normalization
-- [ ] Test Buddy data validators
-- [ ] Test Q2Q outcome taxonomy
-- [ ] Test API Gateway auth middleware
-- [ ] Configure Vitest/Jest
-- [ ] Achieve >80% coverage on mappers
-
-**Assigned**: Quality & Testing Lead → Unit Test Engineer
-**Status**: Not Started
-**Dependencies**: All services implemented
-
-### 4.4 Integration Tests
-- [ ] Create test: Ingest Kintell CSV → normalized rows in DB
-- [ ] Create test: CSV ingestion → events published to NATS
-- [ ] Create test: Event received → profile updated
-- [ ] Create test: End-to-end flow (CSV → events → profile → API)
-- [ ] Add test fixtures and sample data
-- [ ] Configure test database (separate from dev)
-
-**Assigned**: Quality & Testing Lead → Integration Test Engineer
-**Status**: Not Started
-**Dependencies**: All services + 4.1, 4.2
+**Acceptance**:
+- `/v1` APIs active; unversioned deprecated
+- OpenAPI specs generated and published
+- Contract tests pass in CI
+- Idempotent webhook re-delivery verified
+- DLQ captures poison pills
 
 ---
 
-## Phase 5: Documentation & PR 📝
+### Lead 3: Reliability Lead (6 specialists)
+**Mission**: Observability, tracing, metrics, monitoring, health checks
 
-### 5.1 Architecture Documentation
-- [ ] Update docs/Platform_Architecture.md with service map
-- [ ] Update docs/System_Diagram.md with data flow
-- [ ] Create docs/Event_Catalog.md
-- [ ] Create docs/Database_Schema.md
-- [ ] Document API endpoints in each service
-- [ ] Create ER diagram (Mermaid or PNG)
+#### Specialists:
+1. **OTel Engineer** - OpenTelemetry traces/metrics/logs; correlation IDs end-to-end
+2. **Sentry Engineer** - Error tracking wired into all services; source maps
+3. **Prometheus Engineer** - Metrics exporters; Grafana dashboards
+4. **Health Check Engineer** - Liveness/readiness endpoints; startup/shutdown hooks
+5. **Logging Specialist** - Structured logging standards; log aggregation docs
+6. **Runbook Writer** - SRE dashboards guide; incident response playbooks
 
-**Assigned**: Data Modeling Lead → Documentation Writer
-**Status**: Not Started
-**Dependencies**: All implementation complete
+**Deliverables**:
+- `/packages/observability/otel.ts` - OTel SDK wrapper
+- `/packages/observability/sentry.ts` - Sentry client
+- `/packages/observability/metrics.ts` - Prometheus client
+- All services: `/health/liveness`, `/health/readiness`
+- `/docker/grafana/dashboards/` - Pre-built dashboards
+- `/docs/Observability_Overview.md`
+- `/docs/SRE_Dashboards.md` - Runbooks
+- `/reports/reliability_lead_report.md`
 
-### 5.2 Reports
-- [ ] Create reports/worker2_services.md with summary
-- [ ] Include acceptance criteria checklist
-- [ ] Document any deviations or decisions
-- [ ] Add performance notes
-- [ ] List known limitations
-
-**Assigned**: Tech Lead Orchestrator
-**Status**: Not Started
-**Dependencies**: All tasks complete
-
-### 5.3 Pull Request
-- [ ] Review all commits
-- [ ] Ensure branch is up to date
-- [ ] Create PR with comprehensive description
-- [ ] Add checklist from acceptance criteria
-- [ ] Tag reviewers
-- [ ] Link to reports/worker2_services.md
-
-**Assigned**: Tech Lead Orchestrator
-**Status**: Not Started
-**Dependencies**: 5.1, 5.2
+**Acceptance**:
+- OTel traces visible end-to-end (correlation IDs propagate)
+- Sentry captures synthetic errors
+- Grafana dashboards show service health
+- All services have health endpoints
 
 ---
 
-## Blockers & Decisions
+### Lead 4: Data Lead (6 specialists)
+**Mission**: Migrations, backups, data quality, validation pipelines
 
-### Open Questions
-- [ ] Which NATS deployment model? (Embedded vs separate container)
-- [ ] JWT signing strategy? (Symmetric vs asymmetric keys)
-- [ ] Embedding model for evidence_snippets? (OpenAI vs local)
-- [ ] CSV upload size limits?
+#### Specialists:
+1. **Migration Engineer** - Zero-downtime patterns; ordering; rollback scripts
+2. **Backup Specialist** - Scheduled logical backups + restore drills
+3. **CSV Validation Engineer** - Schema versioning; row-level error files
+4. **Data Quality Engineer** - Quarantine pipelines for invalid rows
+5. **Schema Documenter** - ER diagrams; migration guides
+6. **DBA Optimizer** - Connection pooling; query optimization; indexes
 
-### Decisions Made
-- ✅ Use Drizzle ORM for type safety
-- ✅ Use Zod for runtime validation
-- ✅ Use Fastify for performance
-- ✅ NATS for event bus (not Kafka/RabbitMQ)
-- ✅ Separate packages for contracts/schema/utils (enforces boundaries)
+**Deliverables**:
+- `/packages/db/migrations/` - Enhanced with rollback scripts
+- `/packages/db/backup.ts` - Backup/restore automation
+- `/services/kintell-connector/validation/csv-schema.ts` - Versioned schemas
+- `/services/kintell-connector/quarantine/` - Error handling
+- `/docs/DB_Backup_Restore.md`
+- `/docs/Migration_Playbook.md`
+- `/reports/data_lead_report.md`
+
+**Acceptance**:
+- Migrations run zero-downtime; rollback tested
+- Backup/restore drill succeeds
+- Invalid CSV rows captured to quarantine files
+- ER diagram generated
 
 ---
 
-## Progress Tracking
+### Lead 5: Compliance Lead (6 specialists)
+**Mission**: Auditing, GDPR, PII encryption, data sovereignty
 
-**Overall**: 2 / 100 tasks complete (2%)
+#### Specialists:
+1. **Audit Engineer** - `audits` table; actor/scope/before/after logging
+2. **PII Architect** - Field-level encryption; `pii` schema partitioning
+3. **GDPR Engineer** - `/privacy/export` + `/privacy/delete` stub endpoints
+4. **DSR Orchestrator** - Data Subject Request workflows
+5. **Compliance Documenter** - GDPR compliance checklist; retention policies
+6. **Access Control Specialist** - Tenant isolation enforcement; RBAC audits
 
-| Phase | Tasks | Complete | %  |
-|-------|-------|----------|----|
-| 1. Foundation | 10 | 2 | 20% |
-| 2. Data Layer | 35 | 0 | 0% |
-| 3. Core Services | 72 | 0 | 0% |
-| 4. Infrastructure | 20 | 0 | 0% |
-| 5. Documentation | 13 | 0 | 0% |
+**Deliverables**:
+- `/packages/db/schema/audits.ts` - Audit log table
+- `/packages/db/schema/pii.ts` - Encrypted PII schema
+- `/packages/compliance/pii-encryption.ts` - Field encryption SDK
+- `/services/api-gateway/routes/privacy.ts` - GDPR endpoints
+- `/docs/GDPR_Compliance.md`
+- `/docs/Audit_Log_Specification.md`
+- `/reports/compliance_lead_report.md`
 
-**Last Updated**: 2025-11-13 (Auto-updated by orchestrator)
+**Acceptance**:
+- Audit logs capture key actions
+- PII fields encrypted at rest
+- `/privacy/export` returns user data bundle
+- `/privacy/delete` orchestrates deletion flow
+- Tenant isolation verified
+
+---
+
+### Lead 6: QA Lead (6 specialists)
+**Mission**: Integration tests, load tests, contract tests, CI gates
+
+#### Specialists:
+1. **Integration Test Engineer** - Signed webhook → events → profile tests
+2. **Idempotency Test Engineer** - Re-delivery replay tests
+3. **Load Test Engineer** - k6 scripts; baseline throughput/latency
+4. **Contract Test Engineer** - Pact CI integration
+5. **E2E Test Engineer** - Full CSV import → Q2Q → API retrieval
+6. **CI Gate Engineer** - Coverage thresholds; OTel route checks
+
+**Deliverables**:
+- `/tests/integration/webhook-to-profile.test.ts`
+- `/tests/integration/idempotency-replay.test.ts`
+- `/tests/integration/circuit-breaker.test.ts`
+- `/tests/load/k6-baseline.js` - Load test scripts
+- `/reports/perf_baseline.md` - Performance metrics
+- `/tests/e2e/csv-end-to-end.test.ts`
+- `.github/workflows/test.yml` - CI gates updated
+- `/reports/qa_lead_report.md`
+
+**Acceptance**:
+- Integration tests pass (webhook → profile)
+- Idempotent re-delivery proven
+- Circuit breaker fallback verified
+- k6 baseline established (RPS, p95 latency)
+- CI fails on < 80% coverage or un-traced routes
+
+---
+
+## Execution Phases
+
+### Phase 1: Foundation (Leads 1-2) - Days 1-3
+**Parallel Execution**:
+- Security Lead: RS256 JWT + OIDC + Webhook signatures
+- Platform Lead: API versioning + Idempotency + DLQ
+
+**Sync Point**: JWT + OIDC working; `/v1` routes live
+
+---
+
+### Phase 2: Observability & Data (Leads 3-4) - Days 4-6
+**Parallel Execution**:
+- Reliability Lead: OTel + Sentry + Health checks
+- Data Lead: Migrations + Backups + CSV validation
+
+**Sync Point**: OTel traces visible; backups tested
+
+---
+
+### Phase 3: Compliance & Testing (Leads 5-6) - Days 7-9
+**Parallel Execution**:
+- Compliance Lead: Auditing + PII encryption + GDPR stubs
+- QA Lead: Integration tests + Load tests + CI gates
+
+**Sync Point**: All tests passing; compliance verified
+
+---
+
+### Phase 4: Integration & Validation - Day 10
+**Orchestrator Activities**:
+1. Run full test suite
+2. Verify all acceptance criteria
+3. Generate consolidated reports
+4. Update Platform_Architecture.md
+5. Final commit + push
+
+---
+
+## Communication Protocol
+
+### Specialist → Lead
+- Commit artifacts to repository
+- Update status in this file (see Status Tracking below)
+- Report blockers immediately
+
+### Lead → Orchestrator
+- Integration report in `/reports/{lead}_report.md`
+- Blockers requiring orchestration decisions
+- Acceptance criteria validation
+
+### All Commits
+- Prefix: `feat(phaseB):` or `docs(phaseB):` or `test(phaseB):`
+- Small, incremental commits per artifact
+- Reference this plan: `Ref: MULTI_AGENT_PLAN.md § {Lead}/{Specialist}`
+
+---
+
+## Status Tracking
+
+### Security Lead Progress
+- [ ] JWT Architect - RS256 + JWKS
+- [ ] OIDC Engineer - SSO implementation
+- [ ] WAF Specialist - Rate limits + firewall
+- [ ] Webhook Security Engineer - HMAC validation
+- [ ] Service Auth Engineer - Internal auth
+- [ ] Secrets Manager - Config loaders
+
+### Platform Lead Progress
+- [ ] API Versioning Engineer - /v1 routes
+- [ ] OpenAPI Specialist - Spec generation
+- [ ] Contract Test Engineer - Pact tests
+- [ ] Idempotency Engineer - Deduplication
+- [ ] DLQ Architect - Dead-letter queues
+- [ ] Circuit Breaker Engineer - Resilience patterns
+
+### Reliability Lead Progress
+- [ ] OTel Engineer - Tracing + metrics
+- [ ] Sentry Engineer - Error tracking
+- [ ] Prometheus Engineer - Metrics + dashboards
+- [ ] Health Check Engineer - Endpoints
+- [ ] Logging Specialist - Standards
+- [ ] Runbook Writer - SRE docs
+
+### Data Lead Progress
+- [ ] Migration Engineer - Rollback scripts
+- [ ] Backup Specialist - Backup automation
+- [ ] CSV Validation Engineer - Schema validation
+- [ ] Data Quality Engineer - Quarantine pipelines
+- [ ] Schema Documenter - ER diagrams
+- [ ] DBA Optimizer - Performance tuning
+
+### Compliance Lead Progress
+- [ ] Audit Engineer - Audit logs
+- [ ] PII Architect - Encryption schema
+- [ ] GDPR Engineer - Privacy endpoints
+- [ ] DSR Orchestrator - Request workflows
+- [ ] Compliance Documenter - Checklists
+- [ ] Access Control Specialist - Tenant isolation
+
+### QA Lead Progress
+- [ ] Integration Test Engineer - Webhook tests
+- [ ] Idempotency Test Engineer - Replay tests
+- [ ] Load Test Engineer - k6 scripts
+- [ ] Contract Test Engineer - Pact CI
+- [ ] E2E Test Engineer - Full flow tests
+- [ ] CI Gate Engineer - Coverage gates
+
+---
+
+## Final Deliverables Checklist
+
+### Code Artifacts
+- [ ] All services use RS256 JWT with JWKS
+- [ ] OIDC SSO routes implemented
+- [ ] Webhook HMAC validation in connectors
+- [ ] All APIs versioned with `/v1` prefix
+- [ ] OpenAPI specs generated + merged
+- [ ] Idempotency tables + deduplication logic
+- [ ] DLQ + retry logic for NATS
+- [ ] Circuit breakers on inter-service HTTP
+- [ ] OTel instrumentation in all services
+- [ ] Sentry error tracking configured
+- [ ] Health endpoints (liveness/readiness)
+- [ ] Migration rollback scripts
+- [ ] Backup/restore automation
+- [ ] CSV validation + quarantine pipelines
+- [ ] Audit log implementation
+- [ ] PII encryption schema
+- [ ] GDPR privacy endpoints (stubs)
+
+### Tests
+- [ ] Integration test: signed webhook → profile
+- [ ] Integration test: idempotent re-delivery
+- [ ] Integration test: circuit breaker fallback
+- [ ] Load test: k6 baseline established
+- [ ] Contract tests: Gateway ↔ services
+- [ ] E2E test: CSV → events → Q2Q → API
+
+### Documentation
+- [ ] `/docs/Security_Hardening_Checklist.md`
+- [ ] `/docs/Observability_Overview.md`
+- [ ] `/docs/SRE_Dashboards.md`
+- [ ] `/docs/DB_Backup_Restore.md`
+- [ ] `/docs/Migration_Playbook.md`
+- [ ] `/docs/GDPR_Compliance.md`
+- [ ] `/docs/Audit_Log_Specification.md`
+- [ ] `/reports/phaseB_worker1_hardening.md` (MASTER REPORT)
+- [ ] `/reports/perf_baseline.md`
+- [ ] `/reports/security_lead_report.md`
+- [ ] `/reports/platform_lead_report.md`
+- [ ] `/reports/reliability_lead_report.md`
+- [ ] `/reports/data_lead_report.md`
+- [ ] `/reports/compliance_lead_report.md`
+- [ ] `/reports/qa_lead_report.md`
+
+### CI/CD
+- [ ] Test coverage threshold enforced
+- [ ] OTel route coverage check
+- [ ] Contract tests in CI pipeline
+- [ ] Backup restore drill documented
+
+---
+
+## Acceptance Criteria (FINAL GATE)
+
+### Security ✅
+- RS256 JWT + JWKS endpoint responding
+- OIDC SSO login works with test tenant
+- Webhook signature validation proven via replay test
+- Service-to-service JWT working
+
+### Platform ✅
+- All routes use `/v1` prefix
+- OpenAPI merged spec generated
+- Contract tests passing in CI
+- Idempotent re-delivery verified
+- DLQ captures failed events
+
+### Reliability ✅
+- OTel traces visible end-to-end with correlation IDs
+- Sentry alerts fire on synthetic errors
+- Grafana dashboards deployed
+- All services have health endpoints
+
+### Data ✅
+- Migration rollback tested successfully
+- Backup/restore drill completed
+- CSV quarantine flow verified
+- ER diagram generated
+
+### Compliance ✅
+- Audit logs capture key actions
+- PII fields encrypted
+- GDPR endpoints reachable (stubs)
+- Tenant isolation verified
+
+### Testing ✅
+- Integration tests pass (webhook → profile)
+- Idempotency replay test passes
+- Circuit breaker test passes
+- k6 baseline documented
+- CI gates enforced
+
+---
+
+## Risk Register
+
+| Risk | Impact | Mitigation | Owner |
+|------|--------|------------|-------|
+| JWT migration breaks existing clients | HIGH | Version both HS256 + RS256; deprecate gradually | Security Lead |
+| OIDC provider configuration delays | MEDIUM | Start with .env.example + docs; providers configurable | Security Lead |
+| OTel overhead impacts performance | MEDIUM | Sample traces (10%); benchmark before/after | Reliability Lead |
+| Migration rollback untested in prod-like env | HIGH | Test on staging clone; document edge cases | Data Lead |
+| PII encryption key rotation not automated | MEDIUM | Manual rotation docs first; plan vault integration | Compliance Lead |
+| Load test infrastructure unavailable | LOW | Use local k6; document cloud setup for future | QA Lead |
+
+---
+
+## Next Steps (Orchestrator)
+
+1. ✅ Deploy Security Lead team
+2. ✅ Deploy Platform Lead team (parallel)
+3. Monitor commits; unblock dependencies
+4. Deploy Reliability + Data Leads (Phase 2)
+5. Deploy Compliance + QA Leads (Phase 3)
+6. Synthesize final reports
+7. Validate all acceptance criteria
+8. Commit + push to branch
+
+---
+
+**Last Updated**: Phase B initiation
+**Status**: 🟡 IN PROGRESS
+**Orchestrator**: Active

@@ -20,9 +20,9 @@ async function start() {
     return { status: 'ok', service: 'kintell-connector', timestamp: new Date().toISOString() };
   });
 
-  // Register routes
-  app.register(importRoutes, { prefix: '/import' });
-  app.register(webhookRoutes, { prefix: '/webhooks' });
+  // Register routes with API versioning
+  app.register(importRoutes, { prefix: '/v1/import' });
+  app.register(webhookRoutes, { prefix: '/v1/webhooks' });
 
   // Connect to event bus
   const eventBus = getEventBus();

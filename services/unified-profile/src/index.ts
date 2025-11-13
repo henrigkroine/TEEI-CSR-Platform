@@ -17,8 +17,8 @@ async function start() {
     return { status: 'ok', service: 'unified-profile', timestamp: new Date().toISOString() };
   });
 
-  // Register routes
-  app.register(profileRoutes, { prefix: '/profile' });
+  // Register routes with API versioning
+  app.register(profileRoutes, { prefix: '/v1/profile' });
 
   // Connect to event bus and setup subscribers
   const eventBus = getEventBus();

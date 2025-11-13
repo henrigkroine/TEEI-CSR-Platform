@@ -19,8 +19,8 @@ async function start() {
     return { status: 'ok', service: 'upskilling-connector', timestamp: new Date().toISOString() };
   });
 
-  // Register routes
-  app.register(importRoutes, { prefix: '/import' });
+  // Register routes with API versioning
+  app.register(importRoutes, { prefix: '/v1/import' });
 
   // Connect to event bus
   const eventBus = getEventBus();

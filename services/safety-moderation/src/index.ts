@@ -20,8 +20,8 @@ async function start() {
     };
   });
 
-  // Register screening routes
-  app.register(screenRoutes);
+  // Register screening routes with API versioning
+  app.register(screenRoutes, { prefix: '/v1' });
 
   // Connect to event bus
   const eventBus = getEventBus();
