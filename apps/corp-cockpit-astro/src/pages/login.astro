@@ -1,205 +1,128 @@
 ---
-import BaseLayout from '../layouts/BaseLayout.astro';
+import { detectLanguage, t } from '../lib/i18n';
 
-const error = Astro.url.searchParams.get('error');
+const lang = detectLanguage(Astro.request);
+
+// Get redirect URL from query params
+const url = new URL(Astro.request.url);
+const redirect = url.searchParams.get('redirect') || '/';
 ---
 
-<BaseLayout title="Sign In - TEEI Corporate Cockpit">
-  <div class="login-container">
-    <div class="login-card">
-      <h1>Welcome Back</h1>
-      <p class="subtitle">Sign in to access your Corporate Cockpit</p>
-
-      {error && (
-        <div class="error-message" role="alert">
-          Invalid credentials. Please try again.
+<!doctype html>
+<html lang={lang}>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <title>Login - {t(lang, 'app.title')}</title>
+  </head>
+  <body class="bg-gray-50 dark:bg-gray-900">
+    <div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div class="max-w-md w-full space-y-8">
+        <div>
+          <h1 class="text-center text-3xl font-bold text-primary-600 dark:text-primary-400">
+            {t(lang, 'app.title')}
+          </h1>
+          <h2 class="mt-6 text-center text-2xl font-semibold text-gray-900 dark:text-white">
+            Sign in to your account
+          </h2>
+          <p class="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
+            {t(lang, 'app.subtitle')}
+          </p>
         </div>
-      )}
+        <div class="mt-8 bg-white dark:bg-gray-800 py-8 px-4 shadow sm:rounded-lg sm:px-10">
+          <form class="space-y-6" action="/api/auth/login" method="POST">
+            <input type="hidden" name="redirect" value={redirect} />
+            <div>
+              <label for="email" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Email address
+              </label>
+              <div class="mt-1">
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  autocomplete="email"
+                  required
+                  class="appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white sm:text-sm"
+                  placeholder="you@example.com"
+                />
+              </div>
+            </div>
 
-      <form id="login-form" method="POST">
-        <div class="form-group">
-          <label for="email">Email</label>
-          <input
-            type="email"
-            id="email"
-            name="email"
-            required
-            autocomplete="email"
-            placeholder="admin@acme.com"
-          />
+            <div>
+              <label for="password" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Password
+              </label>
+              <div class="mt-1">
+                <input
+                  id="password"
+                  name="password"
+                  type="password"
+                  autocomplete="current-password"
+                  required
+                  class="appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white sm:text-sm"
+                  placeholder="••••••••"
+                />
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between">
+              <div class="flex items-center">
+                <input
+                  id="remember-me"
+                  name="remember-me"
+                  type="checkbox"
+                  class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                />
+                <label for="remember-me" class="ml-2 block text-sm text-gray-900 dark:text-gray-300">
+                  Remember me
+                </label>
+              </div>
+
+              <div class="text-sm">
+                <a href="/forgot-password" class="font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400">
+                  Forgot your password?
+                </a>
+              </div>
+            </div>
+
+            <div>
+              <button
+                type="submit"
+                class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+              >
+                Sign in
+              </button>
+            </div>
+          </form>
+
+          <div class="mt-6">
+            <div class="relative">
+              <div class="absolute inset-0 flex items-center">
+                <div class="w-full border-t border-gray-300 dark:border-gray-600"></div>
+              </div>
+              <div class="relative flex justify-center text-sm">
+                <span class="px-2 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">
+                  For demo purposes only
+                </span>
+              </div>
+            </div>
+
+            <div class="mt-6 text-center">
+              <p class="text-xs text-gray-500 dark:text-gray-400">
+                This is a demo login page. In production, authentication would be handled by the API Gateway.
+              </p>
+            </div>
+          </div>
         </div>
-
-        <div class="form-group">
-          <label for="password">Password</label>
-          <input
-            type="password"
-            id="password"
-            name="password"
-            required
-            autocomplete="current-password"
-            placeholder="Enter your password"
-          />
-        </div>
-
-        <button type="submit" class="btn btn-primary">
-          Sign In
-        </button>
-      </form>
-
-      <div class="demo-credentials">
-        <p><strong>Demo Credentials:</strong></p>
-        <ul>
-          <li><strong>Admin:</strong> admin@acme.com / admin123</li>
-          <li><strong>Viewer:</strong> viewer@acme.com / viewer123</li>
-        </ul>
       </div>
     </div>
-  </div>
-</BaseLayout>
-
-<script>
-  const form = document.getElementById('login-form') as HTMLFormElement;
-
-  form?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-
-    const formData = new FormData(form);
-    const email = formData.get('email') as string;
-    const password = formData.get('password') as string;
-
-    try {
-      const response = await fetch('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-
-      if (response.ok) {
-        window.location.href = '/dashboard';
-      } else {
-        window.location.href = '/login?error=1';
-      }
-    } catch (error) {
-      console.error('Login error:', error);
-      window.location.href = '/login?error=1';
-    }
-  });
-</script>
-
-<style>
-  .login-container {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 60vh;
-    padding: calc(var(--spacing-unit) * 4);
-  }
-
-  .login-card {
-    background-color: var(--color-bg);
-    padding: calc(var(--spacing-unit) * 5);
-    border-radius: var(--border-radius);
-    box-shadow: var(--shadow-lg);
-    max-width: 450px;
-    width: 100%;
-  }
-
-  h1 {
-    font-size: 2rem;
-    margin-bottom: calc(var(--spacing-unit) * 1);
-    text-align: center;
-  }
-
-  .subtitle {
-    text-align: center;
-    color: var(--color-text-secondary);
-    margin-bottom: calc(var(--spacing-unit) * 4);
-  }
-
-  .error-message {
-    background-color: #fee;
-    color: var(--color-error);
-    padding: calc(var(--spacing-unit) * 2);
-    border-radius: var(--border-radius);
-    margin-bottom: calc(var(--spacing-unit) * 3);
-    border: 1px solid var(--color-error);
-  }
-
-  .form-group {
-    margin-bottom: calc(var(--spacing-unit) * 3);
-  }
-
-  label {
-    display: block;
-    font-weight: 600;
-    margin-bottom: calc(var(--spacing-unit) * 1);
-    color: var(--color-text);
-  }
-
-  input {
-    width: 100%;
-    padding: calc(var(--spacing-unit) * 1.5);
-    border: 1px solid var(--color-border);
-    border-radius: var(--border-radius);
-    font-size: 1rem;
-    transition: border-color 0.2s;
-  }
-
-  input:focus {
-    outline: none;
-    border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
-  }
-
-  .btn {
-    width: 100%;
-    padding: calc(var(--spacing-unit) * 1.5);
-    border: none;
-    border-radius: var(--border-radius);
-    font-size: 1rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background-color 0.2s;
-  }
-
-  .btn-primary {
-    background-color: var(--color-primary);
-    color: white;
-  }
-
-  .btn-primary:hover {
-    background-color: #0052a3;
-  }
-
-  .btn:focus-visible {
-    outline: 2px solid var(--color-primary);
-    outline-offset: 2px;
-  }
-
-  .demo-credentials {
-    margin-top: calc(var(--spacing-unit) * 4);
-    padding-top: calc(var(--spacing-unit) * 3);
-    border-top: 1px solid var(--color-border);
-    font-size: 0.875rem;
-    color: var(--color-text-secondary);
-  }
-
-  .demo-credentials p {
-    margin-bottom: calc(var(--spacing-unit) * 1);
-  }
-
-  .demo-credentials ul {
-    list-style: none;
-    padding-left: 0;
-  }
-
-  .demo-credentials li {
-    margin-bottom: calc(var(--spacing-unit) * 0.5);
-  }
-
-  @media (max-width: 768px) {
-    .login-card {
-      padding: calc(var(--spacing-unit) * 3);
-    }
-  }
-</style>
+  </body>
+</html>

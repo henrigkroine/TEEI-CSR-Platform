@@ -1,40 +1,35 @@
 {
   "name": "teei-csr-platform",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
-  "description": "TEEI CSR Platform - Unified impact measurement and AI-powered ecosystem",
+  "description": "TEEI CSR Platform - Unified impact measurement ecosystem",
+  "scripts": {
+    "dev": "concurrently -n gateway,profile,kintell,buddy,upskilling,q2q,safety,cockpit \"pnpm --filter @teei/api-gateway dev\" \"pnpm --filter @teei/unified-profile dev\" \"pnpm --filter @teei/kintell-connector dev\" \"pnpm --filter @teei/buddy-service dev\" \"pnpm --filter @teei/upskilling-connector dev\" \"pnpm --filter @teei/q2q-ai dev\" \"pnpm --filter @teei/safety-moderation dev\" \"pnpm --filter @teei/corp-cockpit-astro dev\"",
+    "build": "pnpm -r --filter './packages/**' build && pnpm -r --filter './services/**' build && pnpm -r --filter './apps/**' build",
+    "test": "pnpm -r test",
+    "test:unit": "pnpm -r test:unit",
+    "test:integration": "pnpm -r test:integration",
+    "db:migrate": "pnpm --filter @teei/shared-schema db:migrate",
+    "db:seed": "pnpm --filter @teei/shared-schema db:seed",
+    "db:reset": "pnpm --filter @teei/shared-schema db:reset",
+    "db:studio": "pnpm --filter @teei/shared-schema db:studio",
+    "lint": "pnpm -r lint",
+    "format": "prettier --write \"**/*.{ts,tsx,js,json,md}\"",
+    "clean": "pnpm -r clean && rm -rf node_modules"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.5",
+    "@typescript-eslint/eslint-plugin": "^6.19.0",
+    "@typescript-eslint/parser": "^6.19.0",
+    "concurrently": "^8.2.2",
+    "eslint": "^8.56.0",
+    "prettier": "^3.2.4",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3",
+    "vitest": "^1.2.1"
+  },
   "engines": {
     "node": ">=20.0.0",
     "pnpm": ">=8.0.0"
-  },
-  "scripts": {
-    "dev": "pnpm -r --parallel dev",
-    "build": "pnpm -r build",
-    "test": "pnpm -r test",
-    "lint": "eslint . --ext .ts,.tsx,.js,.jsx,.astro",
-    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,astro,json,md}\"",
-    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,astro,json,md}\"",
-    "typecheck": "pnpm -r typecheck",
-    "clean": "pnpm -r clean && rm -rf node_modules"
-  },
-  "keywords": [
-    "csr",
-    "impact-measurement",
-    "social-impact",
-    "sroi",
-    "volunteer-management"
-  ],
-  "author": "TEEI Platform (Henrik Røine)",
-  "license": "PROPRIETARY",
-  "devDependencies": {
-    "@types/node": "^20.10.0",
-    "@typescript-eslint/eslint-plugin": "^6.15.0",
-    "@typescript-eslint/parser": "^6.15.0",
-    "eslint": "^8.56.0",
-    "eslint-config-prettier": "^9.1.0",
-    "eslint-plugin-astro": "^0.31.0",
-    "prettier": "^3.1.1",
-    "prettier-plugin-astro": "^0.12.2",
-    "typescript": "^5.3.3"
   }
 }

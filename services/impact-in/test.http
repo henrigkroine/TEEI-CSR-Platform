@@ -1,0 +1,239 @@
+### Impact-In Service - API Test Suite
+### Base URL
+@baseUrl = http://localhost:3008
+@companyId = 123e4567-e89b-12d3-a456-426614174000
+
+### Health Check
+GET {{baseUrl}}/health
+
+###############################################################################
+# Feature Flags
+###############################################################################
+
+### Get Feature Flags
+GET {{baseUrl}}/impact-in/features/{{companyId}}
+
+### Update Feature Flags (Enable Benevity and Goodera)
+POST {{baseUrl}}/impact-in/features/{{companyId}}
+Content-Type: application/json
+
+{
+  "benevity": true,
+  "goodera": true,
+  "workday": false
+}
+
+### Reset Feature Flags to Environment Defaults
+DELETE {{baseUrl}}/impact-in/features/{{companyId}}
+
+###############################################################################
+# Benevity Delivery
+###############################################################################
+
+### Deliver to Benevity
+POST {{baseUrl}}/impact-in/deliver/benevity/{{companyId}}
+Content-Type: application/json
+
+{
+  "metrics": {
+    "companyId": "{{companyId}}",
+    "periodStart": "2024-01-01T00:00:00Z",
+    "periodEnd": "2024-01-31T23:59:59Z",
+    "participantsCount": 120,
+    "volunteersCount": 45,
+    "volunteerHours": 180,
+    "sessionsCount": 60,
+    "avgIntegrationScore": 0.85,
+    "avgLanguageLevel": 7.5,
+    "avgJobReadiness": 0.78
+  },
+  "organizationId": "org-benevity-123",
+  "programId": "teei-integration",
+  "programName": "TEEI Integration Program"
+}
+
+###############################################################################
+# Goodera Delivery
+###############################################################################
+
+### Deliver to Goodera
+POST {{baseUrl}}/impact-in/deliver/goodera/{{companyId}}
+Content-Type: application/json
+
+{
+  "metrics": {
+    "companyId": "{{companyId}}",
+    "periodStart": "2024-02-01T00:00:00Z",
+    "periodEnd": "2024-02-29T23:59:59Z",
+    "participantsCount": 95,
+    "volunteersCount": 38,
+    "volunteerHours": 152,
+    "sessionsCount": 48,
+    "avgIntegrationScore": 0.82,
+    "avgLanguageLevel": 7.2,
+    "avgJobReadiness": 0.75,
+    "outcomes": [
+      {
+        "category": "Social Integration",
+        "score": 0.88,
+        "participantCount": 95
+      },
+      {
+        "category": "Professional Skills",
+        "score": 0.76,
+        "participantCount": 95
+      }
+    ]
+  },
+  "organizationId": "org-goodera-456",
+  "programId": "teei-program-1"
+}
+
+###############################################################################
+# Workday Delivery
+###############################################################################
+
+### Deliver to Workday
+POST {{baseUrl}}/impact-in/deliver/workday/{{companyId}}
+Content-Type: application/json
+
+{
+  "metrics": {
+    "companyId": "{{companyId}}",
+    "periodStart": "2024-03-01T00:00:00Z",
+    "periodEnd": "2024-03-31T23:59:59Z",
+    "participantsCount": 140,
+    "volunteersCount": 52,
+    "volunteerHours": 208,
+    "sessionsCount": 70,
+    "avgIntegrationScore": 0.87,
+    "avgLanguageLevel": 7.8,
+    "avgJobReadiness": 0.81
+  },
+  "organizationId": "org-workday-789",
+  "programId": "teei-integration",
+  "programName": "TEEI Integration and Employment Program"
+}
+
+###############################################################################
+# Delivery History and Audit
+###############################################################################
+
+### Get All Deliveries for Company
+GET {{baseUrl}}/impact-in/deliveries/{{companyId}}
+
+### Get Benevity Deliveries Only
+GET {{baseUrl}}/impact-in/deliveries/{{companyId}}?platform=benevity&limit=20
+
+### Get Goodera Deliveries Only
+GET {{baseUrl}}/impact-in/deliveries/{{companyId}}?platform=goodera&limit=20
+
+### Get Workday Deliveries Only
+GET {{baseUrl}}/impact-in/deliveries/{{companyId}}?platform=workday&limit=20
+
+### Get Failed Deliveries
+GET {{baseUrl}}/impact-in/failed
+
+###############################################################################
+# Replay Failed Delivery
+###############################################################################
+
+### Replay a Failed Delivery (replace with actual delivery ID)
+@deliveryId = replace-with-actual-delivery-id
+POST {{baseUrl}}/impact-in/replay/{{deliveryId}}
+
+###############################################################################
+# Error Cases
+###############################################################################
+
+### Invalid Platform
+POST {{baseUrl}}/impact-in/deliver/invalid-platform/{{companyId}}
+Content-Type: application/json
+
+{
+  "metrics": {
+    "companyId": "{{companyId}}",
+    "periodStart": "2024-01-01T00:00:00Z",
+    "periodEnd": "2024-01-31T23:59:59Z",
+    "participantsCount": 100,
+    "volunteersCount": 50,
+    "volunteerHours": 200,
+    "sessionsCount": 75
+  }
+}
+
+### Missing Required Fields
+POST {{baseUrl}}/impact-in/deliver/benevity/{{companyId}}
+Content-Type: application/json
+
+{
+  "metrics": {
+    "companyId": "{{companyId}}",
+    "periodStart": "2024-01-01T00:00:00Z"
+  }
+}
+
+### Company ID Mismatch
+POST {{baseUrl}}/impact-in/deliver/benevity/{{companyId}}
+Content-Type: application/json
+
+{
+  "metrics": {
+    "companyId": "different-company-id",
+    "periodStart": "2024-01-01T00:00:00Z",
+    "periodEnd": "2024-01-31T23:59:59Z",
+    "participantsCount": 100,
+    "volunteersCount": 50,
+    "volunteerHours": 200,
+    "sessionsCount": 75
+  }
+}
+
+### Deliver to Disabled Platform
+# First disable all platforms
+POST {{baseUrl}}/impact-in/features/{{companyId}}
+Content-Type: application/json
+
+{
+  "benevity": false,
+  "goodera": false,
+  "workday": false
+}
+
+### Then try to deliver (should get 403)
+POST {{baseUrl}}/impact-in/deliver/benevity/{{companyId}}
+Content-Type: application/json
+
+{
+  "metrics": {
+    "companyId": "{{companyId}}",
+    "periodStart": "2024-01-01T00:00:00Z",
+    "periodEnd": "2024-01-31T23:59:59Z",
+    "participantsCount": 100,
+    "volunteersCount": 50,
+    "volunteerHours": 200,
+    "sessionsCount": 75
+  }
+}
+
+###############################################################################
+# Rate Limiting Test
+###############################################################################
+
+### Test Rate Limiting (send multiple requests quickly)
+# Run this multiple times in quick succession to trigger rate limit
+
+POST {{baseUrl}}/impact-in/deliver/benevity/{{companyId}}
+Content-Type: application/json
+
+{
+  "metrics": {
+    "companyId": "{{companyId}}",
+    "periodStart": "2024-01-01T00:00:00Z",
+    "periodEnd": "2024-01-31T23:59:59Z",
+    "participantsCount": 100,
+    "volunteersCount": 50,
+    "volunteerHours": 200,
+    "sessionsCount": 75
+  }
+}

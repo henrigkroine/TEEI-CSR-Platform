@@ -1,0 +1,308 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Chart from '../components/Chart';
+import LoadingSpinner from '../components/LoadingSpinner';
+import ErrorMessage from '../components/ErrorMessage';
+import { detectLanguage, t } from '../lib/i18n';
+import { createApiClient } from '../lib/api';
+
+const lang = detectLanguage(Astro.request);
+
+// Get company ID from cookies or default
+const companyId = Astro.cookies.get('companyId')?.value || 'demo-company';
+
+// Get auth token from cookies
+const token = Astro.cookies.get('auth_token')?.value;
+
+// Get time range from query params (default: last-6-months)
+const url = new URL(Astro.request.url);
+const timeRange = url.searchParams.get('range') || 'last-6-months';
+
+// Fetch real data from analytics service
+const apiClient = createApiClient(token);
+
+let timeSeriesData: any[] = [];
+let error: string | null = null;
+
+try {
+  // Fetch time-series metrics
+  timeSeriesData = await apiClient.get(`/metrics/company/${companyId}/period/${timeRange}`);
+
+  // Ensure it's an array
+  if (!Array.isArray(timeSeriesData)) {
+    timeSeriesData = [];
+  }
+} catch (e: any) {
+  error = e.message || 'Failed to load trends data';
+  console.error('Trends error:', e);
+}
+
+// Extract labels and data from time series
+const labels = timeSeriesData.map((d) => {
+  const date = new Date(d.period || d.timestamp);
+  return date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+});
+
+// Prepare chart data
+const participantGrowthData = {
+  labels,
+  datasets: [
+    {
+      label: t(lang, 'dashboard.participants'),
+      data: timeSeriesData.map((d) => d.participantsCount || 0),
+      borderColor: 'rgb(59, 130, 246)',
+      backgroundColor: 'rgba(59, 130, 246, 0.1)',
+      tension: 0.4,
+      fill: true,
+    },
+  ],
+};
+
+const volunteerEngagementData = {
+  labels,
+  datasets: [
+    {
+      label: t(lang, 'dashboard.volunteers'),
+      data: timeSeriesData.map((d) => d.volunteersCount || 0),
+      backgroundColor: 'rgba(34, 197, 94, 0.8)',
+      borderColor: 'rgb(34, 197, 94)',
+      borderWidth: 1,
+    },
+    {
+      label: t(lang, 'dashboard.sessions'),
+      data: timeSeriesData.map((d) => d.sessionsCount || 0),
+      backgroundColor: 'rgba(59, 130, 246, 0.8)',
+      borderColor: 'rgb(59, 130, 246)',
+      borderWidth: 1,
+    },
+  ],
+};
+
+const programPerformanceData = {
+  labels,
+  datasets: [
+    {
+      label: t(lang, 'dashboard.avgIntegrationScore'),
+      data: timeSeriesData.map((d) => d.avgIntegrationScore || 0),
+      borderColor: 'rgb(59, 130, 246)',
+      backgroundColor: 'rgba(59, 130, 246, 0.1)',
+      tension: 0.4,
+    },
+    {
+      label: t(lang, 'dashboard.avgLanguageLevel'),
+      data: timeSeriesData.map((d) => d.avgLanguageLevel || 0),
+      borderColor: 'rgb(34, 197, 94)',
+      backgroundColor: 'rgba(34, 197, 94, 0.1)',
+      tension: 0.4,
+    },
+    {
+      label: t(lang, 'dashboard.avgJobReadiness'),
+      data: timeSeriesData.map((d) => d.avgJobReadiness || 0),
+      borderColor: 'rgb(168, 85, 247)',
+      backgroundColor: 'rgba(168, 85, 247, 0.1)',
+      tension: 0.4,
+    },
+  ],
+};
+
+// Calculate insights
+const latestData = timeSeriesData[timeSeriesData.length - 1];
+const previousData = timeSeriesData[timeSeriesData.length - 2];
+
+function calculateGrowth(current: number | undefined, previous: number | undefined): number {
+  if (!current || !previous || previous === 0) return 0;
+  return ((current - previous) / previous) * 100;
+}
+
+const participantGrowth = calculateGrowth(
+  latestData?.participantsCount,
+  previousData?.participantsCount
+);
+
+const volunteerGrowth = calculateGrowth(
+  latestData?.volunteersCount,
+  previousData?.volunteersCount
+);
+
+const performanceGrowth = calculateGrowth(
+  latestData?.avgIntegrationScore,
+  previousData?.avgIntegrationScore
+);
+---
+
+<Layout title={t(lang, 'trends.title')}>
+  <div class="space-y-8">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
+          {t(lang, 'trends.title')}
+        </h1>
+        <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+          {t(lang, 'trends.historicalData')}
+        </p>
+      </div>
+      <div class="flex items-center space-x-3">
+        <button
+          id="exportCsvBtn"
+          class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700"
+        >
+          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+          </svg>
+          {t(lang, 'common.exportCsv')}
+        </button>
+        <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
+          {t(lang, 'trends.timeRange')}:
+        </label>
+        <select
+          id="timeRangeSelect"
+          class="block w-48 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 text-sm"
+        >
+          <option value="last-7-days">{t(lang, 'trends.last7days')}</option>
+          <option value="last-30-days">{t(lang, 'trends.last30days')}</option>
+          <option value="last-3-months">{t(lang, 'trends.last3months')}</option>
+          <option value="last-6-months" selected>{t(lang, 'trends.last6months')}</option>
+          <option value="last-year">{t(lang, 'trends.lastYear')}</option>
+        </select>
+      </div>
+    </div>
+
+    {error && (
+      <ErrorMessage client:load message={error} onRetry={() => window.location.reload()} />
+    )}
+
+    {!error && timeSeriesData.length > 0 && (
+      <>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+              {t(lang, 'trends.participantGrowth')}
+            </h2>
+            <Chart client:load type="line" data={participantGrowthData} height={300} />
+          </div>
+
+          <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+              {t(lang, 'trends.volunteerEngagement')}
+            </h2>
+            <Chart client:load type="bar" data={volunteerEngagementData} height={300} />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+              {t(lang, 'trends.programPerformance')}
+            </h2>
+            <Chart client:load type="line" data={programPerformanceData} height={300} />
+          </div>
+
+          <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+              {t(lang, 'trends.keyInsights')}
+            </h2>
+            <div class="space-y-4">
+              {participantGrowth !== 0 && (
+                <div class="flex items-start space-x-3">
+                  <div class="flex-shrink-0">
+                    <svg class={`w-6 h-6 ${participantGrowth > 0 ? 'text-green-500' : 'text-red-500'}`} fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p class="text-sm font-medium text-gray-900 dark:text-white">
+                      {participantGrowth > 0 ? t(lang, 'trends.participantGrowthAccelerating') : t(lang, 'trends.participantGrowthSlowing')}
+                    </p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                      {Math.abs(participantGrowth).toFixed(1)}% {participantGrowth > 0 ? 'increase' : 'decrease'} over last period
+                    </p>
+                  </div>
+                </div>
+              )}
+              {volunteerGrowth !== 0 && (
+                <div class="flex items-start space-x-3">
+                  <div class="flex-shrink-0">
+                    <svg class={`w-6 h-6 ${volunteerGrowth > 0 ? 'text-green-500' : 'text-red-500'}`} fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p class="text-sm font-medium text-gray-900 dark:text-white">
+                      {volunteerGrowth > 0 ? t(lang, 'trends.strongVolunteerGrowth') : t(lang, 'trends.volunteerGrowthConcern')}
+                    </p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                      {Math.abs(volunteerGrowth).toFixed(1)}% {volunteerGrowth > 0 ? 'increase' : 'decrease'} in volunteer count
+                    </p>
+                  </div>
+                </div>
+              )}
+              {performanceGrowth !== 0 && (
+                <div class="flex items-start space-x-3">
+                  <div class="flex-shrink-0">
+                    <svg class={`w-6 h-6 ${performanceGrowth > 0 ? 'text-green-500' : 'text-yellow-500'}`} fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p class="text-sm font-medium text-gray-900 dark:text-white">
+                      {performanceGrowth > 0 ? t(lang, 'trends.performanceImproving') : t(lang, 'trends.performanceNeedsAttention')}
+                    </p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                      Integration score {Math.abs(performanceGrowth).toFixed(1)}% {performanceGrowth > 0 ? 'up' : 'down'}
+                    </p>
+                  </div>
+                </div>
+              )}
+              {timeSeriesData.length > 0 && (
+                <div class="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                  <p class="text-xs text-blue-800 dark:text-blue-200">
+                    {t(lang, 'trends.dataPointsNote')}: {timeSeriesData.length} {timeSeriesData.length === 1 ? 'period' : 'periods'}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </>
+    )}
+
+    {!error && timeSeriesData.length === 0 && (
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-12 text-center">
+        <LoadingSpinner client:load message={t(lang, 'common.loading')} />
+      </div>
+    )}
+  </div>
+
+  <script>
+    import { exportToCSV } from '../lib/export';
+
+    // Time range selector
+    document.getElementById('timeRangeSelect')?.addEventListener('change', (e) => {
+      const target = e.target as HTMLSelectElement;
+      const range = target.value;
+      const url = new URL(window.location.href);
+      url.searchParams.set('range', range);
+      window.location.href = url.toString();
+    });
+
+    // CSV Export button
+    document.getElementById('exportCsvBtn')?.addEventListener('click', () => {
+      // Get data from page - this would ideally come from a global state or API
+      const companyId = 'demo-company';
+      const range = new URL(window.location.href).searchParams.get('range') || 'last-6-months';
+
+      // Fetch and export
+      fetch(`http://localhost:3007/metrics/company/${companyId}/period/${range}`)
+        .then(res => res.json())
+        .then(data => {
+          const dataArray = Array.isArray(data) ? data : [data];
+          const filename = `trends-${companyId}-${range}-${new Date().toISOString().split('T')[0]}.csv`;
+          exportToCSV(dataArray, filename);
+        })
+        .catch(error => {
+          console.error('Export failed:', error);
+          alert('Failed to export CSV. Please try again.');
+        });
+    });
+  </script>
+</Layout>

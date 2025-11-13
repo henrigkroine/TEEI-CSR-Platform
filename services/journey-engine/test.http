@@ -1,0 +1,163 @@
+### Journey Engine API Tests
+### Base URL
+@baseUrl = http://localhost:3009
+@userId = 550e8400-e29b-41d4-a716-446655440000
+
+### Health Check
+GET {{baseUrl}}/health
+
+###
+
+### Get Journey Flags for User
+GET {{baseUrl}}/journey/flags/{{userId}}
+
+###
+
+### Manually Trigger Rule Evaluation
+POST {{baseUrl}}/journey/flags/{{userId}}/evaluate
+
+###
+
+### Get Flag History
+GET {{baseUrl}}/journey/flags/{{userId}}/history
+
+###
+
+### Get Journey Milestones for User
+GET {{baseUrl}}/journey/milestones/{{userId}}
+
+###
+
+### Manually Trigger Milestone
+POST {{baseUrl}}/journey/milestones/{{userId}}/mentor_ready
+Content-Type: application/json
+
+{
+  "metadata": {
+    "triggered_by": "manual_test",
+    "reason": "Testing milestone creation"
+  }
+}
+
+###
+
+### List All Rules
+GET {{baseUrl}}/journey/rules
+
+###
+
+### Get Specific Rule
+GET {{baseUrl}}/journey/rules/mentor_ready_001
+
+###
+
+### Create New Rule
+POST {{baseUrl}}/journey/rules
+Content-Type: application/json
+
+{
+  "id": "test_rule_001",
+  "name": "Test Rule",
+  "description": "A test rule for demonstration",
+  "flag": "test_flag",
+  "conditions": [
+    {
+      "type": "count",
+      "entity": "buddy_matches",
+      "count": ">=",
+      "count_value": 1
+    }
+  ],
+  "actions": [
+    {
+      "type": "set_flag",
+      "flag": "test_flag",
+      "value": true
+    }
+  ],
+  "priority": 5,
+  "active": true
+}
+
+###
+
+### Update Rule
+PUT {{baseUrl}}/journey/rules/test_rule_001
+Content-Type: application/json
+
+{
+  "description": "Updated test rule description",
+  "priority": 10
+}
+
+###
+
+### Activate Rule
+POST {{baseUrl}}/journey/rules/test_rule_001/activate
+
+###
+
+### Deactivate Rule
+POST {{baseUrl}}/journey/rules/test_rule_001/deactivate
+
+###
+
+### Delete Rule
+DELETE {{baseUrl}}/journey/rules/test_rule_001
+
+###
+
+### Create Custom Rule: High Engagement
+POST {{baseUrl}}/journey/rules
+Content-Type: application/json
+
+{
+  "id": "high_engagement_001",
+  "name": "High Engagement",
+  "description": "User has high activity across all programs",
+  "flag": "high_engagement",
+  "conditions": [
+    {
+      "type": "all_of",
+      "conditions": [
+        {
+          "type": "count",
+          "entity": "buddy_events",
+          "count": ">=",
+          "count_value": 10
+        },
+        {
+          "type": "count",
+          "entity": "kintell_sessions",
+          "count": ">=",
+          "count_value": 5
+        },
+        {
+          "type": "count",
+          "entity": "learning_progress",
+          "count": ">=",
+          "count_value": 3
+        }
+      ]
+    }
+  ],
+  "actions": [
+    {
+      "type": "set_flag",
+      "flag": "high_engagement",
+      "value": true
+    },
+    {
+      "type": "emit_event",
+      "event": "orchestration.milestone.reached",
+      "payload": {
+        "milestone": "high_engagement",
+        "tier": "gold"
+      }
+    }
+  ],
+  "priority": 25,
+  "active": true
+}
+
+###

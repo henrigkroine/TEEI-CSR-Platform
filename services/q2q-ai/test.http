@@ -66,3 +66,69 @@ Content-Type: application/json
   "text": "",
   "userId": "550e8400-e29b-41d4-a716-446655440000"
 }
+
+###
+# ============================================================================
+# Calibration & Evaluation Endpoints
+# ============================================================================
+
+###
+# Upload Calibration Dataset
+POST {{baseUrl}}/q2q/eval/upload
+Content-Type: application/json
+
+{
+  "name": "Sample Test Dataset",
+  "samples": [
+    {
+      "text": "I feel more confident about my abilities now",
+      "true_label": "confidence_increase"
+    },
+    {
+      "text": "I don't think I can do this anymore",
+      "true_label": "confidence_decrease"
+    },
+    {
+      "text": "My buddy has been very helpful and I feel connected",
+      "true_label": "belonging_increase"
+    },
+    {
+      "text": "I've been applying to jobs and updating my resume",
+      "true_label": "employability:job_search"
+    }
+  ],
+  "uploaded_by": "test-user"
+}
+
+###
+# List All Calibration Datasets
+GET {{baseUrl}}/q2q/eval/datasets
+Content-Type: application/json
+
+###
+# Run Evaluation on Dataset
+# Replace {datasetId} with actual ID from upload response
+POST {{baseUrl}}/q2q/eval/run
+Content-Type: application/json
+
+{
+  "datasetId": "REPLACE_WITH_DATASET_ID",
+  "provider": "claude",
+  "batchSize": 5
+}
+
+###
+# Get All Evaluation Runs
+GET {{baseUrl}}/q2q/eval/results
+Content-Type: application/json
+
+###
+# Get Specific Evaluation Result
+# Replace {runId} with actual ID from run response
+GET {{baseUrl}}/q2q/eval/results/REPLACE_WITH_RUN_ID
+Content-Type: application/json
+
+###
+# Get Human-Readable Report
+# Replace {runId} with actual ID from run response
+GET {{baseUrl}}/q2q/eval/results/REPLACE_WITH_RUN_ID/report

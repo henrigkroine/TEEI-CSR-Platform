@@ -10,7 +10,7 @@ async function seed() {
   try {
     // Seed companies
     console.log('Creating companies...');
-    const [acmeCorp, techCo] = await db
+    const [acmeCorp, _techCo] = await db
       .insert(companies)
       .values([
         { name: 'Acme Corporation', industry: 'Technology', country: 'USA' },
@@ -20,7 +20,7 @@ async function seed() {
 
     // Seed users
     console.log('Creating users...');
-    const [adminUser, participant1, participant2, volunteer1, volunteer2, companyUser1] = await db
+    const [_adminUser, participant1, participant2, volunteer1, volunteer2, companyUser1] = await db
       .insert(users)
       .values([
         { email: 'admin@teei.org', role: 'admin', firstName: 'Admin', lastName: 'User' },

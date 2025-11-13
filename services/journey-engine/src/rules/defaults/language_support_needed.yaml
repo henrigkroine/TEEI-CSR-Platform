@@ -1,0 +1,27 @@
+id: language_support_needed_001
+name: Language Support Needed
+description: Low language comfort detected by Q2Q
+flag: language_support_needed
+priority: 15
+active: true
+conditions:
+  - type: value
+    entity: outcome_scores
+    field: dimension
+    operator: '='
+    value: language_comfort
+  - type: value
+    entity: outcome_scores
+    field: score
+    operator: '<'
+    value: 0.5
+actions:
+  - type: set_flag
+    flag: language_support_needed
+    value: true
+  - type: emit_event
+    event: orchestration.flag.updated
+    payload:
+      flag: language_support_needed
+      value: true
+      reason: Q2Q detected low language comfort

@@ -1,0 +1,27 @@
+id: mentor_ready_001
+name: Mentor Ready
+description: Participant has completed 3+ language sessions with high ratings
+flag: mentor_ready
+priority: 10
+active: true
+conditions:
+  - type: count
+    entity: kintell_sessions
+    field: session_type
+    value: language
+    count: '>='
+    count_value: 3
+  - type: value
+    entity: kintell_sessions
+    field: avg_rating
+    operator: '>='
+    value: 4.0
+actions:
+  - type: set_flag
+    flag: mentor_ready
+    value: true
+  - type: emit_event
+    event: orchestration.milestone.reached
+    payload:
+      milestone: mentor_ready
+      reason: Completed 3+ language sessions with avg rating >= 4.0

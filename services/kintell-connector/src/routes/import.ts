@@ -5,6 +5,13 @@ import { mapCSVRowToSession } from '../mappers/session-mapper.js';
 import { getEventBus, createServiceLogger } from '@teei/shared-utils';
 import type { KintellSessionCompleted } from '@teei/event-contracts';
 import { eq } from 'drizzle-orm';
+import {
+  createBackfillJob,
+  processBackfill,
+  getBackfillJobStatus,
+  getErrorFile,
+  resumeBackfill,
+} from '../utils/backfill.js';
 
 const logger = createServiceLogger('kintell-connector:import');
 
@@ -109,5 +116,139 @@ export async function importRoutes(app: FastifyInstance) {
     }
 
     return results;
+  });
+
+  /**
+   * POST /import/backfill/start
+   * Start a new backfill job with checkpoint/resume capability
+   */
+  app.post('/backfill/start', async (request, reply) => {
+    const data = await request.file();
+
+    if (!data) {
+      return reply.status(400).send({ error: 'No file uploaded' });
+    }
+
+    try {
+      // Count total rows first
+      let totalRows = 0;
+      const countParser = data.file.pipe(
+        parse({
+          columns: true,
+          skip_empty_lines: true,
+          trim: true,
+        })
+      );
+
+      for await (const _ of countParser) {
+        totalRows++;
+      }
+
+      // Create backfill job
+      const jobId = await createBackfillJob(data.filename, totalRows);
+
+      logger.info({ jobId, fileName: data.filename, totalRows }, 'Backfill job created');
+
+      // Note: In production, you would start processing in the background
+      // For now, we just return the job ID
+      return {
+        jobId,
+        fileName: data.filename,
+        totalRows,
+        status: 'pending',
+        message: 'Backfill job created. Call resume endpoint to start processing.',
+      };
+    } catch (error: any) {
+      logger.error({ error }, 'Error creating backfill job');
+      return reply.status(500).send({
+        error: 'Failed to create backfill job',
+        message: error.message,
+      });
+    }
+  });
+
+  /**
+   * GET /import/backfill/:jobId/status
+   * Get backfill job progress
+   */
+  app.get('/backfill/:jobId/status', async (request, reply) => {
+    try {
+      const { jobId } = request.params as { jobId: string };
+
+      const status = await getBackfillJobStatus(jobId);
+
+      if (!status) {
+        return reply.status(404).send({
+          error: 'Backfill job not found',
+        });
+      }
+
+      return status;
+    } catch (error: any) {
+      logger.error({ error }, 'Error fetching backfill job status');
+      return reply.status(500).send({
+        error: 'Failed to fetch backfill job status',
+        message: error.message,
+      });
+    }
+  });
+
+  /**
+   * GET /import/backfill/:jobId/errors
+   * Download error CSV file
+   */
+  app.get('/backfill/:jobId/errors', async (request, reply) => {
+    try {
+      const { jobId } = request.params as { jobId: string };
+
+      const errorFile = await getErrorFile(jobId);
+
+      if (!errorFile) {
+        return reply.status(404).send({
+          error: 'Error file not found',
+          message: 'No errors recorded or file has been deleted',
+        });
+      }
+
+      reply.header('Content-Type', 'text/csv');
+      reply.header('Content-Disposition', `attachment; filename="backfill_errors_${jobId}.csv"`);
+
+      return errorFile;
+    } catch (error: any) {
+      logger.error({ error }, 'Error downloading error file');
+      return reply.status(500).send({
+        error: 'Failed to download error file',
+        message: error.message,
+      });
+    }
+  });
+
+  /**
+   * POST /import/backfill/:jobId/resume
+   * Resume a backfill job from checkpoint (or start if pending)
+   */
+  app.post('/backfill/:jobId/resume', async (request, reply) => {
+    const data = await request.file();
+
+    if (!data) {
+      return reply.status(400).send({ error: 'No file uploaded' });
+    }
+
+    try {
+      const { jobId } = request.params as { jobId: string };
+
+      logger.info({ jobId }, 'Resuming backfill job');
+
+      // Process backfill (will resume from checkpoint if previously started)
+      const result = await resumeBackfill(jobId, data.file);
+
+      return result;
+    } catch (error: any) {
+      logger.error({ error }, 'Error resuming backfill job');
+      return reply.status(500).send({
+        error: 'Failed to resume backfill job',
+        message: error.message,
+      });
+    }
   });
 }

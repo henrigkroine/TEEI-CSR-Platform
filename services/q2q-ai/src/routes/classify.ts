@@ -25,8 +25,14 @@ export const classifyRoutes: FastifyPluginAsync = async (app) => {
       // Validate request body
       const { text, userId, contextId, contextType } = ClassifyTextSchema.parse(request.body);
 
-      // Run classification (stub implementation)
-      const classification = await classifyText(text);
+      // Generate correlation ID for tracking
+      const correlationId = `classify-${userId}-${Date.now()}`;
+
+      // Run classification using AI inference
+      const classification = await classifyText(text, {
+        correlationId,
+        userId
+      });
 
       // Get database connection
       const db = getDb();
@@ -35,31 +41,39 @@ export const classifyRoutes: FastifyPluginAsync = async (app) => {
       const scoreIds: Record<OutcomeDimension, string> = {} as any;
 
       for (const [dimension, score] of Object.entries(classification.scores)) {
-        // Insert outcome score
+        // Insert outcome score with AI metadata
         const [scoreRecord] = await db('outcome_scores')
           .insert({
-            user_id: userId,
+            text_id: contextId || userId, // Use contextId if provided, otherwise userId
+            text_type: contextType,
             dimension: dimension,
             score: score,
-            context_id: contextId,
-            context_type: contextType,
-            recorded_at: new Date()
+            confidence: score, // For now, use score as confidence
+            model_version: classification.metadata.modelName || 'unknown',
+            method: 'ai_classifier',
+            provider_used: classification.metadata.provider || 'unknown',
+            created_at: new Date()
           })
           .returning('id');
 
         scoreIds[dimension as OutcomeDimension] = scoreRecord.id;
+      }
 
-        // Extract and store evidence snippets
-        const snippets = extractEvidenceSnippets(text, dimension as OutcomeDimension, score);
+      // Extract and store evidence snippets from raw classification
+      if (classification.rawClassification) {
+        const { extractEvidenceSnippets: extractSnippets } = await import('../classifier.js');
+        const snippets = extractSnippets(text, classification.rawClassification);
 
         for (const snippet of snippets) {
+          // Insert evidence snippet with all metadata
           await db('evidence_snippets').insert({
-            outcome_score_id: scoreRecord.id,
-            snippet_text: snippet,
-            confidence: score, // Using classification score as confidence for stub
-            position_start: 0, // Stub values
-            position_end: snippet.length
-          });
+            outcome_score_id: scoreIds[OutcomeDimension.CONFIDENCE], // Link to first score
+            snippet_text: snippet.snippet,
+            snippet_hash: snippet.hash,
+            source_ref: snippet.labelType,
+            embedding: null, // TODO: Add embedding generation
+            created_at: new Date()
+          }).onConflict('snippet_hash').ignore(); // Avoid duplicate snippets
         }
       }
 
@@ -69,7 +83,16 @@ export const classifyRoutes: FastifyPluginAsync = async (app) => {
         classification: {
           scores: classification.scores,
           metadata: classification.metadata,
-          scoreIds: scoreIds
+          scoreIds: scoreIds,
+          rawLabels: classification.rawClassification ? {
+            confidence_increase: classification.rawClassification.confidence_increase,
+            confidence_decrease: classification.rawClassification.confidence_decrease,
+            belonging_increase: classification.rawClassification.belonging_increase,
+            belonging_decrease: classification.rawClassification.belonging_decrease,
+            language_comfort: classification.rawClassification.language_comfort,
+            employability_signals: classification.rawClassification.employability_signals,
+            risk_cues: classification.rawClassification.risk_cues
+          } : undefined
         },
         message: 'Text classified successfully'
       };

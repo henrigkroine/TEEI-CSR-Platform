@@ -1,4 +1,4 @@
-import { pgTable, uuid, date, integer, decimal, timestamp } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, date, integer, decimal, timestamp, index } from 'drizzle-orm/pg-core';
 import { companies } from './users.js';
 
 export const metricsCompanyPeriod = pgTable('metrics_company_period', {
@@ -15,4 +15,7 @@ export const metricsCompanyPeriod = pgTable('metrics_company_period', {
   sroiRatio: decimal('sroi_ratio', { precision: 6, scale: 2 }), // e.g., 5.23 = 5.23:1
   visScore: decimal('vis_score', { precision: 6, scale: 2 }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-});
+}, (table) => ({
+  companyPeriodIdx: index('metrics_company_period_idx').on(table.companyId, table.periodStart),
+  periodStartIdx: index('metrics_period_start_idx').on(table.periodStart),
+}));

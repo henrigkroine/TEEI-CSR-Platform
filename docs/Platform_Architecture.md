@@ -118,6 +118,7 @@ Transform qualitative social impact data into quantifiable business outcomes tha
 - `/upskilling/*` → Upskilling Connector
 - `/q2q/*` → Q2Q AI Engine
 - `/safety/*` → Safety Moderation
+- `/journey/*` → Journey Engine
 
 **Roles**:
 - `admin` - Full platform access
@@ -290,6 +291,71 @@ session_id,session_type,participant_email,volunteer_email,date,duration_min,rati
 
 ---
 
+### 8. Journey Engine (Port 3009)
+
+**Responsibilities**:
+- Declarative rules-based orchestration of participant journeys
+- Automatic computation of journey readiness flags
+- Cross-program milestone tracking
+- Event-driven workflow automation
+
+**Journey Flags**:
+- `mentor_ready` - Ready to become a mentor
+- `followup_needed` - Inactive participant needing outreach
+- `language_support_needed` - Low language comfort detected
+- Custom flags via declarative rules
+
+**Endpoints**:
+- `GET /journey/flags/:userId` - Get all journey flags
+- `POST /journey/flags/:userId/evaluate` - Manual rule evaluation
+- `GET /journey/milestones/:userId` - Get reached milestones
+- `POST /journey/milestones/:userId/:milestone` - Trigger milestone
+- `GET /journey/rules` - List all rules (admin)
+- `POST /journey/rules` - Create rule (admin)
+- `PUT /journey/rules/:id` - Update rule (admin)
+- `DELETE /journey/rules/:id` - Delete rule (admin)
+- `POST /journey/rules/:id/activate` - Activate rule (admin)
+- `POST /journey/rules/:id/deactivate` - Deactivate rule (admin)
+
+**Event Subscriptions**:
+- `buddy.match.created` → Evaluate journey rules
+- `buddy.event.logged` → Evaluate journey rules
+- `buddy.checkin.completed` → Evaluate journey rules
+- `buddy.feedback.submitted` → Evaluate journey rules
+- `kintell.session.completed` → Evaluate journey rules
+- `kintell.rating.created` → Evaluate journey rules
+- `upskilling.course.completed` → Evaluate journey rules
+- `upskilling.credential.issued` → Evaluate journey rules
+
+**Events Emitted**:
+- `orchestration.milestone.reached` - Milestone achieved
+- `orchestration.flag.updated` - Flag value changed
+
+**Rule Engine Features**:
+- Declarative YAML-based rules (editable without code changes)
+- Condition types: count, exists, value, time_since, all_of, any_of
+- Action types: set_flag, emit_event, clear_flag
+- Priority-based evaluation (higher priority first)
+- Idempotent rule execution
+- Profile context caching (5 min TTL)
+- Rules caching (1 min TTL)
+
+**Default Rules**:
+1. **mentor_ready_001**: 3+ language sessions with avg rating >= 4.0
+2. **followup_needed_001**: No activity in 14 days despite active enrollment
+3. **language_support_needed_001**: Q2Q detected low language comfort (< 0.5)
+
+**Data Tables**:
+- `journey_flags` - Computed journey flags
+- `journey_rules` - Rule definitions
+- `journey_milestones` - Milestone achievements
+
+**Documentation**:
+- [Journey Engine Guide](./Journey_Engine.md)
+- [Default Rules Reference](../reports/journey_engine_rules.md)
+
+---
+
 ## Data Layer
 
 ### Database: PostgreSQL 15+
@@ -369,6 +435,20 @@ session_id,session_type,participant_email,volunteer_email,date,duration_min,rati
 - Content flagged for moderation
 - Fields: `content_id`, `content_type`, `flag_reason`, `confidence`, `review_status`, `reviewed_by`
 
+#### Journey Orchestration Tables
+
+**journey_flags**
+- Computed journey readiness flags for participants
+- Fields: `user_id`, `flag`, `value`, `set_by_rule`, `set_at`, `expires_at`
+
+**journey_rules**
+- Declarative rule definitions for journey orchestration
+- Fields: `rule_id`, `name`, `description`, `rule_config`, `active`, `priority`, `created_at`, `updated_at`
+
+**journey_milestones**
+- Tracks when participants reach significant milestones
+- Fields: `user_id`, `milestone`, `reached_at`, `triggered_by_rule`, `metadata`
+
 ### Data Privacy Strategy
 
 1. **Surrogate Keys**: All external IDs mapped to internal UUIDs
@@ -419,7 +499,8 @@ Examples:
 - `upskilling.progress.updated` - Progress updated
 
 #### Orchestration Events
-- `orchestration.journey.milestone.reached` - Milestone reached
+- `orchestration.milestone.reached` - Milestone reached (Journey Engine)
+- `orchestration.flag.updated` - Journey flag changed (Journey Engine)
 - `orchestration.profile.updated` - Profile updated
 
 #### Safety Events
@@ -673,12 +754,12 @@ services/             # Microservices
 - Company metrics aggregation
 - Corporate Cockpit v1 (dashboard)
 
-### Phase C - Orchestration 📋
+### Phase C - Orchestration 🔄
 
-- Journey Engine (milestone tracking)
-- Discord Bot integration
-- Real safety/moderation rules
-- Automated referrals (Language → Upskilling)
+- Journey Engine (milestone tracking) ✅
+- Discord Bot integration 📋
+- Real safety/moderation rules 📋
+- Automated referrals (Language → Upskilling) 📋
 
 ### Phase D - Enterprise Polish 🎯
 
