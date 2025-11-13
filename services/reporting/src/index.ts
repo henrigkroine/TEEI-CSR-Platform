@@ -30,6 +30,8 @@ await fastify.register(setupSwagger);
 await fastify.register(healthRoutes);
 const { companyRoutes } = await import('./routes/companies.js');
 await fastify.register(companyRoutes);
+const { impactInRoutes } = await import('./routes/impact-in.js');
+await fastify.register(impactInRoutes);
 
 // Graceful shutdown
 const gracefulShutdown = async () => {
