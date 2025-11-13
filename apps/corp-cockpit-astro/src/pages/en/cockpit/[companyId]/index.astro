@@ -1,0 +1,122 @@
+---
+import CockpitLayout from '@layouts/CockpitLayout.astro';
+import MetricCard from '@components/shared/MetricCard';
+import DashboardActions from '@components/dashboard/DashboardActions';
+
+const { companyId } = Astro.params;
+
+// TODO: Fetch company data and verify access
+// const company = await fetchCompany(companyId);
+// if (!company) return Astro.redirect('/en');
+
+// Mock company data
+const company = {
+  id: companyId,
+  name: 'Pilot Corp Inc.',
+};
+---
+
+<CockpitLayout
+  title="Dashboard"
+  lang="en"
+  companyId={companyId}
+  companyName={company.name}
+>
+  <div class="mx-auto max-w-7xl p-6">
+    <!-- Header -->
+    <div class="mb-8">
+      <h1 class="mb-2 text-3xl font-bold">CSR Dashboard</h1>
+      <p class="text-foreground/60">
+        Welcome to your Corporate Social Responsibility dashboard
+      </p>
+    </div>
+
+    <!-- Quick stats grid with "Why this metric?" buttons -->
+    <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
+      <MetricCard
+        metricId="sroi"
+        label="SROI"
+        value="3.2x"
+        change="+12% from last quarter"
+        changePositive={true}
+        showLineage={true}
+        client:load
+      />
+
+      <MetricCard
+        metricId="vis"
+        label="VIS Score"
+        value={85}
+        change="+5 pts from last quarter"
+        changePositive={true}
+        showLineage={true}
+        client:load
+      />
+
+      <MetricCard
+        metricId="participants"
+        label="Active Participants"
+        value={247}
+        change="Across all programs"
+        showLineage={false}
+        client:load
+      />
+
+      <MetricCard
+        metricId="integration_score"
+        label="Integration Score"
+        value={0.78}
+        change="+8% from last quarter"
+        changePositive={true}
+        showLineage={true}
+        client:load
+      />
+    </div>
+
+    <!-- Main content area -->
+    <div class="grid gap-6 lg:grid-cols-3">
+      <!-- Program Overview -->
+      <div class="card lg:col-span-2">
+        <h2 class="mb-4 text-xl font-semibold">Program Overview</h2>
+        <div class="space-y-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="font-medium">Buddy Program</div>
+              <div class="text-sm text-foreground/60">89% completion rate</div>
+            </div>
+            <div class="text-2xl font-bold text-primary">142</div>
+          </div>
+          <div class="h-px bg-border"></div>
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="font-medium">Language Connect</div>
+              <div class="text-sm text-foreground/60">67 sessions completed</div>
+            </div>
+            <div class="text-2xl font-bold text-primary">67</div>
+          </div>
+          <div class="h-px bg-border"></div>
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="font-medium">Upskilling</div>
+              <div class="text-sm text-foreground/60">38 courses in progress</div>
+            </div>
+            <div class="text-2xl font-bold text-primary">38</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="card">
+        <h2 class="mb-4 text-xl font-semibold">Quick Actions</h2>
+        <DashboardActions companyId={companyId!} client:load />
+      </div>
+    </div>
+
+    <!-- Phase C Notice -->
+    <div class="mt-8 rounded-lg bg-primary/10 p-4 text-center">
+      <p class="text-sm font-medium">
+        🎉 Phase C pilot features are now live: Evidence Explorer, AI-powered reporting with mandatory citations, and lineage tracing!
+      </p>
+    </div>
+  </div>
+</CockpitLayout>

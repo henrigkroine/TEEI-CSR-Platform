@@ -5,19 +5,22 @@ import node from '@astrojs/node';
 
 // https://astro.build/config
 export default defineConfig({
+  output: 'server',
+  adapter: node({
+    mode: 'standalone',
+  }),
   integrations: [
     react(),
     tailwind({
       applyBaseStyles: false,
     }),
   ],
-  output: 'server',
-  adapter: node({
-    mode: 'standalone',
-  }),
-  server: {
-    port: 3008,
-    host: true,
+  i18n: {
+    defaultLocale: 'en',
+    locales: ['en', 'no', 'uk'],
+    routing: {
+      prefixDefaultLocale: true,
+    },
   },
   vite: {
     resolve: {
@@ -25,8 +28,8 @@ export default defineConfig({
         '@': '/src',
         '@components': '/src/components',
         '@layouts': '/src/layouts',
+        '@utils': '/src/utils',
         '@lib': '/src/lib',
-        '@i18n': '/src/i18n',
       },
     },
   },

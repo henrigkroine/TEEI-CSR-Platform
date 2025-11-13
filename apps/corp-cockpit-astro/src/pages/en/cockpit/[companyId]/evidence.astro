@@ -1,0 +1,28 @@
+---
+import CockpitLayout from '@layouts/CockpitLayout.astro';
+import EvidenceExplorer from '@components/evidence/EvidenceExplorer';
+
+const { companyId } = Astro.params;
+
+// TODO: Verify access and check feature flag
+// if (!isFeatureEnabled('evidence_explorer', companyId)) {
+//   return Astro.redirect(`/en/cockpit/${companyId}`);
+// }
+
+// Mock company data
+const company = {
+  id: companyId,
+  name: 'Pilot Corp Inc.',
+};
+---
+
+<CockpitLayout
+  title="Evidence Explorer"
+  lang="en"
+  companyId={companyId}
+  companyName={company.name}
+>
+  <div class="mx-auto max-w-7xl p-6">
+    <EvidenceExplorer companyId={companyId!} lang="en" client:load />
+  </div>
+</CockpitLayout>
