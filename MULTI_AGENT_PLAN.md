@@ -296,12 +296,12 @@
 - [ ] Runbook Writer - SRE docs
 
 ### Data Lead Progress
-- [ ] Migration Engineer - Rollback scripts
-- [ ] Backup Specialist - Backup automation
-- [ ] CSV Validation Engineer - Schema validation
-- [ ] Data Quality Engineer - Quarantine pipelines
-- [ ] Schema Documenter - ER diagrams
-- [ ] DBA Optimizer - Performance tuning
+- [x] Migration Engineer - Rollback scripts
+- [x] Backup Specialist - Backup automation
+- [x] CSV Validation Engineer - Schema validation
+- [x] Data Quality Engineer - Quarantine pipelines
+- [x] Schema Documenter - ER diagrams
+- [x] DBA Optimizer - Performance tuning
 
 ### Compliance Lead Progress
 - [ ] Audit Engineer - Audit logs
@@ -335,9 +335,9 @@
 - [ ] OTel instrumentation in all services
 - [ ] Sentry error tracking configured
 - [ ] Health endpoints (liveness/readiness)
-- [ ] Migration rollback scripts
-- [ ] Backup/restore automation
-- [ ] CSV validation + quarantine pipelines
+- [x] Migration rollback scripts
+- [x] Backup/restore automation
+- [x] CSV validation + quarantine pipelines
 - [ ] Audit log implementation
 - [ ] PII encryption schema
 - [ ] GDPR privacy endpoints (stubs)
@@ -354,8 +354,8 @@
 - [ ] `/docs/Security_Hardening_Checklist.md`
 - [ ] `/docs/Observability_Overview.md`
 - [ ] `/docs/SRE_Dashboards.md`
-- [ ] `/docs/DB_Backup_Restore.md`
-- [ ] `/docs/Migration_Playbook.md`
+- [x] `/docs/DB_Backup_Restore.md`
+- [x] `/docs/Migration_Playbook.md`
 - [ ] `/docs/GDPR_Compliance.md`
 - [ ] `/docs/Audit_Log_Specification.md`
 - [ ] `/reports/phaseB_worker1_hardening.md` (MASTER REPORT)
@@ -363,7 +363,7 @@
 - [ ] `/reports/security_lead_report.md`
 - [ ] `/reports/platform_lead_report.md`
 - [ ] `/reports/reliability_lead_report.md`
-- [ ] `/reports/data_lead_report.md`
+- [x] `/reports/data_lead_report.md`
 - [ ] `/reports/compliance_lead_report.md`
 - [ ] `/reports/qa_lead_report.md`
 
@@ -397,10 +397,10 @@
 - All services have health endpoints
 
 ### Data ✅
-- Migration rollback tested successfully
-- Backup/restore drill completed
-- CSV quarantine flow verified
-- ER diagram generated
+- [x] Migration rollback tested successfully
+- [x] Backup/restore drill completed
+- [x] CSV quarantine flow verified
+- [x] ER diagram generated
 
 ### Compliance ✅
 - Audit logs capture key actions

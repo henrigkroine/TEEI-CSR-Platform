@@ -4,6 +4,7 @@ import fastifyRateLimit from '@fastify/rate-limit';
 import { config } from 'dotenv';
 import { registerProxyRoutes } from './routes/proxy.js';
 import { registerHealthRoutes } from './routes/health.js';
+import { createHealthManager, setupHealthRoutes } from './health/index.js';
 
 // Load environment variables
 config();
@@ -32,11 +33,18 @@ const fastify = Fastify({
   trustProxy: true
 });
 
+// Create health check manager
+const healthManager = createHealthManager();
+
 /**
  * Initialize and configure the API Gateway
  */
 async function initializeGateway() {
   try {
+    // Setup enhanced health check routes
+    setupHealthRoutes(fastify, healthManager);
+    healthManager.setAlive(true);
+
     // Register JWT plugin for authentication
     await fastify.register(fastifyJwt, {
       secret: JWT_SECRET,
@@ -193,6 +201,9 @@ async function start() {
       host: HOST
     });
 
+    // Mark service as ready after successful initialization
+    healthManager.setReady(true);
+
     fastify.log.info(`🚀 API Gateway running on http://${HOST}:${PORT}`);
     fastify.log.info(`📊 Environment: ${NODE_ENV}`);
     fastify.log.info(`🔐 JWT Authentication: Enabled`);
@@ -210,6 +221,9 @@ async function start() {
  */
 async function shutdown(signal: string) {
   fastify.log.info(`${signal} received, shutting down gracefully...`);
+
+  // Mark service as shutting down (stops accepting new traffic)
+  healthManager.setShuttingDown(true);
 
   try {
     await fastify.close();

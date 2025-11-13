@@ -1,0 +1,165 @@
+{
+  "dashboard": {
+    "title": "TEEI CSR Platform - Service Overview",
+    "tags": ["teei", "overview", "services"],
+    "timezone": "browser",
+    "schemaVersion": 27,
+    "version": 1,
+    "refresh": "30s",
+    "panels": [
+      {
+        "id": 1,
+        "gridPos": {"x": 0, "y": 0, "w": 24, "h": 3},
+        "type": "row",
+        "title": "System Health"
+      },
+      {
+        "id": 2,
+        "gridPos": {"x": 0, "y": 3, "w": 6, "h": 4},
+        "type": "stat",
+        "title": "Services Up",
+        "targets": [
+          {
+            "expr": "count(up{job=~\"teei-.*\"} == 1)",
+            "legendFormat": "Services Up"
+          }
+        ],
+        "options": {
+          "graphMode": "none",
+          "colorMode": "value",
+          "reduceOptions": {
+            "calcs": ["lastNotNull"]
+          }
+        }
+      },
+      {
+        "id": 3,
+        "gridPos": {"x": 6, "y": 3, "w": 6, "h": 4},
+        "type": "stat",
+        "title": "Total Requests/s",
+        "targets": [
+          {
+            "expr": "sum(rate(http_requests_total{service=~\".*\"}[5m]))",
+            "legendFormat": "Requests/s"
+          }
+        ],
+        "options": {
+          "graphMode": "area",
+          "colorMode": "value"
+        }
+      },
+      {
+        "id": 4,
+        "gridPos": {"x": 12, "y": 3, "w": 6, "h": 4},
+        "type": "stat",
+        "title": "Error Rate",
+        "targets": [
+          {
+            "expr": "sum(rate(http_requests_total{status_code=~\"5..\"}[5m])) / sum(rate(http_requests_total[5m])) * 100",
+            "legendFormat": "Error %"
+          }
+        ],
+        "options": {
+          "graphMode": "area",
+          "colorMode": "value",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"value": 0, "color": "green"},
+              {"value": 1, "color": "yellow"},
+              {"value": 5, "color": "red"}
+            ]
+          }
+        }
+      },
+      {
+        "id": 5,
+        "gridPos": {"x": 18, "y": 3, "w": 6, "h": 4},
+        "type": "stat",
+        "title": "Avg Response Time",
+        "targets": [
+          {
+            "expr": "avg(rate(http_request_duration_seconds_sum[5m]) / rate(http_request_duration_seconds_count[5m]))",
+            "legendFormat": "Avg ms"
+          }
+        ],
+        "options": {
+          "graphMode": "area",
+          "colorMode": "value",
+          "unit": "s"
+        }
+      },
+      {
+        "id": 6,
+        "gridPos": {"x": 0, "y": 7, "w": 24, "h": 3},
+        "type": "row",
+        "title": "HTTP Metrics"
+      },
+      {
+        "id": 7,
+        "gridPos": {"x": 0, "y": 10, "w": 12, "h": 8},
+        "type": "graph",
+        "title": "Request Rate by Service",
+        "targets": [
+          {
+            "expr": "sum(rate(http_requests_total[5m])) by (service)",
+            "legendFormat": "{{service}}"
+          }
+        ],
+        "yaxes": [
+          {"format": "reqps", "label": "Requests/s"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 8,
+        "gridPos": {"x": 12, "y": 10, "w": 12, "h": 8},
+        "type": "graph",
+        "title": "Response Time (p95) by Service",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (service, le))",
+            "legendFormat": "{{service}}"
+          }
+        ],
+        "yaxes": [
+          {"format": "s", "label": "Duration"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 9,
+        "gridPos": {"x": 0, "y": 18, "w": 24, "h": 3},
+        "type": "row",
+        "title": "Service Health Status"
+      },
+      {
+        "id": 10,
+        "gridPos": {"x": 0, "y": 21, "w": 24, "h": 8},
+        "type": "table",
+        "title": "Service Health Details",
+        "targets": [
+          {
+            "expr": "up{job=~\"teei-.*\"}",
+            "format": "table",
+            "instant": true
+          }
+        ],
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {"Time": true},
+              "indexByName": {},
+              "renameByName": {
+                "job": "Service",
+                "instance": "Instance",
+                "Value": "Status"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
