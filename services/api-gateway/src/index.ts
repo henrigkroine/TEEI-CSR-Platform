@@ -4,6 +4,7 @@ import fastifyRateLimit from '@fastify/rate-limit';
 import { config } from 'dotenv';
 import { registerProxyRoutes } from './routes/proxy.js';
 import { registerHealthRoutes } from './routes/health.js';
+import { registerPrivacyRoutes } from './routes/privacy.js';
 import { createHealthManager, setupHealthRoutes } from './health/index.js';
 
 // Load environment variables
@@ -166,7 +167,8 @@ async function initializeGateway() {
           buddy: '/v1/buddy/*',
           upskilling: '/v1/upskilling/*',
           q2q: '/v1/q2q/*',
-          safety: '/v1/safety/*'
+          safety: '/v1/safety/*',
+          privacy: '/v1/privacy/*'
         },
         apiVersion: 'v1',
         deprecation: {
@@ -177,6 +179,9 @@ async function initializeGateway() {
 
     // Register health check routes
     await registerHealthRoutes(fastify);
+
+    // Register GDPR privacy routes
+    await registerPrivacyRoutes(fastify);
 
     // Register proxy routes (must be last to avoid conflicts)
     await registerProxyRoutes(fastify);
