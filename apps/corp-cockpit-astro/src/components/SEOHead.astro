@@ -1,0 +1,68 @@
+---
+import { SUPPORTED_LOCALES, type Locale } from '../utils/i18n';
+
+interface Props {
+  title: string;
+  description?: string;
+  locale?: Locale;
+  canonicalUrl?: string;
+  ogImage?: string;
+}
+
+const {
+  title,
+  description = 'TEEI Corporate Cockpit - Transform qualitative social impact into quantifiable business outcomes',
+  locale = 'en',
+  canonicalUrl,
+  ogImage = '/og-image.png',
+} = Astro.props;
+
+const siteUrl = Astro.site || new URL(Astro.url.origin);
+const fullUrl = canonicalUrl || new URL(Astro.url.pathname, siteUrl).href;
+
+// Generate alternate language URLs
+const alternateUrls = SUPPORTED_LOCALES.map((lang) => {
+  const pathname = Astro.url.pathname.replace(/^\/(en|uk|no)/, `/${lang}`);
+  return {
+    lang,
+    url: new URL(pathname, siteUrl).href,
+  };
+});
+---
+
+<!-- Primary Meta Tags -->
+<meta name="title" content={title} />
+<meta name="description" content={description} />
+<meta name="language" content={locale} />
+
+<!-- Canonical URL -->
+<link rel="canonical" href={fullUrl} />
+
+<!-- Alternate Languages -->
+{alternateUrls.map(({ lang, url }) => (
+  <link rel="alternate" hreflang={lang} href={url} />
+))}
+<link rel="alternate" hreflang="x-default" href={new URL(Astro.url.pathname, siteUrl).href} />
+
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content="website" />
+<meta property="og:url" content={fullUrl} />
+<meta property="og:title" content={title} />
+<meta property="og:description" content={description} />
+<meta property="og:image" content={new URL(ogImage, siteUrl).href} />
+<meta property="og:locale" content={locale === 'en' ? 'en_US' : locale === 'uk' ? 'uk_UA' : 'no_NO'} />
+
+<!-- Twitter -->
+<meta property="twitter:card" content="summary_large_image" />
+<meta property="twitter:url" content={fullUrl} />
+<meta property="twitter:title" content={title} />
+<meta property="twitter:description" content={description} />
+<meta property="twitter:image" content={new URL(ogImage, siteUrl).href} />
+
+<!-- Robots -->
+<meta name="robots" content="index, follow" />
+<meta name="googlebot" content="index, follow" />
+
+<!-- Additional SEO -->
+<meta name="author" content="TEEI Platform" />
+<meta name="theme-color" content="#0066cc" />

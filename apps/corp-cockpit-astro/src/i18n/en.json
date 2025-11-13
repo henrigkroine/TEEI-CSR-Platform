@@ -1,0 +1,47 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "reports": "Reports",
+    "export": "Export",
+    "settings": "Settings"
+  },
+  "auth": {
+    "signIn": "Sign In",
+    "signOut": "Sign Out",
+    "email": "Email",
+    "password": "Password",
+    "welcomeBack": "Welcome Back",
+    "signInPrompt": "Sign in to access your Corporate Cockpit",
+    "invalidCredentials": "Invalid credentials. Please try again.",
+    "demoCredentials": "Demo Credentials"
+  },
+  "dashboard": {
+    "title": "Corporate Impact Dashboard",
+    "welcome": "Welcome back, {name}",
+    "atAGlance": "At-a-Glance Metrics",
+    "outcomeTrends": "Outcome Trends",
+    "q2qInsights": "Q2Q Insights",
+    "sroiPanel": "SROI Panel",
+    "visLeaderboard": "VIS Leaderboard",
+    "exportData": "Export Data"
+  },
+  "metrics": {
+    "volunteers": "Volunteers",
+    "hours": "Hours",
+    "sessions": "Sessions",
+    "participants": "Participants",
+    "integration": "Integration",
+    "language": "Language",
+    "jobReadiness": "Job Readiness"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "noData": "No data available",
+    "comingSoon": "Coming soon",
+    "back": "Back",
+    "next": "Next",
+    "save": "Save",
+    "cancel": "Cancel"
+  }
+}

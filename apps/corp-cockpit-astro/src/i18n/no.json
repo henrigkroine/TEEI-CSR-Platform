@@ -1,0 +1,47 @@
+{
+  "nav": {
+    "dashboard": "Kontrollpanel",
+    "reports": "Rapporter",
+    "export": "Eksporter",
+    "settings": "Innstillinger"
+  },
+  "auth": {
+    "signIn": "Logg inn",
+    "signOut": "Logg ut",
+    "email": "E-post",
+    "password": "Passord",
+    "welcomeBack": "Velkommen tilbake",
+    "signInPrompt": "Logg inn for å få tilgang til bedriftens kontrollpanel",
+    "invalidCredentials": "Ugyldige legitimasjoner. Vennligst prøv igjen.",
+    "demoCredentials": "Demo legitimasjoner"
+  },
+  "dashboard": {
+    "title": "Kontrollpanel for bedriftens påvirkning",
+    "welcome": "Velkommen tilbake, {name}",
+    "atAGlance": "Raskt overblikk",
+    "outcomeTrends": "Resultattrender",
+    "q2qInsights": "Q2Q innsikt",
+    "sroiPanel": "SROI panel",
+    "visLeaderboard": "VIS ledertavle",
+    "exportData": "Eksporter data"
+  },
+  "metrics": {
+    "volunteers": "Frivillige",
+    "hours": "Timer",
+    "sessions": "Økter",
+    "participants": "Deltakere",
+    "integration": "Integrasjon",
+    "language": "Språk",
+    "jobReadiness": "Jobbklarhet"
+  },
+  "common": {
+    "loading": "Laster...",
+    "error": "En feil oppstod",
+    "noData": "Ingen data tilgjengelig",
+    "comingSoon": "Kommer snart",
+    "back": "Tilbake",
+    "next": "Neste",
+    "save": "Lagre",
+    "cancel": "Avbryt"
+  }
+}
