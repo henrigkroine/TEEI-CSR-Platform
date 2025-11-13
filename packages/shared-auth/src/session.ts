@@ -6,15 +6,39 @@ const SESSION_COOKIE_NAME = 'teei_session';
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
 
 /**
+ * Get cookie domain based on environment
+ */
+function getCookieDomain(): string | undefined {
+  // Use environment variable if set
+  if (process.env.COOKIE_DOMAIN) {
+    return process.env.COOKIE_DOMAIN;
+  }
+
+  // Determine based on NODE_ENV
+  const env = process.env.NODE_ENV;
+
+  if (env === 'production') {
+    return '.theeducationalequalityinstitute.org';
+  }
+
+  if (env === 'staging') {
+    return '.teei.no';
+  }
+
+  // Local development - no domain restriction
+  return undefined;
+}
+
+/**
  * Cookie configuration for both domains
  */
 const getCookieOptions = (domain?: string) => ({
   path: '/',
   httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
+  secure: process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging',
   sameSite: 'lax' as const,
   maxAge: COOKIE_MAX_AGE,
-  domain: domain || (process.env.NODE_ENV === 'production' ? '.teei.io' : undefined),
+  domain: domain || getCookieDomain(),
 });
 
 /**

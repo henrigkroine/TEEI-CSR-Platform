@@ -5,21 +5,39 @@
 ```
 User Request → Cloudflare Worker → Route Decision
                      ↓
-        ┌────────────┴───────────┐
-        ↓                        ↓
-   TEEI Website          Corp Cockpit
-   (teei.io/*)          (teei.io/dashboard/*)
+        ┌────────────┴───────────────────────────────────┐
+        ↓                                                ↓
+   TEEI Website                                   Corp Cockpit
+   (theeducationalequalityinstitute.org/*)       (dashboard.theeducationalequalityinstitute.org/*)
 ```
+
+## Environments
+
+### Production
+- **Main Site**: `https://theeducationalequalityinstitute.org`
+- **Dashboard**: `https://dashboard.theeducationalequalityinstitute.org`
+- **Cookie Domain**: `.theeducationalequalityinstitute.org`
+
+### Staging
+- **Main Site**: `https://staging.teei.no`
+- **Dashboard**: `https://dashboard.staging.teei.no`
+- **Static Assets**: `https://static-staging.teei.no`
+- **Cookie Domain**: `.teei.no`
+
+### Local Development
+- **Main Site**: `http://localhost:3000`
+- **Dashboard**: `http://localhost:4321`
+- **Cookie Domain**: `localhost`
 
 ## Routing Strategy
 
 ### Option 1: Subdomain (Recommended for Production)
-- **Main Site**: `teei.io` → TEEI Website
-- **Dashboard**: `dashboard.teei.io` → Corp Cockpit
+- **Main Site**: `theeducationalequalityinstitute.org` → TEEI Website
+- **Dashboard**: `dashboard.theeducationalequalityinstitute.org` → Corp Cockpit
 
 ### Option 2: Path-based (Easier for Development)
-- **Main Site**: `teei.io/*` → TEEI Website
-- **Dashboard**: `teei.io/dashboard/*` → Corp Cockpit (proxy)
+- **Main Site**: `theeducationalequalityinstitute.org/*` → TEEI Website
+- **Dashboard**: `theeducationalequalityinstitute.org/dashboard/*` → Corp Cockpit (proxy)
 
 ## Implementation
 
@@ -60,7 +78,9 @@ export default {
 
 ### 2. Cloudflare DNS Setup (Subdomain)
 
-**For dashboard.teei.io:**
+#### Production DNS (theeducationalequalityinstitute.org)
+
+**For dashboard.theeducationalequalityinstitute.org:**
 1. Go to Cloudflare DNS settings
 2. Add CNAME record:
    - Type: `CNAME`
@@ -68,19 +88,37 @@ export default {
    - Target: `corp-cockpit.teei-csr-platform.workers.dev`
    - Proxy: Enabled (orange cloud)
 
-**For teei.io:**
+**For theeducationalequalityinstitute.org:**
 1. Add CNAME record:
    - Type: `CNAME`
    - Name: `@` (root)
    - Target: `teei-website.pages.dev`
    - Proxy: Enabled
 
+#### Staging DNS (teei.no)
+
+**For dashboard.staging.teei.no:**
+1. Go to Cloudflare DNS settings
+2. Add CNAME record:
+   - Type: `CNAME`
+   - Name: `dashboard.staging`
+   - Target: `corp-cockpit-staging.teei-csr-platform.workers.dev`
+   - Proxy: Enabled (orange cloud)
+
+**For staging.teei.no:**
+1. Add CNAME record:
+   - Type: `CNAME`
+   - Name: `staging`
+   - Target: `teei-website-staging.pages.dev`
+   - Proxy: Enabled
+
 ### 3. Deployment Configuration
 
 #### TEEI Website (Existing)
 ```bash
+# Production: https://theeducationalequalityinstitute.org
+# Staging: https://staging.teei.no
 # Already deployed to Cloudflare Pages
-# Base URL: https://teei.io
 ```
 
 #### Corp Cockpit
@@ -102,59 +140,114 @@ wrangler pages deploy dist
 
 Both apps need these shared environment variables:
 
+#### Production
 ```env
+# Environment
+NODE_ENV=production
+
 # JWT Authentication (MUST be the same in both apps)
 JWT_SECRET=your-shared-secret-key-min-32-chars
+
+# Cookie Domain
+COOKIE_DOMAIN=.theeducationalequalityinstitute.org
 
 # Database connection
 DATABASE_URL=postgresql://user:pass@host:5432/teei_csr
 
 # API Gateway
-API_GATEWAY_URL=https://api.teei.io
+API_GATEWAY_URL=https://api.theeducationalequalityinstitute.org
 
 # CORS Origins
-ALLOWED_ORIGINS=https://teei.io,https://dashboard.teei.io
+ALLOWED_ORIGINS=https://theeducationalequalityinstitute.org,https://dashboard.theeducationalequalityinstitute.org
+```
+
+#### Staging
+```env
+# Environment
+NODE_ENV=staging
+
+# JWT Authentication (MUST be the same in both apps)
+JWT_SECRET=your-shared-secret-key-min-32-chars
+
+# Cookie Domain
+COOKIE_DOMAIN=.teei.no
+
+# Database connection
+DATABASE_URL=postgresql://user:pass@host:5432/teei_csr_staging
+
+# API Gateway
+API_GATEWAY_URL=https://api.staging.teei.no
+
+# CORS Origins
+ALLOWED_ORIGINS=https://staging.teei.no,https://dashboard.staging.teei.no
 ```
 
 ### 5. Cookie Configuration
 
-The shared auth package sets cookies with:
-- **Domain**: `.teei.io` (works for both `teei.io` and `dashboard.teei.io`)
+The shared auth package sets cookies with environment-specific domains:
+
+#### Production
+- **Domain**: `.theeducationalequalityinstitute.org`
 - **Path**: `/`
 - **SameSite**: `Lax`
-- **Secure**: `true` (production only)
+- **Secure**: `true`
 - **HttpOnly**: `true`
 
-This allows authentication to work seamlessly across both apps.
+#### Staging
+- **Domain**: `.teei.no`
+- **Path**: `/`
+- **SameSite**: `Lax`
+- **Secure**: `true`
+- **HttpOnly**: `true`
+
+This allows authentication to work seamlessly across both apps in each environment.
 
 ### 6. Integration Flow
 
+#### Production Flow
 ```
-1. User visits teei.io
+1. User visits theeducationalequalityinstitute.org
 2. User clicks "Dashboard" (or "Login" for corporate users)
-3. User logs in → JWT cookie set with domain .teei.io
-4. User clicks "Dashboard" → redirects to dashboard.teei.io
+3. User logs in → JWT cookie set with domain .theeducationalequalityinstitute.org
+4. User clicks "Dashboard" → redirects to dashboard.theeducationalequalityinstitute.org
+5. Dashboard reads JWT cookie (same domain)
+6. User is authenticated automatically
+```
+
+#### Staging Flow
+```
+1. User visits staging.teei.no
+2. User clicks "Dashboard"
+3. User logs in → JWT cookie set with domain .teei.no
+4. User clicks "Dashboard" → redirects to dashboard.staging.teei.no
 5. Dashboard reads JWT cookie (same domain)
 6. User is authenticated automatically
 ```
 
 ### 7. Cross-App Navigation
 
-#### From TEEI Website to Dashboard:
+#### Production
 
+**From TEEI Website to Dashboard:**
 ```html
-<!-- Add to navigation in TEEI Website -->
-<a href="https://dashboard.teei.io">Dashboard</a>
-
-<!-- Or path-based -->
-<a href="/dashboard">Dashboard</a>
+<a href="https://dashboard.theeducationalequalityinstitute.org">Dashboard</a>
 ```
 
-#### From Dashboard back to Main Site:
-
+**From Dashboard back to Main Site:**
 ```html
-<!-- Add to dashboard navigation -->
-<a href="https://teei.io">Back to Main Site</a>
+<a href="https://theeducationalequalityinstitute.org">Back to Main Site</a>
+```
+
+#### Staging
+
+**From TEEI Website to Dashboard:**
+```html
+<a href="https://dashboard.staging.teei.no">Dashboard</a>
+```
+
+**From Dashboard back to Main Site:**
+```html
+<a href="https://staging.teei.no">Back to Main Site</a>
 ```
 
 ## Testing Locally
@@ -182,11 +275,15 @@ pnpm dev
 
 ## Security Considerations
 
-1. **JWT Secret**: MUST be the same across both apps
-2. **Cookie Domain**: Set to `.teei.io` in production
-3. **HTTPS Only**: Enforce HTTPS in production
+1. **JWT Secret**: MUST be the same across both apps in each environment
+2. **Cookie Domain**:
+   - Production: `.theeducationalequalityinstitute.org`
+   - Staging: `.teei.no`
+   - Local: `localhost`
+3. **HTTPS Only**: Enforce HTTPS in production and staging
 4. **CORS**: Configure properly if using API calls between apps
 5. **CSP Headers**: Update Content Security Policy to allow both domains
+6. **Environment Isolation**: Staging and production use separate databases and secrets
 
 ## Deployment Checklist
 

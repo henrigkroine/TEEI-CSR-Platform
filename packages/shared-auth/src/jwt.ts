@@ -5,8 +5,44 @@ import { JWTPayload, JWTPayloadSchema } from './types';
  * JWT configuration
  */
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
-const JWT_ISSUER = 'teei.io';
-const JWT_AUDIENCE = ['teei.io', 'dashboard.teei.io'];
+
+// Get issuer and audience based on environment
+function getJWTIssuer(): string {
+  const env = process.env.NODE_ENV;
+
+  if (env === 'production') {
+    return 'theeducationalequalityinstitute.org';
+  }
+
+  if (env === 'staging') {
+    return 'staging.teei.no';
+  }
+
+  return 'localhost';
+}
+
+function getJWTAudience(): string[] {
+  const env = process.env.NODE_ENV;
+
+  if (env === 'production') {
+    return [
+      'theeducationalequalityinstitute.org',
+      'dashboard.theeducationalequalityinstitute.org',
+    ];
+  }
+
+  if (env === 'staging') {
+    return [
+      'staging.teei.no',
+      'dashboard.staging.teei.no',
+    ];
+  }
+
+  return ['localhost', 'localhost:3000', 'localhost:4321'];
+}
+
+const JWT_ISSUER = getJWTIssuer();
+const JWT_AUDIENCE = getJWTAudience();
 const JWT_EXPIRATION = '7d'; // 7 days
 
 const getSecretKey = () => new TextEncoder().encode(JWT_SECRET);
