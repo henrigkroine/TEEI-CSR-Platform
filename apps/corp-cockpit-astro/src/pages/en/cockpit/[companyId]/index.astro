@@ -1,5 +1,6 @@
 ---
 import CockpitLayout from '@layouts/CockpitLayout.astro';
+import MetricCard from '@components/shared/MetricCard';
 
 const { companyId } = Astro.params;
 
@@ -29,35 +30,46 @@ const company = {
       </p>
     </div>
 
-    <!-- Quick stats grid -->
+    <!-- Quick stats grid with "Why this metric?" buttons -->
     <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
-      <!-- SROI Card -->
-      <div class="card">
-        <div class="mb-2 text-sm font-medium text-foreground/60">SROI</div>
-        <div class="text-3xl font-bold">3.2x</div>
-        <div class="mt-2 text-sm text-green-600">+12% from last quarter</div>
-      </div>
+      <MetricCard
+        metricId="sroi"
+        label="SROI"
+        value="3.2x"
+        change="+12% from last quarter"
+        changePositive={true}
+        showLineage={true}
+        client:load
+      />
 
-      <!-- VIS Card -->
-      <div class="card">
-        <div class="mb-2 text-sm font-medium text-foreground/60">VIS Score</div>
-        <div class="text-3xl font-bold">85</div>
-        <div class="mt-2 text-sm text-green-600">+5 pts from last quarter</div>
-      </div>
+      <MetricCard
+        metricId="vis"
+        label="VIS Score"
+        value={85}
+        change="+5 pts from last quarter"
+        changePositive={true}
+        showLineage={true}
+        client:load
+      />
 
-      <!-- Participants Card -->
-      <div class="card">
-        <div class="mb-2 text-sm font-medium text-foreground/60">Active Participants</div>
-        <div class="text-3xl font-bold">247</div>
-        <div class="mt-2 text-sm text-foreground/60">Across all programs</div>
-      </div>
+      <MetricCard
+        metricId="participants"
+        label="Active Participants"
+        value={247}
+        change="Across all programs"
+        showLineage={false}
+        client:load
+      />
 
-      <!-- Integration Score Card -->
-      <div class="card">
-        <div class="mb-2 text-sm font-medium text-foreground/60">Integration Score</div>
-        <div class="text-3xl font-bold">0.78</div>
-        <div class="mt-2 text-sm text-green-600">+8% from last quarter</div>
-      </div>
+      <MetricCard
+        metricId="integration_score"
+        label="Integration Score"
+        value={0.78}
+        change="+8% from last quarter"
+        changePositive={true}
+        showLineage={true}
+        client:load
+      />
     </div>
 
     <!-- Main content area -->
