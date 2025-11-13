@@ -2,13 +2,14 @@
 interface Props {
   title: string;
   description?: string;
+  lang?: string;
 }
 
-const { title, description = 'TEEI Corporate Cockpit - Impact Measurement Dashboard' } = Astro.props;
+const { title, description = 'TEEI Corporate Cockpit - Impact Measurement Dashboard', lang = 'en' } = Astro.props;
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang={lang}>
   <head>
     <meta charset="UTF-8" />
     <meta name="description" content={description} />

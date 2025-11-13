@@ -19,8 +19,13 @@ declare namespace App {
       email: string;
       name: string;
       company_id: string;
-      role: 'admin' | 'viewer';
+      role: 'ADMIN' | 'MANAGER' | 'VIEWER' | 'SUPER_ADMIN';
     };
     isAuthenticated?: boolean;
+    tenantContext?: {
+      companyId: string;
+      lang: string;
+      validatedAt: string;
+    };
   }
 }

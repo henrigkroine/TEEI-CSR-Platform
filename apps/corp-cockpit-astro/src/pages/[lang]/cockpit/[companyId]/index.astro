@@ -1,0 +1,160 @@
+---
+import BaseLayout from '../../../../layouts/BaseLayout.astro';
+import { hasPermission } from '../../../../utils/rbac';
+import AtAGlance from '../../../../components/widgets/AtAGlance.tsx';
+import SROIPanel from '../../../../components/widgets/SROIPanel.tsx';
+import VISPanel from '../../../../components/widgets/VISPanel.tsx';
+import Q2QFeed from '../../../../components/widgets/Q2QFeed.tsx';
+import ExportButtons from '../../../../components/widgets/ExportButtons.tsx';
+
+// Extract route parameters
+const { lang, companyId } = Astro.params;
+const user = Astro.locals.user;
+const tenantContext = Astro.locals.tenantContext;
+
+// Middleware handles auth/tenant validation, but double-check
+if (!user || !tenantContext) {
+  return Astro.redirect('/login');
+}
+
+// Verify the tenant context matches the route
+if (tenantContext.companyId !== companyId || tenantContext.lang !== lang) {
+  return Astro.redirect(`/${lang}/cockpit/401`);
+}
+
+const canExport = hasPermission(user.role, 'EXPORT_DATA');
+const canViewAdmin = hasPermission(user.role, 'ADMIN_CONSOLE');
+---
+
+<BaseLayout title={`Dashboard - TEEI Corporate Cockpit`} lang={lang}>
+  <div class="dashboard-header">
+    <div>
+      <h1>Corporate Impact Dashboard</h1>
+      <p class="welcome">Welcome back, {user.name}</p>
+      <p class="tenant-indicator">Company ID: <code>{companyId}</code></p>
+    </div>
+    <div class="header-actions">
+      <span class="role-badge">{user.role}</span>
+      {canViewAdmin && (
+        <a href={`/${lang}/cockpit/${companyId}/admin`} class="btn btn-admin">
+          Admin Console
+        </a>
+      )}
+      <form method="POST" action="/api/logout">
+        <button type="submit" class="btn btn-secondary">Sign Out</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="dashboard-grid">
+    <AtAGlance companyId={companyId} client:load />
+    <SROIPanel companyId={companyId} client:load />
+    <VISPanel companyId={companyId} client:load />
+    <Q2QFeed companyId={companyId} limit={10} client:load />
+    {canExport && <ExportButtons companyId={companyId} client:load />}
+  </div>
+</BaseLayout>
+
+<style>
+  .dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: calc(var(--spacing-unit) * 4);
+    flex-wrap: wrap;
+    gap: calc(var(--spacing-unit) * 2);
+  }
+
+  h1 {
+    font-size: 2rem;
+    margin-bottom: calc(var(--spacing-unit) * 0.5);
+  }
+
+  .welcome {
+    color: var(--color-text-secondary);
+    font-size: 1rem;
+    margin-bottom: calc(var(--spacing-unit) * 0.5);
+  }
+
+  .tenant-indicator {
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+  }
+
+  .tenant-indicator code {
+    background-color: var(--color-bg-secondary);
+    padding: calc(var(--spacing-unit) * 0.5) calc(var(--spacing-unit) * 1);
+    border-radius: calc(var(--border-radius) / 2);
+    font-family: 'Courier New', monospace;
+    font-size: 0.8125rem;
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: calc(var(--spacing-unit) * 2);
+  }
+
+  .role-badge {
+    padding: calc(var(--spacing-unit) * 1) calc(var(--spacing-unit) * 2);
+    background-color: var(--color-primary);
+    color: white;
+    border-radius: calc(var(--border-radius) / 2);
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .btn {
+    padding: calc(var(--spacing-unit) * 1.5) calc(var(--spacing-unit) * 2);
+    border: none;
+    border-radius: var(--border-radius);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+    display: inline-block;
+  }
+
+  .btn-admin {
+    background-color: var(--color-primary);
+    color: white;
+  }
+
+  .btn-admin:hover {
+    background-color: var(--color-primary-dark);
+  }
+
+  .btn-secondary {
+    background-color: var(--color-bg-secondary);
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+  }
+
+  .btn-secondary:hover {
+    background-color: var(--color-border);
+  }
+
+  .dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: calc(var(--spacing-unit) * 3);
+  }
+
+  @media (max-width: 768px) {
+    .dashboard-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .dashboard-header {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .header-actions {
+      width: 100%;
+      flex-wrap: wrap;
+    }
+  }
+</style>
