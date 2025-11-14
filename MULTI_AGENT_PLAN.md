@@ -754,3 +754,291 @@ Take the production-ready Corporate Cockpit from Phase B and transform it into a
 5. **QA Lead**: Set up Playwright E2E framework (Slice I)
 
 **Orchestrator**: Monitor progress, unblock dependencies, update this plan weekly
+
+---
+
+# Worker 2 Phase D: Backend Criticals Design Note
+
+**Status**: 🚧 In Progress
+**Branch**: `claude/backend-criticals-rbac-gdpr-analytics-013DvoKrwXyKfmLi9xgW6sCr`
+**Started**: 2025-11-14
+**Priority**: P0/P1 Backend Foundation
+**Target Completion**: TBD
+
+---
+
+## Mission
+
+Close critical backend gaps identified in Worker 2 core services:
+1. **RBAC & Tenant Security (P0)**: Database-backed tenant membership validation with audit trails
+2. **Impact-In Connectors (P1)**: Production-grade HTTP/OAuth/SOAP clients for external integrations
+3. **GDPR DSAR Orchestrator (P1)**: Privacy-compliant data export/deletion workflows
+4. **Analytics Backfill (P1)**: Historical data migration Postgres → ClickHouse
+5. **Performance Caching (P2)**: Redis caching for frequently-called endpoints
+
+---
+
+## Current State Analysis
+
+### What Exists ✅
+- ✅ `api-gateway/middleware/tenantScope.ts` - Extracts tenant from JWT/headers, but **validates via JWT only** (line 87-91 TODO)
+- ✅ `api-gateway/middleware/rbac.ts` - Roles & permissions defined, but no DB queries
+- ✅ `impact-in/connectors/benevity/client.ts` - Basic retry/backoff, missing idempotency & webhook signatures
+- ✅ `impact-in/connectors/goodera/` & `workday/` - Mappers exist, clients are stubs
+- ✅ `analytics/sinks/loader.ts` - Incremental NATS ingestion works, **backfill stubbed** (line 83-91 TODO)
+- ✅ `shared-schema/migrations/0004_add_idempotency_tables.sql` - Event deduplication tables exist
+
+### What's Missing ❌
+- ❌ **Migrations**: `company_users`, `company_api_keys`, `audit_logs`, `consent_records`, `dsar_requests`
+- ❌ **Seed data**: No `/packages/shared-schema/seeds/` directory
+- ❌ **RBAC DB queries**: tenantScope.ts doesn't validate `company_users` membership
+- ❌ **Redis caching**: No caching middleware for RBAC lookups, SROI/VIS, Q2Q
+- ❌ **Impact-In production features**: Idempotency keys, webhook signature verification, OAuth refresh, WS-Security
+- ❌ **Privacy orchestrator**: No `services/privacy-orchestrator/` service
+- ❌ **Analytics backfill**: Postgres → ClickHouse historical data loader unimplemented
+- ❌ **Documentation**: No runbooks for Impact-In, GDPR, Analytics
+
+---
+
+## Architecture: Tables → Middleware → Services
+
+### 1. RBAC & Tenant Security Flow
+
+#### Database Tables (New Migrations)
+
+**Migration File**: `/packages/shared-schema/migrations/0013_add_rbac_and_privacy_tables.sql`
+
+Tables to create:
+- `company_users` - Tenant membership registry
+- `company_api_keys` - Programmatic access tokens
+- `audit_logs` - Tamper-proof audit trail
+- `consent_records` - GDPR consent tracking
+- `dsar_requests` - Data Subject Access Requests
+
+#### Middleware Enhancements
+
+**File**: `/services/api-gateway/src/middleware/tenantScope.ts` (line 76-92 replacement)
+- Replace JWT-only validation with DB query to `company_users`
+- Add Redis caching (TTL: 5 minutes) for membership lookups
+- Audit all failed access attempts to `audit_logs` table
+- Update `last_access_at` asynchronously
+
+**New File**: `/services/api-gateway/src/middleware/auditLog.ts`
+- Helper function to insert audit events
+- Emit audit events to NATS for real-time monitoring
+
+**Cache Invalidation Strategy**:
+- On role change: Invalidate `tenant:${userId}:*` keys
+- On user deactivation: Invalidate all keys for user
+- Pub/Sub pattern to notify all gateway instances
+
+---
+
+### 2. Impact-In Connectors Production Features
+
+#### Benevity Enhancements
+**File**: `/services/impact-in/src/connectors/benevity/client.ts`
+
+Add:
+- Idempotency key support in headers
+- Response caching for 24 hours on success
+- Webhook signature verification using HMAC-SHA256
+- Timing-safe signature comparison
+
+#### Goodera OAuth2 Flow
+**New File**: `/services/impact-in/src/connectors/goodera/oauth.ts`
+
+Features:
+- Token caching in Redis with TTL
+- Automatic token refresh before expiry
+- Retry logic for token endpoint failures
+
+#### Workday WS-Security
+**New File**: `/services/impact-in/src/connectors/workday/soap.ts`
+
+Features:
+- SOAP client with WS-Security headers
+- Multi-tenant endpoint discovery
+- Connection pooling for performance
+
+---
+
+### 3. GDPR DSAR Orchestrator
+
+**New Service**: `/services/privacy-orchestrator/`
+
+Architecture:
+```
+API Gateway /privacy routes
+  ↓
+Privacy Orchestrator
+  ↓ (fan-out via NATS)
+  ├─→ Unified Profile Service (user data)
+  ├─→ Kintell Connector (session data)
+  ├─→ Buddy Service (match/event data)
+  ├─→ Reporting Service (analytics snapshots)
+  └─→ Q2Q AI Service (outcome scores, evidence)
+```
+
+**Key Files**:
+- `/services/privacy-orchestrator/src/handlers/export.ts` - Data export with encryption
+- `/services/privacy-orchestrator/src/handlers/delete.ts` - 30-day deletion with cancellation
+- `/services/privacy-orchestrator/src/index.ts` - Fastify service setup
+
+**Export Flow**:
+1. Create DSAR request in DB with status "pending"
+2. Fan-out export requests to all services via NATS
+3. Aggregate responses into JSON structure
+4. Encrypt with job-specific key
+5. Upload to S3 with 30-day expiry
+6. Update DB with export URL
+7. Send notification email
+
+**Delete Flow**:
+1. Create DSAR request with 30-day cancellation window
+2. Schedule deletion event in NATS JetStream
+3. User can cancel within 30 days
+4. After 30 days, fan-out delete to all services
+5. Mark as completed and audit log
+
+---
+
+### 4. Analytics Backfill Loader
+
+**File**: `/services/analytics/src/sinks/loader.ts` (line 79-94 implementation)
+
+**Backfill Strategy**:
+1. Query `metrics_company_period` table in batches (10K rows)
+2. Transform to ClickHouse schema
+3. Check for duplicates before inserting
+4. Batch insert to `metrics_timeseries` table
+5. Save checkpoint after each batch
+6. Resume from checkpoint on failure
+
+**Deduplication**:
+- Query ClickHouse for existing rows by composite key
+- Filter out duplicates before insertion
+- Prevents double-counting metrics
+
+**Performance**:
+- Streaming inserts (no full table load in memory)
+- Parallel batch processing where safe
+- Progress logging every 10K rows
+
+---
+
+### 5. Redis Caching for SROI/VIS and Q2Q
+
+**New Utility**: `/packages/shared-utils/src/cache.ts`
+
+**Caching Middleware**:
+```typescript
+cacheMiddleware({ 
+  ttl: 3600,  // 1 hour
+  key: (req) => `sroi:${req.params.companyId}:${req.query.period}`
+})
+```
+
+**Apply To**:
+- `/services/impact-calculator/src/routes/sroi.ts` - SROI calculations
+- `/services/impact-calculator/src/routes/vis.ts` - VIS scores
+- `/services/q2q-ai/src/routes/evidence.ts` - Q2Q evidence queries
+
+**Invalidation Strategy**:
+- On new event ingestion: Invalidate `sroi:${companyId}:*` and `vis:${companyId}:*`
+- On Q2Q evidence update: Invalidate `q2q:evidence:${companyId}:*`
+- Use Redis Pub/Sub to notify all service instances
+
+---
+
+## Execution Plan
+
+### Phase 1: Foundation (Days 1-3)
+1. **Day 1**: Generate migrations for RBAC and privacy tables
+2. **Day 2**: Implement DB queries in `tenantScope.ts` with Redis caching
+3. **Day 3**: Create seed data and test RBAC flows
+
+### Phase 2: Impact-In Enhancements (Days 4-6)
+1. **Day 4**: Enhance Benevity client with idempotency and webhooks
+2. **Day 5**: Implement Goodera OAuth2 flow
+3. **Day 6**: Implement Workday SOAP client
+
+### Phase 3: Privacy Orchestrator (Days 7-9)
+1. **Day 7**: Scaffold service and implement export handler
+2. **Day 8**: Implement delete handler with cancellation
+3. **Day 9**: Wire API Gateway routes and E2E test
+
+### Phase 4: Analytics & Caching (Days 10-12)
+1. **Day 10**: Implement analytics backfill with deduplication
+2. **Day 11**: Add Redis caching to SROI/VIS/Q2Q
+3. **Day 12**: Run k6 performance tests
+
+### Phase 5: Testing & Documentation (Days 13-15)
+1. **Day 13**: Unit and integration tests
+2. **Day 14**: E2E tests and k6 scripts
+3. **Day 15**: Documentation and validation report
+
+---
+
+## Acceptance Criteria
+
+### P0: RBAC & Tenant Security
+- [ ] Migrations apply cleanly with rollback scripts
+- [ ] `tenantScope.ts` queries `company_users` table (no JWT-only)
+- [ ] Cross-tenant access returns 403 and audits to `audit_logs`
+- [ ] Redis caches tenant lookups with 5-min TTL
+- [ ] Seed data creates 3 companies, 10 users, various roles
+
+### P1: Impact-In Connectors
+- [ ] Benevity: idempotency keys + webhook signature verification
+- [ ] Goodera: OAuth2 with automatic token refresh
+- [ ] Workday: SOAP with WS-Security and tenant discovery
+- [ ] End-to-end delivery test in staging succeeds
+- [ ] Monitor API shows delivery status and replay works
+
+### P1: GDPR DSAR
+- [ ] Export generates encrypted ZIP within 5 minutes
+- [ ] Delete creates request with 30-day cancellation window
+- [ ] Delete cascades after 30 days with audit trail
+- [ ] All actions logged with timestamps
+
+### P1: Analytics Backfill
+- [ ] Backfill moves historical data to ClickHouse
+- [ ] Deduplication prevents duplicate inserts
+- [ ] Incremental ingestion maintains <60s lag
+- [ ] Checkpoint recovery works after restart
+
+### P2: Caching & Performance
+- [ ] SROI/VIS return cached responses on repeat
+- [ ] Cache invalidation on new events works
+- [ ] k6: ingestion p95 < 500ms at 1000 req/s
+
+### Tests & Documentation
+- [ ] +20% test coverage across services
+- [ ] E2E GDPR tests: export, delete, cancel
+- [ ] k6 scripts for analytics load testing
+- [ ] Docs: Impact_Integration_Benevity.md, GDPR_DSR_Runbook.md, Analytics_Backfill.md
+- [ ] Validation report with curl examples
+
+---
+
+## Risk Mitigation
+
+| Risk | Mitigation |
+|------|------------|
+| Existing data migration to company_users | Write migration script from users.company_id |
+| Redis cache stampede | Use cache warming and staggered TTLs |
+| DSAR fan-out timeout | Circuit breaker + partial success |
+| ClickHouse backfill memory | Stream in 10K row batches |
+| Workday WSDL versioning | Version URLs in config, test sandbox |
+
+---
+
+## Next Steps
+
+1. ✅ Design note complete
+2. 🚧 Generate migrations (starting now)
+
+**Orchestrator**: Worker 2 Backend Lead (Claude)
+**Last Updated**: 2025-11-14
+

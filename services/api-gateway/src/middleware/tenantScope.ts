@@ -1,5 +1,20 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { AuthenticatedRequest, JWTPayload } from './auth.js';
+import { Pool } from 'pg';
+import { Redis } from 'ioredis';
+import { auditLog, AuditAction } from './auditLog.js';
+
+// Database and Redis connections (initialized at startup)
+let dbPool: Pool | null = null;
+let redisClient: Redis | null = null;
+
+export function initTenantScope(pool: Pool, redis: Redis): void {
+  dbPool = pool;
+  redisClient = redis;
+}
+
+// Cache TTL for tenant membership lookups (5 minutes)
+const TENANT_CACHE_TTL = 300;
 
 /**
  * Tenant context attached to each request
@@ -71,24 +86,112 @@ function isValidUUID(uuid: string): boolean {
 
 /**
  * Check if user has access to the requested tenant
- * This would typically query a database, but for now we'll use JWT claims
+ * Uses Redis cache with DB fallback for optimal performance
  */
 async function validateTenantAccess(
   userId: string,
   companyId: string,
-  role: string
-): Promise<{ hasAccess: boolean; userRole?: string }> {
-  // System admins have access to all tenants
-  if (role === 'system_admin' || role === 'admin') {
-    return { hasAccess: true, userRole: role };
+  role: string,
+  request: FastifyRequest
+): Promise<{ hasAccess: boolean; userRole?: string; permissions?: string[] }> {
+  // System admins bypass DB checks (have access to all tenants)
+  if (role === 'system_admin') {
+    return { hasAccess: true, userRole: role, permissions: [] };
   }
 
-  // TODO: Query database to check company_users table
-  // For now, we validate based on JWT companyId claim
-  // In production, this should query: SELECT * FROM company_users WHERE user_id = ? AND company_id = ? AND is_active = true
+  if (!dbPool) {
+    request.log.error('Database pool not initialized for tenant validation');
+    return { hasAccess: false };
+  }
 
-  // Mock validation - replace with actual DB query
-  return { hasAccess: true, userRole: role };
+  try {
+    // Check Redis cache first
+    const cacheKey = `tenant:${userId}:${companyId}`;
+
+    if (redisClient) {
+      try {
+        const cached = await redisClient.get(cacheKey);
+        if (cached) {
+          request.log.debug({ userId, companyId, source: 'cache' }, 'Tenant access validated from cache');
+          return JSON.parse(cached);
+        }
+      } catch (cacheError) {
+        request.log.warn({ error: cacheError }, 'Redis cache read failed, falling back to DB');
+      }
+    }
+
+    // Cache miss - query database
+    const result = await dbPool.query(
+      `SELECT role, permissions, is_active
+       FROM company_users
+       WHERE user_id = $1 AND company_id = $2`,
+      [userId, companyId]
+    );
+
+    if (result.rows.length === 0 || !result.rows[0].is_active) {
+      // User is not a member or is deactivated
+      await auditLog({
+        companyId,
+        userId,
+        action: AuditAction.TENANT_ACCESS_DENIED,
+        resourceType: 'company',
+        resourceId: companyId,
+        success: false,
+        errorMessage: result.rows.length === 0
+          ? 'User not member of company'
+          : 'User account is deactivated',
+        request
+      });
+
+      return { hasAccess: false };
+    }
+
+    const membership = result.rows[0];
+    const accessResult = {
+      hasAccess: true,
+      userRole: membership.role,
+      permissions: membership.permissions || []
+    };
+
+    // Cache successful validation for 5 minutes
+    if (redisClient) {
+      try {
+        await redisClient.setex(cacheKey, TENANT_CACHE_TTL, JSON.stringify(accessResult));
+      } catch (cacheError) {
+        request.log.warn({ error: cacheError }, 'Redis cache write failed');
+      }
+    }
+
+    // Update last_access_at asynchronously (fire and forget)
+    dbPool.query(
+      `UPDATE company_users
+       SET last_access_at = NOW()
+       WHERE user_id = $1 AND company_id = $2`,
+      [userId, companyId]
+    ).catch((error) => {
+      request.log.warn({ error, userId, companyId }, 'Failed to update last_access_at');
+    });
+
+    request.log.debug({ userId, companyId, role: membership.role, source: 'db' }, 'Tenant access validated from DB');
+
+    return accessResult;
+  } catch (error) {
+    request.log.error({ error, userId, companyId }, 'Tenant validation error');
+
+    // Audit the error
+    await auditLog({
+      companyId,
+      userId,
+      action: AuditAction.SYSTEM_ERROR,
+      resourceType: 'company',
+      resourceId: companyId,
+      success: false,
+      errorMessage: `Tenant validation error: ${(error as Error).message}`,
+      request
+    });
+
+    return { hasAccess: false };
+  }
 }
 
 /**
@@ -136,10 +239,11 @@ export async function tenantScope(
   }
 
   // Validate user has access to this tenant
-  const { hasAccess, userRole } = await validateTenantAccess(
+  const { hasAccess, userRole, permissions } = await validateTenantAccess(
     authRequest.user.userId,
     tenantId,
-    authRequest.user.role
+    authRequest.user.role,
+    request
   );
 
   if (!hasAccess) {
@@ -165,7 +269,7 @@ export async function tenantScope(
     companyId: tenantId,
     role: userRole || authRequest.user.role,
     userId: authRequest.user.userId,
-    permissions: [] // TODO: Load from database
+    permissions: permissions || []
   };
 
   // Log successful tenant context attachment
@@ -198,10 +302,11 @@ export async function optionalTenantScope(
     return; // Skip if no valid tenant ID
   }
 
-  const { hasAccess, userRole } = await validateTenantAccess(
+  const { hasAccess, userRole, permissions } = await validateTenantAccess(
     authRequest.user.userId,
     tenantId,
-    authRequest.user.role
+    authRequest.user.role,
+    request
   );
 
   if (hasAccess) {
@@ -210,7 +315,7 @@ export async function optionalTenantScope(
       companyId: tenantId,
       role: userRole || authRequest.user.role,
       userId: authRequest.user.userId,
-      permissions: []
+      permissions: permissions || []
     };
   }
 }
