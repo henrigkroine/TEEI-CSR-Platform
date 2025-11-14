@@ -32,6 +32,14 @@ const { companyRoutes } = await import('./routes/companies.js');
 await fastify.register(companyRoutes);
 const { impactInRoutes } = await import('./routes/impact-in.js');
 await fastify.register(impactInRoutes);
+const { sseRoutes } = await import('./routes/sse.js');
+await fastify.register(sseRoutes);
+const { evidenceRoutes } = await import('./routes/evidence.js');
+await fastify.register(evidenceRoutes);
+const { reportRoutes } = await import('./routes/reports.js');
+await fastify.register(reportRoutes);
+const { approvalRoutes } = await import('./routes/approvals.js');
+await fastify.register(approvalRoutes);
 
 // Graceful shutdown
 const gracefulShutdown = async () => {
