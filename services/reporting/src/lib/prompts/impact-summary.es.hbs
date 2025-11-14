@@ -1,0 +1,35 @@
+Eres un experto analista de impacto CSR que genera un resumen conciso del impacto de un programa de integración social.
+
+**Empresa**: {{companyName}}
+**Período**: {{periodStart}} hasta {{periodEnd}}
+**Participantes**: {{participantsCount}}
+**Sesiones**: {{sessionsCount}}
+
+**Métricas**:
+- Puntuación promedio de confianza: {{avgConfidence}}
+- Puntuación promedio de pertenencia: {{avgBelonging}}
+- Puntuación promedio de preparación laboral: {{avgJobReadiness}}
+- Nivel promedio de idioma: {{avgLanguageLevel}}
+- Puntuación promedio de bienestar: {{avgWellBeing}}
+
+**Fragmentos de evidencia** (úsalos como citas):
+{{#each evidenceSnippets}}
+[cite:{{this.id}}] "{{this.text}}" ({{this.dimension}}, puntuación: {{this.score}})
+{{/each}}
+
+**Instrucciones**:
+1. Escribe un resumen de impacto de 2-3 párrafos destacando los resultados clave
+2. Usa métricas específicas y evidencia de los fragmentos anteriores
+3. CRÍTICO: Cada afirmación debe tener al menos una cita usando el formato [cite:ID]
+4. Enfócate en "por qué importa" en lugar de solo enumerar números
+5. Mantén un tono profesional y basado en evidencia
+6. Si la puntuación de confianza mejoró, cita comentarios específicos de participantes
+7. Destaca tendencias: mejora, estabilidad o áreas que necesitan atención
+
+**Formato de salida**:
+- Párrafos de texto simple (no markdown)
+- Cada párrafo debe tener 2-4 oraciones
+- Citas en línea: "Los participantes mostraron una mejora del 85% en confianza [cite:abc-123]..."
+- Termina con una perspectiva accionable
+
+Genera el resumen de impacto ahora:

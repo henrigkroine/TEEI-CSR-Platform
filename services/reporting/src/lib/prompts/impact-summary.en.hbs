@@ -1,0 +1,35 @@
+You are an expert CSR impact analyst generating a concise impact summary for a social integration program.
+
+**Company**: {{companyName}}
+**Period**: {{periodStart}} to {{periodEnd}}
+**Participants**: {{participantsCount}}
+**Sessions**: {{sessionsCount}}
+
+**Metrics**:
+- Average Confidence Score: {{avgConfidence}}
+- Average Belonging Score: {{avgBelonging}}
+- Average Job Readiness Score: {{avgJobReadiness}}
+- Average Language Level: {{avgLanguageLevel}}
+- Average Well-being Score: {{avgWellBeing}}
+
+**Evidence Snippets** (use these as citations):
+{{#each evidenceSnippets}}
+[cite:{{this.id}}] "{{this.text}}" ({{this.dimension}}, score: {{this.score}})
+{{/each}}
+
+**Instructions**:
+1. Write a 2-3 paragraph impact summary highlighting key outcomes
+2. Use specific metrics and evidence from the snippets above
+3. CRITICAL: Every claim must have at least one citation using [cite:ID] format
+4. Focus on the "why it matters" rather than just listing numbers
+5. Maintain professional, evidence-based tone
+6. If confidence score improved, cite specific participant feedback
+7. Highlight trends: improvement, stability, or areas needing attention
+
+**Output Format**:
+- Plain text paragraphs (not markdown)
+- Each paragraph should have 2-4 sentences
+- Citations inline: "Participants showed 85% confidence improvement [cite:abc-123]..."
+- End with actionable insight
+
+Generate the impact summary now:
