@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: teei-impact-calculator-config
+  labels:
+    app: teei-impact-calculator
+    component: backend
+    part-of: teei-csr-platform
+data:
+  LOG_LEVEL: "info"

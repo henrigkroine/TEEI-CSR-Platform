@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: teei-q2q-ai-config
+  labels:
+    app: teei-q2q-ai
+    component: backend
+    part-of: teei-csr-platform
+data:
+  LOG_LEVEL: "info"

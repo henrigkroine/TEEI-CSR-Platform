@@ -1,0 +1,234 @@
+name: Deploy to Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Image tag to deploy (e.g., v1.0.0)'
+        required: true
+      run_smoke_tests:
+        description: 'Run smoke tests before deployment'
+        type: boolean
+        default: true
+      enable_rollback:
+        description: 'Enable automatic rollback on failure'
+        type: boolean
+        default: true
+
+env:
+  KUBE_NAMESPACE: teei-production
+  ENVIRONMENT: production
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  pre-deployment-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate image tag format
+        run: |
+          TAG="${{ github.event.inputs.image_tag }}"
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "ERROR: Image tag must follow semver format (e.g., v1.0.0)"
+            exit 1
+          fi
+          echo "Valid image tag: $TAG"
+
+      - name: Check image exists
+        run: |
+          echo "Checking if images exist in registry..."
+          # TODO: Add actual image existence check
+          # docker manifest inspect ghcr.io/${{ github.repository_owner }}/teei-api-gateway:${{ github.event.inputs.image_tag }}
+          echo "Image check passed (placeholder)"
+
+  approval:
+    needs: pre-deployment-checks
+    runs-on: ubuntu-latest
+    environment:
+      name: production-approval
+    steps:
+      - name: Manual approval checkpoint
+        run: |
+          echo "Production deployment approved by: ${{ github.actor }}"
+          echo "Deploying version: ${{ github.event.inputs.image_tag }}"
+
+  deploy:
+    needs: approval
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://teei.example.com
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.28.0'
+
+      - name: Setup kustomize
+        uses: imranismail/setup-kustomize@v2
+        with:
+          kustomize-version: '5.0.0'
+
+      - name: Configure kubectl
+        run: |
+          echo "${{ secrets.KUBE_CONFIG_PRODUCTION }}" | base64 -d > /tmp/kubeconfig
+          echo "KUBECONFIG=/tmp/kubeconfig" >> $GITHUB_ENV
+
+      - name: Verify cluster connection
+        run: |
+          kubectl cluster-info
+          kubectl get nodes
+
+      - name: Backup current deployment
+        id: backup
+        run: |
+          echo "Backing up current deployment..."
+          kubectl get deployment -n ${KUBE_NAMESPACE} -o yaml > /tmp/deployment-backup.yaml
+
+          # Get current image tags
+          CURRENT_TAG=$(kubectl get deployment -n ${KUBE_NAMESPACE} prod-teei-api-gateway -o jsonpath='{.spec.template.spec.containers[0].image}' | cut -d: -f2)
+          echo "current_tag=${CURRENT_TAG}" >> $GITHUB_OUTPUT
+          echo "Current version: ${CURRENT_TAG}"
+
+      - name: Update image tags
+        run: |
+          cd k8s/overlays/production
+          IMAGE_TAG=${{ github.event.inputs.image_tag }}
+
+          kustomize edit set image \
+            ghcr.io/${{ github.repository_owner }}/teei-api-gateway:${IMAGE_TAG} \
+            ghcr.io/${{ github.repository_owner }}/teei-unified-profile:${IMAGE_TAG} \
+            ghcr.io/${{ github.repository_owner }}/teei-kintell-connector:${IMAGE_TAG} \
+            ghcr.io/${{ github.repository_owner }}/teei-buddy-service:${IMAGE_TAG} \
+            ghcr.io/${{ github.repository_owner }}/teei-upskilling-connector:${IMAGE_TAG} \
+            ghcr.io/${{ github.repository_owner }}/teei-q2q-ai:${IMAGE_TAG} \
+            ghcr.io/${{ github.repository_owner }}/teei-safety-moderation:${IMAGE_TAG} \
+            ghcr.io/${{ github.repository_owner }}/teei-analytics:${IMAGE_TAG} \
+            ghcr.io/${{ github.repository_owner }}/teei-buddy-connector:${IMAGE_TAG} \
+            ghcr.io/${{ github.repository_owner }}/teei-discord-bot:${IMAGE_TAG} \
+            ghcr.io/${{ github.repository_owner }}/teei-impact-calculator:${IMAGE_TAG} \
+            ghcr.io/${{ github.repository_owner }}/teei-impact-in:${IMAGE_TAG} \
+            ghcr.io/${{ github.repository_owner }}/teei-journey-engine:${IMAGE_TAG} \
+            ghcr.io/${{ github.repository_owner }}/teei-notifications:${IMAGE_TAG} \
+            ghcr.io/${{ github.repository_owner }}/teei-reporting:${IMAGE_TAG} \
+            ghcr.io/${{ github.repository_owner }}/teei-corp-cockpit:${IMAGE_TAG}
+
+      - name: Run database migrations (gate)
+        run: |
+          echo "Running production database migrations..."
+          # TODO: Add actual migration command with backup
+          echo "Migrations complete (placeholder)"
+
+      - name: Render manifests
+        run: |
+          kubectl kustomize k8s/overlays/production > /tmp/production-manifests.yaml
+          echo "Generated production manifests"
+
+      - name: Dry-run deployment
+        run: |
+          kubectl apply --dry-run=server -f /tmp/production-manifests.yaml
+
+      - name: Deploy to production (rolling update)
+        id: deploy
+        run: |
+          echo "Starting production deployment..."
+          kubectl apply -f /tmp/production-manifests.yaml
+
+          # Wait for rollout with timeout
+          kubectl rollout status deployment -n ${KUBE_NAMESPACE} --timeout=15m
+        continue-on-error: true
+
+      - name: Verify deployment health
+        id: health_check
+        if: steps.deploy.outcome == 'success'
+        run: |
+          echo "Verifying deployment health..."
+
+          # Wait for all deployments to be ready
+          kubectl wait --for=condition=available --timeout=10m \
+            -n ${KUBE_NAMESPACE} \
+            deployment --all
+
+          # Check pod health
+          NOT_READY=$(kubectl get pods -n ${KUBE_NAMESPACE} --field-selector=status.phase!=Running --no-headers | wc -l)
+          if [ "$NOT_READY" -gt "0" ]; then
+            echo "ERROR: $NOT_READY pods are not running"
+            exit 1
+          fi
+
+          echo "All pods are healthy"
+        continue-on-error: true
+
+      - name: Run smoke tests
+        id: smoke_tests
+        if: github.event.inputs.run_smoke_tests == 'true' && steps.health_check.outcome == 'success'
+        run: |
+          echo "Running production smoke tests..."
+
+          # TODO: Add actual smoke tests
+          # - Test critical endpoints
+          # - Verify authentication
+          # - Check database connectivity
+
+          echo "Smoke tests passed (placeholder)"
+        continue-on-error: true
+
+      - name: Rollback on failure
+        if: |
+          github.event.inputs.enable_rollback == 'true' &&
+          (steps.deploy.outcome == 'failure' ||
+           steps.health_check.outcome == 'failure' ||
+           steps.smoke_tests.outcome == 'failure')
+        run: |
+          echo "DEPLOYMENT FAILED - Rolling back to previous version..."
+          echo "Previous version: ${{ steps.backup.outputs.current_tag }}"
+
+          # Restore from backup
+          kubectl apply -f /tmp/deployment-backup.yaml
+
+          # Wait for rollback to complete
+          kubectl rollout status deployment -n ${KUBE_NAMESPACE} --timeout=10m
+
+          echo "Rollback completed successfully"
+          exit 1
+
+      - name: Deployment summary
+        if: always()
+        run: |
+          echo "## Production Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** production" >> $GITHUB_STEP_SUMMARY
+          echo "**Namespace:** ${KUBE_NAMESPACE}" >> $GITHUB_STEP_SUMMARY
+          echo "**Image Tag:** ${{ github.event.inputs.image_tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Deployed by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Previous Tag:** ${{ steps.backup.outputs.current_tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Rollback Enabled:** ${{ github.event.inputs.enable_rollback }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Deployment Status" >> $GITHUB_STEP_SUMMARY
+          echo "- Deploy: ${{ steps.deploy.outcome }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Health Check: ${{ steps.health_check.outcome }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Smoke Tests: ${{ steps.smoke_tests.outcome }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Deployed Services" >> $GITHUB_STEP_SUMMARY
+          kubectl get deployments -n ${KUBE_NAMESPACE} -o wide >> $GITHUB_STEP_SUMMARY
+
+      - name: Notify on success
+        if: success()
+        run: |
+          echo "✅ Production deployment successful!"
+          echo "Version ${{ github.event.inputs.image_tag }} is now live."
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "❌ Production deployment failed!"
+          echo "Check logs and investigate the issue."
+          kubectl get events -n ${KUBE_NAMESPACE} --sort-by='.lastTimestamp' | tail -30

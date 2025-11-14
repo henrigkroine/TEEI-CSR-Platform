@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: teei-analytics-config
+  labels:
+    app: teei-analytics
+    component: backend
+    part-of: teei-csr-platform
+data:
+  LOG_LEVEL: "info"

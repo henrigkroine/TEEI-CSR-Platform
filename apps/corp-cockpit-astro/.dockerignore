@@ -1,0 +1,39 @@
+# Dependencies
+node_modules
+npm-debug.log
+pnpm-debug.log
+
+# Development
+.env
+.env.local
+.env.*.local
+*.log
+
+# Build outputs (will be created in container)
+dist
+.astro
+
+# Testing
+coverage
+test-results
+playwright-report
+lighthouse-report.html
+
+# IDE
+.vscode
+.idea
+*.swp
+
+# OS
+.DS_Store
+
+# Git
+.git
+.gitignore
+
+# Documentation
+*.md
+README.md
+
+# Storybook
+storybook-static

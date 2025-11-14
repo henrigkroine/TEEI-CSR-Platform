@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: teei-journey-engine
+  labels:
+    app: teei-journey-engine
+    component: backend
+    part-of: teei-csr-platform
+spec:
+  type: ClusterIP
+  selector:
+    app: teei-journey-engine
+  ports:
+  - name: http
+    port: 80
+    targetPort: 3012
+    protocol: TCP
+  sessionAffinity: None
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: teei-journey-engine
+  labels:
+    app: teei-journey-engine
+    component: backend
+    part-of: teei-csr-platform
+  annotations:
+    vault.hashicorp.com/role: "teei-journey-engine"

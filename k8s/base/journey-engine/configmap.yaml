@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: teei-journey-engine-config
+  labels:
+    app: teei-journey-engine
+    component: backend
+    part-of: teei-csr-platform
+data:
+  LOG_LEVEL: "info"
