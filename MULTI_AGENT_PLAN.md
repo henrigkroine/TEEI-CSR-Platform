@@ -719,18 +719,18 @@ Phase B delivered production-grade security, observability, and compliance. Work
 - [x] Report Validator - Quality checks
 
 ### Integrations Lead Progress
-- [ ] Benevity Mapper - Connector + auth
-- [ ] Goodera Mapper - OAuth + normalization
-- [ ] Workday Mapper - SOAP/REST adapter
-- [ ] Delivery Logger - Log APIs
-- [ ] Replay Endpoint - Retry logic
+- [x] Benevity Mapper - Connector + auth
+- [x] Goodera Mapper - OAuth + normalization
+- [x] Workday Mapper - SOAP/REST adapter
+- [x] Delivery Logger - Log APIs
+- [x] Replay Endpoint - Retry logic
 
 ### Notifications Lead Progress
-- [ ] Email Templates - MJML templates
-- [ ] Mail Provider Adapter - SendGrid integration
-- [ ] Notification Scheduler - Queue + scheduler
-- [ ] SMS/Push Stub - Future providers
-- [ ] Rate Limiter - Tenant quotas
+- [x] Email Templates - MJML templates
+- [x] Mail Provider Adapter - SendGrid integration
+- [x] Notification Scheduler - Queue + scheduler
+- [x] SMS/Push Stub - Future providers
+- [x] Rate Limiter - Tenant quotas
 
 ### Analytics Lead Progress
 - [ ] ClickHouse Loader - Setup + ingestion
@@ -755,19 +755,19 @@ Phase B delivered production-grade security, observability, and compliance. Work
 ## Final Deliverables Checklist
 
 ### Code Artifacts
-- [ ] Gen-AI reporting endpoint with citations
-- [ ] Real Q2Q AI classifier (not stub)
-- [ ] Prompt template library
-- [ ] Citation extraction + validation
-- [ ] PII redaction + lineage tracking
-- [ ] Benevity connector
-- [ ] Goodera connector
-- [ ] Workday connector
-- [ ] Delivery log APIs + replay endpoint
-- [ ] Notifications service with email queue
-- [ ] MJML email templates
-- [ ] SendGrid integration + delivery receipts
-- [ ] SMS/push provider stubs
+- [x] Gen-AI reporting endpoint with citations
+- [x] Real Q2Q AI classifier (not stub)
+- [x] Prompt template library
+- [x] Citation extraction + validation
+- [x] PII redaction + lineage tracking
+- [x] Benevity connector
+- [x] Goodera connector
+- [x] Workday connector
+- [x] Delivery log APIs + replay endpoint
+- [x] Notifications service with email queue
+- [x] MJML email templates
+- [x] SendGrid integration + delivery receipts
+- [x] SMS/push provider stubs
 - [ ] ClickHouse deployment + schema
 - [ ] Trends/cohorts/funnels endpoints
 - [ ] Redis caching for analytics
@@ -787,12 +787,12 @@ Phase B delivered production-grade security, observability, and compliance. Work
 ### Documentation
 - [ ] `/docs/Q2Q_GenReports_Wiring.md`
 - [ ] `/docs/ImpactIn_Connectors.md`
-- [ ] `/docs/Notifications_Service.md`
+- [x] `/docs/Notifications_Service.md`
 - [ ] `/docs/Analytics_APIs.md`
 - [ ] `/docs/Compliance_Backend_Additions.md`
 - [ ] `/reports/gen_reports_eval.md`
 - [ ] `/reports/impactin_cert_pack.md`
-- [ ] `/reports/notifications_test_matrix.md`
+- [x] `/reports/notifications_test_matrix.md`
 - [ ] `/reports/perf_gen_analytics.md`
 - [ ] `/reports/ai_costs_controls.md`
 - [ ] `/reports/worker2_core_complete.md` (MASTER REPORT)
