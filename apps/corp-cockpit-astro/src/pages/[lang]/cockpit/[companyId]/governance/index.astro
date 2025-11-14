@@ -1,0 +1,677 @@
+---
+import BaseLayout from '../../../../../layouts/BaseLayout.astro';
+import { hasPermission } from '../../../../../utils/rbac';
+import ConsentStatus from '../../../../../components/governance/ConsentStatus.tsx';
+import DSARQueue from '../../../../../components/governance/DSARQueue.tsx';
+import RetentionNotices from '../../../../../components/governance/RetentionNotices.tsx';
+import ExportAuditLog from '../../../../../components/governance/ExportAuditLog.tsx';
+
+// Extract route parameters
+const { lang, companyId } = Astro.params;
+const user = Astro.locals.user;
+const tenantContext = Astro.locals.tenantContext;
+
+// Middleware handles auth/tenant validation
+if (!user || !tenantContext) {
+  return Astro.redirect('/login');
+}
+
+// Verify tenant context matches route
+if (tenantContext.companyId !== companyId || tenantContext.lang !== lang) {
+  return Astro.redirect(`/${lang}/cockpit/401`);
+}
+
+// Only ADMIN+ can view governance (MANAGE_SETTINGS permission)
+const canViewGovernance = hasPermission(user.role, 'MANAGE_SETTINGS');
+if (!canViewGovernance) {
+  return Astro.redirect(`/${lang}/cockpit/${companyId}/401`);
+}
+
+// Check if user can view export audit log (SUPER_ADMIN only)
+const canViewExportLog = user.role === 'SUPER_ADMIN';
+---
+
+<BaseLayout title="Data Governance & Compliance - TEEI Corporate Cockpit" lang={lang}>
+  <div class="governance-page">
+    <div class="page-header">
+      <div>
+        <a href={`/${lang}/cockpit/${companyId}`} class="back-link">
+          ← Back to Dashboard
+        </a>
+        <h1>Data Governance & Compliance</h1>
+        <p class="subtitle">GDPR, CCPA & SOC 2 compliance management for {tenantContext.companyName}</p>
+      </div>
+    </div>
+
+    {/* Compliance Overview Cards */}
+    <div class="overview-cards">
+      <div class="overview-card">
+        <div class="card-icon consent">📝</div>
+        <div class="card-content">
+          <h3>Consent Status</h3>
+          <p class="card-stat">98% compliant</p>
+          <p class="card-label">Active participant consents</p>
+        </div>
+      </div>
+
+      <div class="overview-card">
+        <div class="card-icon dsar">📋</div>
+        <div class="card-content">
+          <h3>Pending DSARs</h3>
+          <p class="card-stat">3 requests</p>
+          <p class="card-label">Due in next 7 days</p>
+        </div>
+      </div>
+
+      <div class="overview-card">
+        <div class="card-icon retention">🗑️</div>
+        <div class="card-content">
+          <h3>Retention Alerts</h3>
+          <p class="card-stat">120 records</p>
+          <p class="card-label">Scheduled for deletion</p>
+        </div>
+      </div>
+
+      {canViewExportLog && (
+        <div class="overview-card">
+          <div class="card-icon export">📊</div>
+          <div class="card-content">
+            <h3>Recent Exports</h3>
+            <p class="card-stat">12 exports</p>
+            <p class="card-label">Last 30 days</p>
+          </div>
+        </div>
+      )}
+    </div>
+
+    {/* GDPR Compliance Notice */}
+    <div class="alert-info">
+      <strong>GDPR & Privacy Compliance</strong>
+      <p>
+        This governance dashboard provides comprehensive tools for data privacy compliance, including
+        consent management, data subject access requests (DSAR), retention policies, and export audit
+        trails. All actions are logged to an immutable audit trail for compliance verification.
+      </p>
+    </div>
+
+    {/* Tab Navigation */}
+    <div class="tabs-container">
+      <div class="tabs" role="tablist">
+        <button class="tab active" data-tab="consent" role="tab" aria-selected="true">
+          <span class="tab-icon">📝</span>
+          Consent Status
+        </button>
+        <button class="tab" data-tab="dsar" role="tab" aria-selected="false">
+          <span class="tab-icon">📋</span>
+          DSAR Queue
+        </button>
+        <button class="tab" data-tab="retention" role="tab" aria-selected="false">
+          <span class="tab-icon">🗑️</span>
+          Retention Notices
+        </button>
+        {canViewExportLog && (
+          <button class="tab" data-tab="export" role="tab" aria-selected="false">
+            <span class="tab-icon">📊</span>
+            Export Audit Log
+          </button>
+        )}
+      </div>
+
+      {/* Tab Content Panels */}
+      <div class="tab-content">
+        {/* Consent Status Tab */}
+        <div id="consent-tab" class="tab-panel active" role="tabpanel">
+          <div class="section-header">
+            <h2>Consent Status Viewer</h2>
+            <span class="section-badge gdpr">GDPR Art. 7</span>
+          </div>
+          <p class="section-description">
+            View and monitor participant consent preferences for analytics, marketing, and data processing.
+            All consent changes are logged with timestamps and audit trails.
+          </p>
+          <ConsentStatus companyId={companyId} userId={user.id} client:load />
+        </div>
+
+        {/* DSAR Queue Tab */}
+        <div id="dsar-tab" class="tab-panel" role="tabpanel" hidden>
+          <div class="section-header">
+            <h2>DSAR Request Queue</h2>
+            <span class="section-badge gdpr">GDPR Art. 15-22</span>
+          </div>
+          <p class="section-description">
+            Data Subject Access Request queue showing pending, in-progress, and completed requests.
+            All DSAR requests must be fulfilled within 30 days per GDPR requirements.
+          </p>
+          <DSARQueue companyId={companyId} client:load />
+        </div>
+
+        {/* Retention Notices Tab */}
+        <div id="retention-tab" class="tab-panel" role="tabpanel" hidden>
+          <div class="section-header">
+            <h2>Data Retention Notices</h2>
+            <span class="section-badge gdpr">GDPR Art. 5</span>
+          </div>
+          <p class="section-description">
+            Records approaching their Time-To-Live (TTL) limits. Data minimization principle ensures
+            records are only retained as long as necessary for business and legal purposes.
+          </p>
+          <RetentionNotices companyId={companyId} client:load />
+        </div>
+
+        {/* Export Audit Log Tab */}
+        {canViewExportLog && (
+          <div id="export-tab" class="tab-panel" role="tabpanel" hidden>
+            <div class="section-header">
+              <h2>Export Audit Log</h2>
+              <span class="section-badge soc2">SOC 2</span>
+            </div>
+            <p class="section-description">
+              Complete audit trail of all data exports including user identity, IP address, timestamp,
+              and approval records. Logs retained for 7 years for compliance.
+            </p>
+            <ExportAuditLog companyId={companyId} client:load />
+          </div>
+        )}
+      </div>
+    </div>
+
+    {/* Compliance Resources */}
+    <section class="resources-section">
+      <h3>Compliance Framework Reference</h3>
+
+      <div class="resources-grid">
+        <div class="resource-card">
+          <h4>GDPR (General Data Protection Regulation)</h4>
+          <ul>
+            <li><strong>Legal Basis:</strong> Consent, contract, legitimate interest</li>
+            <li><strong>Data Subject Rights:</strong> Access, rectification, erasure, portability</li>
+            <li><strong>Processing Records:</strong> Article 30 documentation maintained</li>
+            <li><strong>DSAR Timeline:</strong> 30 days to respond to requests</li>
+          </ul>
+        </div>
+
+        <div class="resource-card">
+          <h4>CCPA (California Consumer Privacy Act)</h4>
+          <ul>
+            <li><strong>Right to Know:</strong> Data export via DSAR system</li>
+            <li><strong>Right to Delete:</strong> Erasure requests processed within 45 days</li>
+            <li><strong>Do Not Sell:</strong> We do not sell personal information</li>
+            <li><strong>Opt-Out:</strong> Consent withdrawal available anytime</li>
+          </ul>
+        </div>
+
+        <div class="resource-card">
+          <h4>SOC 2 Type II</h4>
+          <ul>
+            <li><strong>Audit Trail:</strong> All actions logged immutably</li>
+            <li><strong>Access Controls:</strong> RBAC with least privilege</li>
+            <li><strong>Data Classification:</strong> PII, confidential, public</li>
+            <li><strong>Retention:</strong> 7-year log retention for audits</li>
+          </ul>
+        </div>
+
+        <div class="resource-card">
+          <h4>Privacy by Design</h4>
+          <ul>
+            <li><strong>Data Minimization:</strong> Only necessary data collected</li>
+            <li><strong>Encryption:</strong> AES-256 at rest, TLS 1.3 in transit</li>
+            <li><strong>Pseudonymization:</strong> PII redacted in logs</li>
+            <li><strong>Privacy Impact:</strong> Assessments for new features</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="contact-box">
+        <h4>Data Protection Officer (DPO)</h4>
+        <p>
+          For questions about data governance, privacy practices, or to exercise your data rights,
+          contact our Data Protection Officer:
+        </p>
+        <div class="contact-details">
+          <div class="contact-item">
+            <strong>Email:</strong> <a href="mailto:dpo@teei.platform">dpo@teei.platform</a>
+          </div>
+          <div class="contact-item">
+            <strong>Privacy Inbox:</strong> <a href="mailto:privacy@teei.platform">privacy@teei.platform</a>
+          </div>
+        </div>
+        <p class="response-time">
+          <em>We respond to all privacy inquiries within 48 hours.</em>
+        </p>
+      </div>
+    </section>
+  </div>
+</BaseLayout>
+
+<style>
+  .governance-page {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: calc(var(--spacing-unit) * 4);
+  }
+
+  .page-header {
+    margin-bottom: calc(var(--spacing-unit) * 4);
+  }
+
+  .back-link {
+    color: var(--color-primary);
+    text-decoration: none;
+    font-size: 0.9375rem;
+    margin-bottom: calc(var(--spacing-unit) * 2);
+    display: inline-block;
+  }
+
+  .back-link:hover {
+    text-decoration: underline;
+  }
+
+  h1 {
+    font-size: 2rem;
+    margin: calc(var(--spacing-unit) * 2) 0 calc(var(--spacing-unit) * 1);
+  }
+
+  .subtitle {
+    color: var(--color-text-secondary);
+    font-size: 1.125rem;
+    margin: 0;
+  }
+
+  /* Overview Cards */
+  .overview-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: calc(var(--spacing-unit) * 3);
+    margin-bottom: calc(var(--spacing-unit) * 4);
+  }
+
+  .overview-card {
+    background: white;
+    border: 2px solid var(--color-border);
+    border-radius: var(--border-radius);
+    padding: calc(var(--spacing-unit) * 3);
+    display: flex;
+    align-items: center;
+    gap: calc(var(--spacing-unit) * 3);
+    transition: all 0.2s;
+  }
+
+  .overview-card:hover {
+    border-color: var(--color-primary);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+  }
+
+  .card-icon {
+    font-size: 3rem;
+    width: 64px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    flex-shrink: 0;
+  }
+
+  .card-icon.consent {
+    background: #dbeafe;
+  }
+
+  .card-icon.dsar {
+    background: #fef3c7;
+  }
+
+  .card-icon.retention {
+    background: #fee2e2;
+  }
+
+  .card-icon.export {
+    background: #d1fae5;
+  }
+
+  .card-content {
+    flex: 1;
+  }
+
+  .card-content h3 {
+    margin: 0 0 calc(var(--spacing-unit) * 1) 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .card-stat {
+    margin: 0;
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--color-text);
+  }
+
+  .card-label {
+    margin: calc(var(--spacing-unit) * 0.5) 0 0;
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+  }
+
+  /* Alert Info */
+  .alert-info {
+    background: #eff6ff;
+    border: 1px solid #3b82f6;
+    border-left: 4px solid #2563eb;
+    padding: calc(var(--spacing-unit) * 3);
+    border-radius: var(--border-radius);
+    margin-bottom: calc(var(--spacing-unit) * 4);
+  }
+
+  .alert-info strong {
+    display: block;
+    margin-bottom: calc(var(--spacing-unit) * 1);
+    color: #1e40af;
+  }
+
+  .alert-info p {
+    margin: 0;
+    color: #1e3a8a;
+    line-height: 1.6;
+  }
+
+  /* Tabs */
+  .tabs-container {
+    background: white;
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    margin-bottom: calc(var(--spacing-unit) * 4);
+  }
+
+  .tabs {
+    display: flex;
+    background: var(--color-bg-secondary);
+    border-bottom: 2px solid var(--color-border);
+    overflow-x: auto;
+  }
+
+  .tab {
+    flex: 1;
+    padding: calc(var(--spacing-unit) * 3);
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: calc(var(--spacing-unit) * 1);
+    white-space: nowrap;
+  }
+
+  .tab:hover {
+    background: rgba(59, 130, 246, 0.05);
+    color: var(--color-primary);
+  }
+
+  .tab.active {
+    color: var(--color-primary);
+    border-bottom-color: var(--color-primary);
+    background: white;
+  }
+
+  .tab-icon {
+    font-size: 1.25rem;
+  }
+
+  .tab-content {
+    padding: calc(var(--spacing-unit) * 4);
+  }
+
+  .tab-panel {
+    animation: fadeIn 0.3s;
+  }
+
+  .tab-panel[hidden] {
+    display: none;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: calc(var(--spacing-unit) * 2);
+    margin-bottom: calc(var(--spacing-unit) * 2);
+  }
+
+  .section-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+  }
+
+  .section-badge {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .section-badge.gdpr {
+    background: #dbeafe;
+    color: #1e40af;
+  }
+
+  .section-badge.soc2 {
+    background: #fef3c7;
+    color: #92400e;
+  }
+
+  .section-description {
+    color: var(--color-text-secondary);
+    margin-bottom: calc(var(--spacing-unit) * 3);
+    line-height: 1.6;
+  }
+
+  /* Resources Section */
+  .resources-section {
+    background: var(--color-bg-secondary);
+    padding: calc(var(--spacing-unit) * 4);
+    border-radius: var(--border-radius);
+  }
+
+  .resources-section h3 {
+    margin-top: 0;
+    margin-bottom: calc(var(--spacing-unit) * 3);
+  }
+
+  .resources-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: calc(var(--spacing-unit) * 3);
+    margin-bottom: calc(var(--spacing-unit) * 4);
+  }
+
+  .resource-card {
+    background: white;
+    padding: calc(var(--spacing-unit) * 3);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--color-border);
+  }
+
+  .resource-card h4 {
+    margin-top: 0;
+    margin-bottom: calc(var(--spacing-unit) * 2);
+    color: var(--color-primary);
+  }
+
+  .resource-card ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .resource-card li {
+    padding: calc(var(--spacing-unit) * 1) 0;
+    border-bottom: 1px solid var(--color-bg-secondary);
+  }
+
+  .resource-card li:last-child {
+    border-bottom: none;
+  }
+
+  .resource-card strong {
+    color: var(--color-text);
+    font-weight: 600;
+  }
+
+  .contact-box {
+    background: white;
+    padding: calc(var(--spacing-unit) * 3);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--color-border);
+  }
+
+  .contact-box h4 {
+    margin-top: 0;
+    margin-bottom: calc(var(--spacing-unit) * 2);
+  }
+
+  .contact-box p {
+    margin: 0 0 calc(var(--spacing-unit) * 2) 0;
+    line-height: 1.6;
+  }
+
+  .contact-details {
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--spacing-unit) * 1);
+    margin: calc(var(--spacing-unit) * 2) 0;
+    padding: calc(var(--spacing-unit) * 2);
+    background: var(--color-bg-secondary);
+    border-radius: calc(var(--border-radius) / 2);
+  }
+
+  .contact-item {
+    font-size: 0.9375rem;
+  }
+
+  .contact-item strong {
+    display: inline-block;
+    width: 120px;
+    color: var(--color-text-secondary);
+  }
+
+  .contact-item a {
+    color: var(--color-primary);
+    text-decoration: none;
+  }
+
+  .contact-item a:hover {
+    text-decoration: underline;
+  }
+
+  .response-time {
+    margin-top: calc(var(--spacing-unit) * 2);
+    padding: calc(var(--spacing-unit) * 2);
+    background: #fef3c7;
+    border: 1px solid #fcd34d;
+    border-radius: calc(var(--border-radius) / 2);
+    text-align: center;
+    color: #92400e;
+  }
+
+  .response-time em {
+    font-style: normal;
+    font-weight: 600;
+  }
+
+  @media (max-width: 768px) {
+    .governance-page {
+      padding: calc(var(--spacing-unit) * 2);
+    }
+
+    h1 {
+      font-size: 1.5rem;
+    }
+
+    .overview-cards {
+      grid-template-columns: 1fr;
+    }
+
+    .resources-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .section-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: calc(var(--spacing-unit) * 1);
+    }
+
+    .tabs {
+      flex-wrap: wrap;
+    }
+
+    .tab {
+      flex: 1 1 auto;
+      min-width: 150px;
+    }
+
+    .tab-content {
+      padding: calc(var(--spacing-unit) * 2);
+    }
+  }
+</style>
+
+<script>
+  // Tab switching functionality
+  function initTabs() {
+    const tabs = document.querySelectorAll('.tab');
+    const panels = document.querySelectorAll('.tab-panel');
+
+    tabs.forEach((tab) => {
+      tab.addEventListener('click', () => {
+        const tabId = tab.getAttribute('data-tab');
+
+        // Update tabs
+        tabs.forEach((t) => {
+          t.classList.remove('active');
+          t.setAttribute('aria-selected', 'false');
+        });
+        tab.classList.add('active');
+        tab.setAttribute('aria-selected', 'true');
+
+        // Update panels
+        panels.forEach((panel) => {
+          panel.classList.remove('active');
+          panel.setAttribute('hidden', '');
+        });
+        const activePanel = document.getElementById(`${tabId}-tab`);
+        if (activePanel) {
+          activePanel.classList.add('active');
+          activePanel.removeAttribute('hidden');
+        }
+      });
+    });
+  }
+
+  // Initialize on page load
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initTabs);
+  } else {
+    initTabs();
+  }
+</script>

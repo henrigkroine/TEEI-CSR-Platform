@@ -1,0 +1,340 @@
+---
+import BaseLayout from '@layouts/BaseLayout.astro';
+import PartnerOverview from '@components/partners/PartnerOverview';
+import TenantGrid from '@components/partners/TenantGrid';
+import WhitelabelPackExport from '@components/theme/WhitelabelPackExport';
+
+const { partnerId } = Astro.params;
+
+// TODO: Fetch partner data from API
+// const partner = await fetchPartner(partnerId);
+// if (!partner) return Astro.redirect('/en');
+
+// Mock partner data
+const partner = {
+  id: partnerId,
+  name: 'ACME Enterprise Solutions',
+  logo: 'https://via.placeholder.com/200x200?text=ACME',
+  contactEmail: 'partnerships@acme-enterprise.com',
+  contactPhone: '+44 20 1234 5678',
+  description: 'Leading provider of CSR solutions for enterprise clients across EMEA',
+  tier: 'enterprise' as const
+};
+
+const metrics = {
+  totalTenants: 12,
+  totalParticipants: 3847,
+  avgSROI: 3.4,
+  avgVIS: 82
+};
+
+// Mock tenant data
+const tenants = [
+  {
+    tenant: {
+      id: 'tenant-1',
+      name: 'TechCorp International',
+      logo: 'https://via.placeholder.com/100x100?text=TC',
+      industry: 'Technology',
+      status: 'active' as const
+    },
+    metrics: {
+      sroi: 3.8,
+      vis: 88,
+      participationRate: 76,
+      lastReportDate: '2025-10-15'
+    },
+    programMix: {
+      buddyMatching: 45,
+      language: 30,
+      upskilling: 25
+    }
+  },
+  {
+    tenant: {
+      id: 'tenant-2',
+      name: 'Green Energy Ltd',
+      logo: 'https://via.placeholder.com/100x100?text=GE',
+      industry: 'Energy',
+      status: 'active' as const
+    },
+    metrics: {
+      sroi: 3.2,
+      vis: 85,
+      participationRate: 82,
+      lastReportDate: '2025-10-20'
+    },
+    programMix: {
+      buddyMatching: 38,
+      language: 42,
+      upskilling: 20
+    }
+  },
+  {
+    tenant: {
+      id: 'tenant-3',
+      name: 'Healthcare Partners',
+      logo: 'https://via.placeholder.com/100x100?text=HP',
+      industry: 'Healthcare',
+      status: 'trial' as const
+    },
+    metrics: {
+      sroi: 2.9,
+      vis: 75,
+      participationRate: 68,
+      lastReportDate: '2025-10-10'
+    },
+    programMix: {
+      buddyMatching: 50,
+      language: 25,
+      upskilling: 25
+    }
+  },
+  {
+    tenant: {
+      id: 'tenant-4',
+      name: 'Financial Services Group',
+      logo: 'https://via.placeholder.com/100x100?text=FSG',
+      industry: 'Finance',
+      status: 'active' as const
+    },
+    metrics: {
+      sroi: 3.6,
+      vis: 90,
+      participationRate: 85,
+      lastReportDate: '2025-10-25'
+    },
+    programMix: {
+      buddyMatching: 40,
+      language: 35,
+      upskilling: 25
+    }
+  },
+  {
+    tenant: {
+      id: 'tenant-5',
+      name: 'Retail Solutions Inc',
+      logo: 'https://via.placeholder.com/100x100?text=RSI',
+      industry: 'Retail',
+      status: 'active' as const
+    },
+    metrics: {
+      sroi: 3.1,
+      vis: 78,
+      participationRate: 72,
+      lastReportDate: '2025-10-18'
+    },
+    programMix: {
+      buddyMatching: 35,
+      language: 40,
+      upskilling: 25
+    }
+  },
+  {
+    tenant: {
+      id: 'tenant-6',
+      name: 'Manufacturing Corp',
+      industry: 'Manufacturing',
+      status: 'churned' as const
+    },
+    metrics: {
+      sroi: 2.5,
+      vis: 65,
+      participationRate: 45,
+      lastReportDate: '2025-08-15'
+    },
+    programMix: {
+      buddyMatching: 30,
+      language: 35,
+      upskilling: 35
+    }
+  }
+];
+
+// Mock theme data
+const theme = {
+  colors: {
+    primary: '#0066CC',
+    secondary: '#00CC66',
+    background: '#FFFFFF',
+    foreground: '#1A1A1A'
+  },
+  logo: {
+    url: partner.logo || '',
+    primaryColor: '#0066CC',
+    dimensions: {
+      width: 400,
+      height: 400
+    }
+  },
+  typography: {
+    sizes: {
+      body: 16,
+      heading: 24,
+      small: 14
+    },
+    weights: {
+      normal: 400,
+      bold: 700
+    },
+    families: {
+      primary: 'Inter, system-ui, sans-serif',
+      heading: 'Inter, system-ui, sans-serif'
+    }
+  }
+};
+---
+
+<BaseLayout
+  title={`${partner.name} - Partner Portal`}
+  description={`Manage tenants and whitelabel branding for ${partner.name}`}
+  lang="en"
+>
+  <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
+    {/* Navigation */}
+    <nav class="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
+      <div class="mx-auto max-w-7xl px-6 py-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-4">
+            <a
+              href="/en"
+              class="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+            >
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                />
+              </svg>
+            </a>
+            <h1 class="text-xl font-semibold text-gray-900 dark:text-white">
+              Partner Portal
+            </h1>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <a
+              href={`/en/partners/${partnerId}/tenants`}
+              class="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
+            >
+              All Tenants
+            </a>
+            <button
+              id="whitelabel-export-btn"
+              class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+            >
+              <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                />
+              </svg>
+              Export Whitelabel Pack
+            </button>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    {/* Main Content */}
+    <main class="mx-auto max-w-7xl px-6 py-8">
+      {/* Partner Overview */}
+      <div class="mb-8">
+        <PartnerOverview
+          partner={partner}
+          metrics={metrics}
+          client:load
+        />
+      </div>
+
+      {/* Tenant Grid */}
+      <div>
+        <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-6">
+          Managed Tenants
+        </h2>
+        <TenantGrid
+          tenants={tenants}
+          lang="en"
+          partnerId={partnerId!}
+          canAddTenant={true}
+          client:load
+        />
+      </div>
+    </main>
+
+    {/* Whitelabel Export Modal (controlled by button) */}
+    <div id="whitelabel-modal-container"></div>
+  </div>
+
+  <script>
+    import { createRoot } from 'react-dom/client';
+    import { createElement } from 'react';
+    import WhitelabelPackExport from '@components/theme/WhitelabelPackExport';
+
+    // Get button and container
+    const button = document.getElementById('whitelabel-export-btn');
+    const container = document.getElementById('whitelabel-modal-container');
+
+    if (button && container) {
+      let root: any = null;
+      let isOpen = false;
+
+      const render = (open: boolean) => {
+        isOpen = open;
+        if (!root && container) {
+          root = createRoot(container);
+        }
+
+        if (root) {
+          root.render(
+            createElement(WhitelabelPackExport, {
+              partnerId: window.location.pathname.split('/')[3],
+              partnerName: 'ACME Enterprise Solutions',
+              isOpen: open,
+              onClose: () => render(false),
+              theme: {
+                colors: {
+                  primary: '#0066CC',
+                  secondary: '#00CC66',
+                  background: '#FFFFFF',
+                  foreground: '#1A1A1A'
+                },
+                logo: {
+                  url: 'https://via.placeholder.com/200x200?text=ACME',
+                  primaryColor: '#0066CC',
+                  dimensions: {
+                    width: 400,
+                    height: 400
+                  }
+                },
+                typography: {
+                  sizes: {
+                    body: 16,
+                    heading: 24,
+                    small: 14
+                  },
+                  weights: {
+                    normal: 400,
+                    bold: 700
+                  },
+                  families: {
+                    primary: 'Inter, system-ui, sans-serif',
+                    heading: 'Inter, system-ui, sans-serif'
+                  }
+                }
+              }
+            })
+          );
+        }
+      };
+
+      button.addEventListener('click', () => {
+        render(true);
+      });
+    }
+  </script>
+</BaseLayout>

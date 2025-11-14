@@ -536,6 +536,248 @@ async function renderPDF(report: Report, theme: TenantTheme): Promise<Buffer> {
 
 ---
 
+## Phase D: Whitelabel Pack Export
+
+### Overview
+
+Partners can export reports with complete client branding, removing all platform branding for white-label presentations.
+
+### Whitelabel Pack Features
+
+1. **Full Brand Substitution**:
+   - Replace platform logo with client logo
+   - Apply client color scheme throughout
+   - Remove all TEEI/platform references
+   - Custom footer text (e.g., "Prepared by Acme Consulting")
+
+2. **Export Formats**:
+   - **PDF**: Fully branded, print-ready
+   - **PPTX**: Editable slides with client theme
+   - **HTML**: Embeddable branded dashboard
+
+3. **Metadata Customization**:
+   - Document title
+   - Author (partner or client name)
+   - Custom watermark text
+   - Company contact information
+
+### Partner Branding Constraints
+
+**Access Control**:
+- Only partner-tier accounts can export whitelabel packs
+- Per-tenant whitelabel settings stored separately from platform theme
+- Audit log tracks all whitelabel exports for compliance
+
+**Restrictions**:
+1. **Logo Requirements**:
+   - Minimum resolution: 300 DPI for print (PDF)
+   - Aspect ratio: 2:1 to 5:1 recommended
+   - Transparent background (PNG) preferred
+   - Maximum file size: 5 MB
+
+2. **Color Constraints**:
+   - Must still pass WCAG 2.2 AA contrast
+   - Validation required before export
+   - Warning shown if colors may not print well (e.g., pure yellow)
+
+3. **Content Constraints**:
+   - Cannot remove required disclosures (e.g., data sources, methodology)
+   - Cannot modify metric calculations
+   - Cannot remove evidence citations
+   - Tamper-evident hash still required for locked reports
+
+### Theme Validation Rules for Whitelabel
+
+**Pre-Export Validation**:
+
+```typescript
+interface WhitelabelValidation {
+  logoValid: boolean;          // Logo meets size/format requirements
+  colorsValid: boolean;         // Colors pass WCAG AA
+  printableColors: boolean;     // Colors suitable for print (CMYK gamut)
+  metadataComplete: boolean;    // All required metadata present
+  complianceChecks: boolean;    // Required disclosures present
+  errors: string[];             // Blocking errors
+  warnings: string[];           // Non-blocking warnings
+}
+```
+
+**Validation Endpoint**: `POST /reporting/whitelabel/validate`
+
+**Example Response**:
+```json
+{
+  "logoValid": true,
+  "colorsValid": true,
+  "printableColors": false,
+  "metadataComplete": true,
+  "complianceChecks": true,
+  "errors": [],
+  "warnings": [
+    "Primary color (#FFFF00) may not print well. Consider darker shade for print exports."
+  ]
+}
+```
+
+### Logo Requirements (Enhanced)
+
+**For Whitelabel Exports**:
+
+| Attribute | Web Display | PDF Export | PPTX Export |
+|-----------|-------------|------------|-------------|
+| **Min Resolution** | 72 DPI | 300 DPI | 150 DPI |
+| **Recommended Size** | 200x60px | 600x180px | 400x120px |
+| **Max File Size** | 2 MB | 5 MB | 5 MB |
+| **Formats** | PNG, SVG, WebP | PNG, SVG | PNG |
+| **Color Space** | sRGB | sRGB or CMYK | sRGB |
+| **Transparency** | Optional | Recommended | Required |
+
+**Logo Validation**:
+- **Format Check**: Verify MIME type matches extension
+- **Resolution Check**: Extract DPI metadata, verify meets minimum
+- **Aspect Ratio Check**: Warn if < 2:1 or > 5:1 (may look distorted)
+- **Color Profile Check**: Validate sRGB or CMYK (for PDF)
+
+### Sample Whitelabel Pack Structure
+
+**Export Package** (ZIP format):
+
+```
+AcmeConsulting_Q4_2024_Impact_Pack.zip
+├── report.pdf                          # Fully branded PDF
+├── slides.pptx                         # Editable PowerPoint deck
+├── assets/
+│   ├── logo.png                        # Client logo (high-res)
+│   ├── charts/                         # Chart images (PNG)
+│   │   ├── sroi_trend.png
+│   │   ├── vis_breakdown.png
+│   │   └── participation_map.png
+│   └── data/                           # Raw data (CSV)
+│       ├── sroi_data.csv
+│       ├── vis_data.csv
+│       └── participation_data.csv
+├── metadata.json                       # Export metadata
+└── README.txt                          # Instructions for using pack
+```
+
+**metadata.json**:
+```json
+{
+  "exportId": "WL-2024-Q4-A3F8B92C",
+  "exportedAt": "2024-12-15T10:30:00Z",
+  "exportedBy": "partner@acmeconsulting.com",
+  "clientName": "Example Corp",
+  "reportPeriod": "2024-Q4",
+  "formats": ["pdf", "pptx", "csv"],
+  "branding": {
+    "logoUrl": "assets/logo.png",
+    "primaryColor": "#0066CC",
+    "secondaryColor": "#FF6600",
+    "companyName": "Acme Consulting"
+  },
+  "compliance": {
+    "watermarked": true,
+    "evidenceCited": true,
+    "methodologyDisclosed": true,
+    "tamperEvidentHash": "a3f8b92c7d4e5f6a8b9c0d1e2f3a4b5c"
+  },
+  "contentSummary": {
+    "metrics": ["SROI", "VIS", "Participation Rate"],
+    "evidenceItems": 47,
+    "reportPages": 12,
+    "slideCount": 15,
+    "dataRows": 328
+  }
+}
+```
+
+**README.txt**:
+```
+Whitelabel Impact Pack - Usage Instructions
+============================================
+
+This package contains a fully branded impact report for Example Corp.
+
+Contents:
+- report.pdf: Print-ready report with client branding
+- slides.pptx: Editable PowerPoint presentation
+- assets/charts/: High-resolution chart images
+- assets/data/: Raw data in CSV format
+- metadata.json: Export metadata and compliance info
+
+How to Use:
+1. Review report.pdf for completeness
+2. Customize slides.pptx with additional context (optional)
+3. Use charts/ and data/ for custom presentations
+4. Verify watermark hash matches metadata.json (for audit trail)
+
+Compliance Notes:
+- This report is tamper-evident. Do not modify without re-exporting.
+- All metrics are backed by evidence (see citations in PDF).
+- Methodology disclosure is included in report appendix.
+
+Questions? Contact: partner@acmeconsulting.com
+```
+
+### Whitelabel API Endpoints
+
+**`POST /reporting/whitelabel/export`**
+
+**Request**:
+```typescript
+interface WhitelabelExportRequest {
+  reportId: string;
+  clientBranding: {
+    logoUrl: string;
+    companyName: string;
+    primaryColor: string;
+    secondaryColor: string;
+    footerText?: string;
+    contactEmail?: string;
+  };
+  formats: ('pdf' | 'pptx' | 'html')[];
+  includeAssets: boolean;        // Include charts/data as separate files
+  packageFormat: 'zip' | 'files'; // ZIP or individual files
+}
+```
+
+**Response**:
+```typescript
+interface WhitelabelExportResponse {
+  exportId: string;
+  status: 'processing' | 'ready' | 'failed';
+  downloadUrl?: string;           // Signed URL, expires in 24h
+  expiresAt?: string;
+  estimatedSizeMB: number;
+  errors?: string[];
+}
+```
+
+### Whitelabel Settings Storage
+
+**Database Table**: `partner_whitelabel_settings`
+
+```sql
+CREATE TABLE partner_whitelabel_settings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  partner_id UUID REFERENCES partners(id) NOT NULL,
+  client_company_id UUID REFERENCES companies(id) NOT NULL,
+  logo_url TEXT NOT NULL,
+  company_name TEXT NOT NULL,
+  primary_color VARCHAR(7) NOT NULL,
+  secondary_color VARCHAR(7) NOT NULL,
+  footer_text TEXT,
+  contact_email TEXT,
+  watermark_text TEXT,
+  enabled BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(partner_id, client_company_id)
+);
+```
+
+---
+
 ## Future Enhancements
 
 - **Custom Fonts**: Allow font uploads (with performance budget)
@@ -543,6 +785,8 @@ async function renderPDF(report: Report, theme: TenantTheme): Promise<Buffer> {
 - **Multi-Brand**: Support multiple brands per tenant (e.g., subsidiaries)
 - **Theme Versioning**: Track theme changes over time
 - **A/B Testing**: Test different themes for engagement
+- **Whitelabel Templates**: Pre-designed report layouts for partners
+- **Brand Asset Library**: Centralized storage for partner brand assets
 
 ---
 
@@ -552,15 +796,17 @@ async function renderPDF(report: Report, theme: TenantTheme): Promise<Buffer> {
 - Contrast Ratio Calculator: https://contrast-ratio.com/
 - Color Palette Generator: https://coolors.co/
 - Accessible Color Palette Builder: https://venngage.com/tools/accessible-color-palette-generator
+- Print Color Guide (CMYK): https://www.color-management-guide.com
 
 ---
 
-**Document Status**: ✅ IMPLEMENTED (PHASE-C-H-01)
+**Document Status**: ✅ IMPLEMENTED (PHASE-C-H-01) + Phase D Enhancements
 **Last Updated**: 2025-11-14
-**Owner**: Agent Theming Engineer
+**Owner**: Agent Theming Engineer + Agent Branding Engineer (Phase D)
 
 ## Implementation Summary
 
+### Phase C Implementation (Completed)
 All features documented above have been fully implemented. See `reports/PHASE-C-H-01-theming.md` for detailed implementation report including:
 - Database schema migration (`services/reporting/src/db/schema/themes.sql`)
 - API endpoints (`services/reporting/src/routes/themes.ts`)
@@ -569,3 +815,11 @@ All features documented above have been fully implemented. See `reports/PHASE-C-
 - Admin UI component (`apps/corp-cockpit-astro/src/components/admin/ThemeEditor.tsx`)
 - PDF export integration (`apps/corp-cockpit-astro/src/lib/pdf.ts`)
 - Comprehensive test suite (unit + integration tests)
+
+### Phase D Additions (Completed)
+- Whitelabel pack export system (`services/reporting/src/routes/whitelabel.ts`)
+- Partner branding constraints and validation
+- Enhanced logo requirements for print/web
+- Whitelabel pack structure and metadata
+- Partner-specific branding storage (`partner_whitelabel_settings` table)
+- See `reports/w3_phaseD_partner_portal.md` for full Phase D implementation details

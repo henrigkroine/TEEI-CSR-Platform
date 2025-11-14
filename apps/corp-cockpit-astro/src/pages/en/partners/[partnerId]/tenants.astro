@@ -1,0 +1,315 @@
+---
+import BaseLayout from '@layouts/BaseLayout.astro';
+import TenantGrid from '@components/partners/TenantGrid';
+
+const { partnerId } = Astro.params;
+
+// TODO: Fetch partner and tenants data from API
+// const partner = await fetchPartner(partnerId);
+// const tenants = await fetchPartnerTenants(partnerId);
+// if (!partner) return Astro.redirect('/en');
+
+// Mock partner data
+const partner = {
+  id: partnerId,
+  name: 'ACME Enterprise Solutions'
+};
+
+// Extended mock tenant data with more entries for demonstration
+const tenants = [
+  {
+    tenant: {
+      id: 'tenant-1',
+      name: 'TechCorp International',
+      logo: 'https://via.placeholder.com/100x100?text=TC',
+      industry: 'Technology',
+      status: 'active' as const
+    },
+    metrics: {
+      sroi: 3.8,
+      vis: 88,
+      participationRate: 76,
+      lastReportDate: '2025-10-15'
+    },
+    programMix: {
+      buddyMatching: 45,
+      language: 30,
+      upskilling: 25
+    }
+  },
+  {
+    tenant: {
+      id: 'tenant-2',
+      name: 'Green Energy Ltd',
+      logo: 'https://via.placeholder.com/100x100?text=GE',
+      industry: 'Energy',
+      status: 'active' as const
+    },
+    metrics: {
+      sroi: 3.2,
+      vis: 85,
+      participationRate: 82,
+      lastReportDate: '2025-10-20'
+    },
+    programMix: {
+      buddyMatching: 38,
+      language: 42,
+      upskilling: 20
+    }
+  },
+  {
+    tenant: {
+      id: 'tenant-3',
+      name: 'Healthcare Partners',
+      logo: 'https://via.placeholder.com/100x100?text=HP',
+      industry: 'Healthcare',
+      status: 'trial' as const
+    },
+    metrics: {
+      sroi: 2.9,
+      vis: 75,
+      participationRate: 68,
+      lastReportDate: '2025-10-10'
+    },
+    programMix: {
+      buddyMatching: 50,
+      language: 25,
+      upskilling: 25
+    }
+  },
+  {
+    tenant: {
+      id: 'tenant-4',
+      name: 'Financial Services Group',
+      logo: 'https://via.placeholder.com/100x100?text=FSG',
+      industry: 'Finance',
+      status: 'active' as const
+    },
+    metrics: {
+      sroi: 3.6,
+      vis: 90,
+      participationRate: 85,
+      lastReportDate: '2025-10-25'
+    },
+    programMix: {
+      buddyMatching: 40,
+      language: 35,
+      upskilling: 25
+    }
+  },
+  {
+    tenant: {
+      id: 'tenant-5',
+      name: 'Retail Solutions Inc',
+      logo: 'https://via.placeholder.com/100x100?text=RSI',
+      industry: 'Retail',
+      status: 'active' as const
+    },
+    metrics: {
+      sroi: 3.1,
+      vis: 78,
+      participationRate: 72,
+      lastReportDate: '2025-10-18'
+    },
+    programMix: {
+      buddyMatching: 35,
+      language: 40,
+      upskilling: 25
+    }
+  },
+  {
+    tenant: {
+      id: 'tenant-6',
+      name: 'Manufacturing Corp',
+      industry: 'Manufacturing',
+      status: 'churned' as const
+    },
+    metrics: {
+      sroi: 2.5,
+      vis: 65,
+      participationRate: 45,
+      lastReportDate: '2025-08-15'
+    },
+    programMix: {
+      buddyMatching: 30,
+      language: 35,
+      upskilling: 35
+    }
+  },
+  {
+    tenant: {
+      id: 'tenant-7',
+      name: 'Digital Media Agency',
+      logo: 'https://via.placeholder.com/100x100?text=DMA',
+      industry: 'Media',
+      status: 'active' as const
+    },
+    metrics: {
+      sroi: 3.4,
+      vis: 83,
+      participationRate: 79,
+      lastReportDate: '2025-10-22'
+    },
+    programMix: {
+      buddyMatching: 42,
+      language: 33,
+      upskilling: 25
+    }
+  },
+  {
+    tenant: {
+      id: 'tenant-8',
+      name: 'Logistics Network',
+      logo: 'https://via.placeholder.com/100x100?text=LN',
+      industry: 'Logistics',
+      status: 'trial' as const
+    },
+    metrics: {
+      sroi: 2.8,
+      vis: 72,
+      participationRate: 65,
+      lastReportDate: '2025-10-05'
+    },
+    programMix: {
+      buddyMatching: 40,
+      language: 35,
+      upskilling: 25
+    }
+  },
+  {
+    tenant: {
+      id: 'tenant-9',
+      name: 'Education Partners',
+      logo: 'https://via.placeholder.com/100x100?text=EP',
+      industry: 'Education',
+      status: 'active' as const
+    },
+    metrics: {
+      sroi: 3.9,
+      vis: 92,
+      participationRate: 88,
+      lastReportDate: '2025-10-28'
+    },
+    programMix: {
+      buddyMatching: 48,
+      language: 28,
+      upskilling: 24
+    }
+  },
+  {
+    tenant: {
+      id: 'tenant-10',
+      name: 'Construction Services',
+      industry: 'Construction',
+      status: 'active' as const
+    },
+    metrics: {
+      sroi: 3.0,
+      vis: 77,
+      participationRate: 70,
+      lastReportDate: '2025-10-12'
+    },
+    programMix: {
+      buddyMatching: 35,
+      language: 40,
+      upskilling: 25
+    }
+  },
+  {
+    tenant: {
+      id: 'tenant-11',
+      name: 'Hospitality Group',
+      logo: 'https://via.placeholder.com/100x100?text=HG',
+      industry: 'Hospitality',
+      status: 'trial' as const
+    },
+    metrics: {
+      sroi: 2.7,
+      vis: 70,
+      participationRate: 62,
+      lastReportDate: '2025-09-30'
+    },
+    programMix: {
+      buddyMatching: 38,
+      language: 37,
+      upskilling: 25
+    }
+  },
+  {
+    tenant: {
+      id: 'tenant-12',
+      name: 'Automotive Solutions',
+      logo: 'https://via.placeholder.com/100x100?text=AS',
+      industry: 'Automotive',
+      status: 'active' as const
+    },
+    metrics: {
+      sroi: 3.5,
+      vis: 86,
+      participationRate: 81,
+      lastReportDate: '2025-10-24'
+    },
+    programMix: {
+      buddyMatching: 44,
+      language: 31,
+      upskilling: 25
+    }
+  }
+];
+---
+
+<BaseLayout
+  title={`All Tenants - ${partner.name}`}
+  description={`View and manage all tenants for ${partner.name}`}
+  lang="en"
+>
+  <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
+    {/* Navigation */}
+    <nav class="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
+      <div class="mx-auto max-w-7xl px-6 py-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-4">
+            <a
+              href={`/en/partners/${partnerId}`}
+              class="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+            >
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                />
+              </svg>
+            </a>
+            <div>
+              <h1 class="text-xl font-semibold text-gray-900 dark:text-white">
+                All Tenants
+              </h1>
+              <p class="text-sm text-gray-600 dark:text-gray-400">
+                {partner.name}
+              </p>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <span class="text-sm text-gray-600 dark:text-gray-400">
+              {tenants.length} total tenants
+            </span>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    {/* Main Content */}
+    <main class="mx-auto max-w-7xl px-6 py-8">
+      <TenantGrid
+        tenants={tenants}
+        lang="en"
+        partnerId={partnerId!}
+        canAddTenant={true}
+        client:load
+      />
+    </main>
+  </div>
+</BaseLayout>

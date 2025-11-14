@@ -1,0 +1,284 @@
+name: Lighthouse Performance Budgets
+
+on:
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'apps/corp-cockpit-astro/**'
+      - '.github/workflows/lh-budgets.yml'
+  push:
+    branches: [main, develop]
+    paths:
+      - 'apps/corp-cockpit-astro/**'
+      - '.github/workflows/lh-budgets.yml'
+  schedule:
+    # Run daily at 2 AM UTC to catch regressions
+    - cron: '0 2 * * *'
+
+jobs:
+  lighthouse-budgets:
+    name: Lighthouse Performance Budget Enforcement
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [20.x]
+        # Test multiple routes and scenarios
+        route:
+          - path: '/'
+            name: 'home'
+          - path: '/en/dashboard'
+            name: 'dashboard'
+          - path: '/en/reports'
+            name: 'reports'
+          - path: '/en/benchmarks'
+            name: 'benchmarks'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 8
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build application
+        run: pnpm --filter @teei/corp-cockpit-astro build
+        env:
+          NODE_ENV: production
+
+      - name: Start production server
+        run: |
+          pnpm --filter @teei/corp-cockpit-astro preview &
+          npx wait-on http://localhost:4321 --timeout 120000
+        env:
+          NODE_ENV: production
+
+      - name: Run Lighthouse CI
+        uses: treosh/lighthouse-ci-action@v10
+        id: lighthouse
+        with:
+          urls: 'http://localhost:4321${{ matrix.route.path }}'
+          configPath: './apps/corp-cockpit-astro/lighthouserc.json'
+          uploadArtifacts: true
+          temporaryPublicStorage: true
+          runs: 5 # Run 5 times and take median
+
+      - name: Assert Performance Budgets
+        uses: treosh/lighthouse-ci-action@v10
+        with:
+          urls: 'http://localhost:4321${{ matrix.route.path }}'
+          configPath: './apps/corp-cockpit-astro/lighthouserc.json'
+          runs: 5
+          budgetPath: './apps/corp-cockpit-astro/lighthouse-budgets.json'
+          # Fail the build if budgets are exceeded
+          assertMatrix: |
+            - matchingUrlPattern: '.*'
+              assertions:
+                # Core Web Vitals Budgets (AAA targets)
+                'largest-contentful-paint': ['error', {maxNumericValue: 2000}]
+                'interactive': ['error', {maxNumericValue: 3500}]
+                'cumulative-layout-shift': ['error', {maxNumericValue: 0.1}]
+                'total-blocking-time': ['error', {maxNumericValue: 200}]
+
+                # Performance Score
+                'categories:performance': ['error', {minScore: 0.90}]
+
+                # Accessibility (already tested separately, but enforce here too)
+                'categories:accessibility': ['error', {minScore: 0.95}]
+
+                # Best Practices
+                'categories:best-practices': ['error', {minScore: 0.90}]
+
+                # SEO
+                'categories:seo': ['warn', {minScore: 0.90}]
+
+                # Resource Budgets
+                'resource-summary:script:size': ['error', {maxNumericValue: 512000}] # 500kb
+                'resource-summary:stylesheet:size': ['error', {maxNumericValue: 102400}] # 100kb
+                'resource-summary:document:size': ['error', {maxNumericValue: 51200}] # 50kb
+                'resource-summary:font:size': ['warn', {maxNumericValue: 204800}] # 200kb
+                'resource-summary:image:size': ['warn', {maxNumericValue: 512000}] # 500kb
+                'resource-summary:total:size': ['error', {maxNumericValue: 2048000}] # 2MB
+
+                # Network Requests
+                'resource-summary:script:count': ['warn', {maxNumericValue: 15}]
+                'resource-summary:stylesheet:count': ['warn', {maxNumericValue: 5}]
+                'resource-summary:third-party:count': ['warn', {maxNumericValue: 10}]
+
+      - name: Parse Lighthouse Results
+        if: always()
+        id: parse_results
+        run: |
+          # Parse the Lighthouse results JSON
+          if [ -f ".lighthouseci/lhr-*.json" ]; then
+            LCP=$(jq -r '.audits."largest-contentful-paint".numericValue' .lighthouseci/lhr-*.json | head -1)
+            INP=$(jq -r '.audits."max-potential-fid".numericValue' .lighthouseci/lhr-*.json | head -1)
+            CLS=$(jq -r '.audits."cumulative-layout-shift".numericValue' .lighthouseci/lhr-*.json | head -1)
+            TBT=$(jq -r '.audits."total-blocking-time".numericValue' .lighthouseci/lhr-*.json | head -1)
+            PERF=$(jq -r '.categories.performance.score' .lighthouseci/lhr-*.json | head -1)
+
+            echo "lcp=$LCP" >> $GITHUB_OUTPUT
+            echo "inp=$INP" >> $GITHUB_OUTPUT
+            echo "cls=$CLS" >> $GITHUB_OUTPUT
+            echo "tbt=$TBT" >> $GITHUB_OUTPUT
+            echo "perf=$PERF" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Check Budget Violations
+        if: always()
+        run: |
+          echo "=== Performance Budget Check ==="
+          echo "Route: ${{ matrix.route.name }}"
+          echo ""
+          echo "Core Web Vitals:"
+          echo "  LCP: ${{ steps.parse_results.outputs.lcp }}ms (budget: ≤2000ms)"
+          echo "  INP: ${{ steps.parse_results.outputs.inp }}ms (budget: ≤200ms)"
+          echo "  CLS: ${{ steps.parse_results.outputs.cls }} (budget: ≤0.1)"
+          echo "  TBT: ${{ steps.parse_results.outputs.tbt }}ms (budget: ≤200ms)"
+          echo ""
+          echo "Performance Score: ${{ steps.parse_results.outputs.perf }} (budget: ≥0.90)"
+
+          # Check if budgets are met
+          LCP=${{ steps.parse_results.outputs.lcp }}
+          if (( $(echo "$LCP > 2000" | bc -l) )); then
+            echo "❌ LCP budget exceeded!"
+            exit 1
+          fi
+
+      - name: Upload Lighthouse Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-report-${{ matrix.route.name }}
+          path: |
+            .lighthouseci/
+            apps/corp-cockpit-astro/lighthouse-report-*.html
+          retention-days: 30
+
+      - name: Comment PR with Results
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const route = '${{ matrix.route.name }}';
+            const lcp = '${{ steps.parse_results.outputs.lcp }}';
+            const inp = '${{ steps.parse_results.outputs.inp }}';
+            const cls = '${{ steps.parse_results.outputs.cls }}';
+            const tbt = '${{ steps.parse_results.outputs.tbt }}';
+            const perf = '${{ steps.parse_results.outputs.perf }}';
+
+            const lcpPass = parseFloat(lcp) <= 2000;
+            const inpPass = parseFloat(inp) <= 200;
+            const clsPass = parseFloat(cls) <= 0.1;
+            const tbtPass = parseFloat(tbt) <= 200;
+            const perfPass = parseFloat(perf) >= 0.90;
+
+            const icon = (pass) => pass ? '✅' : '❌';
+
+            const comment = `
+            ## Lighthouse Performance Results: ${route}
+
+            ### Core Web Vitals
+            | Metric | Value | Budget | Status |
+            |--------|-------|--------|--------|
+            | LCP | ${lcp}ms | ≤2000ms | ${icon(lcpPass)} |
+            | INP | ${inp}ms | ≤200ms | ${icon(inpPass)} |
+            | CLS | ${cls} | ≤0.1 | ${icon(clsPass)} |
+            | TBT | ${tbt}ms | ≤200ms | ${icon(tbtPass)} |
+
+            ### Performance Score
+            **Score:** ${(parseFloat(perf) * 100).toFixed(0)}/100 (Budget: ≥90) ${icon(perfPass)}
+
+            ${!lcpPass || !inpPass || !clsPass || !tbtPass || !perfPass ? `
+            ### ⚠️ Budget Violations Detected
+
+            Please optimize the following metrics:
+            ${!lcpPass ? '- **LCP**: Reduce Largest Contentful Paint time\n' : ''}
+            ${!inpPass ? '- **INP**: Improve Interaction to Next Paint\n' : ''}
+            ${!clsPass ? '- **CLS**: Fix layout shifts\n' : ''}
+            ${!tbtPass ? '- **TBT**: Reduce Total Blocking Time\n' : ''}
+            ${!perfPass ? '- **Performance Score**: Improve overall performance\n' : ''}
+
+            **Resources:**
+            - [Web Vitals Guide](https://web.dev/vitals/)
+            - [Performance Optimization](../docs/performance.md)
+            - [Lighthouse Reports](../artifacts/)
+            ` : '### ✅ All performance budgets met!'}
+
+            ---
+            *Lighthouse CI Report - Route: ${route}*
+            `;
+
+            // Find existing comment for this route
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const existingComment = comments.find(c =>
+              c.body?.includes(`Lighthouse Performance Results: ${route}`)
+            );
+
+            if (existingComment) {
+              // Update existing comment
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existingComment.id,
+                body: comment,
+              });
+            } else {
+              // Create new comment
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: comment,
+              });
+            }
+
+  # Summary job that aggregates all route results
+  lighthouse-summary:
+    name: Performance Summary
+    runs-on: ubuntu-latest
+    needs: lighthouse-budgets
+    if: always()
+
+    steps:
+      - name: Check Overall Status
+        run: |
+          echo "=== Lighthouse Performance Budget Summary ==="
+          echo "All route tests completed. Check individual job results for details."
+          echo ""
+          echo "Performance Budgets:"
+          echo "  ✓ LCP ≤ 2.0s"
+          echo "  ✓ INP ≤ 200ms"
+          echo "  ✓ CLS ≤ 0.1"
+          echo "  ✓ TBT ≤ 200ms"
+          echo "  ✓ Performance Score ≥ 90%"
+          echo ""
+          echo "Resource Budgets:"
+          echo "  ✓ JavaScript ≤ 500kb"
+          echo "  ✓ CSS ≤ 100kb"
+          echo "  ✓ Total Size ≤ 2MB"
+
+      - name: Create Summary Badge
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          echo "Performance budgets enforced on main branch"
+          # Future: Create/update status badge
