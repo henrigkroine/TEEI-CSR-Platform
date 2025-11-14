@@ -15,7 +15,10 @@
     "@teei/shared-schema": "workspace:*",
     "@teei/shared-utils": "workspace:*",
     "fastify": "^4.25.2",
-    "zod": "^3.22.4"
+    "zod": "^3.22.4",
+    "openai": "^4.24.1",
+    "@anthropic-ai/sdk": "^0.14.0",
+    "handlebars": "^4.7.8"
   },
   "devDependencies": {
     "@types/node": "^20.11.5",

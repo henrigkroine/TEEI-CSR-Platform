@@ -2,6 +2,7 @@ import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { getDb } from '@teei/shared-utils';
 import { classifyText, extractEvidenceSnippets } from '../classifier.js';
+import { getRealClassifier, isRealClassifierEnabled } from '../classifier-real.js';
 import { OutcomeDimension, getAllDimensionDefinitions } from '../taxonomy.js';
 
 // Request validation schema
@@ -25,8 +26,31 @@ export const classifyRoutes: FastifyPluginAsync = async (app) => {
       // Validate request body
       const { text, userId, contextId, contextType } = ClassifyTextSchema.parse(request.body);
 
-      // Run classification (stub implementation)
-      const classification = await classifyText(text);
+      // Run classification - use real classifier if enabled, otherwise use stub
+      let classification;
+      let evidenceMap: Record<OutcomeDimension, string> = {} as any;
+
+      if (isRealClassifierEnabled()) {
+        app.log.info('Using real LLM-based classifier');
+        const realClassifier = getRealClassifier();
+        const result = await realClassifier.classifyText(text);
+
+        // Convert to expected format
+        classification = {
+          scores: result.scores,
+          metadata: {
+            textLength: result.metadata.textLength,
+            wordCount: result.metadata.wordCount,
+            timestamp: result.metadata.timestamp,
+          }
+        };
+
+        // Store evidence snippets for later use
+        evidenceMap = result.evidenceSnippets;
+      } else {
+        app.log.info('Using stub classifier');
+        classification = await classifyText(text);
+      }
 
       // Get database connection
       const db = getDb();
@@ -50,7 +74,14 @@ export const classifyRoutes: FastifyPluginAsync = async (app) => {
         scoreIds[dimension as OutcomeDimension] = scoreRecord.id;
 
         // Extract and store evidence snippets
-        const snippets = extractEvidenceSnippets(text, dimension as OutcomeDimension, score);
+        let snippets;
+        if (isRealClassifierEnabled() && evidenceMap[dimension as OutcomeDimension]) {
+          // Use evidence from real classifier
+          snippets = [evidenceMap[dimension as OutcomeDimension]];
+        } else {
+          // Use stub extraction
+          snippets = extractEvidenceSnippets(text, dimension as OutcomeDimension, score);
+        }
 
         for (const snippet of snippets) {
           await db('evidence_snippets').insert({
