@@ -1,0 +1,514 @@
+---
+import BaseLayout from '../../../../../layouts/BaseLayout.astro';
+import { hasPermission } from '../../../../../utils/rbac';
+import CohortComparator from '../../../../../components/benchmarks/CohortComparator.tsx';
+import PercentileChart from '../../../../../components/benchmarks/PercentileChart.tsx';
+import BenchmarkFilters from '../../../../../components/benchmarks/BenchmarkFilters.tsx';
+import ExportBenchmarks from '../../../../../components/benchmarks/ExportBenchmarks.tsx';
+
+// Extract route parameters
+const { lang, companyId } = Astro.params;
+const user = Astro.locals.user;
+const tenantContext = Astro.locals.tenantContext;
+
+// Middleware handles auth/tenant validation
+if (!user || !tenantContext) {
+  return Astro.redirect('/login');
+}
+
+// Verify tenant context matches route
+if (tenantContext.companyId !== companyId || tenantContext.lang !== lang) {
+  return Astro.redirect(`/${lang}/cockpit/401`);
+}
+
+// RBAC: VIEWER and above can access benchmarks
+const canViewBenchmarks = hasPermission(user.role, 'VIEW_REPORTS');
+if (!canViewBenchmarks) {
+  return Astro.redirect(`/${lang}/cockpit/${companyId}/401`);
+}
+---
+
+<BaseLayout title="Industry Benchmarks & Cohort Analysis - TEEI Corporate Cockpit" lang={lang}>
+  <div class="benchmarks-page">
+    {/* Page Header */}
+    <div class="page-header">
+      <div>
+        <a href={`/${lang}/cockpit/${companyId}`} class="back-link">
+          ← Back to Dashboard
+        </a>
+        <h1>Industry Benchmarks & Cohort Analysis</h1>
+        <p class="subtitle">Compare your CSR performance against peer companies and industry standards</p>
+      </div>
+      <div class="header-actions">
+        <ExportBenchmarks companyId={companyId} lang={lang} client:load />
+      </div>
+    </div>
+
+    {/* Privacy Alert */}
+    <div class="alert-info" role="alert">
+      <strong>Privacy & Aggregation</strong>
+      <p>
+        All benchmark data is fully anonymized and aggregated. Individual company data is never
+        disclosed. Cohorts must contain at least 10 companies to ensure privacy compliance.
+      </p>
+    </div>
+
+    {/* Filters */}
+    <BenchmarkFilters companyId={companyId} client:load />
+
+    {/* Loading State */}
+    <div id="loading-state" class="loading-container" aria-live="polite" aria-busy="true">
+      <div class="spinner" role="status" aria-label="Loading benchmark data"></div>
+      <p>Loading benchmark data...</p>
+    </div>
+
+    {/* Main Content Container */}
+    <div id="benchmarks-container" style="display: none;">
+      {/* Cohort Comparator - Horizontal bars showing your company vs cohort */}
+      <section class="benchmark-section" aria-labelledby="cohort-comparison-heading">
+        <div id="cohort-comparator-root"></div>
+      </section>
+
+      {/* Percentile Chart - Time series with percentile bands */}
+      <section class="benchmark-section" aria-labelledby="percentile-trends-heading">
+        <div id="percentile-chart-root"></div>
+      </section>
+    </div>
+
+    {/* Empty State */}
+    <div id="empty-state" class="empty-state" style="display: none;">
+      <div class="icon" aria-hidden="true">📊</div>
+      <h3>No Data Available</h3>
+      <p>Select cohort criteria above to view benchmark comparisons.</p>
+    </div>
+
+    {/* Methodology Section */}
+    <section class="methodology-section" aria-labelledby="methodology-heading">
+      <h2 id="methodology-heading">Methodology & Calculation</h2>
+      <p class="section-description">
+        Understand how benchmarks are calculated and what they mean for your organization.
+      </p>
+
+      <div class="methodology-grid">
+        <div class="methodology-card">
+          <h3>📐 Percentile Ranking</h3>
+          <p>
+            Your percentile rank shows the percentage of companies in the cohort that perform
+            below your level. For example, 75th percentile means you perform better than 75%
+            of companies in the cohort.
+          </p>
+        </div>
+
+        <div class="methodology-card">
+          <h3>📊 Cohort Selection</h3>
+          <p>
+            Cohorts are defined by industry, company size, and geography. More specific cohorts
+            provide more accurate comparisons but may have fewer companies. We recommend a
+            cohort size of at least 50 companies.
+          </p>
+        </div>
+
+        <div class="methodology-card">
+          <h3>🔄 Data Freshness</h3>
+          <p>
+            Benchmark data is refreshed daily from the Worker-2 data warehouse. Cohort statistics
+            are recalculated nightly to reflect the latest company data submissions.
+          </p>
+        </div>
+
+        <div class="methodology-card">
+          <h3>🔒 Privacy Compliance</h3>
+          <p>
+            All data is fully anonymized. No individual company can be identified from the
+            aggregated statistics. Cohorts with fewer than 10 companies are not displayed to
+            protect privacy.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    {/* Help Section */}
+    <section class="help-section" aria-labelledby="metrics-help-heading">
+      <h2 id="metrics-help-heading">Metrics Explained</h2>
+      <div class="help-grid">
+        <div class="help-card">
+          <h3>SROI (Social Return on Investment)</h3>
+          <p>
+            Measures the social value generated per dollar invested. A ratio of 4:1 means
+            every $1 invested creates $4 of social value. Calculated using TEEI's validated
+            impact methodology.
+          </p>
+        </div>
+
+        <div class="help-card">
+          <h3>Total Beneficiaries</h3>
+          <p>
+            The number of unique individuals who directly benefited from your CSR programs.
+            Includes program participants, community members, and service recipients.
+          </p>
+        </div>
+
+        <div class="help-card">
+          <h3>Volunteer Hours</h3>
+          <p>
+            Total hours contributed by employees to CSR initiatives. Includes skills-based
+            volunteering, mentorship, and community service activities.
+          </p>
+        </div>
+
+        <div class="help-card">
+          <h3>Employee Engagement Rate</h3>
+          <p>
+            Percentage of employees who participated in at least one CSR activity during the
+            reporting period. Higher engagement indicates stronger organizational commitment.
+          </p>
+        </div>
+
+        <div class="help-card">
+          <h3>Active Programs</h3>
+          <p>
+            Number of distinct CSR programs operating during the period. Includes both
+            ongoing and completed programs with measurable outcomes.
+          </p>
+        </div>
+
+        <div class="help-card">
+          <h3>Overall Impact Score</h3>
+          <p>
+            Composite metric (0-100) combining SROI, engagement, scale, and sustainability
+            factors. Provides a holistic view of CSR program effectiveness.
+          </p>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    import { createRoot } from 'react-dom/client';
+    import { createElement } from 'react';
+
+    // Get company ID from URL
+    const pathParts = window.location.pathname.split('/');
+    const companyId = pathParts[pathParts.indexOf('cockpit') + 1];
+
+    // State
+    let currentFilters = {
+      industry: undefined,
+      size: undefined,
+      geography: undefined,
+      metric: 'sroi',
+      period: '2024Q4',
+    };
+
+    // Handle filter change
+    (window as any).handleFilterChange = async (filters: any) => {
+      currentFilters = { ...currentFilters, ...filters };
+      await fetchAndRenderBenchmarks();
+    };
+
+    // Fetch and render benchmarks
+    async function fetchAndRenderBenchmarks() {
+      const loadingState = document.getElementById('loading-state');
+      const benchmarksContainer = document.getElementById('benchmarks-container');
+      const emptyState = document.getElementById('empty-state');
+
+      if (!loadingState || !benchmarksContainer || !emptyState) return;
+
+      // Show loading
+      loadingState.style.display = 'block';
+      loadingState.setAttribute('aria-busy', 'true');
+      benchmarksContainer.style.display = 'none';
+      emptyState.style.display = 'none';
+
+      try {
+        // Build query params
+        const params = new URLSearchParams();
+        if (currentFilters.industry) params.append('industry', currentFilters.industry);
+        if (currentFilters.size) params.append('size', currentFilters.size);
+        if (currentFilters.geography) params.append('geography', currentFilters.geography);
+        if (currentFilters.period) params.append('period', currentFilters.period);
+
+        const url = `http://localhost:3001/companies/${companyId}/benchmarks?${params.toString()}`;
+        const response = await fetch(url);
+
+        if (response.ok) {
+          const data = await response.json();
+
+          if (data.benchmarks && data.benchmarks.length > 0) {
+            // Render CohortComparator
+            const cohortComparatorRoot = document.getElementById('cohort-comparator-root');
+            if (cohortComparatorRoot) {
+              const { default: CohortComparator } = await import('../../../../../components/benchmarks/CohortComparator.tsx');
+              const root = createRoot(cohortComparatorRoot);
+              root.render(
+                createElement(CohortComparator, {
+                  benchmarks: data.benchmarks,
+                  companyName: data.company_name,
+                  cohortName: data.cohort.name,
+                  cohortStats: {
+                    companyCount: data.cohort.company_count,
+                    lastUpdated: data.last_refreshed,
+                  },
+                })
+              );
+            }
+
+            // Render PercentileChart
+            const percentileChartRoot = document.getElementById('percentile-chart-root');
+            if (percentileChartRoot) {
+              // Fetch percentile time-series data
+              const percentileUrl = `http://localhost:3001/benchmarks/percentiles?companyId=${companyId}&metric=${currentFilters.metric}`;
+              const percentileResponse = await fetch(percentileUrl);
+
+              if (percentileResponse.ok) {
+                const percentileData = await percentileResponse.json();
+                const { default: PercentileChart } = await import('../../../../../components/benchmarks/PercentileChart.tsx');
+                const root = createRoot(percentileChartRoot);
+                root.render(
+                  createElement(PercentileChart, {
+                    data: percentileData,
+                    metric: currentFilters.metric,
+                    companyName: data.company_name,
+                  })
+                );
+              }
+            }
+
+            loadingState.style.display = 'none';
+            loadingState.setAttribute('aria-busy', 'false');
+            benchmarksContainer.style.display = 'block';
+          } else {
+            loadingState.style.display = 'none';
+            loadingState.setAttribute('aria-busy', 'false');
+            emptyState.style.display = 'block';
+          }
+        } else {
+          console.error('Failed to fetch benchmarks:', response.statusText);
+          loadingState.style.display = 'none';
+          loadingState.setAttribute('aria-busy', 'false');
+          emptyState.style.display = 'block';
+        }
+      } catch (error) {
+        console.error('Error fetching benchmarks:', error);
+        loadingState.style.display = 'none';
+        loadingState.setAttribute('aria-busy', 'false');
+        emptyState.style.display = 'block';
+      }
+    }
+
+    // Initial load
+    fetchAndRenderBenchmarks();
+  </script>
+
+  <style>
+    .benchmarks-page {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 1.5rem;
+      gap: 1.5rem;
+    }
+
+    .page-header h1 {
+      margin: 0.5rem 0 0.25rem 0;
+      font-size: 2rem;
+      font-weight: 700;
+      color: #1f2937;
+    }
+
+    .page-header .subtitle {
+      margin: 0;
+      font-size: 1rem;
+      color: #6b7280;
+    }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      font-size: 0.875rem;
+      color: #3b82f6;
+      text-decoration: none;
+      margin-bottom: 0.5rem;
+    }
+
+    .back-link:hover {
+      text-decoration: underline;
+    }
+
+    .back-link:focus {
+      outline: 2px solid #3b82f6;
+      outline-offset: 2px;
+      border-radius: 4px;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 0.75rem;
+    }
+
+    .alert-info {
+      padding: 1rem;
+      background: #dbeafe;
+      border-left: 4px solid #3b82f6;
+      border-radius: 0.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .alert-info strong {
+      display: block;
+      margin-bottom: 0.25rem;
+      color: #1e40af;
+      font-weight: 600;
+    }
+
+    .alert-info p {
+      margin: 0;
+      font-size: 0.875rem;
+      color: #1e40af;
+      line-height: 1.5;
+    }
+
+    .loading-container {
+      text-align: center;
+      padding: 4rem 1.5rem;
+    }
+
+    .spinner {
+      width: 3rem;
+      height: 3rem;
+      margin: 0 auto 1rem;
+      border: 4px solid #e5e7eb;
+      border-top-color: #3b82f6;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .loading-container p {
+      color: #6b7280;
+      font-size: 0.9375rem;
+    }
+
+    .benchmark-section {
+      margin-bottom: 2rem;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 4rem 1.5rem;
+      background: white;
+      border-radius: 0.75rem;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .empty-state .icon {
+      font-size: 4rem;
+      margin-bottom: 1rem;
+    }
+
+    .empty-state h3 {
+      margin: 0 0 0.5rem 0;
+      font-size: 1.5rem;
+      color: #1f2937;
+    }
+
+    .empty-state p {
+      margin: 0;
+      color: #6b7280;
+    }
+
+    .methodology-section,
+    .help-section {
+      margin-top: 3rem;
+      padding: 2rem;
+      background: white;
+      border-radius: 0.75rem;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .methodology-section h2,
+    .help-section h2 {
+      margin: 0 0 0.5rem 0;
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: #1f2937;
+    }
+
+    .section-description {
+      margin: 0 0 1.5rem 0;
+      font-size: 0.9375rem;
+      color: #6b7280;
+    }
+
+    .methodology-grid,
+    .help-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.25rem;
+    }
+
+    .methodology-card,
+    .help-card {
+      padding: 1.25rem;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 0.5rem;
+    }
+
+    .methodology-card h3,
+    .help-card h3 {
+      margin: 0 0 0.75rem 0;
+      font-size: 1rem;
+      font-weight: 600;
+      color: #1f2937;
+    }
+
+    .methodology-card p,
+    .help-card p {
+      margin: 0;
+      font-size: 0.875rem;
+      color: #6b7280;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 768px) {
+      .benchmarks-page {
+        padding: 1rem;
+      }
+
+      .page-header {
+        flex-direction: column;
+      }
+
+      .page-header h1 {
+        font-size: 1.5rem;
+      }
+
+      .header-actions {
+        width: 100%;
+      }
+
+      .methodology-section,
+      .help-section {
+        padding: 1.25rem;
+      }
+
+      .methodology-grid,
+      .help-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</BaseLayout>

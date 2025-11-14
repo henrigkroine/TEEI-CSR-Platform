@@ -754,3 +754,477 @@ Take the production-ready Corporate Cockpit from Phase B and transform it into a
 5. **QA Lead**: Set up Playwright E2E framework (Slice I)
 
 **Orchestrator**: Monitor progress, unblock dependencies, update this plan weekly
+
+---
+
+# Worker 3 Phase D: Production Launch - Enterprise Hardening
+
+**Status**: 🚀 Orchestration Started
+**Branch**: `claude/worker3-phaseD-prod-launch-01KeYg8ZYW3Bv9zkk6o1DkJA`
+**Started**: 2025-11-14
+**Target Completion**: TBD
+
+---
+
+## Mission
+
+Transform the pilot-ready Corporate Cockpit from Phase C into a production-grade enterprise platform with:
+- **Governance**: Approvals, audit trails, compliance surfaces
+- **Identity**: SSO (SAML/OIDC), SCIM provisioning UX
+- **Executive Features**: Watermarked PDFs, PPTX exports, narrative controls
+- **Resilience**: PWA offline mode, SSE resume, boardroom displays
+- **Analytics**: Benchmarks, cohorts, DW integration
+- **Compliance**: CSP/Trusted Types, advanced a11y (WCAG 2.2 AAA), SRI
+- **Operations**: Status banners, SLO surfaces, incident shelf
+
+---
+
+## Team Structure (30 Agents / 5 Leads)
+
+See `/AGENTS.md` for full team structure.
+
+**Leads**:
+1. **enterprise-ux-lead** (6 agents) - Approvals, Audit, Partner Portal, Benchmarks, Governance, Status
+2. **identity-lead** (5 agents) - SSO/SCIM UX, Whitelabel, Export Logs, Error Boundaries
+3. **reports-pack-lead** (5 agents) - PDF watermarking, PPTX export, Narrative controls, Docs
+4. **perf-a11y-lead** (7 agents) - PWA, A11y hardening, Web-vitals, CSP
+5. **qa-compliance-lead** (7 agents) - E2E tests, Visual regression, CSP compliance
+
+---
+
+## Deliverables (A-K)
+
+### Slice A: Approvals & Audit Mode 📋
+**Owner**: enterprise-ux-lead (approvals-workflow-dev, audit-mode-dev)
+**Status**: ⏳ Pending
+
+**Tasks**:
+- [ ] Multi-step approval workflow UI (draft → reviewer → approver → locked)
+- [ ] Watermark overlays: "DRAFT" / "APPROVED" / "ARCHIVED"
+- [ ] Version history + diff viewer for narratives and charts
+- [ ] Sign-off trail component (user, timestamp, comments)
+- [ ] Audit Mode toggle: freeze UI, show lineage/evidence IDs on hover
+- [ ] Backend: Approval state API (Worker 2 coordination)
+
+**Files**:
+- `apps/corp-cockpit-astro/src/components/reports/ApprovalFlow.tsx`
+- `apps/corp-cockpit-astro/src/components/reports/ApprovalHistory.tsx`
+- `apps/corp-cockpit-astro/src/components/reports/VersionDiff.tsx`
+- `apps/corp-cockpit-astro/src/components/reports/AuditModeToggle.tsx`
+- `services/reporting/routes/approvals.ts` (stub or extension)
+
+**Acceptance**:
+- ✅ Approval workflow complete (draft → approved → locked)
+- ✅ Version history shows diffs
+- ✅ Audit Mode freezes UI and overlays evidence IDs
+- ✅ Sign-off trail displays correctly
+
+**Report**: `/reports/w3_phaseD_approvals_audit.md`
+
+---
+
+### Slice B: Partner Portal & Whitelabel Packs 🏢
+**Owner**: enterprise-ux-lead (partner-portal-ui) + identity-lead (whitelabel-validator)
+**Status**: ⏳ Pending
+
+**Tasks**:
+- [ ] Partner-scoped landing page: `/[lang]/partners/:partnerId`
+- [ ] Display: partner's tenants, deliveries, SROI/VIS snapshots
+- [ ] Whitelabel pack export (logos, theme tokens, sample PDF)
+- [ ] Theme validator: contrast ratios (WCAG), logo size constraints
+- [ ] Backend: Partner aggregation API (read from DW/reporting)
+
+**Files**:
+- `apps/corp-cockpit-astro/src/pages/[lang]/partners/[partnerId]/index.astro`
+- `apps/corp-cockpit-astro/src/pages/[lang]/partners/[partnerId]/tenants.astro`
+- `apps/corp-cockpit-astro/src/components/partners/TenantSnapshot.tsx`
+- `apps/corp-cockpit-astro/src/components/theme/WhitelabelPackExport.tsx`
+- `apps/corp-cockpit-astro/src/utils/themeValidator.ts`
+
+**Acceptance**:
+- ✅ Partner portal displays all tenants
+- ✅ Whitelabel pack exports with validation
+- ✅ Contrast meets WCAG AA minimum
+
+**Report**: `/reports/w3_phaseD_partner_portal.md`
+
+---
+
+### Slice C: SSO & SCIM UX 🔐
+**Owner**: identity-lead (sso-ui-engineer, scim-ui-engineer)
+**Status**: ⏳ Pending
+
+**Tasks**:
+- [ ] SSO settings UI: display SAML/OIDC metadata (entityID, ACS URL, JWKS endpoint)
+- [ ] Read-only view (secrets managed by Worker 1 backend)
+- [ ] SCIM provisioning UX: role mapping (viewer/admin/analyst)
+- [ ] Test sync button (calls Worker 1 server endpoint)
+- [ ] Instructions/help text for identity admins
+
+**Files**:
+- `apps/corp-cockpit-astro/src/pages/[lang]/admin/sso-settings.astro`
+- `apps/corp-cockpit-astro/src/components/admin/SSOMetadata.tsx`
+- `apps/corp-cockpit-astro/src/components/admin/SCIMMapping.tsx`
+- `apps/corp-cockpit-astro/src/components/admin/SyncTestButton.tsx`
+
+**Acceptance**:
+- ✅ SSO metadata displayed correctly (read-only)
+- ✅ SCIM role mapping UI functional
+- ✅ Test sync button calls Worker 1 endpoint
+- ✅ No secrets in frontend code
+
+**Report**: `/reports/w3_phaseD_sso_scim_ux.md`
+
+---
+
+### Slice D: Executive Packs 📊
+**Owner**: reports-pack-lead (report-pdf-engineer, pptx-export-engineer, narrative-controls-dev)
+**Status**: ⏳ Pending
+
+**Tasks**:
+- [ ] PDF watermarking: company name, period, evidence set hash
+- [ ] PDF ID stamping footer on every page
+- [ ] PPTX export (server-side): cover slide, KPIs, charts, evidence links
+- [ ] Narrative controls: tone (formal/conversational), length (brief/detailed)
+- [ ] Backend: Export endpoints (Worker 2 coordination)
+- [ ] Documentation: Executive pack structure, branding constraints
+
+**Files**:
+- `apps/corp-cockpit-astro/src/components/reports/ExportExecutivePack.tsx`
+- `apps/corp-cockpit-astro/src/components/reports/NarrativeControls.tsx`
+- `services/reporting/routes/exports.presentations.ts` (stub or extension)
+- `services/reporting/utils/pdfWatermark.ts`
+- `services/reporting/utils/pptxGenerator.ts`
+- `docs/cockpit/executive_packs.md`
+
+**Acceptance**:
+- ✅ PDF watermarking + ID stamping functional
+- ✅ PPTX export generates (template or full implementation)
+- ✅ Narrative controls adjust server prompts
+- ✅ Documentation complete
+
+**Report**: `/reports/w3_phaseD_exec_packs.md`
+
+---
+
+### Slice E: PWA Boardroom Mode 📱
+**Owner**: perf-a11y-lead (pwa-engineer, sse-resume-specialist)
+**Status**: ⏳ Pending
+
+**Tasks**:
+- [ ] PWA manifest.webmanifest (name, icons, theme, display: standalone)
+- [ ] Service worker: pre-cache last successful dataset, theme, chart assets
+- [ ] Offline fallback: display last approved report + key KPIs
+- [ ] Offline banner when disconnected
+- [ ] SSE resume with last-event-id on reconnect
+- [ ] Boardroom mode: large typography, auto-refresh, clean UI
+
+**Files**:
+- `apps/corp-cockpit-astro/public/manifest.webmanifest`
+- `apps/corp-cockpit-astro/public/service-worker.js`
+- `apps/corp-cockpit-astro/src/lib/boardroom/offlineCache.ts`
+- `apps/corp-cockpit-astro/src/lib/boardroom/sseResume.ts`
+- `apps/corp-cockpit-astro/src/components/status/OfflineBanner.tsx`
+
+**Acceptance**:
+- ✅ PWA installable (manifest + service worker)
+- ✅ Offline mode displays last dataset
+- ✅ SSE resumes with last-event-id
+- ✅ Boardroom mode renders correctly
+
+**Report**: `/reports/w3_phaseD_pwa_boardroom.md`
+
+---
+
+### Slice F: Benchmarks & Cohorts UI 📈
+**Owner**: enterprise-ux-lead (benchmarks-ui-dev) + perf-a11y-lead (charts-perf-dev)
+**Status**: ⏳ Pending
+
+**Tasks**:
+- [ ] Benchmarks page: compare company vs cohort (industry, country, program mix)
+- [ ] Cohort filters, percentile ribbons (25th, 50th, 75th)
+- [ ] Explanation tooltips, DW aggregates (Worker 2)
+- [ ] Export CSV/PDF of benchmark comparisons
+- [ ] Chart performance: virtualization for large datasets
+
+**Files**:
+- `apps/corp-cockpit-astro/src/pages/[lang]/cockpit/[companyId]/benchmarks/index.astro`
+- `apps/corp-cockpit-astro/src/components/benchmarks/CohortComparator.tsx`
+- `apps/corp-cockpit-astro/src/components/benchmarks/PercentileChart.tsx`
+- `apps/corp-cockpit-astro/src/components/benchmarks/ExportBenchmarks.tsx`
+
+**Acceptance**:
+- ✅ Benchmarks UI displays cohort comparisons
+- ✅ Percentile ribbons render correctly
+- ✅ Exports available (CSV/PDF)
+- ✅ Charts virtualized for performance
+
+**Report**: `/reports/w3_phaseD_benchmarks_ui.md`
+
+---
+
+### Slice G: Governance UI 🛡️
+**Owner**: enterprise-ux-lead (consent-ui-dev) + identity-lead (export-log-ui-dev)
+**Status**: ⏳ Pending
+
+**Tasks**:
+- [ ] Consent status viewer (read-only from Worker 2)
+- [ ] DSAR queue status (pending/in-progress/completed)
+- [ ] Retention ticking banners (records near TTL)
+- [ ] Export log viewer: who exported what/when, link to approval
+- [ ] Backend: Read governance endpoints (Worker 2)
+
+**Files**:
+- `apps/corp-cockpit-astro/src/pages/[lang]/cockpit/[companyId]/governance/index.astro`
+- `apps/corp-cockpit-astro/src/components/governance/ConsentStatus.tsx`
+- `apps/corp-cockpit-astro/src/components/governance/DSARQueue.tsx`
+- `apps/corp-cockpit-astro/src/components/governance/RetentionNotices.tsx`
+- `apps/corp-cockpit-astro/src/components/governance/ExportAuditLog.tsx`
+
+**Acceptance**:
+- ✅ Consent status displayed
+- ✅ DSAR queue visible
+- ✅ Export audit log functional
+- ✅ Retention notices show correctly
+
+**Report**: `/reports/w3_phaseD_governance_ui.md`
+
+---
+
+### Slice H: Advanced A11y & Performance ⚡
+**Owner**: perf-a11y-lead (sr-a11y-engineer, keyboard-nav-engineer, target-size-engineer, web-vitals-rum)
+**Status**: ⏳ Pending
+
+**Tasks**:
+- [ ] Screen reader scripts for complex widgets (live regions for SSE)
+- [ ] Keyboard navigation maps (roving tabindex, skip links)
+- [ ] Target-size remediation (WCAG 2.2 AAA: 44×44px minimum)
+- [ ] Route-level code-split, prefetch saved views
+- [ ] Virtualize long evidence lists
+- [ ] Fine-grained memoization in React components
+- [ ] Web-vitals collection with route labels (OTel spans)
+- [ ] CI: axe/Pa11y zero violations, Lighthouse budgets enforced
+
+**Files**:
+- `apps/corp-cockpit-astro/src/a11y/screenReaderScripts.ts`
+- `apps/corp-cockpit-astro/src/a11y/keyboardNav.ts`
+- `apps/corp-cockpit-astro/src/a11y/targetSizeAudit.md`
+- `apps/corp-cockpit-astro/src/telemetry/web-vitals.ts`
+- `.github/workflows/a11y.yml`
+- `.github/workflows/lh-budgets.yml`
+
+**Acceptance**:
+- ✅ Screen reader navigation functional
+- ✅ Keyboard nav complete (tab order documented)
+- ✅ Target sizes meet WCAG 2.2 AAA
+- ✅ Web-vitals collected to OTel
+- ✅ A11y/LH CI jobs green
+
+**Report**: `/reports/w3_phaseD_a11y_advanced.md` + `/reports/w3_phaseD_perf_hardening.md`
+
+---
+
+### Slice I: CSP & Trusted Types Compliance 🔒
+**Owner**: perf-a11y-lead (csp-engineer) + qa-compliance-lead (sri-assets-engineer, csp-compliance-tester)
+**Status**: ⏳ Pending
+
+**Tasks**:
+- [ ] Strict CSP (nonce-based, align with Worker 1 gateways)
+- [ ] Remove all inline scripts, migrate to external files
+- [ ] Register Trusted Types policy for DOM manipulation
+- [ ] Subresource Integrity (SRI) for static assets
+- [ ] Sanitize href/src attributes, forbid data: URLs
+- [ ] CI: CSP violation tests, Trusted Types enforcement tests
+
+**Files**:
+- `apps/corp-cockpit-astro/src/security/CSP.md`
+- `apps/corp-cockpit-astro/src/client/init/trustedTypes.ts`
+- `apps/corp-cockpit-astro/src/utils/sanitizers.ts`
+- `build/sri-hashes.json`
+- `.github/workflows/csp-tests.yml`
+
+**Acceptance**:
+- ✅ CSP strict (no unsafe-inline, no unsafe-eval)
+- ✅ Trusted Types policy registered
+- ✅ SRI hashes generated for assets
+- ✅ CI tests pass (no CSP violations)
+
+**Report**: `/reports/w3_phaseD_csp_trusted_types.md`
+
+---
+
+### Slice J: Status & SLO Surface 🚦
+**Owner**: enterprise-ux-lead (incident-ui-dev) + identity-lead (error-boundaries-dev)
+**Status**: ⏳ Pending
+
+**Tasks**:
+- [ ] Status banner: pull SLO state from Worker 1/2 (ingestion, reporting, SSE)
+- [ ] Incident shelf: display active incidents, link to runbooks
+- [ ] Graceful UI degradation during incidents (disable non-essential features)
+- [ ] Per-widget error boundaries with fallback UI
+- [ ] Backend: Status endpoint aggregation (Worker 1/2 coordination)
+
+**Files**:
+- `apps/corp-cockpit-astro/src/components/status/StatusBanner.tsx`
+- `apps/corp-cockpit-astro/src/components/status/IncidentShelf.tsx`
+- `apps/corp-cockpit-astro/src/components/status/SLOIndicator.tsx`
+- `apps/corp-cockpit-astro/src/components/common/ErrorBoundary.tsx`
+
+**Acceptance**:
+- ✅ Status banner reflects Worker 1/2 endpoints
+- ✅ Incident shelf displays active incidents
+- ✅ UI degrades gracefully during incidents
+- ✅ Error boundaries catch widget failures
+
+**Report**: `/reports/w3_phaseD_status_slo_ui.md`
+
+---
+
+### Slice K: Docs, Demos, Tests 📚
+**Owner**: qa-compliance-lead (all testers) + reports-pack-lead (docs-scribe)
+**Status**: ⏳ Pending
+
+**Tasks**:
+- [ ] Playwright E2E: Approval/Audit flows
+- [ ] Playwright E2E: PWA offline, SSE resume
+- [ ] Playwright E2E: PPTX export, watermarking
+- [ ] Playwright E2E: SSO UI, SCIM mapping
+- [ ] Visual regression: Partner portal, benchmarks
+- [ ] Exec demo script: `/docs/demos/cxo_walkthrough.md`
+- [ ] Update `/docs/cockpit/branding.md` with whitelabel constraints
+- [ ] Update `/docs/cockpit/governance.md` with DSAR/consent flows
+
+**Files**:
+- `apps/corp-cockpit-astro/tests/e2e/approvals.spec.ts`
+- `apps/corp-cockpit-astro/tests/e2e/pwa-offline.spec.ts`
+- `apps/corp-cockpit-astro/tests/e2e/exec-pack.spec.ts`
+- `apps/corp-cockpit-astro/tests/e2e/sso-ui.spec.ts`
+- `apps/corp-cockpit-astro/tests/visual/partner-portal.spec.ts`
+- `docs/demos/cxo_walkthrough.md`
+- `docs/cockpit/branding.md`
+- `docs/cockpit/governance.md`
+
+**Acceptance**:
+- ✅ All E2E tests pass
+- ✅ Visual regression baselines established
+- ✅ Demo script complete
+- ✅ Documentation updated
+
+**Report**: `/reports/w3_phaseD_e2e_results.md`
+
+---
+
+## Execution Order
+
+### Wave 1: Core Enterprise Features (A, C, D)
+1. **Slice A**: Approvals & Audit Mode (enterprise-ux-lead)
+2. **Slice C**: SSO & SCIM UX (identity-lead)
+3. **Slice D**: Executive Packs (reports-pack-lead)
+
+### Wave 2: Resilience & Analytics (E, F)
+4. **Slice E**: PWA Boardroom Mode (perf-a11y-lead)
+5. **Slice F**: Benchmarks & Cohorts UI (enterprise-ux-lead + perf-a11y-lead)
+
+### Wave 3: Governance & Hardening (G, H, I, J, K)
+6. **Slice G**: Governance UI (enterprise-ux-lead + identity-lead)
+7. **Slice H**: Advanced A11y & Performance (perf-a11y-lead)
+8. **Slice I**: CSP & Trusted Types (perf-a11y-lead + qa-compliance-lead)
+9. **Slice J**: Status & SLO Surface (enterprise-ux-lead + identity-lead)
+10. **Slice K**: Docs, Demos, Tests (qa-compliance-lead + reports-pack-lead)
+
+---
+
+## Progress Tracking
+
+**Overall**: 0 / 11 slices complete (0%)
+
+| Slice | Focus | Owner | Status | Report |
+|-------|-------|-------|--------|--------|
+| A | Approvals & Audit | enterprise-ux-lead | ⏳ Pending | `/reports/w3_phaseD_approvals_audit.md` |
+| B | Partner Portal | enterprise-ux + identity | ⏳ Pending | `/reports/w3_phaseD_partner_portal.md` |
+| C | SSO & SCIM UX | identity-lead | ⏳ Pending | `/reports/w3_phaseD_sso_scim_ux.md` |
+| D | Executive Packs | reports-pack-lead | ⏳ Pending | `/reports/w3_phaseD_exec_packs.md` |
+| E | PWA Boardroom | perf-a11y-lead | ⏳ Pending | `/reports/w3_phaseD_pwa_boardroom.md` |
+| F | Benchmarks & Cohorts | enterprise-ux + perf-a11y | ⏳ Pending | `/reports/w3_phaseD_benchmarks_ui.md` |
+| G | Governance UI | enterprise-ux + identity | ⏳ Pending | `/reports/w3_phaseD_governance_ui.md` |
+| H | A11y & Performance | perf-a11y-lead | ⏳ Pending | `/reports/w3_phaseD_a11y_advanced.md` + `perf_hardening.md` |
+| I | CSP & Trusted Types | perf-a11y + qa-compliance | ⏳ Pending | `/reports/w3_phaseD_csp_trusted_types.md` |
+| J | Status & SLO | enterprise-ux + identity | ⏳ Pending | `/reports/w3_phaseD_status_slo_ui.md` |
+| K | Docs, Demos, Tests | qa-compliance + reports-pack | ⏳ Pending | `/reports/w3_phaseD_e2e_results.md` |
+
+**Last Updated**: 2025-11-14 (Orchestration Start)
+
+---
+
+## Coordination with Workers 1 & 2
+
+### Worker 1 (IaC/Security/Observability)
+**Dependencies**:
+- OIDC/SAML metadata endpoints (for SSO UI)
+- CSP header configuration alignment
+- OTel/Sentry wiring for web-vitals
+- Status/SLO endpoints for incident shelf
+- Secrets management for AI/export services
+
+**Communication**: Tag Worker 1 on CSP, SSO, OTel PRs
+
+### Worker 2 (Backend Services)
+**Dependencies**:
+- Approval state API (save/retrieve approvals)
+- DW cohort/benchmark aggregates
+- Governance endpoints (consent, DSAR, export logs)
+- Export service extensions (PPTX generation)
+- Evidence lineage API extensions
+
+**Communication**: Tag Worker 2 on reporting, DW, governance PRs
+
+---
+
+## Non-Negotiables
+
+1. **Evidence lineage mandatory** for all claims and reports
+2. **No secrets in frontend** - all sensitive operations server-side
+3. **Privacy-first**: redaction on server, no raw PII in UI
+4. **WCAG 2.2 AAA target** for critical paths (minimum AA everywhere)
+5. **CSP strict** - no unsafe-inline, no unsafe-eval
+6. **Feature flags** for all Phase D features
+7. **Tenant isolation** enforced at DB and API layers
+8. **All AI outputs cite evidence** with provenance chains
+
+---
+
+## Success Criteria
+
+- ✅ Approvals workflow complete (draft → approved → locked) with version history
+- ✅ Audit Mode functional (lineage overlay, frozen UI)
+- ✅ Partner portal displays tenants + whitelabel pack exports
+- ✅ SSO/SCIM UX surfaces present (read-only, role mapping works)
+- ✅ Executive packs: PDF watermarked, PPTX exported, narratives configurable
+- ✅ PWA installs, offline mode works, SSE resumes with last-event-id
+- ✅ Benchmarks UI renders DW cohorts with percentile ribbons
+- ✅ Governance UI shows consent, DSAR, export logs
+- ✅ A11y/LH budgets green (WCAG 2.2 AAA target sizes)
+- ✅ CSP strict + Trusted Types enabled, SRI in place
+- ✅ Status banner reflects Worker 1/2 SLOs, incident shelf degrades UI gracefully
+- ✅ All E2E tests pass, visual regression baselines established
+- ✅ Reports produced for all slices (A-K)
+
+---
+
+## Final Deliverable
+
+**Master Report**: `/reports/worker3_phaseD_prod_launch.md`
+
+Contents:
+- Executive summary
+- All slice reports aggregated
+- Screenshots of key features
+- Metrics (LOC, tests, coverage)
+- Sign-offs from all 5 leads
+- Open risks and mitigation plans
+- Production readiness checklist
+
+---
+
+**Orchestration Start**: 2025-11-14
+**Next Action**: Execute Wave 1 (Slices A, C, D)

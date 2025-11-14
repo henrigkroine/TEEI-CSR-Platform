@@ -1,0 +1,298 @@
+---
+/**
+ * Dashboard Index Page - Updated for CSP Phase D
+ *
+ * Changes:
+ * - Removed inline onclick event handler
+ * - Removed inline export button script
+ * - Added external script import for exportHandlers.ts
+ */
+
+import Layout from '../layouts/Layout.astro';
+import KPICard from '../components/KPICard';
+import LoadingSpinner from '../components/LoadingSpinner';
+import ErrorMessage from '../components/ErrorMessage';
+import { detectLanguage, t } from '../lib/i18n';
+import { createApiClient } from '../lib/api';
+
+const lang = detectLanguage(Astro.request);
+const companyId = Astro.cookies.get('companyId')?.value || 'demo-company';
+const token = Astro.cookies.get('auth_token')?.value;
+const apiClient = createApiClient(token);
+
+let metrics: any = null;
+let previousMetrics: any = null;
+let recentActivity: any[] = [];
+let error: string | null = null;
+
+try {
+  metrics = await apiClient.get(`/metrics/company/${companyId}/period/current`);
+  try {
+    previousMetrics = await apiClient.get(`/metrics/company/${companyId}/period/previous`);
+  } catch (e) {
+    console.warn('Failed to fetch previous metrics:', e);
+  }
+  try {
+    const q2qData = await apiClient.get(`/metrics/company/${companyId}/q2q-feed?limit=5`);
+    recentActivity = Array.isArray(q2qData) ? q2qData : [];
+  } catch (e) {
+    console.warn('Failed to fetch recent activity:', e);
+  }
+} catch (e: any) {
+  error = e.message || 'Failed to load dashboard data';
+  console.error('Dashboard error:', e);
+}
+
+function calculateTrend(current: number, previous: number | undefined): { value: number; direction: 'up' | 'down' } | undefined {
+  if (!previous || previous === 0) return undefined;
+  const change = ((current - previous) / previous) * 100;
+  return {
+    value: Math.abs(change),
+    direction: change >= 0 ? 'up' : 'down',
+  };
+}
+
+const period = 'current';
+const kpiData = metrics ? [
+  {
+    title: t(lang, 'dashboard.participants'),
+    value: metrics.participantsCount?.toLocaleString() || '0',
+    trend: calculateTrend(metrics.participantsCount, previousMetrics?.participantsCount),
+    metricId: metrics.id,
+    companyId,
+    period,
+    showEvidenceButton: true,
+  },
+  {
+    title: t(lang, 'dashboard.volunteers'),
+    value: metrics.volunteersCount?.toLocaleString() || '0',
+    trend: calculateTrend(metrics.volunteersCount, previousMetrics?.volunteersCount),
+    metricId: metrics.id,
+    companyId,
+    period,
+    showEvidenceButton: true,
+  },
+  {
+    title: t(lang, 'dashboard.matches'),
+    value: metrics.matchesCount?.toLocaleString() || '0',
+    trend: calculateTrend(metrics.matchesCount, previousMetrics?.matchesCount),
+    metricId: metrics.id,
+    companyId,
+    period,
+    showEvidenceButton: true,
+  },
+  {
+    title: t(lang, 'dashboard.sessions'),
+    value: metrics.sessionsCount?.toLocaleString() || '0',
+    trend: calculateTrend(metrics.sessionsCount, previousMetrics?.sessionsCount),
+    metricId: metrics.id,
+    companyId,
+    period,
+    showEvidenceButton: true,
+  },
+  {
+    title: t(lang, 'dashboard.avgIntegrationScore'),
+    value: metrics.avgIntegrationScore?.toFixed(1) || '0.0',
+    subtitle: 'out of 10',
+    trend: calculateTrend(metrics.avgIntegrationScore, previousMetrics?.avgIntegrationScore),
+    metricId: metrics.id,
+    companyId,
+    period,
+    showEvidenceButton: true,
+  },
+  {
+    title: t(lang, 'dashboard.avgLanguageLevel'),
+    value: metrics.avgLanguageLevel?.toFixed(1) || '0.0',
+    subtitle: 'level',
+    trend: calculateTrend(metrics.avgLanguageLevel, previousMetrics?.avgLanguageLevel),
+    metricId: metrics.id,
+    companyId,
+    period,
+    showEvidenceButton: true,
+  },
+  {
+    title: t(lang, 'dashboard.avgJobReadiness'),
+    value: metrics.avgJobReadiness?.toFixed(1) || '0.0',
+    subtitle: 'out of 10',
+    trend: calculateTrend(metrics.avgJobReadiness, previousMetrics?.avgJobReadiness),
+    metricId: metrics.id,
+    companyId,
+    period,
+    showEvidenceButton: true,
+  },
+  {
+    title: t(lang, 'dashboard.totalHours'),
+    value: metrics.totalVolunteerHours?.toLocaleString() || '0',
+    subtitle: 'volunteer hours',
+    trend: calculateTrend(metrics.totalVolunteerHours, previousMetrics?.totalVolunteerHours),
+    metricId: metrics.id,
+    companyId,
+    period,
+    showEvidenceButton: true,
+  },
+] : [];
+
+function getRelativeTime(timestamp: string): string {
+  const date = new Date(timestamp);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+
+  if (diffMins < 1) return 'just now';
+  if (diffMins < 60) return `${diffMins} minutes ago`;
+
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours} hours ago`;
+
+  const diffDays = Math.floor(diffHours / 24);
+  return `${diffDays} days ago`;
+}
+
+function getSentimentBadge(dimension: string, value: number): { label: string; color: string } {
+  if (value > 0.6) return { label: `${dimension}↑`, color: 'green' };
+  if (value < 0.4) return { label: `${dimension}↓`, color: 'red' };
+  return { label: dimension, color: 'yellow' };
+}
+
+// Get CSP nonce
+const nonce = Astro.locals.cspNonce || '';
+---
+
+<Layout title={t(lang, 'dashboard.title')}>
+  <div class="space-y-8">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
+          {t(lang, 'dashboard.title')}
+        </h1>
+        <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+          {t(lang, 'dashboard.overview')}
+        </p>
+      </div>
+      <div class="flex space-x-3">
+        <button
+          id="exportCsvBtn"
+          class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700"
+        >
+          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+          </svg>
+          {t(lang, 'common.exportCsv')}
+        </button>
+        <button
+          id="exportPdfBtn"
+          class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700"
+        >
+          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          {t(lang, 'common.exportPdf')}
+        </button>
+        <button
+          id="refreshBtn"
+          class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700"
+        >
+          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          {t(lang, 'common.refresh')}
+        </button>
+      </div>
+    </div>
+
+    {error && (
+      <ErrorMessage client:load message={error} onRetry={() => window.location.reload()} />
+    )}
+
+    {!error && kpiData.length > 0 && (
+      <>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {kpiData.map((kpi) => (
+            <KPICard client:load {...kpi} />
+          ))}
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+          <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+            {t(lang, 'dashboard.recentActivity')}
+          </h2>
+          {recentActivity.length > 0 ? (
+            <div class="space-y-4">
+              {recentActivity.map((item: any) => {
+                const badges = [];
+                if (item.confidence !== undefined) {
+                  const badge = getSentimentBadge('confidence', item.confidence);
+                  badges.push(badge);
+                }
+                if (item.belonging !== undefined) {
+                  const badge = getSentimentBadge('belonging', item.belonging);
+                  badges.push(badge);
+                }
+                if (item.languageComfort) {
+                  badges.push({ label: `lang: ${item.languageComfort}`, color: 'blue' });
+                }
+
+                return (
+                  <div class="flex items-start justify-between border-b border-gray-200 dark:border-gray-700 pb-4 last:border-b-0 last:pb-0">
+                    <div class="flex-1">
+                      <p class="text-sm font-medium text-gray-900 dark:text-white mb-1">
+                        {item.snippet?.substring(0, 100) || 'Q2Q Classification'}
+                        {item.snippet?.length > 100 && '...'}
+                      </p>
+                      <p class="text-xs text-gray-500 dark:text-gray-400">
+                        {item.timestamp ? getRelativeTime(item.timestamp) : 'Recently'}
+                      </p>
+                      <div class="flex flex-wrap gap-1.5 mt-2">
+                        {badges.map((badge) => {
+                          const colorClasses = {
+                            green: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+                            red: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+                            yellow: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+                            blue: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+                          };
+                          return (
+                            <span class={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${colorClasses[badge.color as keyof typeof colorClasses]}`}>
+                              {badge.label}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <span class={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ml-3 ${
+                      item.classificationMethod === 'ai'
+                        ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
+                        : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
+                    }`}>
+                      {item.classificationMethod || 'Manual'}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p class="text-sm text-gray-500 dark:text-gray-400">
+              {t(lang, 'common.noData')}
+            </p>
+          )}
+        </div>
+      </>
+    )}
+
+    {!error && kpiData.length === 0 && (
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-12 text-center">
+        <LoadingSpinner client:load message={t(lang, 'common.loading')} />
+      </div>
+    )}
+  </div>
+
+  <!-- External scripts with nonce (CSP compliant) -->
+  <script nonce={nonce} type="module">
+    // Refresh button handler
+    document.getElementById('refreshBtn')?.addEventListener('click', () => {
+      window.location.reload();
+    });
+  </script>
+
+  <!-- Export handlers (external script) -->
+  <script nonce={nonce} src="/client/init/exportHandlers.js" type="module"></script>
+</Layout>

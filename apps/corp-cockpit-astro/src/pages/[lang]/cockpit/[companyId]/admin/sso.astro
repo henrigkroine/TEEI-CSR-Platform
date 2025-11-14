@@ -3,7 +3,9 @@ import BaseLayout from '../../../../../layouts/BaseLayout.astro';
 import { hasPermission } from '../../../../../utils/rbac';
 import SSOSettings from '../../../../../components/identity/SSOSettings.tsx';
 import RoleMappingTable from '../../../../../components/identity/RoleMappingTable.tsx';
+import SCIMRoleMappingEditor from '../../../../../components/identity/SCIMRoleMappingEditor.tsx';
 import SCIMStatus from '../../../../../components/identity/SCIMStatus.tsx';
+import SyncTestButton from '../../../../../components/identity/SyncTestButton.tsx';
 
 // Extract route parameters
 const { lang, companyId } = Astro.params;
@@ -65,16 +67,27 @@ if (!canViewSSO) {
         Identity Provider (IdP) claims are automatically mapped to TEEI roles. Users receive
         permissions based on their IdP group membership or attributes.
       </p>
-      <RoleMappingTable companyId={companyId} client:load />
+      {hasPermission(user.role, 'SUPER_ADMIN') ? (
+        <SCIMRoleMappingEditor companyId={companyId} client:load />
+      ) : (
+        <RoleMappingTable companyId={companyId} client:load />
+      )}
     </section>
 
     {/* SCIM Provisioning */}
     <section class="settings-section">
-      <h2>SCIM Provisioning</h2>
-      <p class="section-description">
-        SCIM (System for Cross-domain Identity Management) automates user and group
-        synchronization from your identity provider. View the last sync status and any errors.
-      </p>
+      <div class="section-header">
+        <div>
+          <h2>SCIM Provisioning</h2>
+          <p class="section-description">
+            SCIM (System for Cross-domain Identity Management) automates user and group
+            synchronization from your identity provider. View the last sync status and any errors.
+          </p>
+        </div>
+        <div class="section-actions">
+          <SyncTestButton companyId={companyId} client:load />
+        </div>
+      </div>
       <SCIMStatus companyId={companyId} client:load />
     </section>
 
@@ -213,6 +226,22 @@ if (!canViewSSO) {
     color: var(--color-text-secondary);
     margin-bottom: calc(var(--spacing-unit) * 3);
     line-height: 1.6;
+  }
+
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: calc(var(--spacing-unit) * 3);
+    margin-bottom: calc(var(--spacing-unit) * 3);
+  }
+
+  .section-header .section-description {
+    margin-bottom: 0;
+  }
+
+  .section-actions {
+    flex-shrink: 0;
   }
 
   .help-section {
