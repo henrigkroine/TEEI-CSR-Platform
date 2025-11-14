@@ -1,0 +1,499 @@
+---
+import BaseLayout from '../../../../layouts/BaseLayout.astro';
+import { hasPermission } from '../../../../utils/rbac';
+import CohortSelector from '../../../../components/benchmarks/CohortSelector.tsx';
+import BenchmarkCharts from '../../../../components/benchmarks/BenchmarkCharts.tsx';
+
+// Extract route parameters
+const { lang, companyId } = Astro.params;
+const user = Astro.locals.user;
+const tenantContext = Astro.locals.tenantContext;
+
+// Middleware handles auth/tenant validation
+if (!user || !tenantContext) {
+  return Astro.redirect('/login');
+}
+
+// Verify tenant context matches route
+if (tenantContext.companyId !== companyId || tenantContext.lang !== lang) {
+  return Astro.redirect(`/${lang}/cockpit/401`);
+}
+
+// RBAC: VIEWER and above can access benchmarks
+const canViewBenchmarks = hasPermission(user.role, 'VIEW_REPORTS');
+if (!canViewBenchmarks) {
+  return Astro.redirect(`/${lang}/cockpit/${companyId}/401`);
+}
+---
+
+<BaseLayout title="Benchmarks & Cohorts - TEEI Corporate Cockpit" lang={lang}>
+  <div class="benchmarks-page">
+    <div class="page-header">
+      <div>
+        <a href={`/${lang}/cockpit/${companyId}`} class="back-link">
+          ← Back to Dashboard
+        </a>
+        <h1>Benchmarks & Cohort Comparison</h1>
+        <p class="subtitle">Compare your CSR performance against peer companies</p>
+      </div>
+      <div class="refresh-info">
+        <span class="icon">🔄</span>
+        <div class="text">
+          <div class="label">Data Refreshed Daily</div>
+          <div class="timestamp" id="last-refreshed">Loading...</div>
+        </div>
+      </div>
+    </div>
+
+    {/* Info alert */}
+    <div class="alert-info">
+      <strong>Privacy & Aggregation</strong>
+      <p>
+        All benchmark data is fully anonymized and aggregated. Individual company data is never
+        disclosed. Cohorts must contain at least 10 companies to ensure privacy compliance.
+      </p>
+    </div>
+
+    {/* Cohort Selector */}
+    <CohortSelector companyId={companyId} onCohortChange={handleCohortChange} client:load />
+
+    {/* Loading State */}
+    <div id="loading-state" class="loading-container">
+      <div class="spinner"></div>
+      <p>Loading benchmark data...</p>
+    </div>
+
+    {/* Benchmarks Container */}
+    <div id="benchmarks-container" style="display: none;">
+      {/* Will be populated dynamically */}
+    </div>
+
+    {/* Empty State */}
+    <div id="empty-state" class="empty-state" style="display: none;">
+      <div class="icon">📊</div>
+      <h3>No Data Available</h3>
+      <p>Select cohort criteria above to view benchmark comparisons.</p>
+    </div>
+
+    {/* Methodology Section */}
+    <section class="methodology-section">
+      <h2>Methodology & Calculation</h2>
+      <p class="section-description">
+        Understand how benchmarks are calculated and what they mean for your organization.
+      </p>
+
+      <div class="methodology-grid">
+        <div class="methodology-card">
+          <h4>📐 Percentile Ranking</h4>
+          <p>
+            Your percentile rank shows the percentage of companies in the cohort that perform
+            below your level. For example, 75th percentile means you perform better than 75%
+            of companies in the cohort.
+          </p>
+        </div>
+
+        <div class="methodology-card">
+          <h4>📊 Cohort Selection</h4>
+          <p>
+            Cohorts are defined by industry, company size, and geography. More specific cohorts
+            provide more accurate comparisons but may have fewer companies. We recommend a
+            cohort size of at least 50 companies.
+          </p>
+        </div>
+
+        <div class="methodology-card">
+          <h4>🔄 Data Freshness</h4>
+          <p>
+            Benchmark data is refreshed daily from the Worker-2 data warehouse. Cohort statistics
+            are recalculated nightly to reflect the latest company data submissions.
+          </p>
+        </div>
+
+        <div class="methodology-card">
+          <h4>🔒 Privacy Compliance</h4>
+          <p>
+            All data is fully anonymized. No individual company can be identified from the
+            aggregated statistics. Cohorts with fewer than 10 companies are not displayed to
+            protect privacy.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    {/* Help Section */}
+    <section class="help-section">
+      <h3>Metrics Explained</h3>
+      <div class="help-grid">
+        <div class="help-card">
+          <h4>SROI (Social Return on Investment)</h4>
+          <p>
+            Measures the social value generated per dollar invested. A ratio of 4:1 means
+            every $1 invested creates $4 of social value. Calculated using TEEI's validated
+            impact methodology.
+          </p>
+        </div>
+
+        <div class="help-card">
+          <h4>Total Beneficiaries</h4>
+          <p>
+            The number of unique individuals who directly benefited from your CSR programs.
+            Includes program participants, community members, and service recipients.
+          </p>
+        </div>
+
+        <div class="help-card">
+          <h4>Volunteer Hours</h4>
+          <p>
+            Total hours contributed by employees to CSR initiatives. Includes skills-based
+            volunteering, mentorship, and community service activities.
+          </p>
+        </div>
+
+        <div class="help-card">
+          <h4>Employee Engagement Rate</h4>
+          <p>
+            Percentage of employees who participated in at least one CSR activity during the
+            reporting period. Higher engagement indicates stronger organizational commitment.
+          </p>
+        </div>
+
+        <div class="help-card">
+          <h4>Active Programs</h4>
+          <p>
+            Number of distinct CSR programs operating during the period. Includes both
+            ongoing and completed programs with measurable outcomes.
+          </p>
+        </div>
+
+        <div class="help-card">
+          <h4>Overall Impact Score</h4>
+          <p>
+            Composite metric (0-100) combining SROI, engagement, scale, and sustainability
+            factors. Provides a holistic view of CSR program effectiveness.
+          </p>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    import type { CohortSelector } from '../../../../components/benchmarks/CohortSelector';
+    import type { BenchmarkCharts } from '../../../../components/benchmarks/BenchmarkCharts';
+
+    // Get company ID from URL
+    const pathParts = window.location.pathname.split('/');
+    const companyId = pathParts[pathParts.indexOf('cockpit') + 1];
+
+    // State
+    let currentIndustry: string | undefined;
+    let currentSize: string | undefined;
+    let currentGeography: string | undefined;
+
+    // Handle cohort change from selector
+    (window as any).handleCohortChange = async (
+      industry?: string,
+      size?: string,
+      geography?: string
+    ) => {
+      currentIndustry = industry;
+      currentSize = size;
+      currentGeography = geography;
+      await fetchBenchmarks();
+    };
+
+    // Fetch benchmarks data
+    async function fetchBenchmarks() {
+      const loadingState = document.getElementById('loading-state');
+      const benchmarksContainer = document.getElementById('benchmarks-container');
+      const emptyState = document.getElementById('empty-state');
+
+      if (!loadingState || !benchmarksContainer || !emptyState) return;
+
+      // Show loading
+      loadingState.style.display = 'block';
+      benchmarksContainer.style.display = 'none';
+      emptyState.style.display = 'none';
+
+      try {
+        // Build query params
+        const params = new URLSearchParams();
+        if (currentIndustry) params.append('industry', currentIndustry);
+        if (currentSize) params.append('size', currentSize);
+        if (currentGeography) params.append('geography', currentGeography);
+
+        const url = `http://localhost:3001/companies/${companyId}/benchmarks?${params.toString()}`;
+        const response = await fetch(url);
+
+        if (response.ok) {
+          const data = await response.json();
+
+          // Update last refreshed timestamp
+          const lastRefreshed = document.getElementById('last-refreshed');
+          if (lastRefreshed) {
+            const date = new Date(data.last_refreshed);
+            lastRefreshed.textContent = `Last updated: ${date.toLocaleString()}`;
+          }
+
+          // Render benchmarks (using React component via client:load)
+          if (data.benchmarks && data.benchmarks.length > 0) {
+            // Import and render BenchmarkCharts component
+            const { default: BenchmarkCharts } = await import('../../../../components/benchmarks/BenchmarkCharts.tsx');
+            const { createRoot } = await import('react-dom/client');
+            const { createElement } = await import('react');
+
+            benchmarksContainer.innerHTML = '';
+            const root = createRoot(benchmarksContainer);
+            root.render(
+              createElement(BenchmarkCharts, {
+                benchmarks: data.benchmarks,
+                companyName: data.company_name,
+                cohortName: data.cohort.name,
+              })
+            );
+
+            loadingState.style.display = 'none';
+            benchmarksContainer.style.display = 'block';
+          } else {
+            loadingState.style.display = 'none';
+            emptyState.style.display = 'block';
+          }
+        } else {
+          console.error('Failed to fetch benchmarks:', response.statusText);
+          loadingState.style.display = 'none';
+          emptyState.style.display = 'block';
+        }
+      } catch (error) {
+        console.error('Error fetching benchmarks:', error);
+        loadingState.style.display = 'none';
+        emptyState.style.display = 'block';
+      }
+    }
+
+    // Initial load with default (no filters)
+    fetchBenchmarks();
+  </script>
+
+  <style>
+    .benchmarks-page {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 32px;
+    }
+
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 24px;
+      gap: 24px;
+    }
+
+    .page-header h1 {
+      margin: 8px 0 4px 0;
+      font-size: 2rem;
+      font-weight: 700;
+      color: #1f2937;
+    }
+
+    .page-header .subtitle {
+      margin: 0;
+      font-size: 1rem;
+      color: #6b7280;
+    }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.875rem;
+      color: #3b82f6;
+      text-decoration: none;
+      margin-bottom: 8px;
+    }
+
+    .back-link:hover {
+      text-decoration: underline;
+    }
+
+    .refresh-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      background: #f0fdf4;
+      border: 1px solid #86efac;
+      border-radius: 8px;
+    }
+
+    .refresh-info .icon {
+      font-size: 1.5rem;
+    }
+
+    .refresh-info .text {
+      font-size: 0.875rem;
+    }
+
+    .refresh-info .label {
+      font-weight: 600;
+      color: #166534;
+    }
+
+    .refresh-info .timestamp {
+      color: #15803d;
+    }
+
+    .alert-info {
+      padding: 16px;
+      background: #dbeafe;
+      border-left: 4px solid #3b82f6;
+      border-radius: 8px;
+      margin-bottom: 24px;
+    }
+
+    .alert-info strong {
+      display: block;
+      margin-bottom: 4px;
+      color: #1e40af;
+      font-weight: 600;
+    }
+
+    .alert-info p {
+      margin: 0;
+      font-size: 0.875rem;
+      color: #1e40af;
+      line-height: 1.5;
+    }
+
+    .loading-container {
+      text-align: center;
+      padding: 64px 24px;
+    }
+
+    .spinner {
+      width: 48px;
+      height: 48px;
+      margin: 0 auto 16px;
+      border: 4px solid #e5e7eb;
+      border-top-color: #3b82f6;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .loading-container p {
+      color: #6b7280;
+      font-size: 0.9375rem;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 64px 24px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .empty-state .icon {
+      font-size: 4rem;
+      margin-bottom: 16px;
+    }
+
+    .empty-state h3 {
+      margin: 0 0 8px 0;
+      font-size: 1.5rem;
+      color: #1f2937;
+    }
+
+    .empty-state p {
+      margin: 0;
+      color: #6b7280;
+    }
+
+    .methodology-section,
+    .help-section {
+      margin-top: 48px;
+      padding: 32px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .methodology-section h2,
+    .help-section h3 {
+      margin: 0 0 8px 0;
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: #1f2937;
+    }
+
+    .section-description {
+      margin: 0 0 24px 0;
+      font-size: 0.9375rem;
+      color: #6b7280;
+    }
+
+    .methodology-grid,
+    .help-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+    }
+
+    .methodology-card,
+    .help-card {
+      padding: 20px;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+    }
+
+    .methodology-card h4,
+    .help-card h4 {
+      margin: 0 0 12px 0;
+      font-size: 1rem;
+      font-weight: 600;
+      color: #1f2937;
+    }
+
+    .methodology-card p,
+    .help-card p {
+      margin: 0;
+      font-size: 0.875rem;
+      color: #6b7280;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 768px) {
+      .benchmarks-page {
+        padding: 16px;
+      }
+
+      .page-header {
+        flex-direction: column;
+      }
+
+      .page-header h1 {
+        font-size: 1.5rem;
+      }
+
+      .refresh-info {
+        width: 100%;
+      }
+
+      .methodology-section,
+      .help-section {
+        padding: 20px;
+      }
+
+      .methodology-grid,
+      .help-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</BaseLayout>

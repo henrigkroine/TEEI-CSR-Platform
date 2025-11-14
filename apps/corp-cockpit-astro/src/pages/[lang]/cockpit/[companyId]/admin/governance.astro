@@ -1,0 +1,415 @@
+---
+import BaseLayout from '../../../../../layouts/BaseLayout.astro';
+import { hasPermission } from '../../../../../utils/rbac';
+import ConsentManager from '../../../../../components/governance/ConsentManager.tsx';
+import DSARStatus from '../../../../../components/governance/DSARStatus.tsx';
+import ExportLogsViewer from '../../../../../components/governance/ExportLogsViewer.tsx';
+import RetentionPolicies from '../../../../../components/governance/RetentionPolicies.tsx';
+
+// Extract route parameters
+const { lang, companyId } = Astro.params;
+const user = Astro.locals.user;
+const tenantContext = Astro.locals.tenantContext;
+
+// Middleware handles auth/tenant validation
+if (!user || !tenantContext) {
+  return Astro.redirect('/login');
+}
+
+// Verify tenant context matches route
+if (tenantContext.companyId !== companyId || tenantContext.lang !== lang) {
+  return Astro.redirect(`/${lang}/cockpit/401`);
+}
+
+// Only ADMIN can view governance settings (MANAGE_SETTINGS permission)
+const canViewGovernance = hasPermission(user.role, 'MANAGE_SETTINGS');
+if (!canViewGovernance) {
+  return Astro.redirect(`/${lang}/cockpit/${companyId}/401`);
+}
+---
+
+<BaseLayout title="Governance & Privacy - TEEI Corporate Cockpit" lang={lang}>
+  <div class="governance-page">
+    <div class="page-header">
+      <div>
+        <a href={`/${lang}/cockpit/${companyId}/admin`} class="back-link">
+          ← Back to Admin Console
+        </a>
+        <h1>Governance & Privacy Controls</h1>
+        <p class="subtitle">GDPR compliance, data subject rights, and privacy management</p>
+      </div>
+    </div>
+
+    <div class="alert-info">
+      <strong>GDPR & Privacy Compliance</strong>
+      <p>
+        This page provides comprehensive privacy and governance tools to ensure compliance with GDPR,
+        CCPA, and other data protection regulations. All actions are logged to an immutable audit trail.
+        Users have full control over their data and consent preferences.
+      </p>
+    </div>
+
+    {/* Consent Management */}
+    <section class="governance-section">
+      <div class="section-header">
+        <h2>Consent Management</h2>
+        <span class="section-badge gdpr">GDPR Art. 7</span>
+      </div>
+      <p class="section-description">
+        Manage user consent preferences for analytics, marketing, and necessary cookies. Users can
+        withdraw consent at any time. All consent changes are logged with timestamps.
+      </p>
+      <ConsentManager companyId={companyId} userId={user.id} client:load />
+    </section>
+
+    {/* Data Subject Access Requests */}
+    <section class="governance-section">
+      <div class="section-header">
+        <h2>Data Subject Access Requests (DSAR)</h2>
+        <span class="section-badge gdpr">GDPR Art. 15-22</span>
+      </div>
+      <p class="section-description">
+        View and manage DSAR requests including access, rectification, erasure, portability, restriction,
+        and objection. All requests are processed within 30 days as required by GDPR.
+      </p>
+      <DSARStatus companyId={companyId} userId={user.id} client:load />
+    </section>
+
+    {/* Export Audit Trail */}
+    <section class="governance-section">
+      <div class="section-header">
+        <h2>Export Audit Trail</h2>
+        <span class="section-badge soc2">SOC 2</span>
+      </div>
+      <p class="section-description">
+        Complete record of all data exports from the platform. Shows who exported what data, when, and
+        from which IP address. Logs are retained for 7 years for compliance purposes.
+      </p>
+      <ExportLogsViewer companyId={companyId} client:load />
+    </section>
+
+    {/* Data Retention Policies */}
+    <section class="governance-section">
+      <div class="section-header">
+        <h2>Data Retention Policies</h2>
+        <span class="section-badge gdpr">GDPR Art. 5</span>
+      </div>
+      <p class="section-description">
+        View data retention policies and scheduled deletions. Data is retained only as long as necessary
+        for business and legal purposes. Automated deletion ensures compliance with data minimization
+        principles.
+      </p>
+      <RetentionPolicies companyId={companyId} client:load />
+    </section>
+
+    {/* Compliance Resources */}
+    <section class="resources-section">
+      <h3>Compliance Resources</h3>
+
+      <div class="resources-grid">
+        <div class="resource-card">
+          <h4>GDPR Compliance</h4>
+          <ul>
+            <li><strong>Legal Basis:</strong> Consent, contract, legitimate interest</li>
+            <li><strong>Data Subject Rights:</strong> Access, rectification, erasure, portability</li>
+            <li><strong>Processing Records:</strong> Article 30 documentation maintained</li>
+            <li><strong>DPO Contact:</strong> <a href="mailto:dpo@teei.platform">dpo@teei.platform</a></li>
+          </ul>
+        </div>
+
+        <div class="resource-card">
+          <h4>CCPA Compliance</h4>
+          <ul>
+            <li><strong>Categories of Data:</strong> Personal identifiers, usage data</li>
+            <li><strong>Right to Know:</strong> Data export available via DSAR</li>
+            <li><strong>Right to Delete:</strong> Erasure requests processed within 45 days</li>
+            <li><strong>Do Not Sell:</strong> We do not sell personal information</li>
+          </ul>
+        </div>
+
+        <div class="resource-card">
+          <h4>SOC 2 Type II</h4>
+          <ul>
+            <li><strong>Audit Trail:</strong> All access and changes logged</li>
+            <li><strong>Data Classification:</strong> PII, confidential, public</li>
+            <li><strong>Retention Policies:</strong> Automated lifecycle management</li>
+            <li><strong>Access Controls:</strong> RBAC with least privilege</li>
+          </ul>
+        </div>
+
+        <div class="resource-card">
+          <h4>Privacy by Design</h4>
+          <ul>
+            <li><strong>Data Minimization:</strong> Only necessary data collected</li>
+            <li><strong>Encryption:</strong> AES-256 at rest, TLS 1.3 in transit</li>
+            <li><strong>Pseudonymization:</strong> PII redacted in logs and analytics</li>
+            <li><strong>Privacy Impact:</strong> Assessments conducted for new features</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="contact-box">
+        <h4>Questions or Concerns?</h4>
+        <p>
+          If you have questions about our privacy practices or data governance policies, please contact
+          our Data Protection Officer:
+        </p>
+        <div class="contact-details">
+          <div class="contact-item">
+            <strong>Email:</strong> <a href="mailto:privacy@teei.platform">privacy@teei.platform</a>
+          </div>
+          <div class="contact-item">
+            <strong>Phone:</strong> +1 (555) 123-4567
+          </div>
+          <div class="contact-item">
+            <strong>Address:</strong> TEEI Privacy Office, 123 Compliance St, San Francisco, CA 94105
+          </div>
+        </div>
+        <p class="response-time">
+          <em>We respond to all privacy inquiries within 48 hours.</em>
+        </p>
+      </div>
+    </section>
+  </div>
+</BaseLayout>
+
+<style>
+  .governance-page {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: calc(var(--spacing-unit) * 4);
+  }
+
+  .page-header {
+    margin-bottom: calc(var(--spacing-unit) * 4);
+  }
+
+  .back-link {
+    color: var(--color-primary);
+    text-decoration: none;
+    font-size: 0.9375rem;
+    margin-bottom: calc(var(--spacing-unit) * 2);
+    display: inline-block;
+  }
+
+  .back-link:hover {
+    text-decoration: underline;
+  }
+
+  h1 {
+    font-size: 2rem;
+    margin: calc(var(--spacing-unit) * 2) 0 calc(var(--spacing-unit) * 1);
+  }
+
+  .subtitle {
+    color: var(--color-text-secondary);
+    font-size: 1.125rem;
+    margin: 0;
+  }
+
+  .alert-info {
+    background: #eff6ff;
+    border: 1px solid #3b82f6;
+    border-left: 4px solid #2563eb;
+    padding: calc(var(--spacing-unit) * 3);
+    border-radius: var(--border-radius);
+    margin-bottom: calc(var(--spacing-unit) * 4);
+  }
+
+  .alert-info strong {
+    display: block;
+    margin-bottom: calc(var(--spacing-unit) * 1);
+    color: #1e40af;
+  }
+
+  .alert-info p {
+    margin: 0;
+    color: #1e3a8a;
+    line-height: 1.6;
+  }
+
+  .governance-section {
+    background: white;
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius);
+    padding: calc(var(--spacing-unit) * 4);
+    margin-bottom: calc(var(--spacing-unit) * 4);
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: calc(var(--spacing-unit) * 2);
+    margin-bottom: calc(var(--spacing-unit) * 2);
+  }
+
+  .governance-section h2 {
+    margin: 0;
+  }
+
+  .section-badge {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .section-badge.gdpr {
+    background: #dbeafe;
+    color: #1e40af;
+  }
+
+  .section-badge.soc2 {
+    background: #fef3c7;
+    color: #92400e;
+  }
+
+  .section-description {
+    color: var(--color-text-secondary);
+    margin-bottom: calc(var(--spacing-unit) * 3);
+    line-height: 1.6;
+  }
+
+  .resources-section {
+    background: var(--color-bg-secondary);
+    padding: calc(var(--spacing-unit) * 4);
+    border-radius: var(--border-radius);
+    margin-top: calc(var(--spacing-unit) * 6);
+  }
+
+  .resources-section h3 {
+    margin-top: 0;
+    margin-bottom: calc(var(--spacing-unit) * 3);
+  }
+
+  .resources-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: calc(var(--spacing-unit) * 3);
+    margin-bottom: calc(var(--spacing-unit) * 4);
+  }
+
+  .resource-card {
+    background: white;
+    padding: calc(var(--spacing-unit) * 3);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--color-border);
+  }
+
+  .resource-card h4 {
+    margin-top: 0;
+    margin-bottom: calc(var(--spacing-unit) * 2);
+    color: var(--color-primary);
+  }
+
+  .resource-card ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .resource-card li {
+    padding: calc(var(--spacing-unit) * 1) 0;
+    border-bottom: 1px solid var(--color-bg-secondary);
+  }
+
+  .resource-card li:last-child {
+    border-bottom: none;
+  }
+
+  .resource-card strong {
+    color: var(--color-text);
+    font-weight: 600;
+  }
+
+  .resource-card a {
+    color: var(--color-primary);
+    text-decoration: none;
+  }
+
+  .resource-card a:hover {
+    text-decoration: underline;
+  }
+
+  .contact-box {
+    background: white;
+    padding: calc(var(--spacing-unit) * 3);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--color-border);
+  }
+
+  .contact-box h4 {
+    margin-top: 0;
+    margin-bottom: calc(var(--spacing-unit) * 2);
+  }
+
+  .contact-box p {
+    margin: 0 0 calc(var(--spacing-unit) * 2) 0;
+    line-height: 1.6;
+  }
+
+  .contact-details {
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--spacing-unit) * 1);
+    margin: calc(var(--spacing-unit) * 2) 0;
+    padding: calc(var(--spacing-unit) * 2);
+    background: var(--color-bg-secondary);
+    border-radius: calc(var(--border-radius) / 2);
+  }
+
+  .contact-item {
+    font-size: 0.9375rem;
+  }
+
+  .contact-item strong {
+    display: inline-block;
+    width: 80px;
+    color: var(--color-text-secondary);
+  }
+
+  .contact-item a {
+    color: var(--color-primary);
+    text-decoration: none;
+  }
+
+  .contact-item a:hover {
+    text-decoration: underline;
+  }
+
+  .response-time {
+    margin-top: calc(var(--spacing-unit) * 2);
+    padding: calc(var(--spacing-unit) * 2);
+    background: #fef3c7;
+    border: 1px solid #fcd34d;
+    border-radius: calc(var(--border-radius) / 2);
+    text-align: center;
+    color: #92400e;
+  }
+
+  .response-time em {
+    font-style: normal;
+    font-weight: 600;
+  }
+
+  @media (max-width: 768px) {
+    .governance-page {
+      padding: calc(var(--spacing-unit) * 2);
+    }
+
+    h1 {
+      font-size: 1.5rem;
+    }
+
+    .resources-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .section-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: calc(var(--spacing-unit) * 1);
+    }
+  }
+</style>

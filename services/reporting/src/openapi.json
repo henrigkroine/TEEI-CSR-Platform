@@ -1,0 +1,673 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "TEEI Corporate Cockpit API",
+    "description": "Enterprise-grade Corporate Impact Reporting API with SSE, approvals, benchmarks, and governance features",
+    "version": "1.0.0",
+    "contact": {
+      "name": "TEEI Platform Support",
+      "email": "support@teei.example"
+    },
+    "license": {
+      "name": "Proprietary",
+      "url": "https://teei.example/license"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3001",
+      "description": "Development server"
+    },
+    {
+      "url": "https://api-staging.teei.example",
+      "description": "Staging server"
+    },
+    {
+      "url": "https://api.teei.example",
+      "description": "Production server"
+    }
+  ],
+  "tags": [
+    {
+      "name": "health",
+      "description": "Health check and status endpoints"
+    },
+    {
+      "name": "companies",
+      "description": "Company management and metrics"
+    },
+    {
+      "name": "reports",
+      "description": "Report generation and management"
+    },
+    {
+      "name": "approvals",
+      "description": "Approval workflow and audit trail"
+    },
+    {
+      "name": "evidence",
+      "description": "Evidence explorer and lineage"
+    },
+    {
+      "name": "benchmarks",
+      "description": "Peer benchmarks and cohort analysis"
+    },
+    {
+      "name": "governance",
+      "description": "GDPR compliance and data governance"
+    },
+    {
+      "name": "sse",
+      "description": "Server-Sent Events for real-time updates"
+    },
+    {
+      "name": "export",
+      "description": "Data export endpoints (PDF, PPTX, CSV)"
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": ["health"],
+        "summary": "Health check",
+        "description": "Returns service health status",
+        "operationId": "getHealth",
+        "responses": {
+          "200": {
+            "description": "Service is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": ["ok", "degraded", "down"]
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "uptime": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/companies": {
+      "get": {
+        "tags": ["companies"],
+        "summary": "List companies",
+        "description": "Returns list of companies accessible to the authenticated user",
+        "operationId": "listCompanies",
+        "security": [{"bearerAuth": []}],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {"type": "integer", "default": 1}
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {"type": "integer", "default": 20}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of companies",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {"$ref": "#/components/schemas/Company"}
+                    },
+                    "pagination": {"$ref": "#/components/schemas/Pagination"}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/companies/{companyId}/metrics": {
+      "get": {
+        "tags": ["companies"],
+        "summary": "Get company metrics",
+        "description": "Returns comprehensive metrics for a company",
+        "operationId": "getCompanyMetrics",
+        "security": [{"bearerAuth": []}],
+        "parameters": [
+          {
+            "name": "companyId",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "string"}
+          },
+          {
+            "name": "dateFrom",
+            "in": "query",
+            "schema": {"type": "string", "format": "date"}
+          },
+          {
+            "name": "dateTo",
+            "in": "query",
+            "schema": {"type": "string", "format": "date"}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Company metrics",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/CompanyMetrics"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reports": {
+      "get": {
+        "tags": ["reports"],
+        "summary": "List reports",
+        "operationId": "listReports",
+        "security": [{"bearerAuth": []}],
+        "parameters": [
+          {
+            "name": "companyId",
+            "in": "query",
+            "required": true,
+            "schema": {"type": "string"}
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["draft", "review", "approved", "locked"]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of reports",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {"$ref": "#/components/schemas/Report"}
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["reports"],
+        "summary": "Create report",
+        "operationId": "createReport",
+        "security": [{"bearerAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {"$ref": "#/components/schemas/CreateReportRequest"}
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Report created",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/Report"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reports/{reportId}": {
+      "get": {
+        "tags": ["reports"],
+        "summary": "Get report",
+        "operationId": "getReport",
+        "security": [{"bearerAuth": []}],
+        "parameters": [
+          {
+            "name": "reportId",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "string"}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Report details",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/Report"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reports/{reportId}/export": {
+      "post": {
+        "tags": ["export"],
+        "summary": "Export report",
+        "description": "Export report as PDF or PPTX",
+        "operationId": "exportReport",
+        "security": [{"bearerAuth": []}],
+        "parameters": [
+          {
+            "name": "reportId",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "string"}
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "format": {
+                    "type": "string",
+                    "enum": ["pdf", "pptx"]
+                  },
+                  "watermark": {
+                    "type": "boolean",
+                    "default": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Report file",
+            "content": {
+              "application/pdf": {},
+              "application/vnd.openxmlformats-officedocument.presentationml.presentation": {}
+            }
+          }
+        }
+      }
+    },
+    "/api/approvals/{reportId}/submit": {
+      "post": {
+        "tags": ["approvals"],
+        "summary": "Submit report for approval",
+        "operationId": "submitForApproval",
+        "security": [{"bearerAuth": []}],
+        "parameters": [
+          {
+            "name": "reportId",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "string"}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Report submitted",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/ApprovalStatus"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/approvals/{reportId}/approve": {
+      "post": {
+        "tags": ["approvals"],
+        "summary": "Approve report",
+        "operationId": "approveReport",
+        "security": [{"bearerAuth": []}],
+        "parameters": [
+          {
+            "name": "reportId",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "string"}
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "comment": {"type": "string"}
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Report approved",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/ApprovalStatus"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/evidence": {
+      "get": {
+        "tags": ["evidence"],
+        "summary": "List evidence",
+        "operationId": "listEvidence",
+        "security": [{"bearerAuth": []}],
+        "parameters": [
+          {
+            "name": "companyId",
+            "in": "query",
+            "required": true,
+            "schema": {"type": "string"}
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["document", "image", "data"]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of evidence",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {"$ref": "#/components/schemas/Evidence"}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/evidence/{evidenceId}/lineage": {
+      "get": {
+        "tags": ["evidence"],
+        "summary": "Get evidence lineage",
+        "description": "Returns data lineage graph for evidence",
+        "operationId": "getEvidenceLineage",
+        "security": [{"bearerAuth": []}],
+        "parameters": [
+          {
+            "name": "evidenceId",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "string"}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lineage graph",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/LineageGraph"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/benchmarks": {
+      "get": {
+        "tags": ["benchmarks"],
+        "summary": "Get benchmark data",
+        "description": "Returns peer benchmark data for cohort comparison",
+        "operationId": "getBenchmarks",
+        "security": [{"bearerAuth": []}],
+        "parameters": [
+          {
+            "name": "companyId",
+            "in": "query",
+            "required": true,
+            "schema": {"type": "string"}
+          },
+          {
+            "name": "industry",
+            "in": "query",
+            "schema": {"type": "string"}
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "schema": {"type": "string"}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Benchmark data",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/BenchmarkData"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/governance/consent": {
+      "get": {
+        "tags": ["governance"],
+        "summary": "Get consent preferences",
+        "operationId": "getConsent",
+        "security": [{"bearerAuth": []}],
+        "responses": {
+          "200": {
+            "description": "Consent preferences",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/ConsentPreferences"}
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["governance"],
+        "summary": "Update consent preferences",
+        "operationId": "updateConsent",
+        "security": [{"bearerAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {"$ref": "#/components/schemas/ConsentPreferences"}
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Consent updated"
+          }
+        }
+      }
+    },
+    "/api/events": {
+      "get": {
+        "tags": ["sse"],
+        "summary": "SSE event stream",
+        "description": "Server-Sent Events endpoint for real-time updates",
+        "operationId": "getEventStream",
+        "security": [{"bearerAuth": []}],
+        "parameters": [
+          {
+            "name": "companyId",
+            "in": "query",
+            "required": true,
+            "schema": {"type": "string"}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Event stream",
+            "content": {
+              "text/event-stream": {}
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "Company": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string"},
+          "name": {"type": "string"},
+          "industry": {"type": "string"},
+          "size": {"type": "string"},
+          "createdAt": {"type": "string", "format": "date-time"}
+        }
+      },
+      "CompanyMetrics": {
+        "type": "object",
+        "properties": {
+          "sroi": {"type": "number"},
+          "vis": {"type": "number"},
+          "volunteers": {"type": "integer"},
+          "hoursLogged": {"type": "integer"},
+          "totalImpact": {"type": "number"}
+        }
+      },
+      "Report": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string"},
+          "title": {"type": "string"},
+          "companyId": {"type": "string"},
+          "status": {
+            "type": "string",
+            "enum": ["draft", "review", "approved", "locked"]
+          },
+          "template": {"type": "string"},
+          "createdAt": {"type": "string", "format": "date-time"},
+          "updatedAt": {"type": "string", "format": "date-time"}
+        }
+      },
+      "CreateReportRequest": {
+        "type": "object",
+        "required": ["title", "companyId", "template"],
+        "properties": {
+          "title": {"type": "string"},
+          "companyId": {"type": "string"},
+          "template": {
+            "type": "string",
+            "enum": ["quarterly", "annual", "investor"]
+          },
+          "narrative": {"type": "string"}
+        }
+      },
+      "ApprovalStatus": {
+        "type": "object",
+        "properties": {
+          "reportId": {"type": "string"},
+          "status": {"type": "string"},
+          "approver": {"type": "string"},
+          "timestamp": {"type": "string", "format": "date-time"}
+        }
+      },
+      "Evidence": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string"},
+          "type": {"type": "string"},
+          "filename": {"type": "string"},
+          "uploadedAt": {"type": "string", "format": "date-time"},
+          "uploadedBy": {"type": "string"}
+        }
+      },
+      "LineageGraph": {
+        "type": "object",
+        "properties": {
+          "nodes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {"type": "string"},
+                "type": {"type": "string"},
+                "label": {"type": "string"}
+              }
+            }
+          },
+          "edges": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "from": {"type": "string"},
+                "to": {"type": "string"}
+              }
+            }
+          }
+        }
+      },
+      "BenchmarkData": {
+        "type": "object",
+        "properties": {
+          "company": {"$ref": "#/components/schemas/CompanyMetrics"},
+          "cohortAverage": {"$ref": "#/components/schemas/CompanyMetrics"},
+          "cohortMedian": {"$ref": "#/components/schemas/CompanyMetrics"},
+          "percentiles": {
+            "type": "object",
+            "additionalProperties": {"type": "number"}
+          }
+        }
+      },
+      "ConsentPreferences": {
+        "type": "object",
+        "properties": {
+          "necessary": {"type": "boolean", "default": true},
+          "analytics": {"type": "boolean"},
+          "marketing": {"type": "boolean"}
+        }
+      },
+      "Pagination": {
+        "type": "object",
+        "properties": {
+          "page": {"type": "integer"},
+          "limit": {"type": "integer"},
+          "total": {"type": "integer"},
+          "totalPages": {"type": "integer"}
+        }
+      }
+    }
+  }
+}

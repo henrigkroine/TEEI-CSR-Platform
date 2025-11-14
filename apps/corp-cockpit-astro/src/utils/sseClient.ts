@@ -1,73 +1,58 @@
 /**
- * SSE Client with Exponential Backoff & Resume Support
+ * SSE (Server-Sent Events) Client for Real-Time Dashboard Updates
  *
- * Provides resilient real-time updates for dashboard widgets with:
- * - Exponential backoff on connection failures
- * - Automatic reconnection with max retry limits
- * - Last-event-ID resume logic to prevent data loss
- * - Company-scoped channel subscription
- * - Graceful fallback to polling on SSE failure
- *
- * @module sseClient
+ * Features:
+ * - Auto-reconnection with exponential backoff
+ * - Event queuing when offline
+ * - Integration with offline storage (IndexedDB)
+ * - Type-safe event handling
  */
 
-export interface SSEClientOptions {
-  /** Company ID for tenant-scoped events */
-  companyId: string;
-  /** Event channel to subscribe to (e.g., 'dashboard-updates', 'evidence-updates') */
-  channel: string;
-  /** Initial retry delay in milliseconds (default: 1000) */
-  initialRetryDelay?: number;
-  /** Maximum retry delay in milliseconds (default: 30000) */
-  maxRetryDelay?: number;
-  /** Maximum number of retry attempts (default: 10) */
-  maxRetries?: number;
-  /** Callback for connection state changes */
-  onConnectionChange?: (state: ConnectionState) => void;
-  /** Callback for received messages */
-  onMessage?: (event: SSEEvent) => void;
-  /** Callback for errors */
-  onError?: (error: SSEError) => void;
-}
+export type SSEEventType =
+  | 'metric_update'
+  | 'report_generated'
+  | 'evidence_added'
+  | 'approval_status_changed'
+  | 'user_activity'
+  | 'system_notification';
 
 export interface SSEEvent {
   id: string;
-  type: string;
-  data: unknown;
-  timestamp: string;
+  type: SSEEventType;
+  timestamp: number;
+  companyId: string;
+  data: any;
+  retry?: number;
 }
 
-export interface SSEError {
-  message: string;
-  code: string;
-  retryable: boolean;
-  retryAfter?: number;
+export interface SSEClientOptions {
+  url: string;
+  companyId: string;
+  onEvent?: (event: SSEEvent) => void;
+  onError?: (error: Error) => void;
+  onOpen?: () => void;
+  onClose?: () => void;
+  maxReconnectAttempts?: number;
+  reconnectInterval?: number;
 }
-
-export type ConnectionState =
-  | 'disconnected'
-  | 'connecting'
-  | 'connected'
-  | 'reconnecting'
-  | 'failed';
 
 export class SSEClient {
   private eventSource: EventSource | null = null;
   private options: Required<SSEClientOptions>;
-  private state: ConnectionState = 'disconnected';
-  private retryCount = 0;
-  private retryTimeoutId: ReturnType<typeof setTimeout> | null = null;
+  private reconnectAttempts = 0;
+  private reconnectTimeout: number | null = null;
+  private isConnected = false;
+  private messageBuffer: SSEEvent[] = [];
   private lastEventId: string | null = null;
-  private isManualClose = false;
 
   constructor(options: SSEClientOptions) {
     this.options = {
-      initialRetryDelay: 1000,
-      maxRetryDelay: 30000,
-      maxRetries: 10,
-      onConnectionChange: () => {},
-      onMessage: () => {},
+      maxReconnectAttempts: 10,
+      reconnectInterval: 1000,
+      onEvent: () => {},
       onError: () => {},
+      onOpen: () => {},
+      onClose: () => {},
       ...options,
     };
   }
@@ -75,48 +60,47 @@ export class SSEClient {
   /**
    * Connect to SSE endpoint
    */
-  public connect(): void {
-    if (this.state === 'connected' || this.state === 'connecting') {
-      console.warn('[SSEClient] Already connected or connecting');
+  connect(): void {
+    if (this.eventSource) {
+      console.warn('[SSE] Already connected');
       return;
     }
 
-    this.isManualClose = false;
-    this.setState('connecting');
-
     try {
-      // Build SSE URL with company scope and channel
-      const url = this.buildSSEUrl();
+      const url = new URL(this.options.url);
 
-      // Create EventSource with last event ID for resume support
-      this.eventSource = new EventSource(url);
+      // Add company ID and last event ID to URL
+      url.searchParams.set('companyId', this.options.companyId);
+      if (this.lastEventId) {
+        url.searchParams.set('lastEventId', this.lastEventId);
+      }
 
-      // Set up event listeners
-      this.eventSource.onopen = () => {
-        console.log('[SSEClient] Connected to SSE endpoint');
-        this.setState('connected');
-        this.retryCount = 0; // Reset retry counter on successful connection
-      };
+      this.eventSource = new EventSource(url.toString());
 
-      this.eventSource.onmessage = (event: MessageEvent) => {
-        this.handleMessage(event);
-      };
+      this.eventSource.addEventListener('open', this.handleOpen.bind(this));
+      this.eventSource.addEventListener('error', this.handleError.bind(this));
+      this.eventSource.addEventListener('message', this.handleMessage.bind(this));
 
-      this.eventSource.onerror = (error: Event) => {
-        this.handleError(error);
-      };
+      // Register custom event listeners
+      const eventTypes: SSEEventType[] = [
+        'metric_update',
+        'report_generated',
+        'evidence_added',
+        'approval_status_changed',
+        'user_activity',
+        'system_notification',
+      ];
 
-      // Listen for custom event types
-      this.eventSource.addEventListener('dashboard-update', (event: MessageEvent) => {
-        this.handleMessage(event);
+      eventTypes.forEach((type) => {
+        this.eventSource!.addEventListener(type, (e: MessageEvent) => {
+          this.handleTypedEvent(type, e);
+        });
       });
 
-      this.eventSource.addEventListener('evidence-update', (event: MessageEvent) => {
-        this.handleMessage(event);
-      });
-
+      console.log('[SSE] Connecting to:', url.toString());
     } catch (error) {
-      console.error('[SSEClient] Failed to create EventSource:', error);
+      console.error('[SSE] Connection error:', error);
+      this.options.onError(error as Error);
       this.scheduleReconnect();
     }
   }
@@ -124,247 +108,238 @@ export class SSEClient {
   /**
    * Disconnect from SSE endpoint
    */
-  public disconnect(): void {
-    this.isManualClose = true;
-
-    if (this.retryTimeoutId) {
-      clearTimeout(this.retryTimeoutId);
-      this.retryTimeoutId = null;
+  disconnect(): void {
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
+      this.reconnectTimeout = null;
     }
 
     if (this.eventSource) {
       this.eventSource.close();
       this.eventSource = null;
+      this.isConnected = false;
+      this.options.onClose();
+      console.log('[SSE] Disconnected');
     }
-
-    this.setState('disconnected');
-    console.log('[SSEClient] Disconnected from SSE endpoint');
   }
 
   /**
-   * Get current connection state
+   * Get connection status
    */
-  public getState(): ConnectionState {
-    return this.state;
+  get connected(): boolean {
+    return this.isConnected;
   }
 
   /**
-   * Get last received event ID
+   * Get buffered messages (for offline mode)
    */
-  public getLastEventId(): string | null {
-    return this.lastEventId;
+  getBufferedMessages(): SSEEvent[] {
+    return [...this.messageBuffer];
   }
 
   /**
-   * Build SSE endpoint URL with query parameters
+   * Clear message buffer
    */
-  private buildSSEUrl(): string {
-    const baseUrl = import.meta.env.PUBLIC_REPORTING_SERVICE_URL || '/api';
-    const params = new URLSearchParams({
-      companyId: this.options.companyId,
-      channel: this.options.channel,
-    });
+  clearBuffer(): void {
+    this.messageBuffer = [];
+  }
 
-    // Add last event ID for resume support
-    if (this.lastEventId) {
-      params.append('lastEventId', this.lastEventId);
+  /**
+   * Event Handlers
+   */
+
+  private handleOpen(): void {
+    console.log('[SSE] Connected');
+    this.isConnected = true;
+    this.reconnectAttempts = 0;
+    this.options.onOpen();
+
+    // Flush buffered messages
+    if (this.messageBuffer.length > 0) {
+      console.log(`[SSE] Flushing ${this.messageBuffer.length} buffered messages`);
+      this.messageBuffer.forEach((event) => {
+        this.options.onEvent(event);
+      });
+      this.messageBuffer = [];
     }
-
-    return `${baseUrl}/sse/stream?${params.toString()}`;
   }
 
-  /**
-   * Handle incoming SSE message
-   */
+  private handleError(error: Event): void {
+    console.error('[SSE] Error:', error);
+    this.isConnected = false;
+
+    const errorObj = new Error('SSE connection error');
+    this.options.onError(errorObj);
+
+    // EventSource automatically reconnects on error, but we'll handle manual reconnection
+    if (
+      this.eventSource &&
+      this.eventSource.readyState === EventSource.CLOSED
+    ) {
+      this.eventSource = null;
+      this.scheduleReconnect();
+    }
+  }
+
   private handleMessage(event: MessageEvent): void {
     try {
-      // Parse event data
       const data = JSON.parse(event.data);
-
-      // Store last event ID for resume
-      if (event.lastEventId) {
-        this.lastEventId = event.lastEventId;
-      }
-
       const sseEvent: SSEEvent = {
-        id: event.lastEventId || crypto.randomUUID(),
-        type: event.type || 'message',
-        data,
-        timestamp: new Date().toISOString(),
+        id: event.lastEventId || this.generateEventId(),
+        type: 'system_notification',
+        timestamp: Date.now(),
+        companyId: this.options.companyId,
+        data: data,
       };
 
-      // Emit to callback
-      this.options.onMessage(sseEvent);
-
+      this.lastEventId = sseEvent.id;
+      this.processEvent(sseEvent);
     } catch (error) {
-      console.error('[SSEClient] Failed to parse message:', error);
-      this.options.onError({
-        message: 'Failed to parse SSE message',
-        code: 'PARSE_ERROR',
-        retryable: false,
-      });
+      console.error('[SSE] Failed to parse message:', error);
     }
   }
 
-  /**
-   * Handle SSE connection errors
-   */
-  private handleError(error: Event): void {
-    console.error('[SSEClient] Connection error:', error);
+  private handleTypedEvent(type: SSEEventType, event: MessageEvent): void {
+    try {
+      const data = JSON.parse(event.data);
+      const sseEvent: SSEEvent = {
+        id: event.lastEventId || this.generateEventId(),
+        type: type,
+        timestamp: Date.now(),
+        companyId: this.options.companyId,
+        data: data,
+      };
 
-    // Don't reconnect if manually closed
-    if (this.isManualClose) {
+      this.lastEventId = sseEvent.id;
+      this.processEvent(sseEvent);
+    } catch (error) {
+      console.error(`[SSE] Failed to parse ${type} event:`, error);
+    }
+  }
+
+  private processEvent(event: SSEEvent): void {
+    // If offline, buffer the event
+    if (!navigator.onLine) {
+      console.log('[SSE] Offline, buffering event:', event.id);
+      this.messageBuffer.push(event);
+      this.saveToOfflineStorage(event);
       return;
     }
 
-    // Close existing connection
-    if (this.eventSource) {
-      this.eventSource.close();
-      this.eventSource = null;
-    }
+    // Process event immediately
+    this.options.onEvent(event);
 
-    const sseError: SSEError = {
-      message: 'SSE connection failed',
-      code: 'CONNECTION_ERROR',
-      retryable: this.retryCount < this.options.maxRetries,
-    };
-
-    this.options.onError(sseError);
-
-    // Schedule reconnection if retryable
-    if (sseError.retryable) {
-      this.scheduleReconnect();
-    } else {
-      this.setState('failed');
-    }
+    // Also save to offline storage for replay
+    this.saveToOfflineStorage(event);
   }
 
   /**
-   * Schedule reconnection with exponential backoff
+   * Reconnection logic
    */
+
   private scheduleReconnect(): void {
-    if (this.retryCount >= this.options.maxRetries) {
-      console.error('[SSEClient] Max retries exceeded');
-      this.setState('failed');
-      this.options.onError({
-        message: 'Max reconnection attempts exceeded',
-        code: 'MAX_RETRIES_EXCEEDED',
-        retryable: false,
-      });
+    if (this.reconnectAttempts >= this.options.maxReconnectAttempts) {
+      console.error('[SSE] Max reconnection attempts reached');
+      this.options.onError(new Error('Max reconnection attempts reached'));
       return;
     }
 
-    this.retryCount++;
-    this.setState('reconnecting');
-
-    // Calculate exponential backoff delay
-    const delay = Math.min(
-      this.options.initialRetryDelay * Math.pow(2, this.retryCount - 1),
-      this.options.maxRetryDelay
+    const delay = this.calculateBackoff();
+    console.log(
+      `[SSE] Scheduling reconnect (attempt ${this.reconnectAttempts + 1}/${
+        this.options.maxReconnectAttempts
+      }) in ${delay}ms`
     );
 
-    console.log(`[SSEClient] Reconnecting in ${delay}ms (attempt ${this.retryCount}/${this.options.maxRetries})`);
-
-    this.retryTimeoutId = setTimeout(() => {
+    this.reconnectTimeout = window.setTimeout(() => {
+      this.reconnectAttempts++;
       this.connect();
     }, delay);
   }
 
+  private calculateBackoff(): number {
+    // Exponential backoff with jitter
+    const exponentialDelay =
+      this.options.reconnectInterval * Math.pow(2, this.reconnectAttempts);
+    const jitter = Math.random() * 1000;
+    return Math.min(exponentialDelay + jitter, 30000); // Max 30 seconds
+  }
+
   /**
-   * Update connection state and notify callback
+   * Offline storage integration
    */
-  private setState(state: ConnectionState): void {
-    if (this.state !== state) {
-      this.state = state;
-      this.options.onConnectionChange(state);
+
+  private async saveToOfflineStorage(event: SSEEvent): Promise<void> {
+    try {
+      const db = await this.openIndexedDB();
+      const tx = db.transaction('events', 'readwrite');
+      const store = tx.objectStore('events');
+
+      await store.add({
+        ...event,
+        storedAt: Date.now(),
+      });
+
+      console.log('[SSE] Event saved to offline storage:', event.id);
+    } catch (error) {
+      console.error('[SSE] Failed to save to offline storage:', error);
     }
+  }
+
+  private openIndexedDB(): Promise<IDBDatabase> {
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open('teei-cockpit', 1);
+
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => resolve(request.result);
+
+      request.onupgradeneeded = (event) => {
+        const db = (event.target as IDBOpenDBRequest).result;
+
+        if (!db.objectStoreNames.contains('events')) {
+          const eventsStore = db.createObjectStore('events', {
+            keyPath: 'id',
+            autoIncrement: true,
+          });
+          eventsStore.createIndex('timestamp', 'timestamp', { unique: false });
+          eventsStore.createIndex('companyId', 'companyId', { unique: false });
+        }
+      };
+    });
+  }
+
+  /**
+   * Utilities
+   */
+
+  private generateEventId(): string {
+    return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   }
 }
 
 /**
- * Create SSE client instance
+ * Hook-like factory for creating SSE clients
  */
 export function createSSEClient(options: SSEClientOptions): SSEClient {
   return new SSEClient(options);
 }
 
 /**
- * Polling fallback for environments that don't support SSE
+ * Global SSE client instance (singleton pattern)
  */
-export class PollingFallback {
-  private intervalId: ReturnType<typeof setInterval> | null = null;
-  private options: {
-    companyId: string;
-    channel: string;
-    pollInterval: number;
-    onMessage: (event: SSEEvent) => void;
-    onError: (error: SSEError) => void;
-  };
+let globalSSEClient: SSEClient | null = null;
 
-  constructor(options: {
-    companyId: string;
-    channel: string;
-    pollInterval?: number;
-    onMessage: (event: SSEEvent) => void;
-    onError: (error: SSEError) => void;
-  }) {
-    this.options = {
-      pollInterval: 5000, // Default 5 seconds
-      ...options,
-    };
-  }
+export function getGlobalSSEClient(): SSEClient | null {
+  return globalSSEClient;
+}
 
-  /**
-   * Start polling
-   */
-  public start(): void {
-    if (this.intervalId) {
-      console.warn('[PollingFallback] Already polling');
-      return;
-    }
+export function setGlobalSSEClient(client: SSEClient): void {
+  globalSSEClient = client;
+}
 
-    console.log(`[PollingFallback] Starting polling (interval: ${this.options.pollInterval}ms)`);
-
-    this.intervalId = setInterval(async () => {
-      try {
-        const baseUrl = import.meta.env.PUBLIC_REPORTING_SERVICE_URL || '/api';
-        const url = `${baseUrl}/updates?companyId=${this.options.companyId}&channel=${this.options.channel}`;
-
-        const response = await fetch(url);
-
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
-        }
-
-        const data = await response.json();
-
-        // Emit as SSE event
-        this.options.onMessage({
-          id: crypto.randomUUID(),
-          type: 'poll',
-          data,
-          timestamp: new Date().toISOString(),
-        });
-
-      } catch (error) {
-        console.error('[PollingFallback] Poll failed:', error);
-        this.options.onError({
-          message: error instanceof Error ? error.message : 'Poll failed',
-          code: 'POLL_ERROR',
-          retryable: true,
-        });
-      }
-    }, this.options.pollInterval);
-  }
-
-  /**
-   * Stop polling
-   */
-  public stop(): void {
-    if (this.intervalId) {
-      clearInterval(this.intervalId);
-      this.intervalId = null;
-      console.log('[PollingFallback] Stopped polling');
-    }
+export function clearGlobalSSEClient(): void {
+  if (globalSSEClient) {
+    globalSSEClient.disconnect();
+    globalSSEClient = null;
   }
 }
