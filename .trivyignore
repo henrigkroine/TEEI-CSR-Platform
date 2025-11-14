@@ -1,0 +1,25 @@
+# Trivy Ignore File
+# ===================
+# This file contains CVE exceptions for known false positives or accepted risks.
+# Each exception MUST include:
+# 1. CVE ID
+# 2. Justification comment
+# 3. Expiration date (YYYY-MM-DD) for review
+# 4. Approved by (team/individual)
+#
+# Format: CVE-YYYY-NNNNN
+#
+# DO NOT add exceptions without proper security review!
+# All exceptions should be reviewed quarterly.
+
+# Example format (remove when adding real exceptions):
+# CVE-2024-12345
+# Justification: Affects Windows systems only, not applicable to Linux containers
+# Expiration: 2025-03-01
+# Approved by: Security Team
+
+# ===================
+# Active Exceptions
+# ===================
+
+# Add your exceptions below this line

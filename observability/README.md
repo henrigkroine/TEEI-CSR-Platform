@@ -72,13 +72,81 @@ Prometheus alerts are configured in `prometheus/rules.yaml`:
 
 ## Deployment
 
-### Deploy Prometheus Rules
+### Kubernetes Auto-Provisioning (Recommended)
+
+The platform now includes Grafana with auto-provisioned dashboards via Kubernetes manifests.
+
+**Dashboards are automatically loaded on Grafana startup** - no manual import required!
+
+#### What's Deployed
+
+Located in `k8s/base/observability/`:
+
+1. **grafana-provisioning.yaml** - ConfigMaps containing:
+   - Prometheus datasource configuration
+   - Dashboard provider configuration
+   - All 4 dashboard JSON files (auto-imported)
+
+2. **grafana-deployment.yaml** - Grafana Deployment with:
+   - Persistent storage (emptyDir, 1Gi)
+   - Volume mounts for dashboards and datasources
+   - Health checks (liveness/readiness probes)
+   - Resource limits (512Mi memory, 500m CPU)
+   - Security context (non-root user, read-only root filesystem)
+
+3. **grafana-service.yaml** - ClusterIP Service on port 3000
+
+4. **grafana-secret.yaml** - Admin credentials (should be sealed in production)
+
+#### Deployment
+
+Grafana is automatically deployed when applying the Kustomize overlays:
 
 ```bash
-kubectl apply -f observability/prometheus/rules.yaml
+# Deploy to staging
+kubectl apply -k k8s/overlays/staging/
+
+# Deploy to production
+kubectl apply -k k8s/overlays/production/
 ```
 
-### Import Grafana Dashboards
+#### Access Grafana UI
+
+**Staging**: `https://staging.teei.example.com/grafana`
+
+**Production**: `https://teei.example.com/grafana`
+
+Default credentials:
+- **Username**: `admin`
+- **Password**: `admin123` (change via sealed secrets in production!)
+
+#### Dashboard Auto-Loading
+
+Dashboards are loaded automatically via the following mechanism:
+
+1. **ConfigMap** `grafana-dashboards` contains all 4 dashboard JSONs as data keys
+2. **Volume mount** at `/etc/grafana/dashboards` exposes the ConfigMap to Grafana
+3. **Dashboard provider** configuration tells Grafana to scan `/etc/grafana/dashboards`
+4. **On startup**, Grafana imports all dashboards into the "TEEI" folder
+
+No manual import needed - dashboards appear immediately after pod starts!
+
+#### Updating Dashboards
+
+To update dashboards after deployment:
+
+```bash
+# Edit the dashboard JSON in observability/grafana/dashboards/
+# Then re-apply the manifests
+kubectl apply -k k8s/overlays/staging/
+
+# Restart Grafana to reload dashboards
+kubectl rollout restart deployment/grafana -n teei-staging
+```
+
+### Manual Deployment (Legacy)
+
+If not using Kubernetes auto-provisioning:
 
 1. **Via UI**:
    - Open Grafana
@@ -92,16 +160,11 @@ kubectl apply -f observability/prometheus/rules.yaml
      -n monitoring
    ```
 
-3. **Via Grafana Operator** (if using):
-   ```yaml
-   apiVersion: integreatly.org/v1alpha1
-   kind: GrafanaDashboard
-   metadata:
-     name: teei-http-overview
-   spec:
-     json: |
-       <dashboard JSON content>
-   ```
+### Deploy Prometheus Rules
+
+```bash
+kubectl apply -f observability/prometheus/rules.yaml
+```
 
 ## Metrics Collection
 
@@ -116,12 +179,32 @@ annotations:
 
 ## Viewing Dashboards
 
-Once deployed:
+### Via Ingress (Recommended)
 
-1. Access Grafana: `kubectl port-forward -n monitoring svc/grafana 3000:80`
-2. Open browser: `http://localhost:3000`
-3. Default credentials: `admin` / `admin` (change on first login)
-4. Navigate to Dashboards → Browse
+Access Grafana directly through the platform ingress:
+
+- **Staging**: `https://staging.teei.example.com/grafana`
+- **Production**: `https://teei.example.com/grafana`
+
+Login with:
+- **Username**: `admin`
+- **Password**: `admin123` (default - change in production!)
+
+All 4 dashboards are available in the "TEEI" folder immediately after login.
+
+### Via Port Forward (Development)
+
+For local testing or development:
+
+```bash
+# Staging
+kubectl port-forward -n teei-staging svc/grafana 3000:3000
+
+# Production
+kubectl port-forward -n teei-production svc/grafana 3000:3000
+```
+
+Then open browser: `http://localhost:3000/grafana`
 
 ## Custom Metrics
 

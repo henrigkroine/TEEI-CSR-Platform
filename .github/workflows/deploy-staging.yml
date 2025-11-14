@@ -49,6 +49,54 @@ jobs:
           kubectl cluster-info
           kubectl get nodes
 
+      - name: Verify secrets exist
+        run: |
+          echo "Checking for required secrets in ${KUBE_NAMESPACE}..."
+
+          # List of required secrets
+          REQUIRED_SECRETS=(
+            "teei-api-gateway-secrets"
+            "teei-unified-profile-secrets"
+            "teei-q2q-ai-secrets"
+            "teei-analytics-secrets"
+            "teei-discord-bot-secrets"
+            "teei-corp-cockpit-secrets"
+          )
+
+          MISSING_SECRETS=()
+
+          for secret in "${REQUIRED_SECRETS[@]}"; do
+            if ! kubectl get secret "${secret}" -n ${KUBE_NAMESPACE} &>/dev/null; then
+              MISSING_SECRETS+=("${secret}")
+              echo "❌ Missing: ${secret}"
+            else
+              echo "✅ Found: ${secret}"
+            fi
+          done
+
+          if [ ${#MISSING_SECRETS[@]} -gt 0 ]; then
+            echo ""
+            echo "⚠️  WARNING: ${#MISSING_SECRETS[@]} secret(s) not found in cluster!"
+            echo "Deployments may fail if these secrets are required."
+            echo ""
+            echo "To create secrets, choose one of these methods:"
+            echo "1. Sealed Secrets: See k8s/base/secrets/SEALED_SECRETS.md"
+            echo "2. Vault: See k8s/base/secrets/VAULT_INTEGRATION.md"
+            echo "3. SOPS: See k8s/base/secrets/SOPS_INTEGRATION.md"
+            echo ""
+            echo "For manual creation (not recommended for production):"
+            for secret in "${MISSING_SECRETS[@]}"; do
+              echo "  kubectl create secret generic ${secret} -n ${KUBE_NAMESPACE} --from-literal=KEY=VALUE"
+            done
+
+            # Don't fail the workflow, just warn
+            # Uncomment the next line to make this a hard requirement
+            # exit 1
+          else
+            echo ""
+            echo "✅ All required secrets are present"
+          fi
+
       - name: Update image tags
         run: |
           cd k8s/overlays/staging
@@ -73,12 +121,91 @@ jobs:
             ghcr.io/${{ github.repository_owner }}/teei-reporting:${IMAGE_TAG} \
             ghcr.io/${{ github.repository_owner }}/teei-corp-cockpit:${IMAGE_TAG}
 
+      - name: Apply sealed secrets (if using Sealed Secrets)
+        run: |
+          echo "Checking for sealed secrets..."
+
+          SEALED_SECRETS_DIR="k8s/overlays/staging/sealed-secrets"
+
+          if [ -d "${SEALED_SECRETS_DIR}" ] && [ -n "$(ls -A ${SEALED_SECRETS_DIR}/*.yaml 2>/dev/null)" ]; then
+            echo "Found sealed secrets, applying..."
+            kubectl apply -f ${SEALED_SECRETS_DIR}/ -n ${KUBE_NAMESPACE} || true
+
+            # Wait for sealed secrets controller to decrypt
+            echo "Waiting 10 seconds for sealed secrets to be decrypted..."
+            sleep 10
+          else
+            echo "No sealed secrets found at ${SEALED_SECRETS_DIR}"
+            echo "Skipping sealed secrets application"
+          fi
+
       - name: Run database migrations (gate)
         run: |
-          echo "Running database migrations..."
-          # TODO: Add actual migration command
-          # kubectl run -n ${KUBE_NAMESPACE} migrate-job --image=... --command -- pnpm db:migrate
-          echo "Migrations complete (placeholder)"
+          echo "=========================================="
+          echo "Running Database Migrations"
+          echo "=========================================="
+
+          # Delete any existing migration job (from previous runs)
+          kubectl delete job db-migration -n ${KUBE_NAMESPACE} --ignore-not-found=true
+
+          # Wait for job deletion to complete
+          echo "Waiting for previous job cleanup..."
+          sleep 5
+
+          # Apply the migration job manifest
+          echo "Creating migration job..."
+          kubectl apply -f k8s/jobs/db-migration.yaml -n ${KUBE_NAMESPACE}
+
+          # Wait for job to start
+          echo "Waiting for job to start..."
+          kubectl wait --for=condition=Ready pod -l app=db-migration -n ${KUBE_NAMESPACE} --timeout=60s || {
+            echo "⚠️  Job pod not ready yet, checking status..."
+            kubectl get pods -l app=db-migration -n ${KUBE_NAMESPACE}
+          }
+
+          # Stream job logs
+          echo ""
+          echo "Migration job logs:"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          kubectl logs -f job/db-migration -n ${KUBE_NAMESPACE} --all-containers=true || {
+            echo "⚠️  Could not stream logs, will check pod status..."
+          }
+
+          # Wait for job to complete (max 10 minutes)
+          echo ""
+          echo "Waiting for migration job to complete..."
+          kubectl wait --for=condition=Complete job/db-migration -n ${KUBE_NAMESPACE} --timeout=600s || {
+            echo "❌ Migration job failed or timed out!"
+            echo ""
+            echo "Job status:"
+            kubectl describe job db-migration -n ${KUBE_NAMESPACE}
+            echo ""
+            echo "Pod logs:"
+            kubectl logs job/db-migration -n ${KUBE_NAMESPACE} --all-containers=true --tail=100
+            echo ""
+            echo "⚠️  DEPLOYMENT ABORTED - Fix migrations and retry"
+            exit 1
+          }
+
+          # Check if job succeeded
+          JOB_STATUS=$(kubectl get job db-migration -n ${KUBE_NAMESPACE} -o jsonpath='{.status.conditions[?(@.type=="Complete")].status}')
+          if [ "$JOB_STATUS" != "True" ]; then
+            echo "❌ Migration job did not complete successfully"
+            kubectl describe job db-migration -n ${KUBE_NAMESPACE}
+            exit 1
+          fi
+
+          echo ""
+          echo "✅ Database migrations completed successfully"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+          # Show migration summary
+          echo ""
+          echo "Migration job summary:"
+          kubectl describe job db-migration -n ${KUBE_NAMESPACE} | grep -A 5 "Status:"
+
+          echo ""
+          echo "Ready to deploy services..."
 
       - name: Render manifests
         run: |
@@ -103,16 +230,66 @@ jobs:
 
       - name: Run smoke tests
         run: |
-          echo "Running smoke tests..."
+          echo "Running comprehensive smoke tests..."
+          echo "Testing all 16 services + critical E2E paths"
+          echo ""
 
-          # Test API Gateway health
-          GATEWAY_URL=$(kubectl get svc -n ${KUBE_NAMESPACE} staging-teei-api-gateway -o jsonpath='{.status.loadBalancer.ingress[0].ip}' || echo "localhost")
-          echo "Testing Gateway at ${GATEWAY_URL}"
+          # Export environment variables for the smoke test script
+          export KUBE_NAMESPACE=${KUBE_NAMESPACE}
+          export MAX_RETRIES=3
+          export RETRY_DELAY=10
+          export TIMEOUT=300
 
-          # TODO: Add actual smoke tests
-          # curl -f http://${GATEWAY_URL}/health || exit 1
+          # Run the smoke test script
+          if ./scripts/smoke-tests.sh; then
+            echo ""
+            echo "✅ All smoke tests passed successfully!"
+            echo ""
+          else
+            echo ""
+            echo "❌ Smoke tests failed!"
+            echo ""
+            echo "Deployment will be rolled back..."
+            echo ""
+            echo "Fetching recent events for debugging:"
+            kubectl get events -n ${KUBE_NAMESPACE} --sort-by='.lastTimestamp' | tail -20
+            echo ""
+            echo "Pod status:"
+            kubectl get pods -n ${KUBE_NAMESPACE} -o wide
+            exit 1
+          fi
 
-          echo "Smoke tests passed (placeholder)"
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          echo "================================================================"
+          echo "   SMOKE TESTS FAILED - INITIATING ROLLBACK"
+          echo "================================================================"
+          echo ""
+          echo "Rolling back all deployments to previous revision..."
+          echo ""
+
+          # Get all deployments in the namespace
+          DEPLOYMENTS=$(kubectl get deployments -n ${KUBE_NAMESPACE} -o jsonpath='{.items[*].metadata.name}')
+
+          # Rollback each deployment
+          for deployment in $DEPLOYMENTS; do
+            echo "Rolling back: ${deployment}"
+            kubectl rollout undo deployment/${deployment} -n ${KUBE_NAMESPACE} || true
+          done
+
+          echo ""
+          echo "Waiting for rollback to complete..."
+          kubectl rollout status deployment -n ${KUBE_NAMESPACE} --timeout=5m || true
+
+          echo ""
+          echo "Rollback completed. Checking pod status:"
+          kubectl get pods -n ${KUBE_NAMESPACE}
+
+          echo ""
+          echo "================================================================"
+          echo "   ROLLBACK COMPLETE - DEPLOYMENT FAILED"
+          echo "================================================================"
 
       - name: Verify health checks
         run: |
@@ -140,6 +317,9 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Deployed Services" >> $GITHUB_STEP_SUMMARY
           kubectl get deployments -n ${KUBE_NAMESPACE} -o wide >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Secrets Status" >> $GITHUB_STEP_SUMMARY
+          kubectl get secrets -n ${KUBE_NAMESPACE} | grep "teei-" >> $GITHUB_STEP_SUMMARY || echo "No TEEI secrets found" >> $GITHUB_STEP_SUMMARY
 
       - name: Notify on failure
         if: failure()

@@ -1042,3 +1042,470 @@ cacheMiddleware({
 **Orchestrator**: Worker 2 Backend Lead (Claude)
 **Last Updated**: 2025-11-14
 
+---
+
+# Worker 4: Staging Pilot Launch Orchestration
+
+**Status**: 🚀 Active - Deployment & Launch Phase
+**Branch**: `claude/orchestrate-staging-pilot-launch-017TLVz3xqXQdQGSRkTqVP6L`
+**Started**: 2025-11-14
+**Mission**: Ship staging→pilot with CI/CD, K8s, observability, and pilot features
+**Target**: Pilot-ready platform with runbooks, monitoring, and enterprise features
+
+---
+
+## Current State Assessment
+
+### Infrastructure Inventory ✅
+
+| Component | Status | Details |
+|-----------|--------|---------|
+| **Dockerfiles** | ✅ Complete | 16 services (corp-cockpit + 15 backend) |
+| **CI/CD Workflows** | ✅ Strong | build-images.yml with SBOM/Cosign, deploy-staging/production |
+| **K8s Base Manifests** | ✅ Complete | All 16 services with Deploy/Service/HPA/ConfigMap |
+| **Kustomize Overlays** | ✅ Present | dev/staging/production overlays |
+| **Observability** | ⚠️ Partial | Prometheus rules + 4 Grafana dashboards, missing tracing/Sentry |
+| **Ingress/TLS** | ❌ Missing | No Ingress resources for external access |
+| **Secrets Management** | ⚠️ Partial | Vault dir exists, needs K8s integration |
+| **DB Migrations** | ❌ Stubbed | deploy-staging.yml line 76-81 is TODO |
+| **Smoke Tests** | ❌ Placeholder | deploy-staging.yml line 104-115 is placeholder |
+| **Rollback Workflow** | ❌ Missing | No rollback automation |
+| **Runbooks** | ❌ Missing | No /docs/runbooks/ or /docs/ops/ |
+| **SSO UI** | ❌ Missing | Backend ready, no cockpit UI |
+| **Impact-In Monitor** | ❌ Missing | Delivery tracking UI not implemented |
+| **Share Links** | ❌ Missing | Saved views exist, share links pending |
+
+### Completion by Slice
+
+| Slice | Focus | Current % | Gaps |
+|-------|-------|-----------|------|
+| **S1: CI/CD** | Build/Push/SBOM/Sign | 90% | Verify signing, optimize cache |
+| **S2: K8s Deploy** | Manifests/Ingress/TLS | 75% | Add Ingress, TLS certs, NetworkPolicies |
+| **S3: GitOps** | Workflows/Migrations/Rollback | 60% | Automate migrations, add rollback job, real smoke tests |
+| **S4: Observability** | Metrics/Traces/Alerts | 50% | Add Jaeger/Tempo, Sentry, define SLOs, import dashboards |
+| **S5: SSO** | OIDC/Admin Console | 30% | Wire OIDC UI, admin console for API keys/roles |
+| **S6: Pilot Features** | Saved Views/Share Links/Monitor | 50% | Impact-In Monitor UI, share links with TTL, A11y CI |
+| **S7: Runbooks** | Deploy/Rollback/DR docs | 10% | Write all runbooks and DR procedures |
+
+---
+
+## Mission Slices (7 PRs)
+
+### S1: CI/CD Build & Publish 🏗️
+
+**Status**: ✅ 90% Complete
+**Lead**: ci-cd-yamlist, dockerfile-factory, sbom-signer
+**Owner**: DevOps Lead
+
+**Current State**:
+- ✅ Dockerfiles for all 16 services
+- ✅ build-images.yml with SBOM generation (Syft)
+- ✅ Cosign signing with keyless mode
+- ✅ Multi-stage builds with layer caching
+- ✅ Change detection (only build modified services)
+
+**Remaining Work**:
+- [ ] Verify Cosign signatures in staging deploy (admission control)
+- [ ] Optimize Docker layer caching (review build-args)
+- [ ] Add vulnerability scanning (Trivy/Grype) gate
+- [ ] Document image tagging strategy for releases
+
+**Acceptance**:
+- ✅ All images build and push to ghcr.io
+- ✅ SBOM artifacts uploaded
+- ✅ Images signed with Cosign
+- [ ] Vulnerability scan results < HIGH threshold
+- [ ] Build time < 10 min for full rebuild
+
+**Agent Assignment**:
+- **Agent 1 (sbom-signer)**: Add Trivy scan job, fail on HIGH/CRITICAL vulns
+- **Agent 2 (ci-cd-yamlist)**: Add signature verification step to deploy-staging.yml
+
+---
+
+### S2: Staging Kubernetes Deploy 🚀
+
+**Status**: ⚠️ 75% Complete
+**Lead**: k8s-deployer, helm-kustomizer, secret-injector
+**Owner**: Platform Engineering Lead
+
+**Current State**:
+- ✅ Base manifests for all 16 services (Deploy/Service/HPA/ConfigMap)
+- ✅ Kustomize overlays for dev/staging/production
+- ✅ NetworkPolicy for api-gateway
+- ✅ HPA configured for all services
+- ❌ No Ingress resources
+- ❌ TLS certificates not configured
+- ⚠️ Secrets referenced but not managed
+- ⚠️ No PostgreSQL/NATS/ClickHouse stateful workloads in K8s
+
+**Remaining Work**:
+- [ ] Add Ingress resource with TLS for staging domain (staging.teei.example.com)
+- [ ] Create Secret manifests for DB credentials, API keys, OAuth secrets
+- [ ] Add NetworkPolicies for all services (not just gateway)
+- [ ] Create K8s manifests for PostgreSQL (or use managed service)
+- [ ] Create K8s manifests for NATS JetStream
+- [ ] Create K8s manifests for ClickHouse (or use managed service)
+- [ ] Configure cert-manager for automatic TLS renewal
+- [ ] Add PodDisruptionBudgets for critical services
+- [ ] Review resource requests/limits for staging workload
+
+**Acceptance**:
+- [ ] All 16 services deploy cleanly to staging namespace
+- [ ] Ingress serves traffic with valid TLS certificate
+- [ ] Secrets mounted from Vault or K8s Secrets
+- [ ] NetworkPolicies enforce least-privilege communication
+- [ ] HPAs scale services under load
+- [ ] PodDisruptionBudgets prevent disruption during rollouts
+- [ ] Stateful services (DB, NATS, ClickHouse) running and healthy
+
+**Agent Assignment**:
+- **Agent 3 (k8s-deployer)**: Create Ingress manifests with TLS, add NetworkPolicies
+- **Agent 4 (helm-kustomizer)**: Add Secret overlays for staging/production
+- **Agent 5 (secret-injector)**: Wire Vault CSI driver or Sealed Secrets
+- **Agent 6 (k8s-deployer)**: Create PostgreSQL/NATS/ClickHouse StatefulSets or Helm charts
+
+---
+
+### S3: GitOps/Release Management 🔄
+
+**Status**: ⚠️ 60% Complete
+**Lead**: gitops-operator, migration-automator, smoke-tester, rollback-engineer
+**Owner**: Release Engineering Lead
+
+**Current State**:
+- ✅ deploy-staging.yml exists with kubectl apply
+- ✅ deploy-production.yml exists with manual gate
+- ⚠️ DB migration step is TODO (line 76-81 in deploy-staging.yml)
+- ⚠️ Smoke tests are placeholder (line 104-115 in deploy-staging.yml)
+- ❌ No rollback workflow
+- ❌ No ArgoCD or Flux setup
+
+**Remaining Work**:
+- [ ] Implement DB migration job in Kubernetes (init container or Job)
+- [ ] Add migration rollback script
+- [ ] Replace placeholder smoke tests with real HTTP health checks
+- [ ] Create rollback workflow (one-click revert to previous version)
+- [ ] Add post-deploy E2E test suite (Playwright or k6)
+- [ ] Document GitOps strategy (ArgoCD vs direct kubectl vs Flux)
+- [ ] Add deployment status notifications (Slack/Discord)
+
+**Acceptance**:
+- [ ] DB migrations run automatically on deploy
+- [ ] Failed migrations trigger rollback
+- [ ] Smoke tests verify /health endpoints for all services
+- [ ] Rollback workflow can revert to previous image tags in < 5 min
+- [ ] Post-deploy E2E tests pass (auth, widgets, reports)
+- [ ] Deployment status posted to team channel
+
+**Agent Assignment**:
+- **Agent 7 (migration-automator)**: Create K8s Job for DB migrations with rollback
+- **Agent 8 (smoke-tester)**: Implement real smoke tests (curl health endpoints)
+- **Agent 9 (rollback-engineer)**: Create rollback workflow (.github/workflows/rollback.yml)
+- **Agent 10 (gitops-operator)**: Document GitOps strategy, evaluate ArgoCD
+
+---
+
+### S4: Observability & SLOs 📊
+
+**Status**: ⚠️ 50% Complete
+**Lead**: grafana-dashboards, alerting-rulesmith, jaeger-tempo-setup, sentry-wirer, log-agg-operator
+**Owner**: Observability Lead
+
+**Current State**:
+- ✅ Prometheus rules.yaml with 12 alert rules
+- ✅ 4 Grafana dashboards (HTTP, NATS, PostgreSQL, ClickHouse)
+- ✅ Services expose /metrics endpoints
+- ❌ Grafana dashboards not auto-imported to staging
+- ❌ No distributed tracing (Jaeger/Tempo)
+- ❌ No error tracking (Sentry)
+- ❌ No SLO definitions (uptime, latency targets)
+- ❌ No log aggregation (Loki/ELK)
+
+**Remaining Work**:
+- [ ] Auto-import Grafana dashboards via ConfigMap or provisioning
+- [ ] Deploy Jaeger or Tempo for distributed tracing
+- [ ] Add Sentry DSN to all services, configure source maps for corp-cockpit
+- [ ] Define SLOs per service (e.g., 99.5% uptime, p95 < 500ms)
+- [ ] Create SLO dashboard in Grafana with burn rate alerts
+- [ ] Deploy Loki or ELK for centralized logs
+- [ ] Add OTel trace instrumentation to critical paths (Q2Q, Impact-In, Reporting)
+- [ ] Configure alert routing to PagerDuty/Slack
+
+**Acceptance**:
+- [ ] All 4 dashboards visible in Grafana on staging
+- [ ] Traces visible in Jaeger/Tempo for multi-service requests
+- [ ] Sentry captures errors with source maps and release tracking
+- [ ] SLO dashboard shows current SLI vs target for all services
+- [ ] Burn rate alerts fire before SLO breach
+- [ ] Logs searchable in Loki/Kibana
+- [ ] Alert notifications delivered to team channel
+
+**Agent Assignment**:
+- **Agent 11 (grafana-dashboards)**: Create ConfigMap/provisioning for dashboard import
+- **Agent 12 (jaeger-tempo-setup)**: Deploy Jaeger or Tempo, add OTel SDKs
+- **Agent 13 (sentry-wirer)**: Add Sentry DSN, configure releases and source maps
+- **Agent 14 (alerting-rulesmith)**: Define SLOs, create burn rate alerts
+- **Agent 15 (log-agg-operator)**: Deploy Loki with Promtail or Fluent Bit
+
+---
+
+### S5: SSO & Tenant Onboarding 🔐
+
+**Status**: ⚠️ 30% Complete
+**Lead**: sso-configurator, tenant-onboarding
+**Owner**: Identity & Access Lead
+
+**Current State**:
+- ✅ Backend RBAC middleware (tenantScope.ts, rbac.ts)
+- ✅ Database schema for company_users, company_api_keys (from Phase D)
+- ❌ No OIDC configuration UI in cockpit
+- ❌ No admin console for API key management
+- ❌ No tenant role mapping UI
+- ❌ SSO flows not tested end-to-end in staging
+
+**Remaining Work**:
+- [ ] Add OIDC configuration page in cockpit admin console (Google, Azure AD)
+- [ ] Build API key management UI (create, revoke, rotate)
+- [ ] Build role assignment UI (assign roles to users per tenant)
+- [ ] Implement end-to-end SSO login flow (OIDC redirect, JWT issuance)
+- [ ] Add tenant onboarding wizard (create company, add users, set features)
+- [ ] Test SSO with real Google/Azure AD tenant
+- [ ] Document SSO setup for customers
+
+**Acceptance**:
+- [ ] Cockpit admin can configure OIDC provider (client ID, secret, issuer URL)
+- [ ] Admin can create/revoke API keys via UI
+- [ ] Admin can assign roles (admin, company_user, participant) to users
+- [ ] SSO login works end-to-end in staging (Google/Azure)
+- [ ] Tenant onboarding wizard creates company + users in one flow
+- [ ] Role mapping enforced by backend (403 on unauthorized access)
+
+**Agent Assignment**:
+- **Agent 16 (sso-configurator)**: Build OIDC config UI page in cockpit
+- **Agent 17 (tenant-onboarding)**: Build tenant onboarding wizard and API key management UI
+
+---
+
+### S6: Cockpit Pilot Features 🎯
+
+**Status**: ⚠️ 50% Complete
+**Lead**: impact-monitor-ui, saved-views-engine, theme-tokenizer, a11y-auditor, lighthouse-ci
+**Owner**: Product Features Lead
+
+**Current State** (from Phase C):
+- ✅ Saved Views implemented (save/load dashboard filters)
+- ✅ Evidence Explorer with lineage
+- ✅ Gen-AI reports with citations
+- ✅ PDF export
+- ⚠️ Share Links with TTL (backend ready, UI missing)
+- ❌ Impact-In Delivery Monitor UI (0% per plan)
+- ⚠️ Theming/white-label (partial)
+- ⚠️ A11y CI automation (a11y.yml exists, needs verification)
+
+**Remaining Work**:
+- [ ] Build Impact-In Delivery Monitor UI (delivery history, status, replay button)
+- [ ] Build Share Link generation UI (modal with TTL picker, copy link)
+- [ ] Add Boardroom Mode (large typography, auto-refresh, full-screen)
+- [ ] Complete tenant theming (logo upload, color picker, PDF branding)
+- [ ] Verify A11y CI job runs and fails on violations
+- [ ] Add Lighthouse CI performance budgets (LCP ≤ 2.0s, INP ≤ 200ms)
+- [ ] Test saved views, share links, and theming in staging
+
+**Acceptance**:
+- [ ] Impact-In Monitor page displays delivery history per platform (Benevity/Goodera/Workday)
+- [ ] Replay button retries failed deliveries
+- [ ] Share Links modal generates signed URLs with TTL (1 hour, 1 day, 1 week)
+- [ ] Share links work read-only and expire correctly
+- [ ] Boardroom mode displays correctly with large text
+- [ ] Tenant theming applies to cockpit and PDF exports
+- [ ] A11y CI job passes (no WCAG 2.2 AA violations)
+- [ ] Lighthouse CI enforces performance budgets
+
+**Agent Assignment**:
+- **Agent 18 (impact-monitor-ui)**: Build Impact-In Monitor page
+- **Agent 19 (saved-views-engine)**: Build Share Links UI and signed URL generation
+- **Agent 20 (theme-tokenizer)**: Complete tenant theming (logo, colors, PDF)
+- **Agent 21 (a11y-auditor)**: Verify A11y CI with axe/Pa11y, fix violations
+- **Agent 22 (lighthouse-ci)**: Add Lighthouse CI job, set performance budgets
+
+---
+
+### S7: Launch Runbooks & DR 📚
+
+**Status**: ❌ 10% Complete
+**Lead**: runbook-scribe, release-manager, postlaunch-validator
+**Owner**: Operations Lead
+
+**Current State**:
+- ❌ No /docs/runbooks/ directory
+- ❌ No deployment runbooks
+- ❌ No rollback procedures
+- ❌ No DR (Disaster Recovery) documentation
+- ❌ No on-call rotation guide
+
+**Remaining Work**:
+- [ ] Create /docs/runbooks/ directory structure
+- [ ] Write deployment runbook (step-by-step staging/production deploy)
+- [ ] Write rollback runbook (revert failed deploy in < 5 min)
+- [ ] Write DR runbook (backup cadence, restore procedure, RTO/RPO targets)
+- [ ] Write incident response playbook (service down, DB failure, NATS lag)
+- [ ] Write on-call guide (alert interpretation, escalation paths)
+- [ ] Write monitoring guide (dashboard interpretation, SLO tracking)
+- [ ] Write security incident runbook (data breach, unauthorized access)
+- [ ] Document backup/restore drills (test restore quarterly)
+
+**Acceptance**:
+- [ ] Deployment runbook covers all steps from build to smoke tests
+- [ ] Rollback runbook can be followed by any engineer in < 5 min
+- [ ] DR runbook specifies RTO (4 hours), RPO (1 hour), backup cadence (daily)
+- [ ] Backup restore drill documented with screenshots
+- [ ] Incident response playbook covers top 10 scenarios
+- [ ] On-call guide includes alert severity matrix and escalation paths
+- [ ] All runbooks reviewed by 2+ engineers
+
+**Agent Assignment**:
+- **Agent 23 (runbook-scribe)**: Write deployment, rollback, DR runbooks
+- **Agent 24 (runbook-scribe)**: Write incident response, monitoring, security runbooks
+- **Agent 25 (release-manager)**: Write release process docs, CHANGELOG
+- **Agent 26 (postlaunch-validator)**: Create pilot readiness checklist, validation report
+
+---
+
+## Additional Agents (7 agents for specialized tasks)
+
+**Performance & Load Testing** (3 agents):
+- **Agent 27 (perf-k6-runner)**: Create k6 load test scripts, set budgets (1000 req/s, p95 < 500ms)
+- **Agent 28 (sse-simulator)**: Load test SSE stability (100 concurrent connections, 1000 events)
+- **Agent 29 (chaos-lite)**: Run chaos experiments in staging (pod kill, NATS lag injection)
+
+**Security & Compliance** (2 agents):
+- **Agent 30 (security-pen-tester)**: Run OWASP ZAP scan, dependency scans (npm audit, Snyk)
+- **Agent 31 (compliance-auditor)**: Verify audit logs, GDPR DSR flows, data retention policies
+
+**Additional Support** (2 agents):
+- **Agent 32 (release-manager)**: Draft CHANGELOG, tag releases, coordinate staging→pilot cutover
+- **Agent 33 (postlaunch-validator)**: Execute pilot readiness checklist, create validation report
+
+---
+
+## Execution Plan
+
+### Week 1: Foundation & Core Deploy (S1-S3)
+**Days 1-2**: S1 - CI/CD verification, Trivy scans
+**Days 3-4**: S2 - Add Ingress/TLS, Secrets, NetworkPolicies
+**Days 5-7**: S3 - DB migrations, rollback workflow, real smoke tests
+
+### Week 2: Observability & Identity (S4-S5)
+**Days 8-10**: S4 - Jaeger/Tempo, Sentry, SLOs, dashboard import
+**Days 11-14**: S5 - OIDC UI, admin console, tenant onboarding
+
+### Week 3: Pilot Features & Docs (S6-S7)
+**Days 15-17**: S6 - Impact-In Monitor UI, Share Links, theming, A11y/Lighthouse CI
+**Days 18-21**: S7 - Runbooks, DR docs, release process
+
+### Week 4: Validation & Launch
+**Days 22-24**: Load testing, security scans, chaos experiments
+**Days 25-26**: DR drill, backup/restore test
+**Days 27-28**: Pilot readiness validation, cutover rehearsal
+
+---
+
+## Communication & Coordination
+
+### Daily Sync
+- **Time**: 09:00 UTC (async via Discord/Slack)
+- **Format**: Standup bot (yesterday, today, blockers)
+- **Participants**: All 5 team leads
+
+### Blocker Escalation
+- **Critical**: DM Tech Lead immediately
+- **Blocking**: Tag lead in shared doc within 1 hour
+- **Minor**: Resolve within team, log in MULTI_AGENT_PLAN.md
+
+### PR Strategy
+- **One PR per slice** (S1-S7 = 7 PRs)
+- **PR Template**: Checklist from acceptance criteria + screenshots
+- **Review**: 2 approvals required (1 lead + 1 peer)
+- **Merge**: Squash merge to `develop`, then merge to `main` for production
+
+---
+
+## Success Criteria (Pilot Readiness)
+
+### P0 (Must-Have)
+- [ ] All 16 services deploy to staging with valid TLS
+- [ ] CI builds/pushes images with SBOM/Cosign signatures
+- [ ] DB migrations run automatically on deploy
+- [ ] Rollback workflow tested and documented
+- [ ] Smoke tests pass (all /health endpoints green)
+- [ ] Observability: Prometheus scraping, 4 dashboards visible, traces in Jaeger, errors in Sentry
+- [ ] SSO works end-to-end (Google/Azure)
+- [ ] Tenant isolation enforced (RBAC + DB scoping)
+
+### P1 (Should-Have)
+- [ ] Impact-In Monitor UI displays delivery history + replay works
+- [ ] Share Links work with TTL enforcement
+- [ ] Tenant theming applies to cockpit + PDF
+- [ ] A11y CI passes, Lighthouse CI enforces budgets
+- [ ] SLOs defined with burn rate alerts
+- [ ] Runbooks complete (deploy, rollback, DR, incident response)
+- [ ] Backup/restore drill documented
+
+### P2 (Nice-to-Have)
+- [ ] Load tests pass (1000 req/s, p95 < 500ms)
+- [ ] Chaos experiments run in staging
+- [ ] ArgoCD/Flux evaluated for GitOps
+- [ ] Log aggregation (Loki/ELK) deployed
+
+---
+
+## Risks & Mitigation
+
+| Risk | Impact | Mitigation |
+|------|--------|------------|
+| TLS cert provisioning delays | High | Use Let's Encrypt with cert-manager (automated) |
+| DB migration failures in prod | Critical | Test migrations in staging, require rollback script |
+| SSO provider configuration errors | High | Test with sandbox accounts, document exact steps |
+| Observability data volume | Medium | Set retention policies (Prometheus 30d, Loki 7d, traces 3d) |
+| Load test infrastructure cost | Low | Use spot instances, run off-peak |
+| Runbook completeness | Medium | Peer review by 2+ engineers, run DR drill |
+
+---
+
+## Progress Tracking
+
+**Overall**: 0 / 60 tasks complete (0%)
+
+| Slice | Tasks | Complete | % | Status |
+|-------|-------|----------|---|--------|
+| S1: CI/CD | 4 | 0 | 0% | 🟡 Planning |
+| S2: K8s Deploy | 9 | 0 | 0% | 🟡 Planning |
+| S3: GitOps | 7 | 0 | 0% | 🟡 Planning |
+| S4: Observability | 8 | 0 | 0% | 🟡 Planning |
+| S5: SSO | 6 | 0 | 0% | 🟡 Planning |
+| S6: Pilot Features | 8 | 0 | 0% | 🟡 Planning |
+| S7: Runbooks | 9 | 0 | 0% | 🟡 Planning |
+| Load Testing | 3 | 0 | 0% | 🟡 Planning |
+| Security | 2 | 0 | 0% | 🟡 Planning |
+| Validation | 4 | 0 | 0% | 🟡 Planning |
+
+**Last Updated**: 2025-11-14 by Worker 4 Tech Lead Orchestrator
+**Next Update**: After S1-S2 PRs merged
+
+---
+
+## Next Actions (Immediate)
+
+1. **CI/CD Lead** (Agent 1-2): Add Trivy scan to build-images.yml, verify Cosign signatures
+2. **Platform Lead** (Agent 3-6): Create Ingress+TLS manifests, add NetworkPolicies, wire Secrets
+3. **Release Lead** (Agent 7-10): Implement DB migration Job, real smoke tests, rollback workflow
+4. **Observability Lead** (Agent 11-15): Auto-import dashboards, deploy Jaeger, add Sentry DSNs
+5. **Identity Lead** (Agent 16-17): Build OIDC config UI, admin console for API keys
+6. **Product Lead** (Agent 18-22): Build Impact-In Monitor UI, Share Links UI, verify A11y/Lighthouse CI
+7. **Operations Lead** (Agent 23-26): Write all runbooks, create pilot readiness checklist
+
+**Tech Lead Orchestrator**: Monitor progress in this doc, unblock dependencies, coordinate PR reviews
+
+---
+

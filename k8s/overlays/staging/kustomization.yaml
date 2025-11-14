@@ -27,6 +27,11 @@ resources:
 - ../../base/notifications
 - ../../base/reporting
 - ../../base/corp-cockpit-astro
+- ../../base/observability
+
+# Ingress and NetworkPolicies
+- ../../base/ingress.yaml
+- ../../base/network-policies.yaml
 
 # ConfigMap generator for staging environment
 configMapGenerator:
@@ -39,6 +44,7 @@ configMapGenerator:
 # Patches for staging environment
 patchesStrategicMerge:
 - resource-limits-patch.yaml
+- ingress-patch.yaml
 
 # Image tags for staging (use commit SHA or 'staging' tag)
 images:

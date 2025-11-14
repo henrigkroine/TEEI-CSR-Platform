@@ -1,0 +1,67 @@
+# SOPS Configuration for TEEI CSR Platform
+# Mozilla SOPS (Secrets OPerationS) enables encryption of secrets at rest
+# https://github.com/getsops/sops
+
+# This configuration defines encryption rules for different environments and file types
+
+creation_rules:
+  # Production secrets - Use age encryption with production key
+  - path_regex: k8s/overlays/production/.*\.yaml$
+    encrypted_regex: ^(data|stringData)$
+    age: >-
+      age1production1234567890abcdefghijklmnopqrstuvwxyz1234567890abc
+
+  # Staging secrets - Use age encryption with staging key
+  - path_regex: k8s/overlays/staging/.*\.yaml$
+    encrypted_regex: ^(data|stringData)$
+    age: >-
+      age1staging1234567890abcdefghijklmnopqrstuvwxyz1234567890abcdef
+
+  # Development secrets - Use age encryption with dev key
+  - path_regex: k8s/overlays/development/.*\.yaml$
+    encrypted_regex: ^(data|stringData)$
+    age: >-
+      age1dev1234567890abcdefghijklmnopqrstuvwxyz1234567890abcdefghi
+
+  # Secrets in base directory - No encryption (templates only)
+  - path_regex: k8s/base/secrets/.*\.yaml$
+    encrypted_regex: ^(ThisWillNeverMatch)$
+    # Base secrets are templates and should not contain real values
+
+# Alternative: Use AWS KMS for production
+# creation_rules:
+#   - path_regex: k8s/overlays/production/.*\.yaml$
+#     encrypted_regex: ^(data|stringData)$
+#     kms: 'arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012'
+
+# Alternative: Use Google Cloud KMS
+# creation_rules:
+#   - path_regex: k8s/overlays/production/.*\.yaml$
+#     encrypted_regex: ^(data|stringData)$
+#     gcp_kms: 'projects/my-project/locations/global/keyRings/sops/cryptoKeys/sops-key'
+
+# Alternative: Use Azure Key Vault
+# creation_rules:
+#   - path_regex: k8s/overlays/production/.*\.yaml$
+#     encrypted_regex: ^(data|stringData)$
+#     azure_keyvault: 'https://my-vault.vault.azure.net/keys/sops-key/abcd1234'
+
+# Configuration notes:
+# 1. Replace the age public keys above with your actual keys
+# 2. Generate age keys with: age-keygen -o key.txt
+# 3. Keep private keys secure (not in Git)
+# 4. Share public keys with team members who need to encrypt
+# 5. Only encrypt the data/stringData fields, not metadata
+
+# Usage:
+# Encrypt a file:
+#   sops -e k8s/overlays/staging/secrets.yaml > k8s/overlays/staging/secrets.enc.yaml
+#
+# Decrypt a file:
+#   sops -d k8s/overlays/staging/secrets.enc.yaml
+#
+# Edit encrypted file in-place:
+#   sops k8s/overlays/staging/secrets.enc.yaml
+#
+# Encrypt in-place:
+#   sops -e -i k8s/overlays/staging/secrets.yaml

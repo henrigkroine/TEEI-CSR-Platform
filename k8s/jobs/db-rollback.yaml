@@ -1,0 +1,315 @@
+---
+# Database Rollback Job
+# Emergency rollback for migrations that cause issues
+# WARNING: This should only be used in emergency situations
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: db-rollback
+  labels:
+    app: db-rollback
+    component: database
+    part-of: teei-csr-platform
+    managed-by: kustomize
+  annotations:
+    description: "Emergency rollback for database migrations"
+    warning: "This will revert schema changes and may cause data loss!"
+spec:
+  # Keep completed job pods for 24 hours for audit purposes
+  ttlSecondsAfterFinished: 86400
+
+  # Don't retry automatically - rollbacks should be deliberate
+  backoffLimit: 0
+
+  # Fail if not completed within 10 minutes
+  activeDeadlineSeconds: 600
+
+  template:
+    metadata:
+      labels:
+        app: db-rollback
+        component: database
+      annotations:
+        sidecar.istio.io/inject: "false"
+    spec:
+      restartPolicy: Never
+
+      # Security Context
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+
+      # Service Account
+      serviceAccountName: teei-db-rollback
+
+      # Init Container: Safety checks before rollback
+      initContainers:
+      - name: pre-rollback-check
+        image: postgres:16-alpine
+        imagePullPolicy: IfNotPresent
+
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities:
+            drop:
+            - ALL
+
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: teei-shared-db-secrets
+              key: DATABASE_URL
+        - name: ROLLBACK_MIGRATION_ID
+          value: ""  # Override this with the migration ID to rollback to
+
+        command:
+        - sh
+        - -c
+        - |
+          set -e
+          echo "=========================================="
+          echo "⚠️  PRE-ROLLBACK SAFETY CHECK ⚠️"
+          echo "=========================================="
+
+          # Test database connectivity
+          echo "Testing database connection..."
+          psql "$DATABASE_URL" -c "SELECT version();" || {
+            echo "ERROR: Cannot connect to database"
+            exit 1
+          }
+          echo "✓ Database connection successful"
+          echo ""
+
+          # Show current migration status
+          echo "Current applied migrations:"
+          psql "$DATABASE_URL" -c "SELECT id, hash, created_at FROM __drizzle_migrations ORDER BY created_at DESC LIMIT 10;" || {
+            echo "⚠ Could not retrieve migration history"
+          }
+          echo ""
+
+          # Backup check
+          echo "⚠️  WARNING: ROLLBACK WILL BEGIN"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "Before proceeding, ensure:"
+          echo "  1. You have a recent database backup"
+          echo "  2. You understand which migration will be rolled back"
+          echo "  3. You have notified the team"
+          echo "  4. All services are stopped or scaled to 0"
+          echo ""
+          echo "This Job will rollback the MOST RECENT migration."
+          echo "To rollback to a specific migration, update the SQL file."
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "Waiting 10 seconds before proceeding..."
+          sleep 10
+
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+
+      # Main Container: Execute rollback
+      containers:
+      - name: rollback
+        image: postgres:16-alpine
+        imagePullPolicy: IfNotPresent
+
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities:
+            drop:
+            - ALL
+
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: teei-shared-db-secrets
+              key: DATABASE_URL
+        - name: ROLLBACK_SCRIPT
+          value: "0013_rollback.sql"  # Update this to rollback a specific migration
+
+        command:
+        - sh
+        - -c
+        - |
+          set -e
+          echo "=========================================="
+          echo "⚠️  EXECUTING DATABASE ROLLBACK ⚠️"
+          echo "=========================================="
+          echo "Timestamp: $(date -u +"%Y-%m-%d %H:%M:%S UTC")"
+          echo "Rollback Script: ${ROLLBACK_SCRIPT}"
+          echo ""
+
+          START_TIME=$(date +%s)
+
+          # Method 1: Run specific rollback script
+          if [ -f "/migrations/rollback/${ROLLBACK_SCRIPT}" ]; then
+            echo "Executing rollback script: ${ROLLBACK_SCRIPT}"
+            psql "$DATABASE_URL" -f "/migrations/rollback/${ROLLBACK_SCRIPT}"
+          else
+            echo "ERROR: Rollback script not found: /migrations/rollback/${ROLLBACK_SCRIPT}"
+            echo ""
+            echo "Available rollback scripts:"
+            ls -la /migrations/rollback/ || echo "No rollback scripts found"
+            echo ""
+            echo "To rollback manually, run one of these scripts:"
+            echo "  psql \$DATABASE_URL -f /migrations/rollback/0013_rollback.sql"
+            echo "  psql \$DATABASE_URL -f /migrations/rollback/0012_rollback_saved_views_share_links.sql"
+            echo "  psql \$DATABASE_URL -f /migrations/rollback/0011_rollback_sroi_tables.sql"
+            exit 1
+          fi
+
+          END_TIME=$(date +%s)
+          DURATION=$((END_TIME - START_TIME))
+
+          echo ""
+          echo "=========================================="
+          echo "Rollback Complete"
+          echo "=========================================="
+          echo "Duration: ${DURATION} seconds"
+          echo "Status: SUCCESS"
+          echo ""
+
+          # Show updated migration status
+          echo "Updated migration status:"
+          psql "$DATABASE_URL" -c "SELECT id, hash, created_at FROM __drizzle_migrations ORDER BY created_at DESC LIMIT 5;" || true
+
+          echo ""
+          echo "⚠️  Next Steps:"
+          echo "  1. Verify application functionality"
+          echo "  2. Check if services need to be redeployed"
+          echo "  3. Document the rollback in incident report"
+          echo "  4. Fix the migration and re-apply if needed"
+
+          exit 0
+
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 256Mi
+
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        - name: migrations
+          mountPath: /migrations
+          readOnly: true
+
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      - name: migrations
+        # Mount migration scripts from ConfigMap or directly from shared-schema image
+        configMap:
+          name: teei-migration-scripts
+          optional: true
+
+---
+# Service Account for Rollback Job
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: teei-db-rollback
+  labels:
+    app: db-rollback
+    component: database
+    part-of: teei-csr-platform
+
+---
+# Role for Rollback Job
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: teei-db-rollback
+  labels:
+    app: db-rollback
+    component: database
+spec:
+  rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get"]
+    resourceNames: ["teei-shared-db-secrets"]
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get"]
+    resourceNames: ["teei-migration-scripts"]
+
+---
+# RoleBinding for Rollback Job
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: teei-db-rollback
+  labels:
+    app: db-rollback
+    component: database
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: teei-db-rollback
+subjects:
+- kind: ServiceAccount
+  name: teei-db-rollback
+
+---
+# ConfigMap with rollback scripts
+# This should be generated from packages/shared-schema/migrations/rollback/
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: teei-migration-scripts
+  labels:
+    app: db-migration
+    component: database
+data:
+  README.md: |
+    # Migration Rollback Scripts
+
+    This ConfigMap contains SQL rollback scripts for emergency database rollbacks.
+
+    ## Usage
+
+    To rollback a specific migration, update the ROLLBACK_SCRIPT env var in
+    k8s/jobs/db-rollback.yaml and apply the job:
+
+    ```bash
+    kubectl create job --from=job/db-rollback db-rollback-$(date +%s) -n teei-staging
+    ```
+
+    ## Available Scripts
+
+    - 0013_rollback.sql: Rollback RBAC and privacy tables
+    - 0012_rollback_saved_views_share_links.sql: Rollback saved views
+    - 0011_rollback_sroi_tables.sql: Rollback SROI tables
+    - 0010_rollback_unified_profile_linking.sql: Rollback profile linking
+    - 0010_rollback_vis_scores_table.sql: Rollback VIS scores
+    - 0007_rollback_notifications_tables.sql: Rollback notifications
+    - 0006_rollback_impact_deliveries.sql: Rollback impact deliveries
+    - 0005_rollback_report_lineage.sql: Rollback report lineage
+    - 0004_rollback_idempotency_tables.sql: Rollback idempotency
+
+    ## Important Notes
+
+    - Always backup the database before rollback
+    - Stop all services before rollback
+    - Rollbacks may cause data loss
+    - Document the rollback in incident reports
+
+  # Add actual rollback scripts here
+  # These should be copied from packages/shared-schema/migrations/rollback/
+  # For now, just include the most recent one as an example

@@ -104,3 +104,19 @@ dist-astro/
 *.p12
 credentials.json
 service-account.json
+
+# Kubernetes secrets (raw/unsealed)
+*-secret-raw.yaml
+*-raw.yaml
+*.secret
+
+# SOPS/age keys
+*.age
+*-age-key.txt
+
+# Sealed Secrets certificates (can be fetched from cluster)
+*-pub-cert.pem
+
+# Secret backups
+*secrets-backup.yaml
+*secrets-backup.yaml.gpg
