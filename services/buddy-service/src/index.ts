@@ -2,6 +2,7 @@ import Fastify from 'fastify';
 import multipart from '@fastify/multipart';
 import { createServiceLogger, getEventBus } from '@teei/shared-utils';
 import { importRoutes } from './routes/import.js';
+import { createHealthManager, setupHealthRoutes } from './health/index.js';
 
 const logger = createServiceLogger('buddy-service');
 const PORT = parseInt(process.env.PORT_BUDDY_SERVICE || '3003');
@@ -14,13 +15,13 @@ async function start() {
   // Register multipart for file uploads
   app.register(multipart);
 
-  // Health check
-  app.get('/health', async () => {
-    return { status: 'ok', service: 'buddy-service', timestamp: new Date().toISOString() };
-  });
+  // Setup health check manager
+  const healthManager = createHealthManager();
+  setupHealthRoutes(app, healthManager);
+  healthManager.setAlive(true);
 
-  // Register routes
-  app.register(importRoutes, { prefix: '/import' });
+  // Register routes with API versioning
+  app.register(importRoutes, { prefix: '/v1/import' });
 
   // Connect to event bus
   const eventBus = getEventBus();
@@ -29,6 +30,7 @@ async function start() {
   // Start server
   try {
     await app.listen({ port: PORT, host: '0.0.0.0' });
+    healthManager.setReady(true);
     logger.info(`Buddy Service running on port ${PORT}`);
   } catch (err) {
     logger.error(err);
@@ -38,6 +40,7 @@ async function start() {
   // Graceful shutdown
   const shutdown = async () => {
     logger.info('Shutting down...');
+    healthManager.setShuttingDown(true);
     await eventBus.disconnect();
     await app.close();
     process.exit(0);

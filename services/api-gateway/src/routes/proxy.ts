@@ -19,73 +19,79 @@ const SERVICE_ENDPOINTS = {
  * @param fastify - Fastify instance
  */
 export async function registerProxyRoutes(fastify: FastifyInstance): Promise<void> {
-  // Unified Profile Service - User profiles, authentication, authorization
+  // Unified Profile Service - User profiles, authentication, authorization (v1)
   await fastify.register(fastifyHttpProxy, {
     upstream: SERVICE_ENDPOINTS.UNIFIED_PROFILE,
-    prefix: '/profile',
-    rewritePrefix: '/profile',
+    prefix: '/v1/profile',
+    rewritePrefix: '/v1/profile',
     http2: false,
     preHandler: async (request, reply) => {
       fastify.log.info(`Proxying request to Unified Profile: ${request.url}`);
+      reply.header('X-API-Version', 'v1');
     }
   });
 
-  // Kintell Connector - External skills taxonomy integration
+  // Kintell Connector - External skills taxonomy integration (v1)
   await fastify.register(fastifyHttpProxy, {
     upstream: SERVICE_ENDPOINTS.KINTELL_CONNECTOR,
-    prefix: '/kintell',
-    rewritePrefix: '/kintell',
+    prefix: '/v1/kintell',
+    rewritePrefix: '/v1',
     http2: false,
     preHandler: async (request, reply) => {
       fastify.log.info(`Proxying request to Kintell Connector: ${request.url}`);
+      reply.header('X-API-Version', 'v1');
     }
   });
 
-  // Buddy Service - Peer support and mentorship matching
+  // Buddy Service - Peer support and mentorship matching (v1)
   await fastify.register(fastifyHttpProxy, {
     upstream: SERVICE_ENDPOINTS.BUDDY_SERVICE,
-    prefix: '/buddy',
-    rewritePrefix: '/buddy',
+    prefix: '/v1/buddy',
+    rewritePrefix: '/v1',
     http2: false,
     preHandler: async (request, reply) => {
       fastify.log.info(`Proxying request to Buddy Service: ${request.url}`);
+      reply.header('X-API-Version', 'v1');
     }
   });
 
-  // Upskilling Connector - External learning platform integration
+  // Upskilling Connector - External learning platform integration (v1)
   await fastify.register(fastifyHttpProxy, {
     upstream: SERVICE_ENDPOINTS.UPSKILLING_CONNECTOR,
-    prefix: '/upskilling',
-    rewritePrefix: '/upskilling',
+    prefix: '/v1/upskilling',
+    rewritePrefix: '/v1',
     http2: false,
     preHandler: async (request, reply) => {
       fastify.log.info(`Proxying request to Upskilling Connector: ${request.url}`);
+      reply.header('X-API-Version', 'v1');
     }
   });
 
-  // Q2Q AI Service - Conversational AI for career guidance
+  // Q2Q AI Service - Conversational AI for career guidance (v1)
   await fastify.register(fastifyHttpProxy, {
     upstream: SERVICE_ENDPOINTS.Q2Q_AI,
-    prefix: '/q2q',
-    rewritePrefix: '/q2q',
+    prefix: '/v1/q2q',
+    rewritePrefix: '/v1',
     http2: false,
     preHandler: async (request, reply) => {
       fastify.log.info(`Proxying request to Q2Q AI: ${request.url}`);
+      reply.header('X-API-Version', 'v1');
     }
   });
 
-  // Safety & Moderation Service - Content moderation and safety checks
+  // Safety & Moderation Service - Content moderation and safety checks (v1)
   await fastify.register(fastifyHttpProxy, {
     upstream: SERVICE_ENDPOINTS.SAFETY_MODERATION,
-    prefix: '/safety',
-    rewritePrefix: '/safety',
+    prefix: '/v1/safety',
+    rewritePrefix: '/v1',
     http2: false,
     preHandler: async (request, reply) => {
       fastify.log.info(`Proxying request to Safety & Moderation: ${request.url}`);
+      reply.header('X-API-Version', 'v1');
     }
   });
 
-  fastify.log.info('All proxy routes registered successfully');
+  fastify.log.info('All v1 proxy routes registered successfully');
 }
 
 /**

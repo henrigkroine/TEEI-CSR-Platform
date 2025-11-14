@@ -1,0 +1,151 @@
+openapi: 3.0.3
+info:
+  title: Q2Q AI Service API
+  version: 1.0.0
+  description: |
+    Q2Q AI Service provides outcome classification and taxonomy management
+    for career guidance and skills assessment.
+  contact:
+    name: TEEI Platform Team
+servers:
+  - url: http://localhost:3005
+    description: Local development
+  - url: http://localhost:3000/v1/q2q
+    description: Via API Gateway (local)
+paths:
+  /health:
+    get:
+      summary: Health check endpoint
+      operationId: getHealth
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  service:
+                    type: string
+                  timestamp:
+                    type: string
+                    format: date-time
+                  version:
+                    type: string
+  /v1/classify/text:
+    post:
+      summary: Classify text and store outcome scores
+      operationId: classifyText
+      tags:
+        - Classification
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClassifyTextRequest'
+      responses:
+        '200':
+          description: Text classified successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClassificationResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /v1/taxonomy:
+    get:
+      summary: Get outcome dimension definitions
+      operationId: getTaxonomy
+      tags:
+        - Taxonomy
+      responses:
+        '200':
+          description: Taxonomy retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  dimensions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DimensionDefinition'
+                  count:
+                    type: integer
+components:
+  schemas:
+    ClassifyTextRequest:
+      type: object
+      required:
+        - text
+        - userId
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 10000
+        userId:
+          type: string
+          format: uuid
+        contextId:
+          type: string
+          format: uuid
+        contextType:
+          type: string
+          enum: [conversation, survey, assessment, other]
+          default: other
+    ClassificationResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        classification:
+          type: object
+          properties:
+            scores:
+              type: object
+              additionalProperties:
+                type: number
+            metadata:
+              type: object
+            scoreIds:
+              type: object
+              additionalProperties:
+                type: string
+        message:
+          type: string
+    DimensionDefinition:
+      type: object
+      properties:
+        dimension:
+          type: string
+        label:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        examples:
+          type: array
+          items:
+            type: string
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+        error:
+          type: string
+        details:
+          type: array

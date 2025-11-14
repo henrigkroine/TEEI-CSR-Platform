@@ -1,0 +1,132 @@
+openapi: 3.0.3
+info:
+  title: Buddy Service API
+  version: 1.0.0
+  description: |
+    Buddy Service manages peer mentorship programs, handling match creation,
+    event logging, check-ins, and feedback submissions.
+  contact:
+    name: TEEI Platform Team
+servers:
+  - url: http://localhost:3003
+    description: Local development
+  - url: http://localhost:3000/v1/buddy
+    description: Via API Gateway (local)
+paths:
+  /health:
+    get:
+      summary: Health check endpoint
+      operationId: getHealth
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  service:
+                    type: string
+                  timestamp:
+                    type: string
+                    format: date-time
+  /v1/import/matches:
+    post:
+      summary: Import buddy matches from CSV
+      operationId: importMatches
+      tags:
+        - Import
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: CSV file containing buddy match data
+      responses:
+        '200':
+          description: Import successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  imported:
+                    type: integer
+                  failed:
+                    type: integer
+  /v1/import/events:
+    post:
+      summary: Import buddy events from CSV
+      operationId: importEvents
+      tags:
+        - Import
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Import successful
+  /v1/import/checkins:
+    post:
+      summary: Import check-ins from CSV
+      operationId: importCheckins
+      tags:
+        - Import
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Import successful
+  /v1/import/feedback:
+    post:
+      summary: Import feedback from CSV
+      operationId: importFeedback
+      tags:
+        - Import
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Import successful

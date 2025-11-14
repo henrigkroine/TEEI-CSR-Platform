@@ -1,0 +1,138 @@
+{
+  "dashboard": {
+    "title": "Event Bus (NATS) Metrics",
+    "tags": ["teei", "events", "nats"],
+    "timezone": "browser",
+    "schemaVersion": 27,
+    "version": 1,
+    "refresh": "30s",
+    "panels": [
+      {
+        "id": 1,
+        "gridPos": {"x": 0, "y": 0, "w": 24, "h": 3},
+        "type": "row",
+        "title": "Event Processing"
+      },
+      {
+        "id": 2,
+        "gridPos": {"x": 0, "y": 3, "w": 8, "h": 6},
+        "type": "stat",
+        "title": "Events Processed/s",
+        "targets": [
+          {
+            "expr": "sum(rate(events_processed_total[5m]))",
+            "legendFormat": "Events/s"
+          }
+        ],
+        "options": {
+          "graphMode": "area",
+          "colorMode": "value"
+        }
+      },
+      {
+        "id": 3,
+        "gridPos": {"x": 8, "y": 3, "w": 8, "h": 6},
+        "type": "stat",
+        "title": "Events Published/s",
+        "targets": [
+          {
+            "expr": "sum(rate(events_published_total[5m]))",
+            "legendFormat": "Events/s"
+          }
+        ],
+        "options": {
+          "graphMode": "area",
+          "colorMode": "value"
+        }
+      },
+      {
+        "id": 4,
+        "gridPos": {"x": 16, "y": 3, "w": 8, "h": 6},
+        "type": "stat",
+        "title": "Event Error Rate",
+        "targets": [
+          {
+            "expr": "sum(rate(events_processed_total{status=\"error\"}[5m])) / sum(rate(events_processed_total[5m])) * 100",
+            "legendFormat": "Error %"
+          }
+        ],
+        "options": {
+          "graphMode": "area",
+          "colorMode": "value",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"value": 0, "color": "green"},
+              {"value": 1, "color": "yellow"},
+              {"value": 5, "color": "red"}
+            ]
+          }
+        }
+      },
+      {
+        "id": 5,
+        "gridPos": {"x": 0, "y": 9, "w": 12, "h": 8},
+        "type": "graph",
+        "title": "Event Processing Rate by Type",
+        "targets": [
+          {
+            "expr": "sum(rate(events_processed_total[5m])) by (event_type)",
+            "legendFormat": "{{event_type}}"
+          }
+        ],
+        "yaxes": [
+          {"format": "eps", "label": "Events/s"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 6,
+        "gridPos": {"x": 12, "y": 9, "w": 12, "h": 8},
+        "type": "graph",
+        "title": "Event Processing Duration (p95)",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(event_processing_duration_seconds_bucket[5m])) by (event_type, le))",
+            "legendFormat": "{{event_type}}"
+          }
+        ],
+        "yaxes": [
+          {"format": "s", "label": "Duration"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 7,
+        "gridPos": {"x": 0, "y": 17, "w": 12, "h": 8},
+        "type": "graph",
+        "title": "Queue Sizes",
+        "targets": [
+          {
+            "expr": "queue_size",
+            "legendFormat": "{{queue_name}}"
+          }
+        ],
+        "yaxes": [
+          {"format": "short", "label": "Messages"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 8,
+        "gridPos": {"x": 12, "y": 17, "w": 12, "h": 8},
+        "type": "graph",
+        "title": "Event Success vs Errors",
+        "targets": [
+          {
+            "expr": "sum(rate(events_processed_total{status=\"success\"}[5m]))",
+            "legendFormat": "Success"
+          },
+          {
+            "expr": "sum(rate(events_processed_total{status=\"error\"}[5m]))",
+            "legendFormat": "Error"
+          }
+        ]
+      }
+    ]
+  }
+}

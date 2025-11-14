@@ -1,0 +1,169 @@
+openapi: 3.0.3
+info:
+  title: Safety & Moderation Service API
+  version: 1.0.0
+  description: |
+    Safety & Moderation Service provides content screening, policy enforcement,
+    and human review queue management for platform safety.
+  contact:
+    name: TEEI Platform Team
+servers:
+  - url: http://localhost:3006
+    description: Local development
+  - url: http://localhost:3000/v1/safety
+    description: Via API Gateway (local)
+paths:
+  /health:
+    get:
+      summary: Health check endpoint
+      operationId: getHealth
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  service:
+                    type: string
+                  timestamp:
+                    type: string
+                    format: date-time
+  /v1/screen/text:
+    post:
+      summary: Screen text content for safety violations
+      operationId: screenText
+      tags:
+        - Screening
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScreenTextRequest'
+      responses:
+        '200':
+          description: Text screened successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScreeningResult'
+        '400':
+          description: Validation error
+  /v1/review-queue:
+    get:
+      summary: Get pending review items
+      operationId: getReviewQueue
+      tags:
+        - Review
+      responses:
+        '200':
+          description: Review queue retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ReviewItem'
+                  count:
+                    type: integer
+  /v1/review/{id}:
+    put:
+      summary: Mark a review as complete
+      operationId: completeReview
+      tags:
+        - Review
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Review completed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  status:
+                    type: string
+                  reviewedAt:
+                    type: string
+                    format: date-time
+        '404':
+          description: Review item not found
+        '400':
+          description: Review already completed
+components:
+  schemas:
+    ScreenTextRequest:
+      type: object
+      required:
+        - contentId
+        - contentType
+        - text
+      properties:
+        contentId:
+          type: string
+          format: uuid
+        contentType:
+          type: string
+          enum: [feedback_text, checkin_note, message, other]
+        text:
+          type: string
+          minLength: 1
+    ScreeningResult:
+      type: object
+      properties:
+        safe:
+          type: boolean
+        flagId:
+          type: string
+          format: uuid
+        reason:
+          type: string
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+        requiresHumanReview:
+          type: boolean
+    ReviewItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        contentId:
+          type: string
+          format: uuid
+        contentType:
+          type: string
+        text:
+          type: string
+        flagReason:
+          type: string
+        confidence:
+          type: number
+        status:
+          type: string
+          enum: [pending, reviewed]
+        raisedAt:
+          type: string
+          format: date-time
+        reviewedAt:
+          type: string
+          format: date-time

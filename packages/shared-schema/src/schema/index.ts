@@ -9,3 +9,6 @@ export * from './safety.js';
 export * from './impact-in.js';
 export * from './webhooks.js';
 export * from './journey.js';
+export * from './idempotency.js';
+export * from './audits.js';
+export * from './pii.js';

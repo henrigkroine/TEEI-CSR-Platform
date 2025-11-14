@@ -1,0 +1,16 @@
+{
+  "name": "@teei/openapi",
+  "version": "1.0.0",
+  "description": "OpenAPI specifications for TEEI CSR Platform services",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "validate": "openapi-spec-validator *.yaml"
+  },
+  "keywords": ["openapi", "api", "documentation"],
+  "author": "TEEI Platform Team",
+  "license": "MIT",
+  "devDependencies": {
+    "@apidevtools/swagger-cli": "^4.0.4"
+  }
+}

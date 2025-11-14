@@ -1,0 +1,130 @@
+{
+  "dashboard": {
+    "title": "Node.js Runtime Metrics",
+    "tags": ["teei", "nodejs", "runtime"],
+    "timezone": "browser",
+    "schemaVersion": 27,
+    "version": 1,
+    "refresh": "30s",
+    "panels": [
+      {
+        "id": 1,
+        "gridPos": {"x": 0, "y": 0, "w": 24, "h": 3},
+        "type": "row",
+        "title": "Memory Usage"
+      },
+      {
+        "id": 2,
+        "gridPos": {"x": 0, "y": 3, "w": 12, "h": 8},
+        "type": "graph",
+        "title": "Heap Memory Usage",
+        "targets": [
+          {
+            "expr": "nodejs_heap_size_used_bytes",
+            "legendFormat": "{{service}} - Used"
+          },
+          {
+            "expr": "nodejs_heap_size_total_bytes",
+            "legendFormat": "{{service}} - Total"
+          }
+        ],
+        "yaxes": [
+          {"format": "bytes", "label": "Memory"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 3,
+        "gridPos": {"x": 12, "y": 3, "w": 12, "h": 8},
+        "type": "graph",
+        "title": "External Memory",
+        "targets": [
+          {
+            "expr": "nodejs_external_memory_bytes",
+            "legendFormat": "{{service}}"
+          }
+        ],
+        "yaxes": [
+          {"format": "bytes"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 4,
+        "gridPos": {"x": 0, "y": 11, "w": 24, "h": 3},
+        "type": "row",
+        "title": "Event Loop & CPU"
+      },
+      {
+        "id": 5,
+        "gridPos": {"x": 0, "y": 14, "w": 12, "h": 8},
+        "type": "graph",
+        "title": "Event Loop Lag",
+        "targets": [
+          {
+            "expr": "nodejs_eventloop_lag_seconds",
+            "legendFormat": "{{service}}"
+          }
+        ],
+        "yaxes": [
+          {"format": "s", "label": "Lag"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 6,
+        "gridPos": {"x": 12, "y": 14, "w": 12, "h": 8},
+        "type": "graph",
+        "title": "CPU Usage",
+        "targets": [
+          {
+            "expr": "rate(process_cpu_seconds_total[5m])",
+            "legendFormat": "{{service}}"
+          }
+        ],
+        "yaxes": [
+          {"format": "percentunit", "label": "CPU"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 7,
+        "gridPos": {"x": 0, "y": 22, "w": 24, "h": 3},
+        "type": "row",
+        "title": "Garbage Collection"
+      },
+      {
+        "id": 8,
+        "gridPos": {"x": 0, "y": 25, "w": 12, "h": 8},
+        "type": "graph",
+        "title": "GC Duration",
+        "targets": [
+          {
+            "expr": "rate(nodejs_gc_duration_seconds_sum[5m]) / rate(nodejs_gc_duration_seconds_count[5m])",
+            "legendFormat": "{{service}}"
+          }
+        ],
+        "yaxes": [
+          {"format": "s"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 9,
+        "gridPos": {"x": 12, "y": 25, "w": 12, "h": 8},
+        "type": "graph",
+        "title": "Active Handles & Requests",
+        "targets": [
+          {
+            "expr": "nodejs_active_handles",
+            "legendFormat": "{{service}} - Handles"
+          },
+          {
+            "expr": "nodejs_active_requests",
+            "legendFormat": "{{service}} - Requests"
+          }
+        ]
+      }
+    ]
+  }
+}

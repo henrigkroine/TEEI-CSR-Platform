@@ -1,0 +1,238 @@
+openapi: 3.0.3
+info:
+  title: Unified Profile Service API
+  version: 1.0.0
+  description: |
+    Unified Profile Service provides identity unification, user profile management,
+    and external ID mapping for the TEEI CSR Platform.
+  contact:
+    name: TEEI Platform Team
+servers:
+  - url: http://localhost:3001
+    description: Local development
+  - url: http://localhost:3000/v1/profile
+    description: Via API Gateway (local)
+paths:
+  /health:
+    get:
+      summary: Health check endpoint
+      operationId: getHealth
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  service:
+                    type: string
+                    example: unified-profile
+                  timestamp:
+                    type: string
+                    format: date-time
+  /v1/profile/{id}:
+    get:
+      summary: Get aggregated user profile
+      operationId: getProfile
+      tags:
+        - Profile
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: User ID
+      responses:
+        '200':
+          description: User profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      summary: Update user profile
+      operationId: updateProfile
+      tags:
+        - Profile
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileRequest'
+      responses:
+        '200':
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '404':
+          description: User not found
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /v1/profile/mapping:
+    post:
+      summary: Create or update external ID mapping
+      operationId: createMapping
+      tags:
+        - Profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMappingRequest'
+      responses:
+        '200':
+          description: Mapping created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExternalMapping'
+components:
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum: [apprentice, company_admin, program_admin]
+        tenantId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    UserProfile:
+      allOf:
+        - $ref: '#/components/schemas/User'
+        - type: object
+          properties:
+            externalMappings:
+              type: object
+              additionalProperties:
+                type: string
+            enrollments:
+              type: array
+              items:
+                $ref: '#/components/schemas/ProgramEnrollment'
+            journeyFlags:
+              $ref: '#/components/schemas/JourneyFlags'
+    ProgramEnrollment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        programType:
+          type: string
+          enum: [buddy, language, mentorship, upskilling]
+        status:
+          type: string
+          enum: [active, completed, inactive]
+        enrolledAt:
+          type: string
+          format: date-time
+    JourneyFlags:
+      type: object
+      properties:
+        isBuddyMatched:
+          type: boolean
+        hasCompletedLanguage:
+          type: boolean
+        hasCompletedMentorship:
+          type: boolean
+        hasCompletedCourse:
+          type: boolean
+    ExternalMapping:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        externalSystem:
+          type: string
+        externalId:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    UpdateProfileRequest:
+      type: object
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+          format: email
+    CreateMappingRequest:
+      type: object
+      required:
+        - userId
+        - externalSystem
+        - externalId
+      properties:
+        userId:
+          type: string
+          format: uuid
+        externalSystem:
+          type: string
+        externalId:
+          type: string
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+        message:
+          type: string

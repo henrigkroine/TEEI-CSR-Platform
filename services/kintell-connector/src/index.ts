@@ -3,6 +3,7 @@ import multipart from '@fastify/multipart';
 import { createServiceLogger, getEventBus } from '@teei/shared-utils';
 import { importRoutes } from './routes/import.js';
 import { webhookRoutes } from './routes/webhooks.js';
+import { createHealthManager, setupHealthRoutes } from './health/index.js';
 
 const logger = createServiceLogger('kintell-connector');
 const PORT = parseInt(process.env.PORT_KINTELL_CONNECTOR || '3002');
@@ -15,14 +16,14 @@ async function start() {
   // Register multipart for file uploads
   app.register(multipart);
 
-  // Health check
-  app.get('/health', async () => {
-    return { status: 'ok', service: 'kintell-connector', timestamp: new Date().toISOString() };
-  });
+  // Setup health check manager
+  const healthManager = createHealthManager();
+  setupHealthRoutes(app, healthManager);
+  healthManager.setAlive(true);
 
-  // Register routes
-  app.register(importRoutes, { prefix: '/import' });
-  app.register(webhookRoutes, { prefix: '/webhooks' });
+  // Register routes with API versioning
+  app.register(importRoutes, { prefix: '/v1/import' });
+  app.register(webhookRoutes, { prefix: '/v1/webhooks' });
 
   // Connect to event bus
   const eventBus = getEventBus();
@@ -31,6 +32,7 @@ async function start() {
   // Start server
   try {
     await app.listen({ port: PORT, host: '0.0.0.0' });
+    healthManager.setReady(true);
     logger.info(`Kintell Connector Service running on port ${PORT}`);
   } catch (err) {
     logger.error(err);
@@ -40,6 +42,7 @@ async function start() {
   // Graceful shutdown
   const shutdown = async () => {
     logger.info('Shutting down...');
+    healthManager.setShuttingDown(true);
     await eventBus.disconnect();
     await app.close();
     process.exit(0);

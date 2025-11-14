@@ -1,0 +1,106 @@
+openapi: 3.0.3
+info:
+  title: TEEI CSR Platform API Gateway
+  version: 1.0.0
+  description: |
+    API Gateway provides unified access to all TEEI CSR Platform microservices,
+    handling authentication, rate limiting, and request routing.
+  contact:
+    name: TEEI Platform Team
+servers:
+  - url: http://localhost:3000
+    description: Local development
+paths:
+  /:
+    get:
+      summary: API Gateway information
+      operationId: getInfo
+      tags:
+        - Gateway
+      responses:
+        '200':
+          description: Gateway information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  service:
+                    type: string
+                  version:
+                    type: string
+                  timestamp:
+                    type: string
+                    format: date-time
+                  environment:
+                    type: string
+                  endpoints:
+                    type: object
+                  apiVersion:
+                    type: string
+                  deprecation:
+                    type: object
+  /health:
+    get:
+      summary: Gateway health check
+      operationId: getHealth
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Gateway is healthy
+  /health/all:
+    get:
+      summary: Check health of all services
+      operationId: getAllHealth
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Health status of all services
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  gateway:
+                    type: object
+                  services:
+                    type: object
+                  allHealthy:
+                    type: boolean
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  responses:
+    Unauthorized:
+      description: Unauthorized - Invalid or missing JWT token
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+              error:
+                type: string
+    RateLimitExceeded:
+      description: Rate limit exceeded
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+              error:
+                type: string
+              message:
+                type: string
+              retryAfter:
+                type: integer

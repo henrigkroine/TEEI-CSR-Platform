@@ -1,0 +1,128 @@
+{
+  "dashboard": {
+    "title": "API Gateway - Detailed Metrics",
+    "tags": ["teei", "api-gateway"],
+    "timezone": "browser",
+    "schemaVersion": 27,
+    "version": 1,
+    "refresh": "30s",
+    "panels": [
+      {
+        "id": 1,
+        "gridPos": {"x": 0, "y": 0, "w": 24, "h": 3},
+        "type": "row",
+        "title": "Gateway Performance"
+      },
+      {
+        "id": 2,
+        "gridPos": {"x": 0, "y": 3, "w": 8, "h": 6},
+        "type": "graph",
+        "title": "Request Rate",
+        "targets": [
+          {
+            "expr": "rate(http_requests_total{service=\"api-gateway\"}[5m])",
+            "legendFormat": "{{method}} {{route}}"
+          }
+        ],
+        "yaxes": [
+          {"format": "reqps"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 3,
+        "gridPos": {"x": 8, "y": 3, "w": 8, "h": 6},
+        "type": "graph",
+        "title": "Response Time Percentiles",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket{service=\"api-gateway\"}[5m])) by (le))",
+            "legendFormat": "p50"
+          },
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{service=\"api-gateway\"}[5m])) by (le))",
+            "legendFormat": "p95"
+          },
+          {
+            "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{service=\"api-gateway\"}[5m])) by (le))",
+            "legendFormat": "p99"
+          }
+        ],
+        "yaxes": [
+          {"format": "s"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 4,
+        "gridPos": {"x": 16, "y": 3, "w": 8, "h": 6},
+        "type": "graph",
+        "title": "Error Rate by Status Code",
+        "targets": [
+          {
+            "expr": "sum(rate(http_requests_total{service=\"api-gateway\",status_code=~\"4..|5..\"}[5m])) by (status_code)",
+            "legendFormat": "{{status_code}}"
+          }
+        ],
+        "yaxes": [
+          {"format": "reqps"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 5,
+        "gridPos": {"x": 0, "y": 9, "w": 24, "h": 3},
+        "type": "row",
+        "title": "Downstream Services Health"
+      },
+      {
+        "id": 6,
+        "gridPos": {"x": 0, "y": 12, "w": 24, "h": 8},
+        "type": "graph",
+        "title": "Downstream Service Latency",
+        "targets": [
+          {
+            "expr": "rate(http_request_duration_seconds_sum{service=\"api-gateway\"}[5m]) / rate(http_request_duration_seconds_count{service=\"api-gateway\"}[5m])",
+            "legendFormat": "{{route}}"
+          }
+        ],
+        "yaxes": [
+          {"format": "s", "label": "Latency"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 7,
+        "gridPos": {"x": 0, "y": 20, "w": 12, "h": 6},
+        "type": "graph",
+        "title": "Active Connections",
+        "targets": [
+          {
+            "expr": "active_connections{service=\"api-gateway\"}",
+            "legendFormat": "{{connection_type}}"
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "gridPos": {"x": 12, "y": 20, "w": 12, "h": 6},
+        "type": "graph",
+        "title": "Request/Response Size",
+        "targets": [
+          {
+            "expr": "rate(http_request_size_bytes_sum{service=\"api-gateway\"}[5m])",
+            "legendFormat": "Request"
+          },
+          {
+            "expr": "rate(http_response_size_bytes_sum{service=\"api-gateway\"}[5m])",
+            "legendFormat": "Response"
+          }
+        ],
+        "yaxes": [
+          {"format": "bytes"},
+          {"format": "short"}
+        ]
+      }
+    ]
+  }
+}

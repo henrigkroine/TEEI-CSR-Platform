@@ -2,6 +2,7 @@ import Fastify from 'fastify';
 import { createServiceLogger } from '@teei/shared-utils';
 import { classifyRoutes } from './routes/classify.js';
 import { initializeModelRegistry } from './registry/persist.js';
+import { createHealthManager, setupHealthRoutes } from './health/index.js';
 
 const logger = createServiceLogger('q2q-ai');
 const PORT = parseInt(process.env.PORT_Q2Q_AI || '3005');
@@ -19,18 +20,13 @@ async function start() {
     logger: logger as any,
   });
 
-  // Health check
-  app.get('/health', async () => {
-    return {
-      status: 'ok',
-      service: 'q2q-ai',
-      timestamp: new Date().toISOString(),
-      version: '1.0.0'
-    };
-  });
+  // Setup health check manager
+  const healthManager = createHealthManager();
+  setupHealthRoutes(app, healthManager);
+  healthManager.setAlive(true);
 
-  // Register routes
-  app.register(classifyRoutes);
+  // Register routes with API versioning
+  app.register(classifyRoutes, { prefix: '/v1' });
 
   // Import and register calibration routes
   const { calibrationRoutes } = await import('./routes/calibration.js');
@@ -43,6 +39,7 @@ async function start() {
   // Start server
   try {
     await app.listen({ port: PORT, host: '0.0.0.0' });
+    healthManager.setReady(true);
     logger.info(`Q2Q AI Service running on port ${PORT}`);
     logger.info('Available endpoints:');
     logger.info(`  GET  /health - Health check`);
@@ -67,6 +64,7 @@ async function start() {
   // Graceful shutdown
   const shutdown = async () => {
     logger.info('Shutting down...');
+    healthManager.setShuttingDown(true);
     await app.close();
     process.exit(0);
   };
