@@ -9,3 +9,4 @@ export * from './safety.js';
 export * from './idempotency.js';
 export * from './audits.js';
 export * from './pii.js';
+export * from './report_lineage.js';
