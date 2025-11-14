@@ -8,6 +8,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { getSCIMConfig, getErrorMessage } from '@/api/identity';
 
 interface SCIMStatusProps {
   companyId: string;
@@ -68,14 +69,56 @@ export default function SCIMStatus({ companyId }: SCIMStatusProps) {
 
   async function fetchSCIMData() {
     try {
-      // TODO: Fetch from Worker-1 platform API
-      // For now, use mock data
+      // Fetch SCIM config from Worker-1 platform API
+      // The API client will use mock data as fallback if USE_REAL_IDENTITY_API is false
+      const response = await getSCIMConfig(companyId);
+
+      setConfig({
+        enabled: response.scim.enabled,
+        endpoint: response.scim.endpoint,
+        sync_frequency_minutes: 15, // TODO: Add to API response
+        supported_operations: ['CREATE', 'UPDATE', 'DELETE', 'PATCH'], // TODO: Add to API response
+      });
+
+      setSyncStatus({
+        last_sync_at: response.scim.lastSyncAt,
+        last_sync_status: response.scim.syncStatus,
+        next_sync_at: null, // TODO: Add to API response
+        users_synced: 0, // TODO: Add to API response
+        groups_synced: 0, // TODO: Add to API response
+        errors_count: 0, // TODO: Add to API response
+        duration_ms: 0, // TODO: Add to API response
+      });
+
+      // TODO: These would need separate API endpoints
+      // GET /v1/identity/scim-config/{companyId}/metrics
+      // GET /v1/identity/scim-config/{companyId}/errors
+      setMetrics(getMockMetrics());
+      setErrors(getMockErrors());
+
+      // In development mode, show a helpful message
+      if (import.meta.env.DEV) {
+        console.info(
+          '[SCIM Status] Some data is mocked. Full implementation requires additional API endpoints for metrics and errors.'
+        );
+      }
+    } catch (err) {
+      const errorMessage = getErrorMessage(err);
+      console.error('Failed to fetch SCIM data:', err);
+
+      // In development mode, show a helpful message
+      if (import.meta.env.DEV) {
+        console.warn(
+          '[SCIM Status] API call failed. Using mock data. ' +
+          'Set USE_REAL_IDENTITY_API=true in .env to use real API.'
+        );
+      }
+
+      // Fallback to mock data
       setConfig(getMockSCIMConfig());
       setSyncStatus(getMockSyncStatus());
       setMetrics(getMockMetrics());
       setErrors(getMockErrors());
-    } catch (error) {
-      console.error('Failed to fetch SCIM data:', error);
     } finally {
       setLoading(false);
     }

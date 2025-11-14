@@ -1,0 +1,173 @@
+---
+import BaseLayout from '../../../../layouts/BaseLayout.astro';
+import { hasPermission } from '../../../../utils/rbac';
+import DeliveryMonitor from '../../../../components/impact-in/DeliveryMonitor';
+
+// Extract route parameters
+const { lang, companyId } = Astro.params;
+const user = Astro.locals.user;
+const tenantContext = Astro.locals.tenantContext;
+
+// Auth checks
+if (!user || !tenantContext) {
+  return Astro.redirect('/login');
+}
+
+// Verify tenant context matches the route
+if (tenantContext.companyId !== companyId || tenantContext.lang !== lang) {
+  return Astro.redirect(`/${lang}/cockpit/401`);
+}
+
+// Check permissions - require VIEW_INTEGRATIONS or ADMIN role
+const canViewIntegrations = hasPermission(user.role, 'VIEW_INTEGRATIONS') ||
+                            hasPermission(user.role, 'ADMIN');
+
+if (!canViewIntegrations) {
+  return Astro.redirect(`/${lang}/cockpit/${companyId}?error=permission_denied`);
+}
+
+// Page titles by language
+const pageTitles = {
+  en: 'Impact-In Delivery Monitor',
+  no: 'Impact-In Leveringsmonitor',
+  uk: 'Монітор доставки Impact-In'
+};
+
+const pageDescriptions = {
+  en: 'Monitor and manage data deliveries to external platforms',
+  no: 'Overvåk og administrer dataleveranser til eksterne plattformer',
+  uk: 'Моніторинг та управління доставкою даних на зовнішні платформи'
+};
+
+const pageTitle = pageTitles[lang as keyof typeof pageTitles] || pageTitles.en;
+const pageDescription = pageDescriptions[lang as keyof typeof pageDescriptions] || pageDescriptions.en;
+---
+
+<BaseLayout
+  title={`${pageTitle} - TEEI Corporate Cockpit`}
+  lang={lang}
+  description={pageDescription}
+>
+  <div class="impact-in-page">
+    {/* Breadcrumb */}
+    <nav aria-label="Breadcrumb" class="breadcrumb">
+      <ol>
+        <li>
+          <a href={`/${lang}/cockpit/${companyId}`}>Dashboard</a>
+        </li>
+        <li>
+          <a href={`/${lang}/cockpit/${companyId}/admin`}>Admin</a>
+        </li>
+        <li aria-current="page">{pageTitle}</li>
+      </ol>
+    </nav>
+
+    {/* Main Content */}
+    <main class="impact-in-content">
+      <DeliveryMonitor
+        companyId={companyId}
+        lang={lang}
+        client:load
+      />
+    </main>
+  </div>
+
+  <style>
+    .impact-in-page {
+      padding: calc(var(--spacing-unit) * 4);
+      max-width: 1600px;
+      margin: 0 auto;
+    }
+
+    .breadcrumb {
+      margin-bottom: calc(var(--spacing-unit) * 4);
+    }
+
+    .breadcrumb ol {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      font-size: 0.875rem;
+    }
+
+    .breadcrumb li:not(:last-child)::after {
+      content: '›';
+      margin-left: 0.5rem;
+      color: var(--color-foreground, #666);
+      opacity: 0.4;
+    }
+
+    .breadcrumb a {
+      color: var(--color-primary, #0066cc);
+      text-decoration: none;
+      transition: opacity 0.2s;
+    }
+
+    .breadcrumb a:hover {
+      opacity: 0.8;
+      text-decoration: underline;
+    }
+
+    .breadcrumb a:focus {
+      outline: 2px solid var(--color-primary, #0066cc);
+      outline-offset: 2px;
+      border-radius: 2px;
+    }
+
+    .breadcrumb li[aria-current='page'] {
+      color: var(--color-foreground, #333);
+      opacity: 0.6;
+    }
+
+    .impact-in-content {
+      background: transparent;
+    }
+
+    /* Responsive design */
+    @media (max-width: 768px) {
+      .impact-in-page {
+        padding: calc(var(--spacing-unit) * 2);
+      }
+
+      .breadcrumb {
+        margin-bottom: calc(var(--spacing-unit) * 2);
+      }
+
+      .breadcrumb ol {
+        font-size: 0.75rem;
+      }
+    }
+
+    /* Dark mode support */
+    @media (prefers-color-scheme: dark) {
+      .breadcrumb a {
+        color: var(--color-primary-light, #4d9fff);
+      }
+
+      .breadcrumb li[aria-current='page'] {
+        color: var(--color-foreground, #e5e5e5);
+      }
+    }
+
+    /* High contrast mode support */
+    @media (prefers-contrast: high) {
+      .breadcrumb a {
+        text-decoration: underline;
+      }
+
+      .breadcrumb a:focus {
+        outline-width: 3px;
+      }
+    }
+
+    /* Reduced motion support */
+    @media (prefers-reduced-motion: reduce) {
+      .breadcrumb a {
+        transition: none;
+      }
+    }
+  </style>
+</BaseLayout>

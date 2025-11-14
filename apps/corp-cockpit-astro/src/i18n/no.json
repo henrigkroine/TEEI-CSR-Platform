@@ -148,5 +148,118 @@
     "generateReport": "Generer Rapport",
     "generating": "Genererer rapport...",
     "noReports": "Ingen rapporter funnet"
+  },
+  "impactIn": {
+    "title": "Impact-In Leveringsmonitor",
+    "subtitle": "Overvåk og administrer dataleveranser til eksterne plattformer",
+    "stats": {
+      "totalDeliveries": "Totalt Leveranser",
+      "successRate": "Suksessrate",
+      "failedDeliveries": "Mislykkede Leveranser",
+      "inProgress": "Pågår",
+      "successful": "vellykket",
+      "failureRate": "feilrate",
+      "pending": "ventende",
+      "retrying": "prøver på nytt"
+    },
+    "providers": {
+      "benevity": "Benevity",
+      "goodera": "Goodera",
+      "workday": "Workday",
+      "breakdown": "Leverandør Oversikt",
+      "allProviders": "Alle Leverandører",
+      "totalDeliveries": "totalt leveranser",
+      "avgAttempts": "gj.snitt forsøk"
+    },
+    "status": {
+      "success": "Vellykket",
+      "failed": "Mislyktes",
+      "pending": "Ventende",
+      "retrying": "Prøver på nytt",
+      "allStatuses": "Alle Statuser"
+    },
+    "filters": {
+      "provider": "Leverandør",
+      "status": "Status",
+      "startDate": "Startdato",
+      "endDate": "Sluttdato",
+      "dateRange": "Datoområde",
+      "today": "I dag",
+      "last7Days": "Siste 7 Dager",
+      "last30Days": "Siste 30 Dager",
+      "clearDateRange": "Tøm Datoområde"
+    },
+    "table": {
+      "deliveryId": "Leverings-ID",
+      "provider": "Leverandør",
+      "status": "Status",
+      "attempts": "Forsøk",
+      "created": "Opprettet",
+      "actions": "Handlinger",
+      "selectAll": "Velg alle leveranser",
+      "selected": "valgt",
+      "bulkRetry": "Masseforsøk",
+      "clearSelection": "Tøm Valg",
+      "exportCsv": "Eksporter CSV",
+      "refresh": "Oppdater",
+      "noDeliveries": "Ingen leveranser funnet",
+      "noDeliveriesDescription": "Prøv å justere filtrene dine eller kom tilbake senere.",
+      "loading": "Laster leveranser...",
+      "showingPage": "Viser side"
+    },
+    "details": {
+      "title": "Leveringsdetaljer",
+      "overview": "Oversikt",
+      "provider": "Leverandør",
+      "attempts": "Forsøk",
+      "createdAt": "Opprettet",
+      "deliveredAt": "Levert",
+      "lastUpdated": "Sist Oppdatert",
+      "companyId": "Selskaps-ID",
+      "lastError": "Siste Feil",
+      "payload": "Forespørselsdata",
+      "response": "Leverandørsvar",
+      "noPayload": "Ingen last data",
+      "noResponse": "Ingen svar data",
+      "duration": "Varighet",
+      "close": "Lukk"
+    },
+    "retry": {
+      "retry": "Prøv på nytt",
+      "retrying": "Prøver på nytt...",
+      "canOnlyRetryFailed": "Kan kun prøve mislykkede leveranser på nytt",
+      "replayedSuccessfully": "Levering spilt av på nytt",
+      "failedToRetry": "Kunne ikke prøve levering på nytt"
+    },
+    "bulkRetry": {
+      "title": "Masseforsøk Valgte",
+      "titleAllFailed": "Prøv Alle Mislykkede Leveranser På Nytt",
+      "aboutToRetry": "Prøver {count} mislykkede leveranser på nytt",
+      "note": "Merk: {count} ikke-mislykkede leveranser vil bli hoppet over",
+      "warning": "Dette vil prøve alle mislykkede leveranser{provider} på nytt. Denne operasjonen kan ikke angres.",
+      "for": " for",
+      "description": "Du er i ferd med å prøve {count} valgte leveranser på nytt. Mislykkede leveranser vil bli sendt til sine respektive leverandører på nytt.",
+      "allFailedDescription": "Alle mislykkede leveranser som matcher kriteriene dine vil bli forsøkt på nytt. Dette kan ta noen øyeblikk.",
+      "total": "Totalt",
+      "successful": "Vellykket",
+      "failed": "Mislyktes",
+      "result": "Resultat",
+      "cancel": "Avbryt",
+      "confirmRetry": "Bekreft Forsøk",
+      "close": "Lukk",
+      "noDeliveriesSelected": "Ingen leveranser valgt",
+      "maxDeliveries": "Maksimum 100 leveranser kan forsøkes på nytt samtidig"
+    },
+    "info": {
+      "title": "Om Impact-In Leveranser",
+      "description": "Leveranser sendes automatisk til konfigurerte leverandører (Benevity, Goodera, Workday) når CSR-data endres. Mislykkede leveranser kan prøves på nytt manuelt eller i bulk. Systemet vil automatisk prøve mislykkede leveranser på nytt opptil 3 ganger med eksponentiell tilbakekobling."
+    },
+    "errors": {
+      "loadingFailed": "Kunne ikke laste leveranser",
+      "statsLoadingFailed": "Kunne ikke laste statistikk",
+      "detailsLoadingFailed": "Kunne ikke hente leveringsdetaljer",
+      "retryFailed": "Kunne ikke prøve levering på nytt",
+      "bulkRetryFailed": "Masseforsøk mislyktes"
+    }
   }
 }

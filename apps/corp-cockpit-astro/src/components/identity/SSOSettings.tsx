@@ -8,36 +8,17 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { getSSOConfig, getErrorMessage, type SAMLConfig, type OIDCConfig } from '@/api/identity';
 
 interface SSOSettingsProps {
   companyId: string;
-}
-
-interface SAMLConfig {
-  enabled: boolean;
-  entity_id: string;
-  acs_url: string;
-  metadata_url: string;
-  certificate_fingerprint: string;
-  sign_requests: boolean;
-  want_assertions_signed: boolean;
-  name_id_format: string;
-}
-
-interface OIDCConfig {
-  enabled: boolean;
-  issuer: string;
-  client_id: string;
-  redirect_uri: string;
-  scopes: string[];
-  response_type: string;
-  grant_type: string;
 }
 
 export default function SSOSettings({ companyId }: SSOSettingsProps) {
   const [samlConfig, setSamlConfig] = useState<SAMLConfig | null>(null);
   const [oidcConfig, setOidcConfig] = useState<OIDCConfig | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'saml' | 'oidc'>('saml');
 
   useEffect(() => {
@@ -46,19 +27,59 @@ export default function SSOSettings({ companyId }: SSOSettingsProps) {
 
   async function fetchSSOConfig() {
     try {
-      // TODO: Fetch from Worker-1 platform API
-      // For now, use mock data
-      setSamlConfig(getMockSAMLConfig(companyId));
-      setOidcConfig(getMockOIDCConfig(companyId));
-    } catch (error) {
-      console.error('Failed to fetch SSO config:', error);
+      setLoading(true);
+      setError(null);
+
+      // Fetch from Worker-1 platform API
+      // The API client will use mock data as fallback if USE_REAL_IDENTITY_API is false
+      const response = await getSSOConfig(companyId);
+
+      setSamlConfig(response.saml);
+      setOidcConfig(response.oidc);
+    } catch (err) {
+      const errorMessage = getErrorMessage(err);
+      console.error('Failed to fetch SSO config:', err);
+      setError(errorMessage);
+
+      // In development mode, show a helpful message
+      if (import.meta.env.DEV) {
+        console.warn(
+          '[SSO Settings] API call failed. Using mock data. ' +
+          'Set USE_REAL_IDENTITY_API=true in .env to use real API.'
+        );
+      }
     } finally {
       setLoading(false);
     }
   }
 
+  function handleRetry() {
+    fetchSSOConfig();
+  }
+
   if (loading) {
-    return <div className="sso-settings loading">Loading SSO configuration...</div>;
+    return (
+      <div className="sso-settings loading">
+        <div className="loading-spinner">
+          <div className="spinner"></div>
+          <p>Loading SSO configuration...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error && !samlConfig && !oidcConfig) {
+    return (
+      <div className="sso-settings error-state">
+        <div className="error-banner">
+          <strong>Failed to load SSO configuration</strong>
+          <p>{error}</p>
+          <button onClick={handleRetry} className="retry-btn">
+            Retry
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -169,6 +190,76 @@ export default function SSOSettings({ companyId }: SSOSettingsProps) {
       <style jsx>{`
         .sso-settings {
           background: white;
+        }
+
+        .loading-spinner {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: 64px 24px;
+          gap: 16px;
+        }
+
+        .spinner {
+          width: 48px;
+          height: 48px;
+          border: 4px solid #e5e7eb;
+          border-top-color: #3b82f6;
+          border-radius: 50%;
+          animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+          to {
+            transform: rotate(360deg);
+          }
+        }
+
+        .loading-spinner p {
+          margin: 0;
+          color: #6b7280;
+          font-size: 0.9375rem;
+        }
+
+        .error-state {
+          padding: 24px;
+        }
+
+        .error-banner {
+          background: #fee2e2;
+          border: 1px solid #fca5a5;
+          border-left: 4px solid #ef4444;
+          padding: 20px;
+          border-radius: 6px;
+        }
+
+        .error-banner strong {
+          display: block;
+          margin-bottom: 8px;
+          color: #991b1b;
+          font-size: 1rem;
+        }
+
+        .error-banner p {
+          margin: 0 0 16px;
+          color: #7f1d1d;
+        }
+
+        .retry-btn {
+          padding: 8px 16px;
+          background: #ef4444;
+          color: white;
+          border: none;
+          border-radius: 6px;
+          font-size: 0.875rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .retry-btn:hover {
+          background: #dc2626;
         }
 
         .tab-nav {
@@ -436,30 +527,3 @@ function ConfigField({
   );
 }
 
-/**
- * Mock data functions (replace with real API calls to Worker-1)
- */
-function getMockSAMLConfig(companyId: string): SAMLConfig {
-  return {
-    enabled: true,
-    entity_id: `https://teei.platform/saml/${companyId}`,
-    acs_url: `https://teei.platform/api/auth/saml/${companyId}/acs`,
-    metadata_url: `https://teei.platform/api/auth/saml/${companyId}/metadata.xml`,
-    certificate_fingerprint: 'AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD',
-    sign_requests: true,
-    want_assertions_signed: true,
-    name_id_format: 'urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress',
-  };
-}
-
-function getMockOIDCConfig(companyId: string): OIDCConfig {
-  return {
-    enabled: false,
-    issuer: 'https://accounts.google.com',
-    client_id: `teei-${companyId}.apps.googleusercontent.com`,
-    redirect_uri: `https://teei.platform/api/auth/oidc/${companyId}/callback`,
-    scopes: ['openid', 'profile', 'email'],
-    response_type: 'code',
-    grant_type: 'authorization_code',
-  };
-}

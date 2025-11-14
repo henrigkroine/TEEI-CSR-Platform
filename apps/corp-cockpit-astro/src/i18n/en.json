@@ -222,5 +222,118 @@
       "finalizeConfirm": "Finalize this report? This will lock editing and mark it as final.",
       "regenerateConfirm": "Regenerate this section? Current edits will be lost."
     }
+  },
+  "impactIn": {
+    "title": "Impact-In Delivery Monitor",
+    "subtitle": "Monitor and manage data deliveries to external platforms",
+    "stats": {
+      "totalDeliveries": "Total Deliveries",
+      "successRate": "Success Rate",
+      "failedDeliveries": "Failed Deliveries",
+      "inProgress": "In Progress",
+      "successful": "successful",
+      "failureRate": "failure rate",
+      "pending": "pending",
+      "retrying": "retrying"
+    },
+    "providers": {
+      "benevity": "Benevity",
+      "goodera": "Goodera",
+      "workday": "Workday",
+      "breakdown": "Provider Breakdown",
+      "allProviders": "All Providers",
+      "totalDeliveries": "total deliveries",
+      "avgAttempts": "avg attempts"
+    },
+    "status": {
+      "success": "Success",
+      "failed": "Failed",
+      "pending": "Pending",
+      "retrying": "Retrying",
+      "allStatuses": "All Statuses"
+    },
+    "filters": {
+      "provider": "Provider",
+      "status": "Status",
+      "startDate": "Start Date",
+      "endDate": "End Date",
+      "dateRange": "Date Range",
+      "today": "Today",
+      "last7Days": "Last 7 Days",
+      "last30Days": "Last 30 Days",
+      "clearDateRange": "Clear Date Range"
+    },
+    "table": {
+      "deliveryId": "Delivery ID",
+      "provider": "Provider",
+      "status": "Status",
+      "attempts": "Attempts",
+      "created": "Created",
+      "actions": "Actions",
+      "selectAll": "Select all deliveries",
+      "selected": "selected",
+      "bulkRetry": "Bulk Retry",
+      "clearSelection": "Clear Selection",
+      "exportCsv": "Export CSV",
+      "refresh": "Refresh",
+      "noDeliveries": "No deliveries found",
+      "noDeliveriesDescription": "Try adjusting your filters or check back later.",
+      "loading": "Loading deliveries...",
+      "showingPage": "Showing page"
+    },
+    "details": {
+      "title": "Delivery Details",
+      "overview": "Overview",
+      "provider": "Provider",
+      "attempts": "Attempts",
+      "createdAt": "Created At",
+      "deliveredAt": "Delivered At",
+      "lastUpdated": "Last Updated",
+      "companyId": "Company ID",
+      "lastError": "Last Error",
+      "payload": "Request Payload",
+      "response": "Provider Response",
+      "noPayload": "No payload data",
+      "noResponse": "No response data",
+      "duration": "Duration",
+      "close": "Close"
+    },
+    "retry": {
+      "retry": "Retry",
+      "retrying": "Retrying...",
+      "canOnlyRetryFailed": "Can only retry failed deliveries",
+      "replayedSuccessfully": "Delivery replayed successfully",
+      "failedToRetry": "Failed to retry delivery"
+    },
+    "bulkRetry": {
+      "title": "Bulk Retry Selected",
+      "titleAllFailed": "Retry All Failed Deliveries",
+      "aboutToRetry": "About to retry {count} failed deliveries",
+      "note": "Note: {count} non-failed deliveries will be skipped",
+      "warning": "This will retry all failed deliveries{provider}. This operation cannot be undone.",
+      "for": " for",
+      "description": "You are about to retry {count} selected deliveries. Failed deliveries will be resent to their respective providers.",
+      "allFailedDescription": "All failed deliveries matching your criteria will be retried. This may take a few moments.",
+      "total": "Total",
+      "successful": "Success",
+      "failed": "Failed",
+      "result": "Result",
+      "cancel": "Cancel",
+      "confirmRetry": "Confirm Retry",
+      "close": "Close",
+      "noDeliveriesSelected": "No deliveries selected",
+      "maxDeliveries": "Maximum 100 deliveries can be retried at once"
+    },
+    "info": {
+      "title": "About Impact-In Deliveries",
+      "description": "Deliveries are automatically sent to configured providers (Benevity, Goodera, Workday) when CSR data changes. Failed deliveries can be retried manually or in bulk. The system will automatically retry failed deliveries up to 3 times with exponential backoff."
+    },
+    "errors": {
+      "loadingFailed": "Failed to load deliveries",
+      "statsLoadingFailed": "Failed to load statistics",
+      "detailsLoadingFailed": "Failed to fetch delivery details",
+      "retryFailed": "Failed to retry delivery",
+      "bulkRetryFailed": "Bulk retry failed"
+    }
   }
 }

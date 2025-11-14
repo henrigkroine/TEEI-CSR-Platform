@@ -663,11 +663,11 @@ AcmeConsulting_Q4_2024_Impact_Pack.zip
 **metadata.json**:
 ```json
 {
-  "exportId": "WL-2024-Q4-A3F8B92C",
-  "exportedAt": "2024-12-15T10:30:00Z",
+  "exportId": "WL-2025-Q4-A3F8B92C",
+  "exportedAt": "2025-11-14T10:30:00Z",
   "exportedBy": "partner@acmeconsulting.com",
   "clientName": "Example Corp",
-  "reportPeriod": "2024-Q4",
+  "reportPeriod": "2025-Q4",
   "formats": ["pdf", "pptx", "csv"],
   "branding": {
     "logoUrl": "assets/logo.png",

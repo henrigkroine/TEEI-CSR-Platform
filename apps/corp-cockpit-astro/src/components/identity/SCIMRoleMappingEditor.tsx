@@ -8,6 +8,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { getSCIMConfig, getErrorMessage } from '@/api/identity';
 
 interface SCIMRoleMappingEditorProps {
   companyId: string;
@@ -63,23 +64,50 @@ export default function SCIMRoleMappingEditor({
   async function fetchMappings() {
     try {
       setLoading(true);
-      // TODO: Call Worker 1 API: GET /identity/scim/mappings
-      const response = await fetch(`/api/identity/scim/${companyId}/mappings`);
+      setError(null);
 
-      if (response.ok) {
-        const data = await response.json();
-        setMappings(data.mappings || []);
-      } else {
-        throw new Error('Failed to fetch mappings');
+      // Fetch SCIM config which includes role mappings
+      // The API client will use mock data as fallback if USE_REAL_IDENTITY_API is false
+      const response = await getSCIMConfig(companyId);
+
+      // Convert API format to component format
+      const mappingsFromApi: RoleMapping[] = response.scim.roleMappings.map((rm, index) => ({
+        id: `mapping-${index}`,
+        idp_claim: 'groups', // Default, would need to be in API response
+        claim_value: rm.externalRoleId,
+        teei_role: mapInternalRoleToTeeiRole(rm.internalRoleId),
+        priority: 100 - (index * 10), // Generate priority based on order
+        enabled: true,
+        description: rm.description,
+        created_at: new Date().toISOString(),
+      }));
+
+      setMappings(mappingsFromApi);
+    } catch (err) {
+      const errorMessage = getErrorMessage(err);
+      console.error('Failed to fetch role mappings:', err);
+      setError(errorMessage);
+
+      // In development mode, show a helpful message
+      if (import.meta.env.DEV) {
+        console.warn(
+          '[SCIM Role Mappings] API call failed. Using mock data. ' +
+          'Set USE_REAL_IDENTITY_API=true in .env to use real API.'
+        );
       }
-    } catch (error) {
-      console.error('Failed to fetch role mappings:', error);
-      setError('Failed to load role mappings');
-      // Use mock data for development
-      setMappings(getMockMappings());
     } finally {
       setLoading(false);
     }
+  }
+
+  function mapInternalRoleToTeeiRole(internalRoleId: string): 'VIEWER' | 'MANAGER' | 'ADMIN' | 'SUPER_ADMIN' {
+    const roleMap: Record<string, 'VIEWER' | 'MANAGER' | 'ADMIN' | 'SUPER_ADMIN'> = {
+      'company-viewer': 'VIEWER',
+      'company-manager': 'MANAGER',
+      'company-admin': 'ADMIN',
+      'super-admin': 'SUPER_ADMIN',
+    };
+    return roleMap[internalRoleId] || 'VIEWER';
   }
 
   function openCreateModal() {
@@ -116,9 +144,15 @@ export default function SCIMRoleMappingEditor({
     setError(null);
 
     try {
+      // TODO: These CRUD endpoints need to be defined in the Worker 1 API spec
+      // For now, we'll show an error message that the feature is not yet implemented
+      setError('CRUD operations for SCIM role mappings are not yet available. Please contact your administrator.');
+
+      // When the API endpoints are available, implement like this:
+      /*
       if (editingMapping) {
         // Update existing mapping
-        // TODO: Call Worker 1 API: PUT /identity/scim/mappings/:id
+        // PUT /v1/identity/scim-config/{companyId}/role-mappings/{id}
         const response = await fetch(
           `/api/identity/scim/${companyId}/mappings/${editingMapping.id}`,
           {
@@ -140,7 +174,7 @@ export default function SCIMRoleMappingEditor({
         }
       } else {
         // Create new mapping
-        // TODO: Call Worker 1 API: POST /identity/scim/mappings
+        // POST /v1/identity/scim-config/{companyId}/role-mappings
         const response = await fetch(`/api/identity/scim/${companyId}/mappings`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -156,6 +190,7 @@ export default function SCIMRoleMappingEditor({
           setError(errorData.error || 'Failed to create mapping');
         }
       }
+      */
     } catch (error) {
       console.error('Failed to save mapping:', error);
       setError(error instanceof Error ? error.message : 'Network error');
@@ -171,8 +206,14 @@ export default function SCIMRoleMappingEditor({
 
     if (!confirmed) return;
 
+    // TODO: DELETE endpoint needs to be defined in the Worker 1 API spec
+    // For now, show an error message
+    alert('Delete operation for SCIM role mappings is not yet available. Please contact your administrator.');
+
+    // When the API endpoint is available, implement like this:
+    /*
     try {
-      // TODO: Call Worker 1 API: DELETE /identity/scim/mappings/:id
+      // DELETE /v1/identity/scim-config/{companyId}/role-mappings/{id}
       const response = await fetch(
         `/api/identity/scim/${companyId}/mappings/${mapping.id}`,
         {
@@ -190,6 +231,7 @@ export default function SCIMRoleMappingEditor({
       console.error('Failed to delete mapping:', error);
       alert('Failed to delete mapping: Network error');
     }
+    */
   }
 
   const sortedMappings = [...mappings].sort((a, b) => b.priority - a.priority);
@@ -806,30 +848,3 @@ function RoleBadge({ role }: { role: string }) {
   );
 }
 
-/**
- * Mock data function (replace with real API call to Worker-1)
- */
-function getMockMappings(): RoleMapping[] {
-  return [
-    {
-      id: '1',
-      idp_claim: 'groups',
-      claim_value: 'teei-super-admins',
-      teei_role: 'SUPER_ADMIN',
-      priority: 100,
-      enabled: true,
-      description: 'Platform administrators with full access',
-      created_at: '2024-01-15T10:00:00Z',
-    },
-    {
-      id: '2',
-      idp_claim: 'groups',
-      claim_value: 'teei-admins',
-      teei_role: 'ADMIN',
-      priority: 90,
-      enabled: true,
-      description: 'Company administrators and report reviewers',
-      created_at: '2024-01-15T10:00:00Z',
-    },
-  ];
-}

@@ -3,6 +3,8 @@ import type { GeneratedReport, Citation } from '../../types/reports';
 import ReportEditor from './ReportEditor';
 import ExportModal from './ExportModal';
 import { renderWithCitations } from './CitationTooltip';
+import { CompactCostDisplay } from './CostSummary';
+import { formatCost } from '../../api/reporting';
 
 interface ReportPreviewProps {
   report: GeneratedReport;
@@ -144,6 +146,16 @@ export default function ReportPreview({
     });
   };
 
+  const calculateCost = (tokens: number, model: string): string => {
+    // GPT-4 Turbo pricing (as of 2024): $0.01/1K input, $0.03/1K output
+    // Assume 60% input, 40% output
+    const inputTokens = tokens * 0.6;
+    const outputTokens = tokens * 0.4;
+    const inputCost = (inputTokens * 0.01) / 1000;
+    const outputCost = (outputTokens * 0.03) / 1000;
+    return (inputCost + outputCost).toFixed(4);
+  };
+
   return (
     <>
       {/* Backdrop */}
@@ -168,10 +180,16 @@ export default function ReportPreview({
               <h2 id="report-preview-title" className="text-xl font-bold">
                 {report.reportType.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())} Preview
               </h2>
-              <p className="mt-1 text-sm text-foreground/60">
-                Generated {formatDate(report.metadata.generatedAt)} • {report.metadata.model} • 
-                Prompt v{report.metadata.promptVersion} • {report.metadata.tokensUsed} tokens
-              </p>
+              <div className="mt-2">
+                <CompactCostDisplay
+                  tokensUsed={report.metadata.tokensUsed}
+                  estimatedCostUsd={calculateCost(report.metadata.tokensUsed, report.metadata.model)}
+                  modelName={report.metadata.model}
+                />
+                <p className="mt-2 text-xs text-foreground/60">
+                  Generated {formatDate(report.metadata.generatedAt)} • Prompt v{report.metadata.promptVersion}
+                </p>
+              </div>
             </div>
             <div className="flex items-center gap-3">
               <button
