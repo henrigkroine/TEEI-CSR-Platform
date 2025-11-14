@@ -21,7 +21,7 @@
   --color-foreground: #1A1A1A;
   --color-border: #E0E0E0;
   --color-muted: #F5F5F5;
-  --color-muted-foreground: #666666;
+  --color-muted-foreground: #595959; /* WCAG AA compliant: 7:1 contrast on white */
 
   /* Typography */
   --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -61,16 +61,51 @@
     line-height: var(--line-height-normal);
   }
 
-  /* Focus visible for accessibility */
+  /* Focus visible for accessibility - WCAG 2.2 AA compliant */
   *:focus-visible {
     @apply outline-2 outline-offset-2 outline-primary;
+    outline-style: solid;
+  }
+
+  /* Enhanced focus styles for interactive elements */
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible,
+  [tabindex]:focus-visible {
+    @apply ring-2 ring-primary ring-offset-2;
+  }
+
+  /* Dark mode focus ring offset */
+  [data-theme="dark"] *:focus-visible {
+    @apply ring-offset-gray-900;
+  }
+
+  /* Remove default focus outline to use our custom styles */
+  *:focus:not(:focus-visible) {
+    outline: none;
   }
 
   /* Skip link for accessibility */
   .skip-link {
-    @apply absolute left-0 top-0 z-50 bg-primary px-4 py-2 text-white;
+    @apply absolute left-0 top-0 z-50 bg-primary px-4 py-2 text-white rounded-br-md;
     @apply -translate-y-full transform;
     @apply transition-transform focus:translate-y-0;
+    @apply focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-primary;
+  }
+
+  /* Screen reader only class */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
   }
 }
 
@@ -79,8 +114,8 @@
     @apply inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium;
     @apply transition-colors focus-visible:outline focus-visible:outline-2;
     @apply disabled:pointer-events-none disabled:opacity-50;
-    min-height: 2.5rem; /* WCAG 2.5.8 target size */
-    min-width: 2.5rem;
+    min-height: 44px; /* WCAG 2.2 Level AA (2.5.8) - 44x44px touch target */
+    min-width: 44px;
   }
 
   .btn-primary {
@@ -93,5 +128,13 @@
 
   .card {
     @apply rounded-lg border border-border bg-background p-6 shadow-sm;
+  }
+
+  /* Form controls - WCAG 2.2 Level AA minimum touch targets */
+  input[type="checkbox"],
+  input[type="radio"] {
+    min-width: 24px;
+    min-height: 24px;
+    cursor: pointer;
   }
 }

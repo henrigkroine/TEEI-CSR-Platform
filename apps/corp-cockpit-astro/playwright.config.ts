@@ -129,5 +129,18 @@ export default defineConfig({
   // Maximum time to wait for expect() to pass
   expect: {
     timeout: 10000,
+    // Strict visual regression thresholds
+    toHaveScreenshot: {
+      // Maximum allowed pixel difference (0.2%)
+      maxDiffPixelRatio: 0.002,
+      // Maximum allowed different pixels
+      maxDiffPixels: 100,
+      // Threshold for pixel color difference (0-1)
+      threshold: 0.2,
+      // Animation handling
+      animations: 'disabled',
+      // CSS media type
+      caret: 'hide',
+    },
   },
 });

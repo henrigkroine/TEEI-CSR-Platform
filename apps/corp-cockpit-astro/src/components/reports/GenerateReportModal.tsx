@@ -1,12 +1,13 @@
-import { useState } from 'react';
-import type { 
-  GenerateReportRequest, 
-  ReportType, 
-  ReportTone, 
-  ReportLength 
+import { useState, useRef, useEffect } from 'react';
+import type {
+  GenerateReportRequest,
+  ReportType,
+  ReportTone,
+  ReportLength
 } from '../../types/reports';
 import ReportPreview from './ReportPreview';
 import type { GeneratedReport } from '../../types/reports';
+import { FocusTrap } from '../a11y/FocusManager';
 
 interface GenerateReportModalProps {
   companyId: string;
@@ -34,9 +35,9 @@ const LENGTH_LABELS: Record<ReportLength, string> = {
   detailed: 'Detailed'
 };
 
-export default function GenerateReportModal({ 
-  companyId, 
-  isOpen, 
+export default function GenerateReportModal({
+  companyId,
+  isOpen,
   onClose,
   lang = 'en'
 }: GenerateReportModalProps) {
@@ -44,6 +45,7 @@ export default function GenerateReportModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
 
   // Form state - Step 1: Configuration
   const [reportType, setReportType] = useState<ReportType>('quarterly');
@@ -58,6 +60,28 @@ export default function GenerateReportModal({
   const [includeCharts, setIncludeCharts] = useState(true);
   const [deterministic, setDeterministic] = useState(false);
   const [seed, setSeed] = useState<string>('');
+
+  // Handle Escape key
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !loading) {
+        event.preventDefault();
+        handleClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [isOpen, loading]);
+
+  // Focus close button when modal opens
+  useEffect(() => {
+    if (isOpen && closeButtonRef.current && !report) {
+      setTimeout(() => closeButtonRef.current?.focus(), 100);
+    }
+  }, [isOpen, report]);
 
   const handleGenerate = async () => {
     setLoading(true);
@@ -144,10 +168,10 @@ export default function GenerateReportModal({
   // Show report preview if report generated
   if (report) {
     return (
-      <ReportPreview 
-        report={report} 
+      <ReportPreview
+        report={report}
         companyId={companyId}
-        onClose={handleClose} 
+        onClose={handleClose}
         onBack={() => setReport(null)}
         lang={lang}
       />
@@ -155,40 +179,44 @@ export default function GenerateReportModal({
   }
 
   return (
-    <>
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 z-40 bg-black/50"
-        onClick={handleClose}
-        aria-hidden="true"
-      />
+    <FocusTrap active={isOpen} restoreFocusOnDeactivate={true} focusFirstOnActivate={true}>
+      <>
+        {/* Backdrop */}
+        <div
+          className="fixed inset-0 z-40 bg-black/50"
+          onClick={handleClose}
+          aria-hidden="true"
+        />
 
-      {/* Modal */}
-      <div
-        className="fixed left-1/2 top-1/2 z-50 w-full max-w-3xl -translate-x-1/2 -translate-y-1/2 
-                   max-h-[90vh] overflow-hidden rounded-lg bg-background shadow-2xl"
-        role="dialog"
-        aria-labelledby="generate-report-title"
-        aria-modal="true"
-      >
-        {/* Header */}
-        <div className="border-b border-border px-6 py-4 bg-background sticky top-0 z-10">
-          <div className="flex items-center justify-between">
-            <h2 id="generate-report-title" className="text-xl font-bold">
-              Generate Report
-            </h2>
-            <button
-              onClick={handleClose}
-              className="btn-secondary"
-              aria-label="Close modal"
-              disabled={loading}
-            >
+        {/* Modal */}
+        <div
+          className="fixed left-1/2 top-1/2 z-50 w-full max-w-3xl -translate-x-1/2 -translate-y-1/2
+                     max-h-[90vh] overflow-hidden rounded-lg bg-background shadow-2xl"
+          role="dialog"
+          aria-labelledby="generate-report-title"
+          aria-modal="true"
+        >
+          {/* Header */}
+          <div className="border-b border-border px-6 py-4 bg-background sticky top-0 z-10">
+            <div className="flex items-center justify-between">
+              <h2 id="generate-report-title" className="text-xl font-bold">
+                Generate Report
+              </h2>
+              <button
+                ref={closeButtonRef}
+                onClick={handleClose}
+                className="btn-secondary"
+                aria-label="Close modal"
+                disabled={loading}
+              >
               <svg
                 className="h-5 w-5"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
+                aria-hidden="true"
               >
+                <title>Close icon</title>
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -203,16 +231,16 @@ export default function GenerateReportModal({
         {/* Content */}
         <div className="max-h-[calc(90vh-10rem)] overflow-y-auto p-6">
           {error && (
-            <div className="mb-4 rounded-md bg-red-50 p-4 text-red-600 border border-red-200">
+            <div className="mb-4 rounded-md bg-red-50 p-4 text-red-600 border border-red-200" role="alert" aria-live="assertive">
               <p className="font-medium">Error generating report</p>
               <p className="text-sm mt-1">{error}</p>
             </div>
           )}
 
           {loading && (
-            <div className="mb-4 rounded-md bg-blue-50 p-4 border border-blue-200">
+            <div className="mb-4 rounded-md bg-blue-50 p-4 border border-blue-200" role="status" aria-live="polite">
               <div className="flex items-center gap-3">
-                <div className="h-5 w-5 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" aria-hidden="true" />
                 <div className="flex-1">
                   <p className="font-medium text-blue-900">Generating report...</p>
                   <p className="text-sm text-blue-700 mt-1">
@@ -222,13 +250,13 @@ export default function GenerateReportModal({
               </div>
               {progress > 0 && (
                 <div className="mt-3">
-                  <div className="h-2 bg-blue-200 rounded-full overflow-hidden">
-                    <div 
+                  <div className="h-2 bg-blue-200 rounded-full overflow-hidden" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100} aria-label="Report generation progress">
+                    <div
                       className="h-full bg-blue-600 transition-all duration-300"
                       style={{ width: `${progress}%` }}
                     />
                   </div>
-                  <p className="text-xs text-blue-600 mt-1">{progress}% complete</p>
+                  <p className="text-xs text-blue-600 mt-1" aria-live="polite">{progress}% complete</p>
                 </div>
               )}
             </div>
@@ -498,6 +526,7 @@ export default function GenerateReportModal({
           </div>
         </div>
       </div>
-    </>
+      </>
+    </FocusTrap>
   );
 }

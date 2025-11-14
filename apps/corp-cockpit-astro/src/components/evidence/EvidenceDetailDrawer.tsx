@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { EvidenceSnippet, OutcomeScore, OutcomeDimension } from '@teei/shared-types';
+import { FocusTrap } from '../a11y/FocusManager';
 
 interface EvidenceDetailDrawerProps {
   snippet: EvidenceSnippet | null;
@@ -93,10 +94,10 @@ export default function EvidenceDetailDrawer({
     const currentLang = levels[lang as keyof typeof levels] || levels.en;
 
     if (confidence >= 0.9)
-      return { label: currentLang.high, color: 'bg-green-100 text-green-800' };
+      return { label: currentLang.high, color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' };
     if (confidence >= 0.75)
-      return { label: currentLang.medium, color: 'bg-yellow-100 text-yellow-800' };
-    return { label: currentLang.low, color: 'bg-orange-100 text-orange-800' };
+      return { label: currentLang.medium, color: 'bg-yellow-100 text-yellow-900 dark:bg-yellow-900 dark:text-yellow-200' };
+    return { label: currentLang.low, color: 'bg-orange-100 text-orange-900 dark:bg-orange-900 dark:text-orange-200' };
   };
 
   const copyFullText = async () => {
@@ -217,21 +218,22 @@ This evidence has been anonymized and redacted for privacy protection in accorda
   if (!isOpen || !snippet) return null;
 
   return (
-    <>
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 z-40 bg-black/50"
-        onClick={onClose}
-        aria-hidden="true"
-      />
+    <FocusTrap active={isOpen} restoreFocusOnDeactivate={true} focusFirstOnActivate={true}>
+      <>
+        {/* Backdrop */}
+        <div
+          className="fixed inset-0 z-40 bg-black/50"
+          onClick={onClose}
+          aria-hidden="true"
+        />
 
-      {/* Drawer */}
-      <div
-        className="fixed right-0 top-0 z-50 h-full w-full max-w-3xl overflow-y-auto bg-background shadow-2xl"
-        role="dialog"
-        aria-labelledby="evidence-drawer-title"
-        aria-modal="true"
-      >
+        {/* Drawer */}
+        <div
+          className="fixed right-0 top-0 z-50 h-full w-full max-w-3xl overflow-y-auto bg-background shadow-2xl"
+          role="dialog"
+          aria-labelledby="evidence-drawer-title"
+          aria-modal="true"
+        >
         {/* Header */}
         <div className="sticky top-0 z-10 border-b border-border bg-background px-6 py-4">
           <div className="flex items-center justify-between">
@@ -246,11 +248,11 @@ This evidence has been anonymized and redacted for privacy protection in accorda
             <button
               ref={closeButtonRef}
               onClick={onClose}
-              className="rounded-md p-2 hover:bg-border/50 focus:bg-border/50 focus:outline-none focus:ring-2 focus:ring-primary"
+              className="rounded-md p-2 hover:bg-border/50 focus:bg-border/50 focus:outline-none focus:ring-2 focus:ring-primary min-w-[44px] min-h-[44px] flex items-center justify-center"
               aria-label={t.close}
             >
               <svg
-                className="h-5 w-5"
+                className="h-6 w-6"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -477,6 +479,7 @@ This evidence has been anonymized and redacted for privacy protection in accorda
           </div>
         </div>
       </div>
-    </>
+      </>
+    </FocusTrap>
   );
 }

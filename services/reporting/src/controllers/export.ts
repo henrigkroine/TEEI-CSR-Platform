@@ -1,9 +1,31 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { pool } from '../db/connection.js';
+import {
+  exportReportToPDF,
+  exportMultipleReportsToPDF,
+  previewPDFMetadata,
+} from '../utils/pdfExport.js';
+import type { PDFExportRequest } from '../../types.js';
+import {
+  logExportAttempt,
+  logExportSuccess,
+  logExportFailure,
+} from '../lib/exportAudit.js';
 
 interface ExportQuery {
   format?: 'csv' | 'json';
   period?: string;
+}
+
+interface PDFExportBody {
+  reportId?: string;
+  reportIds?: string[];
+  options?: {
+    includeCharts?: boolean;
+    includeCitations?: boolean;
+    includeTableOfContents?: boolean;
+    watermark?: string;
+  };
 }
 
 export async function exportCSRD(
@@ -11,6 +33,24 @@ export async function exportCSRD(
   reply: FastifyReply
 ): Promise<void> {
   const { format = 'json', period } = request.query;
+
+  // Get user info from request (set by auth middleware)
+  const userId = (request as any).user?.id || 'anonymous';
+  const userName = (request as any).user?.name || (request as any).user?.email || 'Anonymous User';
+  const tenantId = (request as any).user?.companyId || 'unknown';
+  const ipAddress = request.ip || request.headers['x-forwarded-for'] || 'unknown';
+  const userAgent = request.headers['user-agent'];
+
+  // Log export attempt
+  const exportId = logExportAttempt({
+    tenantId,
+    userId,
+    userName,
+    exportType: format === 'csv' ? 'csv' : 'json',
+    ipAddress: ipAddress as string,
+    userAgent,
+    metadata: { period },
+  });
 
   const client = await pool.connect();
   try {
@@ -82,6 +122,13 @@ export async function exportCSRD(
       }
 
       const csv = csvRows.join('\n');
+
+      // Log success
+      logExportSuccess(exportId, {
+        fileSize: Buffer.byteLength(csv, 'utf-8'),
+        metadata: { rowCount: result.rows.length, period },
+      });
+
       reply
         .header('Content-Type', 'text/csv')
         .header('Content-Disposition', `attachment; filename="csrd_export_${period || 'all-time'}.csv"`)
@@ -101,6 +148,14 @@ export async function exportCSRD(
         },
       }));
 
+      const jsonString = JSON.stringify({ period: period || 'all-time', data });
+
+      // Log success
+      logExportSuccess(exportId, {
+        fileSize: Buffer.byteLength(jsonString, 'utf-8'),
+        metadata: { rowCount: result.rows.length, period },
+      });
+
       reply
         .header('Content-Type', 'application/json')
         .header(
@@ -112,8 +167,193 @@ export async function exportCSRD(
     }
   } catch (error) {
     request.log.error(error);
+
+    // Log failure
+    logExportFailure(exportId, error);
+
     reply.code(500).send({ error: 'Failed to export CSRD data' });
   } finally {
     client.release();
+  }
+}
+
+/**
+ * Export report to PDF
+ *
+ * POST /reporting/export/pdf
+ *
+ * Request body:
+ * {
+ *   "reportId": "uuid", // Required if reportIds not provided
+ *   "reportIds": ["uuid1", "uuid2"], // Optional: batch export
+ *   "options": {
+ *     "includeCharts": true,
+ *     "includeCitations": true,
+ *     "includeTableOfContents": true,
+ *     "watermark": "Custom watermark text"
+ *   }
+ * }
+ *
+ * Response:
+ * - Content-Type: application/pdf
+ * - Content-Disposition: attachment; filename="report.pdf"
+ */
+export async function exportPDF(
+  request: FastifyRequest<{ Body: PDFExportBody }>,
+  reply: FastifyReply
+): Promise<void> {
+  // Get user info from request (set by auth middleware)
+  const userId = (request as any).user?.id || 'anonymous';
+  const userName = (request as any).user?.name || (request as any).user?.email || 'Anonymous User';
+  const tenantId = (request as any).user?.companyId || request.body.reportId;
+  const ipAddress = request.ip || request.headers['x-forwarded-for'] || 'unknown';
+  const userAgent = request.headers['user-agent'];
+
+  if (!tenantId) {
+    reply.code(400).send({ error: 'Tenant ID is required' });
+    return;
+  }
+
+  // Log export attempt
+  const exportId = logExportAttempt({
+    tenantId,
+    userId,
+    userName,
+    exportType: 'pdf',
+    reportId: request.body.reportId,
+    reportIds: request.body.reportIds,
+    ipAddress: ipAddress as string,
+    userAgent,
+    metadata: { options: request.body.options },
+  });
+
+  try {
+
+    // Batch export
+    if (request.body.reportIds && request.body.reportIds.length > 0) {
+      request.log.info(`[PDF Export] Batch export requested: ${request.body.reportIds.length} reports`);
+
+      const result = await exportMultipleReportsToPDF(
+        request.body.reportIds,
+        tenantId,
+        request.body.options
+      );
+
+      if (!result.success || !result.buffer) {
+        // Log failure
+        logExportFailure(exportId, result.error || 'PDF export failed');
+        reply.code(500).send({ error: result.error || 'PDF export failed' });
+        return;
+      }
+
+      // Log success
+      logExportSuccess(exportId, {
+        fileSize: result.fileSize || result.buffer.length,
+        renderTime: result.renderTime,
+        metadata: {
+          pageCount: result.pageCount,
+          reportCount: request.body.reportIds.length,
+        },
+      });
+
+      reply
+        .header('Content-Type', 'application/pdf')
+        .header('Content-Disposition', `attachment; filename="${result.fileName}"`)
+        .header('X-PDF-Pages', result.pageCount?.toString() || '0')
+        .header('X-Render-Time', result.renderTime?.toString() || '0')
+        .code(200)
+        .send(result.buffer);
+
+      return;
+    }
+
+    // Single report export
+    if (!request.body.reportId) {
+      reply.code(400).send({ error: 'reportId or reportIds is required' });
+      return;
+    }
+
+    request.log.info(`[PDF Export] Single export requested: ${request.body.reportId}`);
+
+    const exportRequest: PDFExportRequest = {
+      reportId: request.body.reportId,
+      tenantId,
+      options: request.body.options,
+    };
+
+    const result = await exportReportToPDF(exportRequest);
+
+    if (!result.success || !result.buffer) {
+      // Log failure
+      logExportFailure(exportId, result.error || 'PDF export failed');
+      reply.code(500).send({ error: result.error || 'PDF export failed' });
+      return;
+    }
+
+    // Log success
+    logExportSuccess(exportId, {
+      fileSize: result.fileSize || result.buffer.length,
+      renderTime: result.renderTime,
+      metadata: {
+        pageCount: result.pageCount,
+        fileName: result.fileName,
+      },
+    });
+
+    reply
+      .header('Content-Type', 'application/pdf')
+      .header('Content-Disposition', `attachment; filename="${result.fileName}"`)
+      .header('X-PDF-Pages', result.pageCount?.toString() || '0')
+      .header('X-Render-Time', result.renderTime?.toString() || '0')
+      .code(200)
+      .send(result.buffer);
+  } catch (error) {
+    request.log.error('[PDF Export] Error:', error);
+
+    // Log failure
+    logExportFailure(exportId, error);
+
+    reply.code(500).send({ error: 'Failed to export PDF' });
+  }
+}
+
+/**
+ * Preview PDF metadata
+ *
+ * GET /reporting/export/pdf/:reportId/preview
+ *
+ * Response:
+ * {
+ *   "estimatedPages": 12,
+ *   "estimatedSize": 1048576,
+ *   "chartCount": 5,
+ *   "sectionCount": 8
+ * }
+ */
+export async function previewPDF(
+  request: FastifyRequest<{ Params: { reportId: string } }>,
+  reply: FastifyReply
+): Promise<void> {
+  try {
+    const { reportId } = request.params;
+    const tenantId = (request as any).user?.companyId || reportId;
+
+    if (!tenantId) {
+      reply.code(400).send({ error: 'Tenant ID is required' });
+      return;
+    }
+
+    request.log.info(`[PDF Export] Preview requested: ${reportId}`);
+
+    const metadata = await previewPDFMetadata(reportId, tenantId);
+
+    reply.code(200).send({
+      reportId,
+      ...metadata,
+      estimatedSizeFormatted: `${(metadata.estimatedSize / 1024 / 1024).toFixed(2)} MB`,
+    });
+  } catch (error) {
+    request.log.error('[PDF Export] Preview error:', error);
+    reply.code(500).send({ error: 'Failed to preview PDF' });
   }
 }

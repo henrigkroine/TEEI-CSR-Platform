@@ -36,28 +36,49 @@ export async function watermarkPDF(
   }
 
   try {
-    // TODO: Implement with PDFKit or Puppeteer
-    // For now, return original buffer
-    // Real implementation would:
-    // 1. Load existing PDF
-    // 2. For each page:
-    //    a. Calculate watermark position
-    //    b. Apply text overlay with opacity
-    //    c. Add timestamp if configured
-    // 3. Save modified PDF
+    // Dynamic import to avoid dependency if not used
+    const { PDFDocument, rgb, degrees } = await import('pdf-lib');
+
+    // Load existing PDF
+    const pdfDoc = await PDFDocument.load(pdfBuffer);
+    const pages = pdfDoc.getPages();
+
+    // Parse color (hex to RGB)
+    const colorRgb = hexToRgb(config.color);
+    const color = rgb(colorRgb.r / 255, colorRgb.g / 255, colorRgb.b / 255);
+
+    // Apply watermark to each page
+    for (const page of pages) {
+      const { width, height } = page.getSize();
+      const position = calculateWatermarkPosition(config.position, width, height);
+
+      // Draw watermark text
+      page.drawText(config.text, {
+        x: position.x,
+        y: position.y,
+        size: config.font_size,
+        color,
+        opacity: config.opacity,
+        rotate: degrees(position.angle || 0),
+      });
+    }
+
+    // Save modified PDF
+    const watermarkedPdfBytes = await pdfDoc.save();
 
     console.log('[Watermark] Applied watermark to PDF:', {
       text: config.text,
       position: config.position,
       opacity: config.opacity,
+      pages: pages.length,
     });
 
-    // Mock: Return original buffer
-    // In production, this would return the watermarked PDF
-    return pdfBuffer;
+    return Buffer.from(watermarkedPdfBytes);
   } catch (error) {
     console.error('[Watermark] PDF watermarking failed:', error);
-    throw new Error('Failed to apply watermark to PDF');
+    // Return original buffer if watermarking fails (graceful degradation)
+    console.warn('[Watermark] Returning original PDF without watermark');
+    return pdfBuffer;
   }
 }
 
@@ -320,4 +341,113 @@ export function estimateWatermarkedSize(
   // Watermark adds ~2-5% to file size
   const overhead = config.position === 'diagonal' ? 0.05 : 0.02;
   return Math.ceil(originalSize * (1 + overhead));
+}
+
+/**
+ * Convert hex color to RGB
+ *
+ * @param hex - Hex color code (e.g., #ff0000)
+ * @returns RGB values
+ */
+function hexToRgb(hex: string): { r: number; g: number; b: number } {
+  // Remove # if present
+  hex = hex.replace(/^#/, '');
+
+  // Parse hex values
+  const bigint = parseInt(hex, 16);
+  const r = (bigint >> 16) & 255;
+  const g = (bigint >> 8) & 255;
+  const b = bigint & 255;
+
+  return { r, g, b };
+}
+
+/**
+ * Apply watermark with logo image
+ *
+ * @param pdfBuffer - Original PDF as Buffer
+ * @param config - Watermark configuration
+ * @param logoBuffer - Company logo as Buffer (PNG or JPG)
+ * @returns Watermarked PDF as Buffer
+ */
+export async function watermarkPDFWithLogo(
+  pdfBuffer: Buffer,
+  config: WatermarkConfig,
+  logoBuffer?: Buffer
+): Promise<Buffer> {
+  if (!config.enabled) {
+    return pdfBuffer;
+  }
+
+  try {
+    const { PDFDocument, rgb, degrees } = await import('pdf-lib');
+
+    // Load existing PDF
+    const pdfDoc = await PDFDocument.load(pdfBuffer);
+    const pages = pdfDoc.getPages();
+
+    // Parse color (hex to RGB)
+    const colorRgb = hexToRgb(config.color);
+    const color = rgb(colorRgb.r / 255, colorRgb.g / 255, colorRgb.b / 255);
+
+    // Embed logo if provided and config includes it
+    let logoImage;
+    if (logoBuffer && config.include_company_logo) {
+      try {
+        // Try PNG first, then JPEG
+        try {
+          logoImage = await pdfDoc.embedPng(logoBuffer);
+        } catch {
+          logoImage = await pdfDoc.embedJpg(logoBuffer);
+        }
+      } catch (error) {
+        console.warn('[Watermark] Failed to embed logo, continuing without it:', error);
+      }
+    }
+
+    // Apply watermark to each page
+    for (const page of pages) {
+      const { width, height } = page.getSize();
+      const position = calculateWatermarkPosition(config.position, width, height);
+
+      // Draw logo if available
+      if (logoImage) {
+        const logoDims = logoImage.scale(0.1); // Scale down to 10%
+        page.drawImage(logoImage, {
+          x: position.x - logoDims.width / 2,
+          y: position.y + config.font_size + 5, // Above text
+          width: logoDims.width,
+          height: logoDims.height,
+          opacity: config.opacity,
+        });
+      }
+
+      // Draw watermark text
+      page.drawText(config.text, {
+        x: position.x,
+        y: position.y,
+        size: config.font_size,
+        color,
+        opacity: config.opacity,
+        rotate: degrees(position.angle || 0),
+      });
+    }
+
+    // Save modified PDF
+    const watermarkedPdfBytes = await pdfDoc.save();
+
+    console.log('[Watermark] Applied watermark with logo to PDF:', {
+      text: config.text,
+      position: config.position,
+      opacity: config.opacity,
+      pages: pages.length,
+      hasLogo: !!logoImage,
+    });
+
+    return Buffer.from(watermarkedPdfBytes);
+  } catch (error) {
+    console.error('[Watermark] PDF watermarking with logo failed:', error);
+    console.warn('[Watermark] Returning original PDF without watermark');
+    return pdfBuffer;
+  }
 }

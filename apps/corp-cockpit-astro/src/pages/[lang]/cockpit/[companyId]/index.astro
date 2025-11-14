@@ -30,14 +30,14 @@ const canViewEvidence = hasPermission(user.role, 'VIEW_EVIDENCE');
 ---
 
 <BaseLayout title={`Dashboard - TEEI Corporate Cockpit`} lang={lang}>
-  <div class="dashboard-header">
+  <header class="dashboard-header">
     <div>
       <h1>Corporate Impact Dashboard</h1>
       <p class="welcome">Welcome back, {user.name}</p>
       <p class="tenant-indicator">Company ID: <code>{companyId}</code></p>
     </div>
-    <div class="header-actions">
-      <span class="role-badge">{user.role}</span>
+    <nav class="header-actions" aria-label="User actions">
+      <span class="role-badge" aria-label={`Your role: ${user.role}`}>{user.role}</span>
       {canViewAdmin && (
         <a href={`/${lang}/cockpit/${companyId}/admin`} class="btn btn-admin">
           Admin Console
@@ -46,24 +46,26 @@ const canViewEvidence = hasPermission(user.role, 'VIEW_EVIDENCE');
       <form method="POST" action="/api/logout">
         <button type="submit" class="btn btn-secondary">Sign Out</button>
       </form>
-    </div>
-  </div>
+    </nav>
+  </header>
 
-  <div class="dashboard-grid">
+  <section class="dashboard-grid" aria-label="Dashboard metrics and data">
     <AtAGlance companyId={companyId} client:load />
     <SROIPanel companyId={companyId} client:load />
     <VISPanel companyId={companyId} client:load />
     <Q2QFeed companyId={companyId} limit={10} client:load />
     {canExport && <ExportButtons companyId={companyId} client:load />}
-  </div>
+  </section>
 
-  <DashboardActions
-    companyId={companyId}
-    canGenerateReports={canGenerateReports}
-    canViewEvidence={canViewEvidence}
-    canExport={canExport}
-    client:load
-  />
+  <aside aria-label="Dashboard actions">
+    <DashboardActions
+      companyId={companyId}
+      canGenerateReports={canGenerateReports}
+      canViewEvidence={canViewEvidence}
+      canExport={canExport}
+      client:load
+    />
+  </aside>
 </BaseLayout>
 
 <style>
