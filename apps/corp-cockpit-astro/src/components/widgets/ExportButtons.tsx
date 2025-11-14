@@ -36,20 +36,25 @@ export default function ExportButtons({ companyId, period }: Props) {
   }
 
   return (
-    <div className="widget export-buttons">
-      <h2>📥 Export Data</h2>
+    <section className="widget export-buttons" aria-labelledby="export-heading">
+      <h2 id="export-heading">Export Data</h2>
       <p className="subtitle">CSRD Compliance Reports</p>
 
-      <div className="export-options">
+      <div className="export-options" role="group" aria-labelledby="export-heading">
         <button
           onClick={() => handleExport('csv')}
           disabled={exporting}
           className="export-btn csv"
+          aria-label="Export data as CSV spreadsheet format"
+          aria-describedby="csv-desc"
         >
-          <span className="icon">📊</span>
+          <svg className="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+            <title>Spreadsheet icon</title>
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+          </svg>
           <div>
             <div className="btn-title">Export CSV</div>
-            <div className="btn-desc">Spreadsheet format</div>
+            <div className="btn-desc" id="csv-desc">Spreadsheet format</div>
           </div>
         </button>
 
@@ -57,14 +62,25 @@ export default function ExportButtons({ companyId, period }: Props) {
           onClick={() => handleExport('json')}
           disabled={exporting}
           className="export-btn json"
+          aria-label="Export data as JSON API-ready format"
+          aria-describedby="json-desc"
         >
-          <span className="icon">💾</span>
+          <svg className="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+            <title>Code icon</title>
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
           <div>
             <div className="btn-title">Export JSON</div>
-            <div className="btn-desc">API-ready format</div>
+            <div className="btn-desc" id="json-desc">API-ready format</div>
           </div>
         </button>
       </div>
+
+      {exporting && (
+        <div role="status" aria-live="polite" className="export-status">
+          Exporting data...
+        </div>
+      )}
 
       <div className="export-info">
         <p><strong>Includes:</strong></p>
@@ -126,7 +142,21 @@ export default function ExportButtons({ companyId, period }: Props) {
         }
 
         .export-btn .icon {
-          font-size: 2rem;
+          width: 2rem;
+          height: 2rem;
+          flex-shrink: 0;
+        }
+
+        .export-status {
+          padding: 12px;
+          background: #eff6ff;
+          border: 1px solid #3b82f6;
+          border-radius: 6px;
+          color: #1e40af;
+          font-size: 0.875rem;
+          font-weight: 600;
+          text-align: center;
+          margin-top: 16px;
         }
 
         .btn-title {

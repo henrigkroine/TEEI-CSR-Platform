@@ -247,9 +247,9 @@ export default function ReportsListTable({ companyId, lang = 'en' }: ReportsList
                     <td className="px-4 py-3">
                       <span className={`
                         inline-flex items-center px-2 py-1 rounded-full text-xs font-medium
-                        ${report.status === 'final' 
-                          ? 'bg-green-100 text-green-700' 
-                          : 'bg-yellow-100 text-yellow-700'
+                        ${report.status === 'final'
+                          ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                          : 'bg-yellow-100 text-yellow-900 dark:bg-yellow-900 dark:text-yellow-200'
                         }
                       `}>
                         {report.status.toUpperCase()}

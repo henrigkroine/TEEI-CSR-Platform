@@ -60,7 +60,7 @@ export default function CitationTooltip({
       <span
         ref={triggerRef}
         className="citation-marker cursor-help underline decoration-dotted decoration-primary
-                   hover:bg-primary/10 transition-colors rounded px-0.5"
+                   hover:bg-primary/10 transition-colors rounded px-1.5 py-1 inline-flex items-center min-h-[24px]"
         onMouseEnter={() => setIsOpen(true)}
         onMouseLeave={() => setIsOpen(false)}
         onClick={() => onViewDetails && onViewDetails(citation)}
@@ -115,11 +115,11 @@ export default function CitationTooltip({
               <div className="ml-2">
                 <div className={`
                   text-xs font-bold px-2 py-1 rounded-full
-                  ${citation.confidence >= 0.8 
-                    ? 'bg-green-100 text-green-700' 
-                    : citation.confidence >= 0.6 
-                    ? 'bg-yellow-100 text-yellow-700' 
-                    : 'bg-orange-100 text-orange-700'
+                  ${citation.confidence >= 0.8
+                    ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                    : citation.confidence >= 0.6
+                    ? 'bg-yellow-100 text-yellow-900 dark:bg-yellow-900 dark:text-yellow-200'
+                    : 'bg-orange-100 text-orange-900 dark:bg-orange-900 dark:text-orange-200'
                   }
                 `}>
                   {(citation.confidence * 100).toFixed(0)}%
@@ -139,7 +139,7 @@ export default function CitationTooltip({
               <button
                 onClick={() => onViewDetails(citation)}
                 className="w-full text-xs text-primary hover:text-primary/80 font-medium
-                         border border-primary/20 rounded-md px-3 py-2 hover:bg-primary/5
+                         border border-primary/20 rounded-md px-3 py-2.5 min-h-[44px] hover:bg-primary/5
                          transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 View Full Evidence

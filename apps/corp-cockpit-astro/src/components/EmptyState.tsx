@@ -18,7 +18,8 @@ export default function EmptyState({
 }: EmptyStateProps) {
   const icons = {
     chart: (
-      <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <title>Bar chart icon</title>
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -28,7 +29,8 @@ export default function EmptyState({
       </svg>
     ),
     data: (
-      <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <title>Database icon</title>
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -38,7 +40,8 @@ export default function EmptyState({
       </svg>
     ),
     search: (
-      <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <title>Search icon</title>
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -48,7 +51,8 @@ export default function EmptyState({
       </svg>
     ),
     folder: (
-      <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <title>Folder icon</title>
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -62,6 +66,7 @@ export default function EmptyState({
   return (
     <div
       className={`flex flex-col items-center justify-center p-12 bg-white dark:bg-gray-800 rounded-lg shadow-md ${className}`}
+      role="status"
     >
       <div className="text-gray-400 dark:text-gray-600 mb-4">{icons[icon]}</div>
       <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">

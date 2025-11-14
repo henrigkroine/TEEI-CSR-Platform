@@ -1,0 +1,171 @@
+name: Visual Regression Tests
+
+on:
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'apps/corp-cockpit-astro/src/**'
+      - 'apps/corp-cockpit-astro/tests/e2e/visual*.spec.ts'
+      - 'apps/corp-cockpit-astro/tests/e2e/snapshots/**'
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '20'
+  PNPM_VERSION: '8'
+
+jobs:
+  visual-regression:
+    name: Visual Regression Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps ${{ matrix.browser }}
+
+      - name: Build project
+        run: pnpm -w build
+
+      - name: Start dev server
+        run: |
+          cd apps/corp-cockpit-astro
+          pnpm dev &
+          echo $! > dev-server.pid
+          # Wait for server to be ready
+          for i in {1..30}; do
+            if curl -s http://localhost:4321 > /dev/null; then
+              echo "Dev server is ready"
+              break
+            fi
+            echo "Waiting for dev server... ($i/30)"
+            sleep 2
+          done
+
+      - name: Run visual regression tests
+        run: |
+          cd apps/corp-cockpit-astro
+          pnpm exec playwright test visual-comprehensive --project=${{ matrix.browser }}
+        env:
+          CI: true
+
+      - name: Stop dev server
+        if: always()
+        run: |
+          if [ -f apps/corp-cockpit-astro/dev-server.pid ]; then
+            kill $(cat apps/corp-cockpit-astro/dev-server.pid) || true
+          fi
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ matrix.browser }}
+          path: apps/corp-cockpit-astro/playwright-report
+          retention-days: 30
+
+      - name: Upload failed screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: failed-screenshots-${{ matrix.browser }}
+          path: apps/corp-cockpit-astro/test-results
+          retention-days: 7
+
+      - name: Upload snapshot diffs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: snapshot-diffs-${{ matrix.browser }}
+          path: apps/corp-cockpit-astro/test-results/**/*-diff.png
+          retention-days: 7
+
+  visual-regression-summary:
+    name: Visual Regression Summary
+    runs-on: ubuntu-latest
+    needs: visual-regression
+    if: always()
+
+    steps:
+      - name: Check test results
+        run: |
+          if [ "${{ needs.visual-regression.result }}" == "failure" ]; then
+            echo "::error::Visual regression tests failed"
+            echo "Please review the test artifacts for screenshot differences"
+            exit 1
+          else
+            echo "::notice::All visual regression tests passed"
+          fi
+
+  # Optional: Update baselines automatically (disabled by default)
+  # update-baselines:
+  #   name: Update Baselines
+  #   runs-on: ubuntu-latest
+  #   if: false  # Set to true to enable automatic baseline updates
+  #   needs: visual-regression
+  #
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
+  #
+  #     - name: Setup Node.js and pnpm
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version: ${{ env.NODE_VERSION }}
+  #
+  #     - uses: pnpm/action-setup@v2
+  #       with:
+  #         version: ${{ env.PNPM_VERSION }}
+  #
+  #     - name: Install dependencies
+  #       run: pnpm install
+  #
+  #     - name: Install Playwright browsers
+  #       run: pnpm exec playwright install --with-deps
+  #
+  #     - name: Generate baselines
+  #       run: |
+  #         cd apps/corp-cockpit-astro
+  #         pnpm exec playwright test visual-comprehensive --update-snapshots
+  #
+  #     - name: Commit updated baselines
+  #       uses: stefanzweifel/git-auto-commit-action@v5
+  #       with:
+  #         commit_message: "chore: update visual regression baselines [skip ci]"
+  #         file_pattern: "apps/corp-cockpit-astro/tests/e2e/snapshots/**/*.png"

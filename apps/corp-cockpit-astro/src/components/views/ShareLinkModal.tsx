@@ -149,14 +149,14 @@ export const ShareLinkModal: FC<ShareLinkModalProps> = ({
               </div>
 
               <div>
-                <label className="flex items-start gap-3 cursor-pointer">
+                <label className="flex items-start gap-3 cursor-pointer p-2 rounded hover:bg-gray-50 dark:hover:bg-gray-700">
                   <input
                     type="checkbox"
                     checked={boardroomMode}
                     onChange={(e) => setBoardroomMode(e.target.checked)}
-                    className="mt-0.5 w-4 h-4 text-blue-600 border-gray-300 rounded
+                    className="mt-0.5 w-6 h-6 text-blue-600 border-gray-300 rounded
                              focus:ring-blue-500 dark:focus:ring-blue-400
-                             dark:border-gray-600 dark:bg-gray-900"
+                             dark:border-gray-600 dark:bg-gray-900 cursor-pointer flex-shrink-0"
                     disabled={isGenerating}
                   />
                   <div className="flex-1">
@@ -188,7 +188,7 @@ export const ShareLinkModal: FC<ShareLinkModalProps> = ({
               <button
                 onClick={handleClose}
                 disabled={isGenerating}
-                className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600
+                className="flex-1 px-4 py-2.5 min-h-[44px] border border-gray-300 dark:border-gray-600
                          text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-50
                          dark:hover:bg-gray-700 transition-colors disabled:opacity-50
                          focus:outline-none focus:ring-2 focus:ring-gray-500"
@@ -198,7 +198,7 @@ export const ShareLinkModal: FC<ShareLinkModalProps> = ({
               <button
                 onClick={handleGenerate}
                 disabled={isGenerating}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md
+                className="flex-1 px-4 py-2.5 min-h-[44px] bg-blue-600 text-white rounded-md
                          hover:bg-blue-700 transition-colors disabled:opacity-50
                          focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
@@ -248,7 +248,7 @@ export const ShareLinkModal: FC<ShareLinkModalProps> = ({
                 />
                 <button
                   onClick={handleCopy}
-                  className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700
+                  className="px-4 py-2.5 min-h-[44px] bg-gray-100 dark:bg-gray-700 text-gray-700
                            dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600
                            transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500
                            whitespace-nowrap"
@@ -269,7 +269,7 @@ export const ShareLinkModal: FC<ShareLinkModalProps> = ({
 
             <button
               onClick={handleClose}
-              className="w-full px-4 py-2 bg-blue-600 text-white rounded-md
+              className="w-full px-4 py-2.5 min-h-[44px] bg-blue-600 text-white rounded-md
                        hover:bg-blue-700 transition-colors focus:outline-none
                        focus:ring-2 focus:ring-blue-500"
             >

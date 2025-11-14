@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import type { ExportFormat, ExportOptions } from '../../types/reports';
+import { FocusTrap } from '../a11y/FocusManager';
 
 interface ExportModalProps {
   reportId: string;
@@ -45,6 +46,29 @@ export default function ExportModal({
   const [watermark, setWatermark] = useState(isDraft);
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+  // Handle Escape key
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !exporting) {
+        event.preventDefault();
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [isOpen, onClose, exporting]);
+
+  // Focus close button when modal opens
+  useEffect(() => {
+    if (isOpen && closeButtonRef.current) {
+      setTimeout(() => closeButtonRef.current?.focus(), 100);
+    }
+  }, [isOpen]);
 
   const handleExport = async () => {
     setExporting(true);
@@ -108,34 +132,36 @@ export default function ExportModal({
   if (!isOpen) return null;
 
   return (
-    <>
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 z-40 bg-black/50"
-        onClick={onClose}
-        aria-hidden="true"
-      />
+    <FocusTrap active={isOpen} restoreFocusOnDeactivate={true} focusFirstOnActivate={true}>
+      <>
+        {/* Backdrop */}
+        <div
+          className="fixed inset-0 z-40 bg-black/50"
+          onClick={onClose}
+          aria-hidden="true"
+        />
 
-      {/* Modal */}
-      <div
-        className="fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 
-                   rounded-lg bg-background shadow-2xl"
-        role="dialog"
-        aria-labelledby="export-modal-title"
-        aria-modal="true"
-      >
-        {/* Header */}
-        <div className="border-b border-border px-6 py-4">
-          <div className="flex items-center justify-between">
-            <h2 id="export-modal-title" className="text-xl font-bold">
-              Export Report
-            </h2>
-            <button
-              onClick={onClose}
-              className="btn-secondary"
-              aria-label="Close modal"
-              disabled={exporting}
-            >
+        {/* Modal */}
+        <div
+          className="fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2
+                     rounded-lg bg-background shadow-2xl"
+          role="dialog"
+          aria-labelledby="export-modal-title"
+          aria-modal="true"
+        >
+          {/* Header */}
+          <div className="border-b border-border px-6 py-4">
+            <div className="flex items-center justify-between">
+              <h2 id="export-modal-title" className="text-xl font-bold">
+                Export Report
+              </h2>
+              <button
+                ref={closeButtonRef}
+                onClick={onClose}
+                className="btn-secondary"
+                aria-label="Close modal"
+                disabled={exporting}
+              >
               <svg
                 className="h-5 w-5"
                 fill="none"
@@ -342,6 +368,7 @@ export default function ExportModal({
           </div>
         </div>
       </div>
-    </>
+      </>
+    </FocusTrap>
   );
 }

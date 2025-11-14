@@ -10,8 +10,9 @@
  * @module evidence/LineageDrawer
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { memoize } from '../../utils/memoization';
+import { FocusTrap } from '../a11y/FocusManager';
 
 interface LineageData {
   evidence_id: string;
@@ -62,10 +63,31 @@ function LineageDrawer({ companyId, evidenceId, onClose }: LineageDrawerProps) {
   const [lineage, setLineage] = useState<LineageData | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'dependencies' | 'calculations' | 'transformations'>('dependencies');
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     fetchLineage();
   }, [companyId, evidenceId]);
+
+  // Handle Escape key to close drawer
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [onClose]);
+
+  // Focus close button when drawer opens
+  useEffect(() => {
+    if (closeButtonRef.current) {
+      setTimeout(() => closeButtonRef.current?.focus(), 100);
+    }
+  }, []);
 
   async function fetchLineage() {
     setLoading(true);
@@ -85,17 +107,23 @@ function LineageDrawer({ companyId, evidenceId, onClose }: LineageDrawerProps) {
   }
 
   return (
-    <div className="drawer-overlay" onClick={onClose}>
-      <div className="drawer" onClick={(e) => e.stopPropagation()}>
-        <div className="drawer-header">
-          <div>
-            <h3>Evidence Lineage</h3>
-            {lineage && <p className="metric-name">{lineage.metric_name}</p>}
+    <FocusTrap active={true} restoreFocusOnDeactivate={true} focusFirstOnActivate={true}>
+      <div className="drawer-overlay" onClick={onClose} role="presentation">
+        <div className="drawer" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="lineage-drawer-title">
+          <div className="drawer-header">
+            <div>
+              <h3 id="lineage-drawer-title">Evidence Lineage</h3>
+              {lineage && <p className="metric-name">{lineage.metric_name}</p>}
+            </div>
+            <button
+              ref={closeButtonRef}
+              onClick={onClose}
+              className="close-btn"
+              aria-label="Close drawer"
+            >
+              ×
+            </button>
           </div>
-          <button onClick={onClose} className="close-btn" aria-label="Close drawer">
-            ×
-          </button>
-        </div>
 
         <div className="drawer-content">
           {loading ? (
@@ -121,22 +149,37 @@ function LineageDrawer({ companyId, evidenceId, onClose }: LineageDrawerProps) {
               </div>
 
               {/* Tabs */}
-              <div className="tabs">
+              <div className="tabs" role="tablist" aria-label="Evidence lineage views">
                 <button
                   className={`tab ${activeTab === 'dependencies' ? 'active' : ''}`}
                   onClick={() => setActiveTab('dependencies')}
+                  role="tab"
+                  aria-selected={activeTab === 'dependencies'}
+                  aria-controls="dependencies-panel"
+                  id="dependencies-tab"
+                  tabIndex={activeTab === 'dependencies' ? 0 : -1}
                 >
                   Dependencies ({lineage.dependencies.length})
                 </button>
                 <button
                   className={`tab ${activeTab === 'calculations' ? 'active' : ''}`}
                   onClick={() => setActiveTab('calculations')}
+                  role="tab"
+                  aria-selected={activeTab === 'calculations'}
+                  aria-controls="calculations-panel"
+                  id="calculations-tab"
+                  tabIndex={activeTab === 'calculations' ? 0 : -1}
                 >
                   Calculations ({lineage.calculations.length})
                 </button>
                 <button
                   className={`tab ${activeTab === 'transformations' ? 'active' : ''}`}
                   onClick={() => setActiveTab('transformations')}
+                  role="tab"
+                  aria-selected={activeTab === 'transformations'}
+                  aria-controls="transformations-panel"
+                  id="transformations-tab"
+                  tabIndex={activeTab === 'transformations' ? 0 : -1}
                 >
                   Transformations ({lineage.transformations.length})
                 </button>
@@ -145,13 +188,19 @@ function LineageDrawer({ companyId, evidenceId, onClose }: LineageDrawerProps) {
               {/* Tab Content */}
               <div className="tab-content">
                 {activeTab === 'dependencies' && (
-                  <DependenciesTab dependencies={lineage.dependencies} />
+                  <div role="tabpanel" id="dependencies-panel" aria-labelledby="dependencies-tab">
+                    <DependenciesTab dependencies={lineage.dependencies} />
+                  </div>
                 )}
                 {activeTab === 'calculations' && (
-                  <CalculationsTab calculations={lineage.calculations} />
+                  <div role="tabpanel" id="calculations-panel" aria-labelledby="calculations-tab">
+                    <CalculationsTab calculations={lineage.calculations} />
+                  </div>
                 )}
                 {activeTab === 'transformations' && (
-                  <TransformationsTab transformations={lineage.transformations} />
+                  <div role="tabpanel" id="transformations-panel" aria-labelledby="transformations-tab">
+                    <TransformationsTab transformations={lineage.transformations} />
+                  </div>
                 )}
               </div>
             </>
@@ -308,6 +357,7 @@ function LineageDrawer({ companyId, evidenceId, onClose }: LineageDrawerProps) {
         `}</style>
       </div>
     </div>
+    </FocusTrap>
   );
 }
 

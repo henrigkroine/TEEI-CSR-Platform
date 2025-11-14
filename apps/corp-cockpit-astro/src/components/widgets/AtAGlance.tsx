@@ -47,58 +47,66 @@ export default function AtAGlance({ companyId, period }: Props) {
   }
 
   if (loading) {
-    return <div className="widget loading">Loading...</div>;
+    return (
+      <div className="widget loading" role="status" aria-live="polite" aria-label="Loading metrics">
+        Loading...
+      </div>
+    );
   }
 
   if (error || !data) {
-    return <div className="widget error">Error: {error || 'No data'}</div>;
+    return (
+      <div className="widget error" role="alert" aria-live="assertive">
+        Error: {error || 'No data'}
+      </div>
+    );
   }
 
   return (
-    <div className="widget at-a-glance">
-      <h2>📊 At-a-Glance Metrics</h2>
+    <section className="widget at-a-glance" aria-labelledby="at-a-glance-heading">
+      <h2 id="at-a-glance-heading">At-a-Glance Metrics</h2>
       <p className="period">Period: {data.period}</p>
 
       <div className="metrics-grid">
-        <div className="metric-section">
-          <h3>Inputs</h3>
+        <section className="metric-section" aria-labelledby="inputs-heading">
+          <h3 id="inputs-heading">Inputs</h3>
           <div className="metrics">
             <div className="metric">
-              <span className="value">{data.inputs.total_volunteers}</span>
-              <span className="label">Volunteers</span>
+              <span className="value" aria-label={`${data.inputs.total_volunteers} volunteers`}>{data.inputs.total_volunteers}</span>
+              <span className="label" aria-hidden="true">Volunteers</span>
             </div>
             <div className="metric">
-              <span className="value">{data.inputs.total_hours.toFixed(0)}</span>
-              <span className="label">Hours</span>
+              <span className="value" aria-label={`${data.inputs.total_hours.toFixed(0)} hours`}>{data.inputs.total_hours.toFixed(0)}</span>
+              <span className="label" aria-hidden="true">Hours</span>
             </div>
             <div className="metric">
-              <span className="value">{data.inputs.total_sessions}</span>
-              <span className="label">Sessions</span>
+              <span className="value" aria-label={`${data.inputs.total_sessions} sessions`}>{data.inputs.total_sessions}</span>
+              <span className="label" aria-hidden="true">Sessions</span>
             </div>
             <div className="metric">
-              <span className="value">{data.inputs.active_participants}</span>
-              <span className="label">Participants</span>
+              <span className="value" aria-label={`${data.inputs.active_participants} participants`}>{data.inputs.active_participants}</span>
+              <span className="label" aria-hidden="true">Participants</span>
             </div>
           </div>
-        </div>
+        </section>
 
-        <div className="metric-section">
-          <h3>Outcomes</h3>
+        <section className="metric-section" aria-labelledby="outcomes-heading">
+          <h3 id="outcomes-heading">Outcomes</h3>
           <div className="metrics">
             <div className="metric">
-              <span className="value">{(data.outcomes.integration_avg * 100).toFixed(0)}%</span>
-              <span className="label">Integration</span>
+              <span className="value" aria-label={`${(data.outcomes.integration_avg * 100).toFixed(0)} percent integration`}>{(data.outcomes.integration_avg * 100).toFixed(0)}%</span>
+              <span className="label" aria-hidden="true">Integration</span>
             </div>
             <div className="metric">
-              <span className="value">{(data.outcomes.language_avg * 100).toFixed(0)}%</span>
-              <span className="label">Language</span>
+              <span className="value" aria-label={`${(data.outcomes.language_avg * 100).toFixed(0)} percent language proficiency`}>{(data.outcomes.language_avg * 100).toFixed(0)}%</span>
+              <span className="label" aria-hidden="true">Language</span>
             </div>
             <div className="metric">
-              <span className="value">{(data.outcomes.job_readiness_avg * 100).toFixed(0)}%</span>
-              <span className="label">Job Readiness</span>
+              <span className="value" aria-label={`${(data.outcomes.job_readiness_avg * 100).toFixed(0)} percent job readiness`}>{(data.outcomes.job_readiness_avg * 100).toFixed(0)}%</span>
+              <span className="label" aria-hidden="true">Job Readiness</span>
             </div>
           </div>
-        </div>
+        </section>
       </div>
 
       <style>{`
@@ -115,7 +123,7 @@ export default function AtAGlance({ companyId, period }: Props) {
         }
 
         .period {
-          color: #6b7280;
+          color: #4b5563;
           font-size: 0.875rem;
           margin-bottom: 24px;
         }
@@ -156,13 +164,13 @@ export default function AtAGlance({ companyId, period }: Props) {
 
         .metric .label {
           font-size: 0.875rem;
-          color: #6b7280;
+          color: #4b5563;
         }
 
         .loading, .error {
           padding: 40px;
           text-align: center;
-          color: #6b7280;
+          color: #4b5563;
         }
 
         .error {

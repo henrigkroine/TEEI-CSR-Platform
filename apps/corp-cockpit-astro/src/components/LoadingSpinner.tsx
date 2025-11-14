@@ -18,19 +18,23 @@ export default function LoadingSpinner({
   };
 
   const spinner = (
-    <div className="flex flex-col items-center justify-center">
+    <div className="flex flex-col items-center justify-center" role="status" aria-live="polite">
       <div
         className={`${sizeClasses[size]} border-4 border-gray-200 dark:border-gray-700 border-t-primary-600 rounded-full animate-spin`}
+        aria-hidden="true"
       />
       {message && (
         <p className="mt-4 text-sm text-gray-600 dark:text-gray-400">{message}</p>
+      )}
+      {!message && (
+        <span className="sr-only">Loading</span>
       )}
     </div>
   );
 
   if (fullScreen) {
     return (
-      <div className="fixed inset-0 bg-white dark:bg-gray-900 bg-opacity-75 dark:bg-opacity-75 flex items-center justify-center z-50">
+      <div className="fixed inset-0 bg-white dark:bg-gray-900 bg-opacity-75 dark:bg-opacity-75 flex items-center justify-center z-50" aria-label="Loading overlay">
         {spinner}
       </div>
     );

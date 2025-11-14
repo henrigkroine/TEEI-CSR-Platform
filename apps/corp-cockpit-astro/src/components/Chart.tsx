@@ -62,7 +62,12 @@ export default function Chart({ type, data, options, className = '', height = 30
   const ChartComponent = chartComponents[type];
 
   return (
-    <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 ${className}`} style={{ height }}>
+    <div
+      className={`bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 ${className}`}
+      style={{ height }}
+      role="img"
+      aria-label={`${type} chart visualization`}
+    >
       <ChartComponent data={data} options={defaultOptions} />
     </div>
   );

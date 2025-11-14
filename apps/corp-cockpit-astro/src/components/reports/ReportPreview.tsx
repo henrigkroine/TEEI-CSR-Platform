@@ -216,9 +216,9 @@ export default function ReportPreview({
                     <div className="font-medium text-foreground/60">Status</div>
                     <div className="text-lg font-semibold">
                       <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs ${
-                        report.status === 'final' 
-                          ? 'bg-green-100 text-green-700' 
-                          : 'bg-yellow-100 text-yellow-700'
+                        report.status === 'final'
+                          ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                          : 'bg-yellow-100 text-yellow-900 dark:bg-yellow-900 dark:text-yellow-200'
                       }`}>
                         {report.status.toUpperCase()}
                       </span>
@@ -362,11 +362,11 @@ export default function ReportPreview({
                       </span>
                       <span className={`
                         shrink-0 rounded-full px-2 py-0.5 text-xs font-medium
-                        ${citation.confidence >= 0.8 
-                          ? 'bg-green-100 text-green-700' 
-                          : citation.confidence >= 0.6 
-                          ? 'bg-yellow-100 text-yellow-700' 
-                          : 'bg-orange-100 text-orange-700'
+                        ${citation.confidence >= 0.8
+                          ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                          : citation.confidence >= 0.6
+                          ? 'bg-yellow-100 text-yellow-900 dark:bg-yellow-900 dark:text-yellow-200'
+                          : 'bg-orange-100 text-orange-900 dark:bg-orange-900 dark:text-orange-200'
                         }
                       `}>
                         {(citation.confidence * 100).toFixed(0)}%

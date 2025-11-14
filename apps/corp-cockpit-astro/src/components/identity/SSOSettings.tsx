@@ -58,36 +58,59 @@ export default function SSOSettings({ companyId }: SSOSettingsProps) {
   }
 
   if (loading) {
-    return <div className="sso-settings loading">Loading SSO configuration...</div>;
+    return (
+      <div className="sso-settings loading" role="status" aria-live="polite">
+        Loading SSO configuration...
+      </div>
+    );
   }
 
   return (
     <div className="sso-settings">
       {/* Tab Navigation */}
-      <div className="tab-nav">
+      <div className="tab-nav" role="tablist" aria-label="SSO configuration options">
         <button
           className={`tab-btn ${activeTab === 'saml' ? 'active' : ''}`}
           onClick={() => setActiveTab('saml')}
+          role="tab"
+          aria-selected={activeTab === 'saml'}
+          aria-controls="saml-panel"
+          id="saml-tab"
         >
-          <span className="tab-icon">🔐</span>
+          <svg className="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+            <title>Lock icon</title>
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+          </svg>
           SAML 2.0
-          {samlConfig?.enabled && <span className="status-badge enabled">Enabled</span>}
+          {samlConfig?.enabled && <span className="status-badge enabled" aria-label="SAML is enabled">Enabled</span>}
         </button>
         <button
           className={`tab-btn ${activeTab === 'oidc' ? 'active' : ''}`}
           onClick={() => setActiveTab('oidc')}
+          role="tab"
+          aria-selected={activeTab === 'oidc'}
+          aria-controls="oidc-panel"
+          id="oidc-tab"
         >
-          <span className="tab-icon">🔑</span>
+          <svg className="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+            <title>Key icon</title>
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+          </svg>
           OIDC / OAuth 2.0
-          {oidcConfig?.enabled && <span className="status-badge enabled">Enabled</span>}
+          {oidcConfig?.enabled && <span className="status-badge enabled" aria-label="OIDC is enabled">Enabled</span>}
         </button>
       </div>
 
       {/* SAML Tab */}
       {activeTab === 'saml' && samlConfig && (
-        <div className="config-panel">
+        <div
+          className="config-panel"
+          role="tabpanel"
+          id="saml-panel"
+          aria-labelledby="saml-tab"
+        >
           {!samlConfig.enabled && (
-            <div className="alert-warning">
+            <div className="alert-warning" role="alert">
               <strong>SAML is currently disabled</strong>
               <p>Contact your administrator to enable SAML authentication.</p>
             </div>
@@ -132,9 +155,14 @@ export default function SSOSettings({ companyId }: SSOSettingsProps) {
 
       {/* OIDC Tab */}
       {activeTab === 'oidc' && oidcConfig && (
-        <div className="config-panel">
+        <div
+          className="config-panel"
+          role="tabpanel"
+          id="oidc-panel"
+          aria-labelledby="oidc-tab"
+        >
           {!oidcConfig.enabled && (
-            <div className="alert-warning">
+            <div className="alert-warning" role="alert">
               <strong>OIDC is currently disabled</strong>
               <p>Contact your administrator to enable OIDC authentication.</p>
             </div>
@@ -204,7 +232,9 @@ export default function SSOSettings({ companyId }: SSOSettingsProps) {
         }
 
         .tab-icon {
-          font-size: 1.25rem;
+          width: 1.25rem;
+          height: 1.25rem;
+          flex-shrink: 0;
         }
 
         .status-badge {
@@ -354,8 +384,22 @@ function ConfigField({
           <div className={`value ${monospace ? 'monospace' : ''}`}>{value}</div>
         )}
         {copyable && (
-          <button onClick={copyToClipboard} className="copy-btn" title="Copy to clipboard">
-            {copied ? '✓' : '📋'}
+          <button
+            onClick={copyToClipboard}
+            className="copy-btn"
+            aria-label={copied ? 'Copied to clipboard' : 'Copy to clipboard'}
+          >
+            {copied ? (
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                <title>Check mark</title>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                <title>Clipboard</title>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+              </svg>
+            )}
           </button>
         )}
       </div>
@@ -419,9 +463,16 @@ function ConfigField({
           border: 1px solid #d1d5db;
           border-radius: 6px;
           cursor: pointer;
-          font-size: 1rem;
           transition: all 0.2s;
           flex-shrink: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .copy-btn svg {
+          width: 1.25rem;
+          height: 1.25rem;
         }
 
         .copy-btn:hover {

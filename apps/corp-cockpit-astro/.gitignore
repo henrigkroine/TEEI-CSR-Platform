@@ -24,3 +24,18 @@ pnpm-debug.log*
 
 # Astro
 .astro/
+
+# Test results and reports (DO NOT commit)
+test-results/
+playwright-report/
+playwright/.cache/
+
+# Visual regression baselines (DO commit - already in git)
+# tests/e2e/snapshots/ - KEEP THESE IN GIT
+
+# Lighthouse reports
+lighthouse-report.html
+.lighthouseci/
+
+# Coverage
+coverage/

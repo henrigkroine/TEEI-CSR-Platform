@@ -541,12 +541,22 @@ function ReportGenerationModal({
           .radio-label, .checkbox-label, .section-checkbox {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 12px;
             cursor: pointer;
             padding: 12px;
+            min-height: 44px;
             border: 1px solid var(--color-border);
             border-radius: 6px;
             transition: all 0.2s;
+          }
+
+          .radio-label input[type="radio"],
+          .checkbox-label input[type="checkbox"],
+          .section-checkbox input[type="checkbox"] {
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            flex-shrink: 0;
           }
 
           .radio-label:hover, .checkbox-label:hover, .section-checkbox:hover {

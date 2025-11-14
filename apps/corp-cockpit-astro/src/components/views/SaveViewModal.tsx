@@ -159,15 +159,15 @@ export const SaveViewModal: FC<SaveViewModalProps> = ({
             </p>
           </div>
 
-          <div className="space-y-2">
-            <label className="flex items-center gap-2 cursor-pointer">
+          <div className="space-y-3">
+            <label className="flex items-center gap-3 cursor-pointer p-2 rounded hover:bg-gray-50 dark:hover:bg-gray-700">
               <input
                 type="checkbox"
                 checked={isDefault}
                 onChange={(e) => setIsDefault(e.target.checked)}
-                className="w-4 h-4 text-blue-600 border-gray-300 rounded
+                className="w-6 h-6 text-blue-600 border-gray-300 rounded
                          focus:ring-blue-500 dark:focus:ring-blue-400
-                         dark:border-gray-600 dark:bg-gray-900"
+                         dark:border-gray-600 dark:bg-gray-900 cursor-pointer"
                 disabled={isSaving}
               />
               <span className="text-sm text-gray-700 dark:text-gray-300">
@@ -175,14 +175,14 @@ export const SaveViewModal: FC<SaveViewModalProps> = ({
               </span>
             </label>
 
-            <label className="flex items-center gap-2 cursor-pointer">
+            <label className="flex items-center gap-3 cursor-pointer p-2 rounded hover:bg-gray-50 dark:hover:bg-gray-700">
               <input
                 type="checkbox"
                 checked={isShared}
                 onChange={(e) => setIsShared(e.target.checked)}
-                className="w-4 h-4 text-blue-600 border-gray-300 rounded
+                className="w-6 h-6 text-blue-600 border-gray-300 rounded
                          focus:ring-blue-500 dark:focus:ring-blue-400
-                         dark:border-gray-600 dark:bg-gray-900"
+                         dark:border-gray-600 dark:bg-gray-900 cursor-pointer"
                 disabled={isSaving}
               />
               <span className="text-sm text-gray-700 dark:text-gray-300">
@@ -196,7 +196,7 @@ export const SaveViewModal: FC<SaveViewModalProps> = ({
           <button
             onClick={handleClose}
             disabled={isSaving}
-            className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600
+            className="flex-1 px-4 py-2.5 min-h-[44px] border border-gray-300 dark:border-gray-600
                      text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-50
                      dark:hover:bg-gray-700 transition-colors disabled:opacity-50
                      focus:outline-none focus:ring-2 focus:ring-gray-500"
@@ -206,7 +206,7 @@ export const SaveViewModal: FC<SaveViewModalProps> = ({
           <button
             onClick={handleSave}
             disabled={isSaving || !viewName.trim()}
-            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md
+            className="flex-1 px-4 py-2.5 min-h-[44px] bg-blue-600 text-white rounded-md
                      hover:bg-blue-700 transition-colors disabled:opacity-50
                      focus:outline-none focus:ring-2 focus:ring-blue-500"
           >

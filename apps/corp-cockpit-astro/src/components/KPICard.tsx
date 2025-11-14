@@ -37,7 +37,7 @@ export default function KPICard({
           <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">{title}</p>
           <p className="text-3xl font-bold text-gray-900 dark:text-white">{value}</p>
           {subtitle && (
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{subtitle}</p>
+            <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">{subtitle}</p>
           )}
         </div>
         {icon && (
@@ -70,7 +70,7 @@ export default function KPICard({
             )}
             {Math.abs(trend.value)}%
           </span>
-          <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">vs last period</span>
+          <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">vs last period</span>
         </div>
       )}
       {showEvidenceButton && (metricId || (companyId && period)) && (
