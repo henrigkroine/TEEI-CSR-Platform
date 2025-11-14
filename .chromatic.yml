@@ -1,0 +1,31 @@
+# Chromatic Visual Regression Testing Configuration
+# TEEI Corporate Cockpit - Phase D Deliverable K
+
+# Project configuration
+projectId: ${CHROMATIC_PROJECT_ID}
+
+# Build configuration
+buildScriptName: build-storybook
+storybookBuildDir: storybook-static
+
+# Capture options
+exitZeroOnChanges: true
+exitOnceUploaded: false
+autoAcceptChanges: main
+
+# Snapshots configuration
+onlyChanged: true
+externals:
+  - "public/**"
+
+# CI configuration
+skip: cancelled
+
+# Delay capture for animations
+delay: 300
+
+# Ignore certain story parameters
+ignoreLastBuildOnBranch: main
+
+# TurboSnap configuration (faster builds)
+zip: true

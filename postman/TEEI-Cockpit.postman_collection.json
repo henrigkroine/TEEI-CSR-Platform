@@ -1,0 +1,640 @@
+{
+  "info": {
+    "name": "TEEI Corporate Cockpit API",
+    "description": "Complete API collection for TEEI Corporate Cockpit with authentication, reports, approvals, benchmarks, and governance endpoints",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_postman_id": "teei-cockpit-api-v1"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{authToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3001",
+      "type": "string"
+    },
+    {
+      "key": "authToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "companyId",
+      "value": "company-1",
+      "type": "string"
+    },
+    {
+      "key": "reportId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "evidenceId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health & Status",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "API Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "status"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Companies",
+      "item": [
+        {
+          "name": "List Companies",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/companies?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "companies"],
+              "query": [
+                {"key": "page", "value": "1"},
+                {"key": "limit", "value": "20"}
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Company Metrics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/companies/{{companyId}}/metrics",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "companies", "{{companyId}}", "metrics"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Company Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/companies/{{companyId}}/dashboard",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "companies", "{{companyId}}", "dashboard"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Reports",
+      "item": [
+        {
+          "name": "List Reports",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/reports?companyId={{companyId}}&status=draft",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reports"],
+              "query": [
+                {"key": "companyId", "value": "{{companyId}}"},
+                {"key": "status", "value": "draft"}
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Report",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('reportId', response.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Q1 2024 Impact Report\",\n  \"companyId\": \"{{companyId}}\",\n  \"template\": \"quarterly\",\n  \"narrative\": \"Strong performance in Q1 with significant volunteer engagement.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/reports",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reports"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Report",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/reports/{{reportId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reports", "{{reportId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Report",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Q1 2024 Impact Report (Updated)\",\n  \"narrative\": \"Updated narrative with additional metrics.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/reports/{{reportId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reports", "{{reportId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Report",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/reports/{{reportId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reports", "{{reportId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Export Report as PDF",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"format\": \"pdf\",\n  \"watermark\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/reports/{{reportId}}/export",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reports", "{{reportId}}", "export"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Export Report as PPTX",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"format\": \"pptx\",\n  \"watermark\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/reports/{{reportId}}/export",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reports", "{{reportId}}", "export"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Approvals",
+      "item": [
+        {
+          "name": "Get Approval Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/approvals/{{reportId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "approvals", "{{reportId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Submit for Review",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/approvals/{{reportId}}/submit",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "approvals", "{{reportId}}", "submit"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Request Changes",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"comment\": \"Please update the Q1 metrics section with latest data.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/approvals/{{reportId}}/request-changes",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "approvals", "{{reportId}}", "request-changes"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Approve Report",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"comment\": \"Approved for publication.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/approvals/{{reportId}}/approve",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "approvals", "{{reportId}}", "approve"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Lock Report",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/approvals/{{reportId}}/lock",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "approvals", "{{reportId}}", "lock"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Version History",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/approvals/{{reportId}}/versions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "approvals", "{{reportId}}", "versions"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Comments",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/approvals/{{reportId}}/comments",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "approvals", "{{reportId}}", "comments"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Add Comment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Looks good overall, great work!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/approvals/{{reportId}}/comments",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "approvals", "{{reportId}}", "comments"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Evidence",
+      "item": [
+        {
+          "name": "List Evidence",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/evidence?companyId={{companyId}}&type=document",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "evidence"],
+              "query": [
+                {"key": "companyId", "value": "{{companyId}}"},
+                {"key": "type", "value": "document"}
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Evidence Detail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/evidence/{{evidenceId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "evidence", "{{evidenceId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Evidence Lineage",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/evidence/{{evidenceId}}/lineage",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "evidence", "{{evidenceId}}", "lineage"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Upload Evidence",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {"key": "file", "type": "file", "src": ""},
+                {"key": "companyId", "value": "{{companyId}}", "type": "text"},
+                {"key": "type", "value": "document", "type": "text"}
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/evidence/upload",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "evidence", "upload"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Download Evidence",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/evidence/{{evidenceId}}/download",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "evidence", "{{evidenceId}}", "download"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Benchmarks",
+      "item": [
+        {
+          "name": "Get Benchmark Data",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/benchmarks?companyId={{companyId}}&industry=technology&size=500-1000",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "benchmarks"],
+              "query": [
+                {"key": "companyId", "value": "{{companyId}}"},
+                {"key": "industry", "value": "technology"},
+                {"key": "size", "value": "500-1000"}
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Cohort List",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/benchmarks/cohorts",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "benchmarks", "cohorts"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Percentile Rankings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/benchmarks/{{companyId}}/percentiles",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "benchmarks", "{{companyId}}", "percentiles"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Governance",
+      "item": [
+        {
+          "name": "Get Consent Preferences",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/governance/consent",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "governance", "consent"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Consent Preferences",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"necessary\": true,\n  \"analytics\": true,\n  \"marketing\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/governance/consent",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "governance", "consent"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Submit DSAR Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"export\",\n  \"description\": \"Request all personal data\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/governance/dsar",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "governance", "dsar"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get DSAR Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/governance/dsar",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "governance", "dsar"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Export Logs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/governance/export-logs",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "governance", "export-logs"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Retention Policies",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/governance/retention",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "governance", "retention"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "SSE Events",
+      "item": [
+        {
+          "name": "Connect to Event Stream",
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Accept", "value": "text/event-stream"}
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/events?companyId={{companyId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "events"],
+              "query": [
+                {"key": "companyId", "value": "{{companyId}}"}
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
