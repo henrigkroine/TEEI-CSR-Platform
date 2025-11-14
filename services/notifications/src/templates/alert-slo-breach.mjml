@@ -1,0 +1,92 @@
+<mjml>
+  <mj-head>
+    <mj-title>SLO Breach Alert - {{serviceName}}</mj-title>
+    <mj-preview>Action required: SLO breach detected</mj-preview>
+    <mj-attributes>
+      <mj-all font-family="Arial, sans-serif" />
+      <mj-text font-size="14px" color="#333333" line-height="20px" />
+    </mj-attributes>
+    <mj-style inline="inline">
+      .alert-box { background-color: #fef2f2; border-left: 4px solid #dc2626; padding: 16px; }
+      .metric-row { padding: 8px 0; border-bottom: 1px solid #e5e7eb; }
+      .metric-label { font-weight: bold; color: #374151; }
+      .metric-value { color: #dc2626; font-weight: bold; }
+    </mj-style>
+  </mj-head>
+  <mj-body background-color="#f3f4f6">
+    <!-- Header -->
+    <mj-section background-color="#dc2626" padding="20px">
+      <mj-column>
+        <mj-text align="center" color="#ffffff" font-size="24px" font-weight="bold">
+          SLO BREACH ALERT
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <!-- Alert Content -->
+    <mj-section background-color="#ffffff" padding="30px 20px">
+      <mj-column>
+        <mj-text font-size="18px" font-weight="bold" color="#dc2626">
+          Service Level Objective Breach Detected
+        </mj-text>
+        <mj-text>
+          The following service has breached its SLO threshold:
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <!-- Alert Details -->
+    <mj-section background-color="#fef2f2" padding="20px" border-left="4px solid #dc2626">
+      <mj-column>
+        <mj-text css-class="metric-row">
+          <span class="metric-label">Service:</span> {{serviceName}}
+        </mj-text>
+        <mj-text css-class="metric-row">
+          <span class="metric-label">Metric:</span> {{metric}}
+        </mj-text>
+        <mj-text css-class="metric-row">
+          <span class="metric-label">Threshold:</span> {{threshold}}
+        </mj-text>
+        <mj-text css-class="metric-row">
+          <span class="metric-label">Current Value:</span> <span class="metric-value">{{current}}</span>
+        </mj-text>
+        <mj-text css-class="metric-row">
+          <span class="metric-label">Detected At:</span> {{timestamp}}
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <!-- Action Items -->
+    <mj-section background-color="#ffffff" padding="20px">
+      <mj-column>
+        <mj-text font-size="16px" font-weight="bold">
+          Recommended Actions:
+        </mj-text>
+        <mj-text>
+          1. Check the service dashboard for detailed metrics<br/>
+          2. Review recent deployments or configuration changes<br/>
+          3. Investigate error logs and traces<br/>
+          4. Escalate to on-call team if necessary
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <!-- CTA -->
+    <mj-section background-color="#ffffff" padding="20px">
+      <mj-column>
+        <mj-button href="{{dashboardUrl}}" background-color="#dc2626" border-radius="6px">
+          View Dashboard
+        </mj-button>
+      </mj-column>
+    </mj-section>
+
+    <!-- Footer -->
+    <mj-section background-color="#f9fafb" padding="20px">
+      <mj-column>
+        <mj-text align="center" font-size="12px" color="#6b7280">
+          This is an automated alert from TEEI Platform Monitoring
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>

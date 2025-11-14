@@ -1,0 +1,90 @@
+<mjml>
+  <mj-head>
+    <mj-title>Weekly Impact Report - {{companyName}}</mj-title>
+    <mj-preview>Your weekly impact report is ready</mj-preview>
+    <mj-attributes>
+      <mj-all font-family="Arial, sans-serif" />
+      <mj-text font-size="14px" color="#333333" line-height="20px" />
+      <mj-section background-color="#ffffff" />
+    </mj-attributes>
+    <mj-style inline="inline">
+      .metric-value { font-size: 32px; font-weight: bold; color: #2563eb; }
+      .metric-label { font-size: 12px; color: #6b7280; text-transform: uppercase; }
+      .cta-button { background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; }
+    </mj-style>
+  </mj-head>
+  <mj-body background-color="#f3f4f6">
+    <!-- Header -->
+    <mj-section background-color="#2563eb" padding="20px">
+      <mj-column>
+        <mj-text align="center" color="#ffffff" font-size="24px" font-weight="bold">
+          TEEI Platform
+        </mj-text>
+        <mj-text align="center" color="#ffffff" font-size="16px">
+          Weekly Impact Report
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <!-- Greeting -->
+    <mj-section background-color="#ffffff" padding="30px 20px 20px 20px">
+      <mj-column>
+        <mj-text font-size="18px" font-weight="bold">
+          Hello {{companyName}},
+        </mj-text>
+        <mj-text>
+          Here's your impact report for {{reportPeriod.start}} - {{reportPeriod.end}}
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <!-- Metrics Grid -->
+    <mj-section background-color="#ffffff" padding="20px">
+      <mj-column width="33%">
+        <mj-text align="center" css-class="metric-value">
+          {{metrics.totalParticipants}}
+        </mj-text>
+        <mj-text align="center" css-class="metric-label">
+          Total Participants
+        </mj-text>
+      </mj-column>
+      <mj-column width="33%">
+        <mj-text align="center" css-class="metric-value">
+          {{metrics.avgConfidenceScore}}%
+        </mj-text>
+        <mj-text align="center" css-class="metric-label">
+          Avg Confidence
+        </mj-text>
+      </mj-column>
+      <mj-column width="33%">
+        <mj-text align="center" css-class="metric-value">
+          {{metrics.sroiRatio}}x
+        </mj-text>
+        <mj:text align="center" css-class="metric-label">
+          SROI Ratio
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <!-- Call to Action -->
+    <mj-section background-color="#ffffff" padding="30px 20px">
+      <mj-column>
+        <mj-button href="{{reportUrl}}" background-color="#2563eb" border-radius="6px">
+          View Full Report
+        </mj-button>
+      </mj-column>
+    </mj-section>
+
+    <!-- Footer -->
+    <mj-section background-color="#f9fafb" padding="20px">
+      <mj-column>
+        <mj-text align="center" font-size="12px" color="#6b7280">
+          This is an automated report from TEEI Platform
+        </mj-text>
+        <mj-text align="center" font-size="12px" color="#6b7280">
+          Questions? Contact support@teei-platform.com
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>

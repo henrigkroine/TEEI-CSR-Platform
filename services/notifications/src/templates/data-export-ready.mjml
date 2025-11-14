@@ -1,0 +1,134 @@
+<mjml>
+  <mj-head>
+    <mj-title>Your Data Export is Ready</mj-title>
+    <mj-preview>Download your personal data export</mj-preview>
+    <mj-attributes>
+      <mj-all font-family="Arial, sans-serif" />
+      <mj-text font-size="14px" color="#333333" line-height="20px" />
+    </mj-attributes>
+    <mj-style inline="inline">
+      .info-box { background-color: #eff6ff; border-left: 4px solid #2563eb; padding: 16px; }
+      .warning-box { background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; }
+    </mj-style>
+  </mj-head>
+  <mj-body background-color="#f3f4f6">
+    <!-- Header -->
+    <mj-section background-color="#2563eb" padding="20px">
+      <mj-column>
+        <mj-text align="center" color="#ffffff" font-size="24px" font-weight="bold">
+          Your Data Export is Ready
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <!-- Main Content -->
+    <mj-section background-color="#ffffff" padding="30px 20px">
+      <mj-column>
+        <mj-text font-size="18px" font-weight="bold">
+          Hello {{userName}},
+        </mj-text>
+        <mj-text>
+          Your personal data export has been prepared and is now ready for download.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <!-- Export Details -->
+    <mj-section background-color="#eff6ff" padding="20px" border-left="4px solid #2563eb">
+      <mj-column>
+        <mj-text font-weight="bold">Export Details:</mj-text>
+        <mj-text>
+          <strong>Request Date:</strong> {{requestDate}}<br/>
+          <strong>Export Date:</strong> {{exportDate}}<br/>
+          <strong>File Format:</strong> {{fileFormat}}<br/>
+          <strong>File Size:</strong> {{fileSize}}
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <!-- What's Included -->
+    <mj-section background-color="#ffffff" padding="20px">
+      <mj-column>
+        <mj-text font-size="16px" font-weight="bold">
+          What's Included:
+        </mj-text>
+        <mj-text>
+          • Your profile information<br/>
+          • Activity history and participation records<br/>
+          • Communication preferences<br/>
+          • Any personal data collected during program participation
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <!-- Download Button -->
+    <mj-section background-color="#ffffff" padding="20px">
+      <mj-column>
+        <mj-button href="{{downloadUrl}}" background-color="#2563eb" border-radius="6px">
+          Download Your Data
+        </mj-button>
+      </mj-column>
+    </mj-section>
+
+    <!-- Important Notice -->
+    <mj-section background-color="#fef3c7" padding="20px" border-left="4px solid #f59e0b">
+      <mj-column>
+        <mj-text font-weight="bold" color="#92400e">
+          Important Security Notice
+        </mj-text>
+        <mj-text color="#92400e">
+          • This download link will expire in <strong>{{expiryDays}} days</strong><br/>
+          • The file is encrypted and password-protected<br/>
+          • Your password will be sent in a separate email<br/>
+          • Do not share this link with anyone
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <!-- GDPR Information -->
+    <mj-section background-color="#ffffff" padding="20px">
+      <mj-column>
+        <mj-text font-size="16px" font-weight="bold">
+          Your Rights Under GDPR
+        </mj-text>
+        <mj-text>
+          This export is provided in compliance with GDPR Article 15 (Right of Access) and Article 20 (Right to Data Portability).
+        </mj-text>
+        <mj-text>
+          You also have the right to:<br/>
+          • Request correction of inaccurate data<br/>
+          • Request deletion of your data<br/>
+          • Object to processing of your data<br/>
+          • Withdraw consent at any time
+        </mj-text>
+        <mj-text>
+          For more information about your privacy rights, please visit our <a href="{{privacyPolicyUrl}}">Privacy Policy</a> or contact our Data Protection Officer at privacy@teei-platform.com.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <!-- Support -->
+    <mj-section background-color="#ffffff" padding="20px">
+      <mj-column>
+        <mj-text font-size="16px" font-weight="bold">
+          Need Help?
+        </mj-text>
+        <mj-text>
+          If you have any questions or issues downloading your data, please contact us at support@teei-platform.com.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <!-- Footer -->
+    <mj-section background-color="#f9fafb" padding="20px">
+      <mj-column>
+        <mj-text align="center" font-size="12px" color="#6b7280">
+          This email was sent in response to your data export request
+        </mj-text>
+        <mj-text align="center" font-size="12px" color="#6b7280">
+          TEEI Platform - Privacy & Data Protection
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>
