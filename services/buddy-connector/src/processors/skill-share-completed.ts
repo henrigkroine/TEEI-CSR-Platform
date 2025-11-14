@@ -1,6 +1,7 @@
 import { createServiceLogger } from '@teei/shared-utils';
 import { db, buddySystemEvents } from '@teei/shared-schema';
 import type { BuddySkillShareCompleted } from '@teei/event-contracts';
+import { tagEventWithSDGs, enrichPayloadWithSDGs } from '../utils/sdg-tagger.js';
 
 const logger = createServiceLogger('buddy-connector:skill-share-completed');
 
@@ -27,13 +28,17 @@ export async function processSkillShareCompleted(
     'Processing buddy.skill_share.completed event'
   );
 
-  // Store raw event (could be expanded to dedicated skill_sessions table later)
+  // Tag event with SDGs
+  const sdgResult = tagEventWithSDGs('buddy.skill_share.completed', event);
+  const enrichedPayload = enrichPayloadWithSDGs(event, sdgResult);
+
+  // Store raw event with SDG tags (could be expanded to dedicated skill_sessions table later)
   await db.insert(buddySystemEvents).values({
     eventId,
     eventType: 'buddy.skill_share.completed',
     userId: data.learnerId, // Index by learner for impact tracking
     timestamp: new Date(timestamp),
-    payload: event as any,
+    payload: enrichedPayload as any,
     correlationId: correlationId || null,
     processedAt: new Date(),
   });

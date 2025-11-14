@@ -2,6 +2,7 @@ import { createServiceLogger } from '@teei/shared-utils';
 import { db, buddyFeedback, buddySystemEvents, buddyMatches } from '@teei/shared-schema';
 import { eq } from 'drizzle-orm';
 import type { BuddyFeedbackSubmitted } from '@teei/event-contracts';
+import { tagEventWithSDGs, enrichPayloadWithSDGs } from '../utils/sdg-tagger.js';
 
 const logger = createServiceLogger('buddy-connector:feedback-submitted');
 
@@ -37,13 +38,17 @@ export async function processFeedbackSubmitted(
     throw new Error(`Match not found: ${data.matchId}`);
   }
 
-  // Store raw event
+  // Tag event with SDGs
+  const sdgResult = tagEventWithSDGs('buddy.feedback.submitted', event);
+  const enrichedPayload = enrichPayloadWithSDGs(event, sdgResult);
+
+  // Store raw event with SDG tags
   await db.insert(buddySystemEvents).values({
     eventId,
     eventType: 'buddy.feedback.submitted',
     userId: match.participantId,
     timestamp: new Date(timestamp),
-    payload: event as any,
+    payload: enrichedPayload as any,
     correlationId: correlationId || null,
     processedAt: new Date(),
   });

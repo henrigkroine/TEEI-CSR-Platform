@@ -1,0 +1,143 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "UN SDG Mapping Configuration for Buddy System Events",
+  "description": "Maps Buddy System event types and keywords to UN Sustainable Development Goals for CSR reporting",
+  "version": "1.0.0",
+  "lastUpdated": "2025-11-14",
+  "eventTypeMappings": {
+    "buddy.match.created": {
+      "sdgs": [10, 16],
+      "description": "Match creation supports reduced inequalities and peace & justice through social integration",
+      "confidence": 1.0
+    },
+    "buddy.match.ended": {
+      "sdgs": [10],
+      "description": "Match completion contributes to reduced inequalities through integration support",
+      "confidence": 1.0
+    },
+    "buddy.event.attended": {
+      "sdgs": [11, 4],
+      "description": "Event attendance supports sustainable cities and quality education through community participation",
+      "confidence": 1.0
+    },
+    "buddy.skill_share.completed": {
+      "sdgs": [4, 8],
+      "description": "Skill sharing advances quality education and decent work opportunities",
+      "confidence": 1.0
+    },
+    "buddy.feedback.submitted": {
+      "sdgs": [17],
+      "description": "Feedback contributes to partnerships through program improvement",
+      "confidence": 1.0
+    },
+    "buddy.milestone.reached": {
+      "sdgs": [10],
+      "description": "Milestones indicate progress in reducing inequalities",
+      "confidence": 1.0
+    },
+    "buddy.checkin.completed": {
+      "sdgs": [3],
+      "description": "Check-ins support good health and well-being through regular monitoring",
+      "confidence": 1.0
+    }
+  },
+  "keywordMappings": {
+    "language": {
+      "sdgs": [4],
+      "description": "Language-related activities support quality education",
+      "confidence": 0.8,
+      "fields": ["title", "category", "description"]
+    },
+    "job": {
+      "sdgs": [8],
+      "description": "Job-related activities support decent work and economic growth",
+      "confidence": 0.8,
+      "fields": ["title", "category", "description"]
+    },
+    "career": {
+      "sdgs": [8],
+      "description": "Career-related activities support decent work and economic growth",
+      "confidence": 0.8,
+      "fields": ["title", "category", "description"]
+    },
+    "employment": {
+      "sdgs": [8],
+      "description": "Employment-related activities support decent work",
+      "confidence": 0.8,
+      "fields": ["title", "category", "description"]
+    },
+    "mental health": {
+      "sdgs": [3],
+      "description": "Mental health activities support good health and well-being",
+      "confidence": 0.9,
+      "fields": ["title", "category", "description"]
+    },
+    "wellness": {
+      "sdgs": [3],
+      "description": "Wellness activities support good health and well-being",
+      "confidence": 0.8,
+      "fields": ["title", "category", "description"]
+    },
+    "health": {
+      "sdgs": [3],
+      "description": "Health activities support good health and well-being",
+      "confidence": 0.8,
+      "fields": ["title", "category", "description"]
+    },
+    "community": {
+      "sdgs": [11],
+      "description": "Community activities support sustainable cities and communities",
+      "confidence": 0.8,
+      "fields": ["title", "category", "description"]
+    },
+    "culture": {
+      "sdgs": [11],
+      "description": "Cultural activities support sustainable cities and communities",
+      "confidence": 0.7,
+      "fields": ["title", "category", "description"]
+    },
+    "integration": {
+      "sdgs": [10],
+      "description": "Integration activities support reduced inequalities",
+      "confidence": 0.9,
+      "fields": ["title", "category", "description"]
+    }
+  },
+  "sdgReference": {
+    "3": {
+      "name": "Good Health and Well-being",
+      "description": "Ensure healthy lives and promote well-being for all at all ages",
+      "icon": "🏥"
+    },
+    "4": {
+      "name": "Quality Education",
+      "description": "Ensure inclusive and equitable quality education and promote lifelong learning opportunities for all",
+      "icon": "📚"
+    },
+    "8": {
+      "name": "Decent Work and Economic Growth",
+      "description": "Promote sustained, inclusive and sustainable economic growth, full and productive employment and decent work for all",
+      "icon": "💼"
+    },
+    "10": {
+      "name": "Reduced Inequalities",
+      "description": "Reduce inequality within and among countries",
+      "icon": "⚖️"
+    },
+    "11": {
+      "name": "Sustainable Cities and Communities",
+      "description": "Make cities and human settlements inclusive, safe, resilient and sustainable",
+      "icon": "🏙️"
+    },
+    "16": {
+      "name": "Peace, Justice and Strong Institutions",
+      "description": "Promote peaceful and inclusive societies for sustainable development, provide access to justice for all and build effective, accountable and inclusive institutions at all levels",
+      "icon": "⚖️"
+    },
+    "17": {
+      "name": "Partnerships for the Goals",
+      "description": "Strengthen the means of implementation and revitalize the global partnership for sustainable development",
+      "icon": "🤝"
+    }
+  }
+}

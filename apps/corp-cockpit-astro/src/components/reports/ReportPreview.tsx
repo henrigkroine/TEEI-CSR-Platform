@@ -1,78 +1,147 @@
-import { useState, useRef, useEffect } from 'react';
-import type { GenerateReportResponse, ReportSection } from '@teei/shared-types';
+import { useState, useEffect } from 'react';
+import type { GeneratedReport, Citation } from '../../types/reports';
+import ReportEditor from './ReportEditor';
+import ExportModal from './ExportModal';
+import { renderWithCitations } from './CitationTooltip';
 
 interface ReportPreviewProps {
-  report: GenerateReportResponse;
+  report: GeneratedReport;
+  companyId: string;
   onClose: () => void;
   onBack: () => void;
+  lang?: string;
 }
 
-export default function ReportPreview({ report, onClose, onBack }: ReportPreviewProps) {
-  const [editedSections, setEditedSections] = useState<ReportSection[]>(report.sections);
+export default function ReportPreview({ 
+  report, 
+  companyId,
+  onClose, 
+  onBack,
+  lang = 'en'
+}: ReportPreviewProps) {
+  const [editedReport, setEditedReport] = useState(report);
   const [showCitations, setShowCitations] = useState(true);
-  const [exportingPDF, setExportingPDF] = useState(false);
-  const contentRefs = useRef<Record<number, HTMLDivElement | null>>({});
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [editingSection, setEditingSection] = useState<number | null>(null);
+  const [savingDraft, setSavingDraft] = useState(false);
 
-  // Update edited sections when report changes
   useEffect(() => {
-    setEditedSections(report.sections);
+    setEditedReport(report);
   }, [report]);
 
-  const handleSectionEdit = (sectionIndex: number) => {
-    const contentElement = contentRefs.current[sectionIndex];
-    if (!contentElement) return;
-
-    const newContent = contentElement.innerText;
-    const updatedSections = [...editedSections];
-    updatedSections[sectionIndex] = {
-      ...updatedSections[sectionIndex],
-      content: newContent,
-    };
-    setEditedSections(updatedSections);
+  const handleSectionEdit = (sectionIndex: number, newSection: typeof report.sections[0]) => {
+    const updatedSections = [...editedReport.sections];
+    updatedSections[sectionIndex] = newSection;
+    setEditedReport({
+      ...editedReport,
+      sections: updatedSections,
+    });
   };
 
-  const handleExportPDF = async () => {
-    setExportingPDF(true);
+  const handleSaveDraft = async () => {
+    setSavingDraft(true);
     try {
-      // TODO: Implement PDF export in Slice D
-      // For now, just download as JSON
-      const dataStr = JSON.stringify(
-        {
-          sections: editedSections,
-          citations: report.citations,
-          metadata: report.metadata,
+      await fetch(`/api/companies/${companyId}/gen-reports/${report.reportId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
         },
-        null,
-        2
-      );
-      const dataUri = `data:application/json;charset=utf-8,${encodeURIComponent(dataStr)}`;
-      const exportFileDefaultName = `quarterly-report-${report.metadata.generatedAt}.json`;
-
-      const linkElement = document.createElement('a');
-      linkElement.setAttribute('href', dataUri);
-      linkElement.setAttribute('download', exportFileDefaultName);
-      linkElement.click();
+        body: JSON.stringify({
+          sections: editedReport.sections,
+          status: 'draft'
+        }),
+      });
     } catch (err) {
-      console.error('Failed to export report:', err);
-      alert('Failed to export report. Please try again.');
+      console.error('Failed to save draft:', err);
+      alert('Failed to save draft. Please try again.');
     } finally {
-      setExportingPDF(false);
+      setSavingDraft(false);
     }
   };
 
-  const getCitationById = (evidenceId: string) => {
-    return report.citations.find((c) => c.evidenceId === evidenceId);
+  const handleFinalizeReport = async () => {
+    if (!confirm('Finalize this report? This will lock editing and mark it as final.')) {
+      return;
+    }
+
+    try {
+      await fetch(`/api/companies/${companyId}/gen-reports/${report.reportId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sections: editedReport.sections,
+          status: 'final'
+        }),
+      });
+      alert('Report finalized successfully!');
+      onClose();
+    } catch (err) {
+      console.error('Failed to finalize report:', err);
+      alert('Failed to finalize report. Please try again.');
+    }
   };
 
-  // Extract citation IDs from content
-  const extractCitationIds = (content: string): string[] => {
+  const handleRegenerateSection = async (sectionIndex: number) => {
+    if (!confirm('Regenerate this section? Current edits will be lost.')) {
+      return;
+    }
+
+    try {
+      const section = editedReport.sections[sectionIndex];
+      const response = await fetch(
+        `/api/companies/${companyId}/gen-reports/${report.reportId}/sections/${section.order}/regenerate`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to regenerate section');
+      }
+
+      const newSection = await response.json();
+      handleSectionEdit(sectionIndex, newSection);
+    } catch (err) {
+      console.error('Failed to regenerate section:', err);
+      alert('Failed to regenerate section. Please try again.');
+    }
+  };
+
+  const handleViewCitationDetails = (citation: Citation) => {
+    // Open evidence drawer with citation details
+    // This would integrate with the Evidence Explorer from PHASE-C-B-01
+    console.log('View citation details:', citation);
+    alert(`Evidence ID: ${citation.evidenceId}\nSource: ${citation.source}\nConfidence: ${(citation.confidence * 100).toFixed(0)}%`);
+  };
+
+  const getCitationsBySection = (sectionIndex: number): Citation[] => {
+    const section = editedReport.sections[sectionIndex];
     const citationRegex = /\[citation:([^\]]+)\]/g;
-    const ids: string[] = [];
+    const citationIds: string[] = [];
     let match;
-    while ((match = citationRegex.exec(content)) !== null) {
-      ids.push(match[1]);
+    
+    while ((match = citationRegex.exec(section.content)) !== null) {
+      citationIds.push(match[1]);
     }
-    return ids;
+
+    return citationIds
+      .map(id => editedReport.citations.find(c => c.evidenceId === id || c.id === id))
+      .filter((c): c is Citation => c !== undefined);
+  };
+
+  const formatDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString(lang, {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
 
   return (
@@ -86,21 +155,22 @@ export default function ReportPreview({ report, onClose, onBack }: ReportPreview
 
       {/* Preview Modal */}
       <div
-        className="fixed left-1/2 top-1/2 z-50 h-[90vh] w-full max-w-6xl -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-lg bg-background shadow-2xl"
+        className="fixed left-1/2 top-1/2 z-50 h-[90vh] w-full max-w-7xl -translate-x-1/2 -translate-y-1/2 
+                   overflow-hidden rounded-lg bg-background shadow-2xl flex flex-col"
         role="dialog"
         aria-labelledby="report-preview-title"
         aria-modal="true"
       >
         {/* Header */}
-        <div className="border-b border-border bg-background px-6 py-4">
+        <div className="border-b border-border bg-background px-6 py-4 shrink-0">
           <div className="flex items-center justify-between">
             <div>
               <h2 id="report-preview-title" className="text-xl font-bold">
-                Quarterly Report Preview
+                {report.reportType.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())} Preview
               </h2>
               <p className="mt-1 text-sm text-foreground/60">
-                {report.metadata.generatedAt} • {report.metadata.model} • Prompt v
-                {report.metadata.promptVersion}
+                Generated {formatDate(report.metadata.generatedAt)} • {report.metadata.model} • 
+                Prompt v{report.metadata.promptVersion} • {report.metadata.tokensUsed} tokens
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -135,19 +205,31 @@ export default function ReportPreview({ report, onClose, onBack }: ReportPreview
         </div>
 
         {/* Content */}
-        <div className="flex h-[calc(90vh-8rem)] overflow-hidden">
+        <div className="flex flex-1 overflow-hidden">
           {/* Main Content */}
           <div className="flex-1 overflow-y-auto p-8">
             <div className="mx-auto max-w-4xl space-y-8">
               {/* Metadata Card */}
-              <div className="card bg-primary/5">
-                <div className="grid grid-cols-3 gap-4 text-sm">
+              <div className="card bg-primary/5 border-primary/20">
+                <div className="grid grid-cols-4 gap-4 text-sm">
+                  <div>
+                    <div className="font-medium text-foreground/60">Status</div>
+                    <div className="text-lg font-semibold">
+                      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs ${
+                        report.status === 'final' 
+                          ? 'bg-green-100 text-green-700' 
+                          : 'bg-yellow-100 text-yellow-700'
+                      }`}>
+                        {report.status.toUpperCase()}
+                      </span>
+                    </div>
+                  </div>
                   <div>
                     <div className="font-medium text-foreground/60">Tokens Used</div>
                     <div className="text-lg font-semibold">{report.metadata.tokensUsed}</div>
                   </div>
                   <div>
-                    <div className="font-medium text-foreground/60">Total Citations</div>
+                    <div className="font-medium text-foreground/60">Citations</div>
                     <div className="text-lg font-semibold">{report.citations.length}</div>
                   </div>
                   <div>
@@ -160,60 +242,99 @@ export default function ReportPreview({ report, onClose, onBack }: ReportPreview
               </div>
 
               {/* Editable Notice */}
-              <div className="rounded-md bg-border/20 p-4 text-sm">
-                <p className="font-medium">📝 Editable Content</p>
-                <p className="mt-1 text-foreground/60">
-                  Click any section to make minor edits. Citation markers like [citation:xxx] will
-                  be preserved in the export.
-                </p>
-              </div>
+              {report.status === 'draft' && (
+                <div className="rounded-md bg-blue-50 border border-blue-200 p-4 text-sm">
+                  <div className="flex items-start gap-3">
+                    <span className="text-blue-600 text-xl">✏️</span>
+                    <div>
+                      <p className="font-medium text-blue-900">Editable Draft</p>
+                      <p className="mt-1 text-blue-700">
+                        Click "Edit Section" to make changes. Citation markers like [citation:xxx] 
+                        will be preserved. Changes are auto-saved.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Sections */}
-              {editedSections.map((section, index) => (
+              {editedReport.sections.map((section, index) => (
                 <section key={section.order} className="space-y-3">
-                  <h3 className="text-2xl font-bold">{section.title}</h3>
-                  <div
-                    ref={(el) => (contentRefs.current[index] = el)}
-                    contentEditable
-                    suppressContentEditableWarning
-                    onBlur={() => handleSectionEdit(index)}
-                    className="whitespace-pre-wrap rounded-md border border-border bg-background p-4 text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
-                    style={{ minHeight: '100px' }}
-                    role="textbox"
-                    aria-label={`Edit ${section.title} section`}
-                    aria-multiline="true"
-                  >
-                    {section.content}
+                  <div className="flex items-start justify-between">
+                    <h3 className="text-2xl font-bold">{section.title}</h3>
+                    {report.status === 'draft' && (
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setEditingSection(editingSection === index ? null : index)}
+                          className="text-sm text-primary hover:text-primary/80 font-medium"
+                        >
+                          {editingSection === index ? 'View Mode' : 'Edit Section'}
+                        </button>
+                        <button
+                          onClick={() => handleRegenerateSection(index)}
+                          className="text-sm text-orange-600 hover:text-orange-700 font-medium"
+                          title="Regenerate this section with AI"
+                        >
+                          🔄 Regenerate
+                        </button>
+                      </div>
+                    )}
                   </div>
 
-                  {/* Section Citations */}
-                  {showCitations && (
-                    <div className="ml-4 space-y-2">
-                      {extractCitationIds(section.content).map((evidenceId, citationIndex) => {
-                        const citation = getCitationById(evidenceId);
-                        if (!citation) return null;
+                  {editingSection === index ? (
+                    <ReportEditor
+                      section={section}
+                      onChange={(newSection) => handleSectionEdit(index, newSection)}
+                      autoSave={true}
+                      autoSaveDelay={2000}
+                    />
+                  ) : (
+                    <div className="prose prose-sm max-w-none">
+                      <div className="whitespace-pre-wrap rounded-md border border-border bg-background p-6 
+                                    text-foreground leading-relaxed">
+                        {renderWithCitations(
+                          section.content, 
+                          editedReport.citations,
+                          handleViewCitationDetails
+                        )}
+                      </div>
+                    </div>
+                  )}
 
-                        return (
-                          <div
-                            key={`${evidenceId}-${citationIndex}`}
-                            className="flex gap-3 rounded-md bg-border/10 p-3 text-sm"
-                          >
-                            <div className="shrink-0 font-mono text-xs text-foreground/40">
-                              [{evidenceId.slice(0, 8)}...]
-                            </div>
-                            <div className="flex-1">
-                              <p className="text-foreground/80">{citation.snippetText}</p>
-                              <div className="mt-1 flex items-center gap-3 text-xs text-foreground/60">
-                                <span>{citation.source}</span>
-                                <span>•</span>
-                                <span>
-                                  Confidence: {(citation.confidence * 100).toFixed(0)}%
-                                </span>
-                              </div>
+                  {/* Section Citations */}
+                  {showCitations && getCitationsBySection(index).length > 0 && (
+                    <div className="ml-4 space-y-2">
+                      <h4 className="text-sm font-semibold text-foreground/80">
+                        Citations in this section:
+                      </h4>
+                      {getCitationsBySection(index).map((citation, citationIndex) => (
+                        <div
+                          key={`${citation.id}-${citationIndex}`}
+                          className="flex gap-3 rounded-md bg-border/10 p-3 text-sm hover:bg-border/20 
+                                   transition-colors cursor-pointer"
+                          onClick={() => handleViewCitationDetails(citation)}
+                        >
+                          <div className="shrink-0 font-mono text-xs text-foreground/40">
+                            [{citationIndex + 1}]
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-foreground/80">{citation.snippetText}</p>
+                            <div className="mt-1 flex items-center gap-3 text-xs text-foreground/60">
+                              <span>{citation.source}</span>
+                              <span>•</span>
+                              <span className={
+                                citation.confidence >= 0.8 ? 'text-green-600' :
+                                citation.confidence >= 0.6 ? 'text-yellow-600' :
+                                'text-orange-600'
+                              }>
+                                Confidence: {(citation.confidence * 100).toFixed(0)}%
+                              </span>
+                              <span>•</span>
+                              <span className="text-primary hover:underline">Click for details</span>
                             </div>
                           </div>
-                        );
-                      })}
+                        </div>
+                      ))}
                     </div>
                   )}
                 </section>
@@ -221,22 +342,37 @@ export default function ReportPreview({ report, onClose, onBack }: ReportPreview
             </div>
           </div>
 
-          {/* Citations Sidebar (when enabled) */}
+          {/* Citations Sidebar */}
           {showCitations && (
-            <div className="w-80 border-l border-border bg-border/10 p-6 overflow-y-auto">
-              <h3 className="mb-4 font-semibold">All Citations ({report.citations.length})</h3>
-              <div className="space-y-3">
-                {report.citations.map((citation) => (
-                  <div key={citation.id} className="rounded-md bg-background p-3 text-sm">
+            <div className="w-80 border-l border-border bg-border/5 overflow-y-auto">
+              <div className="sticky top-0 bg-border/10 border-b border-border px-6 py-4">
+                <h3 className="font-semibold">All Citations ({editedReport.citations.length})</h3>
+              </div>
+              <div className="p-6 space-y-3">
+                {editedReport.citations.map((citation, index) => (
+                  <div 
+                    key={citation.id} 
+                    className="rounded-md bg-background border border-border p-3 text-sm 
+                             hover:border-primary/50 transition-colors cursor-pointer"
+                    onClick={() => handleViewCitationDetails(citation)}
+                  >
                     <div className="mb-2 flex items-start justify-between">
                       <span className="font-mono text-xs text-foreground/40">
-                        {citation.evidenceId.slice(0, 8)}...
+                        [{index + 1}] {citation.evidenceId.slice(0, 8)}...
                       </span>
-                      <span className="shrink-0 rounded-full bg-primary/20 px-2 py-0.5 text-xs font-medium">
+                      <span className={`
+                        shrink-0 rounded-full px-2 py-0.5 text-xs font-medium
+                        ${citation.confidence >= 0.8 
+                          ? 'bg-green-100 text-green-700' 
+                          : citation.confidence >= 0.6 
+                          ? 'bg-yellow-100 text-yellow-700' 
+                          : 'bg-orange-100 text-orange-700'
+                        }
+                      `}>
                         {(citation.confidence * 100).toFixed(0)}%
                       </span>
                     </div>
-                    <p className="mb-2 text-foreground/80">{citation.snippetText}</p>
+                    <p className="mb-2 text-foreground/80 line-clamp-3">{citation.snippetText}</p>
                     <p className="text-xs text-foreground/60">{citation.source}</p>
                   </div>
                 ))}
@@ -246,33 +382,50 @@ export default function ReportPreview({ report, onClose, onBack }: ReportPreview
         </div>
 
         {/* Footer */}
-        <div className="border-t border-border bg-background px-6 py-4">
+        <div className="border-t border-border bg-background px-6 py-4 shrink-0">
           <div className="flex items-center justify-between">
-            <button onClick={onBack} className="btn-secondary" disabled={exportingPDF}>
-              ← Back to Generation
+            <button onClick={onBack} className="btn-secondary">
+              ← Back to Configuration
             </button>
             <div className="flex items-center gap-3">
-              <button onClick={onClose} className="btn-secondary" disabled={exportingPDF}>
-                Close
-              </button>
+              {report.status === 'draft' && (
+                <>
+                  <button 
+                    onClick={handleSaveDraft} 
+                    className="btn-secondary"
+                    disabled={savingDraft}
+                  >
+                    {savingDraft ? 'Saving...' : 'Save Draft'}
+                  </button>
+                  <button 
+                    onClick={handleFinalizeReport} 
+                    className="btn-secondary"
+                  >
+                    🔒 Finalize Report
+                  </button>
+                </>
+              )}
               <button
-                onClick={handleExportPDF}
+                onClick={() => setShowExportModal(true)}
                 className="btn-primary"
-                disabled={exportingPDF}
               >
-                {exportingPDF ? (
-                  <>
-                    <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                    Exporting...
-                  </>
-                ) : (
-                  '📄 Export PDF'
-                )}
+                📄 Export Report
               </button>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Export Modal */}
+      {showExportModal && (
+        <ExportModal
+          reportId={report.reportId}
+          companyId={companyId}
+          isOpen={showExportModal}
+          onClose={() => setShowExportModal(false)}
+          isDraft={report.status === 'draft'}
+        />
+      )}
     </>
   );
 }

@@ -4,6 +4,7 @@ import { createServiceLogger, getEventBus } from '@teei/shared-utils';
 import { metricsRoutes } from './routes/metrics.js';
 import { cohortRoutes } from './routes/cohort.js';
 import { streamRoutes } from './routes/stream.js';
+import { sroiRoutes } from './routes/sroi.js';
 import { initRedis, healthCheck as redisHealthCheck, disconnect as redisDisconnect } from './cache/redis.js';
 import { subscribeToInvalidationEvents } from './cache/invalidation.js';
 import { initNATSBridge, shutdownNATSBridge } from './stream/nats-bridge.js';
@@ -67,6 +68,7 @@ async function start() {
   app.register(metricsRoutes, { prefix: '/metrics' });
   app.register(cohortRoutes, { prefix: '/cohort' });
   app.register(streamRoutes, { prefix: '/stream' });
+  app.register(sroiRoutes, { prefix: '/impact' });
 
   // Connect to event bus
   const eventBus = getEventBus();

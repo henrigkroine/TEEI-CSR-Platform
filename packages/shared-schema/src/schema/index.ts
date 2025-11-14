@@ -12,3 +12,5 @@ export * from './journey.js';
 export * from './idempotency.js';
 export * from './audits.js';
 export * from './pii.js';
+export * from './impact-metrics.js';
+export * from './lineage.js';

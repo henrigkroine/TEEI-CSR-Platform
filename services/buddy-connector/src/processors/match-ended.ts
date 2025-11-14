@@ -2,6 +2,7 @@ import { createServiceLogger } from '@teei/shared-utils';
 import { db, buddyMatches, buddySystemEvents } from '@teei/shared-schema';
 import { eq } from 'drizzle-orm';
 import type { BuddyMatchEnded } from '@teei/event-contracts';
+import { tagEventWithSDGs, enrichPayloadWithSDGs } from '../utils/sdg-tagger.js';
 
 const logger = createServiceLogger('buddy-connector:match-ended');
 
@@ -25,13 +26,17 @@ export async function processMatchEnded(
     'Processing buddy.match.ended event'
   );
 
-  // Store raw event
+  // Tag event with SDGs
+  const sdgResult = tagEventWithSDGs('buddy.match.ended', event);
+  const enrichedPayload = enrichPayloadWithSDGs(event, sdgResult);
+
+  // Store raw event with SDG tags
   await db.insert(buddySystemEvents).values({
     eventId,
     eventType: 'buddy.match.ended',
     userId: data.participantId,
     timestamp: new Date(timestamp),
-    payload: event as any,
+    payload: enrichedPayload as any,
     correlationId: correlationId || null,
     processedAt: new Date(),
   });

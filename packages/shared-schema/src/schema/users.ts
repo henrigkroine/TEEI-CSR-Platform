@@ -10,9 +10,12 @@ export const users = pgTable('users', {
   role: varchar('role', { length: 50 }).notNull(), // admin, company_user, participant, volunteer
   firstName: varchar('first_name', { length: 100 }),
   lastName: varchar('last_name', { length: 100 }),
+  journeyFlags: jsonb('journey_flags').default({}), // Journey tracking flags: { is_buddy_participant, buddy_match_count, etc. }
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
-});
+}, (table) => ({
+  journeyFlagsIdx: index('idx_users_journey_flags').using('gin', table.journeyFlags),
+}));
 
 export const companies = pgTable('companies', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -76,4 +79,35 @@ export const privacyAuditLog = pgTable('privacy_audit_log', {
   performedAt: timestamp('performed_at', { withTimezone: true }).defaultNow().notNull(),
 }, (table) => ({
   requestIdIdx: index('privacy_audit_log_request_id_idx').on(table.requestId),
+}));
+
+// User External IDs table - Maps CSR users to external system identities
+export const userExternalIds = pgTable('user_external_ids', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  profileId: uuid('profile_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  provider: varchar('provider', { length: 50 }).notNull(), // buddy, discord, kintell, upskilling
+  externalId: varchar('external_id', { length: 255 }).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  metadata: jsonb('metadata').default({}), // Provider-specific metadata
+}, (table) => ({
+  profileIdIdx: index('idx_user_external_ids_profile').on(table.profileId),
+  providerExternalIdx: index('idx_user_external_ids_provider_external').on(table.provider, table.externalId),
+  providerIdx: index('idx_user_external_ids_provider').on(table.provider),
+}));
+
+// Identity linking audit log
+export const identityLinkingAudit = pgTable('identity_linking_audit', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  profileId: uuid('profile_id').notNull().references(() => users.id),
+  provider: varchar('provider', { length: 50 }).notNull(),
+  externalId: varchar('external_id', { length: 255 }).notNull(),
+  operation: varchar('operation', { length: 20 }).notNull(), // created, updated, deleted
+  performedBy: varchar('performed_by', { length: 100 }), // Service or user identifier
+  performedAt: timestamp('performed_at', { withTimezone: true }).defaultNow().notNull(),
+  metadata: jsonb('metadata').default({}),
+}, (table) => ({
+  profileIdIdx: index('idx_identity_linking_audit_profile').on(table.profileId),
+  providerIdx: index('idx_identity_linking_audit_provider').on(table.provider, table.externalId),
+  performedAtIdx: index('idx_identity_linking_audit_performed_at').on(table.performedAt),
 }));

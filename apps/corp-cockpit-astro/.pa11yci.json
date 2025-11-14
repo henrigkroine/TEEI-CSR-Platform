@@ -1,0 +1,45 @@
+{
+  "defaults": {
+    "standard": "WCAG2AA",
+    "runners": [
+      "axe",
+      "htmlcs"
+    ],
+    "chromeLaunchConfig": {
+      "executablePath": null,
+      "args": [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage"
+      ]
+    },
+    "timeout": 30000,
+    "wait": 1000,
+    "screenCapture": "./pa11y-screenshots/${name}-${datetime}.png",
+    "includeNotices": false,
+    "includeWarnings": false,
+    "threshold": 0,
+    "reporters": [
+      "cli",
+      "json"
+    ]
+  },
+  "urls": [
+    {
+      "url": "http://localhost:4321/",
+      "screenCapture": "./pa11y-screenshots/landing-page.png"
+    },
+    {
+      "url": "http://localhost:4321/en",
+      "screenCapture": "./pa11y-screenshots/tenant-selector-en.png"
+    },
+    {
+      "url": "http://localhost:4321/no",
+      "screenCapture": "./pa11y-screenshots/tenant-selector-no.png"
+    },
+    {
+      "url": "http://localhost:4321/uk",
+      "screenCapture": "./pa11y-screenshots/tenant-selector-uk.png"
+    }
+  ]
+}

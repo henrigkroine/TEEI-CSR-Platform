@@ -140,5 +140,13 @@
     "unauthorized": "Du er ikke autorisert til å se disse dataene",
     "notFound": "Data ikke funnet",
     "serverError": "Serverfeil oppstod"
+  },
+  "reports": {
+    "title": "Genererte Rapporter",
+    "subtitle": "Vis, rediger og eksporter AI-genererte rapporter",
+    "generateNew": "Generer Ny Rapport",
+    "generateReport": "Generer Rapport",
+    "generating": "Genererer rapport...",
+    "noReports": "Ingen rapporter funnet"
   }
 }

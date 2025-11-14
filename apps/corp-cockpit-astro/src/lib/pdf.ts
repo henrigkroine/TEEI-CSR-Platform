@@ -302,6 +302,21 @@ export async function exportMetricsToPDF(
       headers['Authorization'] = `Bearer ${token}`;
     }
 
+    // Fetch company theme for branding
+    let companyLogo: string | undefined;
+    try {
+      const themeResponse = await fetch(
+        `${baseUrl}/companies/${companyId}/theme`,
+        { headers }
+      );
+      if (themeResponse.ok) {
+        const theme = await themeResponse.json();
+        companyLogo = theme.logo_url || undefined;
+      }
+    } catch (error) {
+      console.warn('Failed to fetch company theme, using default branding:', error);
+    }
+
     // Fetch metrics
     const metricsResponse = await fetch(
       `${baseUrl}/metrics/company/${companyId}/period/${period}`,
@@ -345,6 +360,7 @@ export async function exportMetricsToPDF(
     // Prepare report data
     const reportData: PDFReportData = {
       companyName,
+      companyLogo, // Include tenant logo from theme
       reportPeriod: period,
       generatedDate: new Date().toISOString(),
       metrics: {

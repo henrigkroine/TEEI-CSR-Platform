@@ -2,6 +2,12 @@ import { createServiceLogger } from '@teei/shared-utils';
 import { db, buddyMatches, buddySystemEvents, users } from '@teei/shared-schema';
 import { eq } from 'drizzle-orm';
 import type { BuddyMatchCreated } from '@teei/event-contracts';
+import { tagEventWithSDGs, enrichPayloadWithSDGs } from '../utils/sdg-tagger.js';
+import {
+  linkBuddyUser,
+  incrementJourneyCounter,
+  updateJourneyFlags,
+} from '../services/profile-service.js';
 
 const logger = createServiceLogger('buddy-connector:match-created');
 
@@ -47,16 +53,25 @@ export async function processMatchCreated(
     throw new Error(`Buddy not found: ${data.buddyId}`);
   }
 
-  // Store raw event
+  // Tag event with SDGs
+  const sdgResult = tagEventWithSDGs('buddy.match.created', event);
+  const enrichedPayload = enrichPayloadWithSDGs(event, sdgResult);
+
+  // Store raw event with SDG tags
   await db.insert(buddySystemEvents).values({
     eventId,
     eventType: 'buddy.match.created',
     userId: data.participantId,
     timestamp: new Date(timestamp),
-    payload: event as any,
+    payload: enrichedPayload as any,
     correlationId: correlationId || null,
     processedAt: new Date(),
   });
+
+  logger.info(
+    { eventId, sdgs: sdgResult.sdgs },
+    'Event tagged with SDGs'
+  );
 
   // Check if match already exists (idempotency at domain level)
   const [existingMatch] = await db
@@ -90,4 +105,35 @@ export async function processMatchCreated(
     },
     'Match created successfully'
   );
+
+  // TASK-A-05: Link Buddy users to CSR profiles and update journey flags
+  try {
+    // Link participant to profile
+    await linkBuddyUser(data.participantId, data.participantId, {
+      matchId: data.matchId,
+      matchedAt: data.matchedAt,
+    });
+
+    // Link buddy to profile
+    await linkBuddyUser(data.buddyId, data.buddyId, {
+      matchId: data.matchId,
+      matchedAt: data.matchedAt,
+    });
+
+    // Update journey flags for participant
+    await updateJourneyFlags(data.participantId, {
+      is_buddy_participant: true,
+    });
+
+    // Increment match count for participant
+    await incrementJourneyCounter(data.participantId, 'buddy_match_count');
+
+    logger.info(
+      { participantId: data.participantId, buddyId: data.buddyId },
+      'Profile linking and journey flags updated'
+    );
+  } catch (error) {
+    // Log but don't fail - profile linking is non-critical
+    logger.warn({ error, deliveryId }, 'Failed to update profile linking');
+  }
 }

@@ -1,0 +1,86 @@
+{
+  "version": "1.0",
+  "description": "Default SROI valuation weights for buddy program activities",
+  "lastUpdated": "2025-11-14",
+  "methodology": "Values based on estimated social impact and time investment per activity",
+  "weights": {
+    "buddy_match": {
+      "value": 10,
+      "rationale": "Initial connection established, foundation for future engagement",
+      "sdgAlignment": [10],
+      "impactLevel": "medium"
+    },
+    "event_attended": {
+      "value": 5,
+      "rationale": "Community participation, networking, cultural exchange per event",
+      "sdgAlignment": [4, 10, 11],
+      "impactLevel": "medium"
+    },
+    "skill_share": {
+      "value": 15,
+      "rationale": "Direct skills transfer, educational value, volunteer time (⭐⭐⭐ high impact)",
+      "sdgAlignment": [4, 8],
+      "impactLevel": "high"
+    },
+    "feedback": {
+      "value": 8,
+      "rationale": "Quality assurance, program improvement insights, relationship health indicator",
+      "sdgAlignment": [],
+      "impactLevel": "medium"
+    },
+    "milestone": {
+      "value": 20,
+      "rationale": "Significant achievement, program completion, measurable progress (⭐⭐⭐ high impact)",
+      "sdgAlignment": ["varies"],
+      "impactLevel": "high"
+    },
+    "checkin": {
+      "value": 3,
+      "rationale": "Regular engagement signal, retention indicator, minimal time investment",
+      "sdgAlignment": [],
+      "impactLevel": "low"
+    }
+  },
+  "investment": {
+    "monthly": {
+      "platformCost": 500,
+      "staffHours": 20,
+      "hourlyRate": 50,
+      "total": 1500
+    },
+    "notes": "Phase 1 simplified investment model. Phase 2 will include volunteer opportunity cost and variable platform costs."
+  },
+  "sroiBenchmarks": {
+    "poor": {
+      "range": [0, 1],
+      "description": "Investment exceeds social value created"
+    },
+    "break_even": {
+      "range": [1, 2],
+      "description": "Social value roughly equals investment"
+    },
+    "good": {
+      "range": [2, 4],
+      "description": "Positive social return, 2-4x investment"
+    },
+    "excellent": {
+      "range": [4, 10],
+      "description": "Strong social impact, 4-10x investment"
+    },
+    "exceptional": {
+      "range": [10, null],
+      "description": "Exceptional social return, >10x investment"
+    }
+  },
+  "companyOverrides": {
+    "description": "Companies can override these defaults through the API",
+    "example": {
+      "companyId": "uuid-here",
+      "weights": {
+        "skill_share": 25,
+        "milestone": 30
+      },
+      "rationale": "Company X values skills transfer and completions more highly"
+    }
+  }
+}

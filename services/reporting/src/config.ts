@@ -18,5 +18,25 @@ export const config = {
   logging: {
     level: process.env.LOG_LEVEL || 'info',
   },
+  email: {
+    smtp: {
+      host: process.env.SMTP_HOST || 'smtp.example.com',
+      port: parseInt(process.env.SMTP_PORT || '587', 10),
+      secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
+      auth: {
+        user: process.env.SMTP_USER || 'reports@teei.io',
+        pass: process.env.SMTP_PASSWORD || '',
+      },
+    },
+    from: {
+      name: process.env.EMAIL_FROM_NAME || 'TEEI CSR Platform',
+      address: process.env.EMAIL_FROM_ADDRESS || 'reports@teei.io',
+    },
+    maxRetries: parseInt(process.env.EMAIL_MAX_RETRIES || '3', 10),
+  },
+  scheduling: {
+    enabled: process.env.SCHEDULING_ENABLED !== 'false',
+    timezone: process.env.SCHEDULING_TIMEZONE || 'UTC',
+  },
   env: process.env.NODE_ENV || 'development',
 } as const;

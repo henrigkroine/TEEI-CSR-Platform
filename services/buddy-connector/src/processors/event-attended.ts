@@ -1,6 +1,8 @@
 import { createServiceLogger } from '@teei/shared-utils';
 import { db, buddySystemEvents } from '@teei/shared-schema';
 import type { BuddyEventAttended } from '@teei/event-contracts';
+import { tagEventWithSDGs, enrichPayloadWithSDGs } from '../utils/sdg-tagger.js';
+import { incrementJourneyCounter } from '../services/profile-service.js';
 
 const logger = createServiceLogger('buddy-connector:event-attended');
 
@@ -26,13 +28,17 @@ export async function processEventAttended(
     'Processing buddy.event.attended event'
   );
 
-  // Store raw event (could be expanded to dedicated attendance table later)
+  // Tag event with SDGs
+  const sdgResult = tagEventWithSDGs('buddy.event.attended', event);
+  const enrichedPayload = enrichPayloadWithSDGs(event, sdgResult);
+
+  // Store raw event with SDG tags (could be expanded to dedicated attendance table later)
   await db.insert(buddySystemEvents).values({
     eventId,
     eventType: 'buddy.event.attended',
     userId: data.userId,
     timestamp: new Date(timestamp),
-    payload: event as any,
+    payload: enrichedPayload as any,
     correlationId: correlationId || null,
     processedAt: new Date(),
   });
@@ -46,4 +52,12 @@ export async function processEventAttended(
     },
     'Event attendance recorded successfully'
   );
+
+  // TASK-A-05: Update journey flags
+  try {
+    await incrementJourneyCounter(data.userId, 'buddy_events_attended');
+    logger.info({ userId: data.userId }, 'Journey counter updated for event attendance');
+  } catch (error) {
+    logger.warn({ error, userId: data.userId }, 'Failed to update journey counter');
+  }
 }

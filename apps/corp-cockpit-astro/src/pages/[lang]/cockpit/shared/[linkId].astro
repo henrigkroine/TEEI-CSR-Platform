@@ -1,0 +1,144 @@
+---
+/**
+ * Shared Dashboard View Page
+ *
+ * Public read-only view accessible via secure share link
+ * Supports boardroom mode for presentations
+ */
+
+import BaseLayout from '@layouts/BaseLayout.astro';
+import SharedDashboard from '@components/views/SharedDashboard';
+
+const { lang, linkId } = Astro.params;
+const { mode } = Astro.url.searchParams;
+const boardroomMode = mode === 'boardroom';
+
+// Validate language
+const validLangs = ['en', 'no', 'uk'];
+if (!validLangs.includes(lang || '')) {
+  return Astro.redirect('/en');
+}
+
+// Fetch share link data from API
+let shareData: any = null;
+let error: string | null = null;
+
+try {
+  const response = await fetch(
+    `${import.meta.env.PUBLIC_REPORTING_API_URL || 'http://localhost:3002'}/share/${linkId}`,
+    {
+      headers: {
+        'Accept': 'application/json',
+      },
+    }
+  );
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    error = errorData.reason === 'expired'
+      ? 'This share link has expired'
+      : errorData.reason === 'invalid_signature'
+      ? 'This share link is invalid'
+      : 'This share link is no longer valid';
+  } else {
+    shareData = await response.json();
+  }
+} catch (err) {
+  error = 'Failed to load shared view';
+  console.error('Share link fetch error:', err);
+}
+
+const title = boardroomMode ? 'Dashboard - Boardroom View' : 'Shared Dashboard';
+---
+
+<BaseLayout title={title} lang={lang}>
+  {boardroomMode && (
+    <meta name="robots" content="noindex,nofollow" />
+  )}
+
+  <div class:list={[
+    boardroomMode ? 'boardroom-mode' : '',
+    'min-h-screen bg-background'
+  ]}>
+    {error ? (
+      <!-- Error State -->
+      <div class="flex items-center justify-center min-h-screen p-6">
+        <div class="max-w-md w-full text-center">
+          <svg
+            class="mx-auto h-16 w-16 text-red-500"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+            />
+          </svg>
+          <h1 class="mt-4 text-2xl font-bold text-foreground">
+            {error}
+          </h1>
+          <p class="mt-2 text-foreground/60">
+            This link may have expired or been revoked. Please contact the person who shared it with you.
+          </p>
+        </div>
+      </div>
+    ) : shareData ? (
+      <!-- Shared Dashboard -->
+      <SharedDashboard
+        companyId={shareData.company_id}
+        filterConfig={shareData.filter_config}
+        boardroomMode={boardroomMode}
+        lang={lang}
+        client:load
+      />
+    ) : (
+      <!-- Loading State -->
+      <div class="flex items-center justify-center min-h-screen">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    )}
+  </div>
+</BaseLayout>
+
+<style>
+  /* Boardroom Mode Styles */
+  .boardroom-mode {
+    background: #000;
+    color: #fff;
+  }
+
+  .boardroom-mode h1,
+  .boardroom-mode h2,
+  .boardroom-mode h3 {
+    font-size: 2.5rem;
+    line-height: 1.2;
+  }
+
+  @media (min-width: 1024px) {
+    .boardroom-mode h1 {
+      font-size: 4rem;
+    }
+
+    .boardroom-mode h2 {
+      font-size: 3rem;
+    }
+
+    .boardroom-mode h3 {
+      font-size: 2rem;
+    }
+
+    .boardroom-mode .metric-value {
+      font-size: 5rem;
+      font-weight: 700;
+    }
+  }
+
+  /* Hide navigation and footer in boardroom mode */
+  .boardroom-mode nav,
+  .boardroom-mode footer {
+    display: none;
+  }
+</style>

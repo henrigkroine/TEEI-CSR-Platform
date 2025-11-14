@@ -1,0 +1,600 @@
+openapi: 3.0.3
+info:
+  title: Unified Profile Linking API
+  version: 1.0.0
+  description: |
+    API for managing cross-system identity mapping and journey flags.
+
+    **TASK-A-05**: Unified Profile Linking (Buddy ↔ CSR)
+
+    This API enables:
+    - Linking external system IDs to CSR Platform profiles
+    - Managing journey flags for cross-program analytics
+    - Tracking user progress across multiple systems
+
+  contact:
+    name: CSR Platform Team
+    email: csr-platform@teei.org
+
+servers:
+  - url: http://localhost:3001/v1
+    description: Local development
+  - url: https://api-staging.csr-platform.teei.org/v1
+    description: Staging environment
+  - url: https://api.csr-platform.teei.org/v1
+    description: Production environment
+
+tags:
+  - name: Profile Linking
+    description: External identity mapping operations
+  - name: Journey Flags
+    description: Journey tracking and flag management
+
+paths:
+  /profile/link-external:
+    post:
+      summary: Link external ID to profile
+      description: |
+        Creates or updates a mapping between an external system ID and a CSR Platform profile.
+
+        **Idempotent**: Safe to retry. If mapping exists, it will be updated.
+
+        **Audit**: All operations logged in `identity_linking_audit` table.
+      tags:
+        - Profile Linking
+      operationId: linkExternalId
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LinkExternalIdRequest'
+            examples:
+              buddy_mapping:
+                summary: Link Buddy System user
+                value:
+                  profileId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                  provider: "buddy"
+                  externalId: "buddy-user-123"
+                  metadata:
+                    matchId: "match-456"
+                    matchedAt: "2025-11-14T10:00:00Z"
+              discord_mapping:
+                summary: Link Discord user
+                value:
+                  profileId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                  provider: "discord"
+                  externalId: "discord-snowflake-789"
+                  metadata:
+                    serverId: "server-123"
+                    joinedAt: "2025-11-10T08:30:00Z"
+      responses:
+        '201':
+          description: Mapping created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LinkExternalIdResponse'
+              examples:
+                new_mapping:
+                  summary: New mapping created
+                  value:
+                    success: true
+                    mappingId: "m1n2o3p4-q5r6-7890-stuv-wx1234567890"
+                    isNew: true
+                    profileId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                    provider: "buddy"
+                updated_mapping:
+                  summary: Existing mapping updated
+                  value:
+                    success: true
+                    mappingId: "m1n2o3p4-q5r6-7890-stuv-wx1234567890"
+                    isNew: false
+                    profileId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                    provider: "buddy"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/ProfileNotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /profile/{id}/external-ids:
+    get:
+      summary: Get all external IDs for a profile
+      description: |
+        Retrieves all external system identities linked to a CSR Platform profile.
+
+        Returns mappings for all providers: buddy, discord, kintell, upskilling.
+      tags:
+        - Profile Linking
+      operationId: getExternalIds
+      parameters:
+        - $ref: '#/components/parameters/ProfileId'
+      responses:
+        '200':
+          description: External IDs retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExternalIdsResponse'
+              examples:
+                multi_provider:
+                  summary: User with multiple external IDs
+                  value:
+                    profileId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                    externalIds:
+                      buddy:
+                        externalId: "buddy-user-123"
+                        metadata:
+                          matchId: "match-456"
+                        createdAt: "2025-11-14T10:00:00Z"
+                        updatedAt: "2025-11-14T10:00:00Z"
+                      discord:
+                        externalId: "discord-snowflake-789"
+                        metadata:
+                          serverId: "server-123"
+                        createdAt: "2025-11-10T08:30:00Z"
+                        updatedAt: "2025-11-10T08:30:00Z"
+                no_external_ids:
+                  summary: User with no external IDs
+                  value:
+                    profileId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                    externalIds: {}
+        '404':
+          $ref: '#/components/responses/ProfileNotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /profile/{id}/flags:
+    get:
+      summary: Get journey flags
+      description: |
+        Retrieves all journey tracking flags for a user profile.
+
+        Flags include:
+        - Boolean flags: is_buddy_participant, is_discord_member
+        - Counter flags: buddy_match_count, buddy_events_attended
+      tags:
+        - Journey Flags
+      operationId: getJourneyFlags
+      parameters:
+        - $ref: '#/components/parameters/ProfileId'
+      responses:
+        '200':
+          description: Journey flags retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JourneyFlagsResponse'
+              examples:
+                active_user:
+                  summary: Active buddy participant
+                  value:
+                    profileId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                    journeyFlags:
+                      is_buddy_participant: true
+                      buddy_match_count: 3
+                      buddy_events_attended: 12
+                      buddy_milestones_count: 5
+                      is_discord_member: true
+                new_user:
+                  summary: New user with no flags
+                  value:
+                    profileId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                    journeyFlags: {}
+        '404':
+          $ref: '#/components/responses/ProfileNotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    put:
+      summary: Update journey flags
+      description: |
+        Batch update journey tracking flags for a user profile.
+
+        **Behavior**:
+        - Existing flags preserved unless explicitly overwritten
+        - Partial updates supported (only send changed flags)
+        - Atomic operation
+      tags:
+        - Journey Flags
+      operationId: updateJourneyFlags
+      parameters:
+        - $ref: '#/components/parameters/ProfileId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateJourneyFlagsRequest'
+            examples:
+              set_participant:
+                summary: Mark as buddy participant
+                value:
+                  flags:
+                    is_buddy_participant: true
+                    buddy_match_count: 1
+              batch_update:
+                summary: Update multiple flags
+                value:
+                  flags:
+                    buddy_events_attended: 15
+                    buddy_milestones_count: 8
+                    is_discord_member: true
+      responses:
+        '200':
+          description: Flags updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateJourneyFlagsResponse'
+              examples:
+                success:
+                  value:
+                    success: true
+                    profileId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                    journeyFlags:
+                      is_buddy_participant: true
+                      buddy_match_count: 3
+                      buddy_events_attended: 15
+                      buddy_milestones_count: 8
+                      is_discord_member: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/ProfileNotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /profile/{id}/increment-counter:
+    post:
+      summary: Increment journey counter
+      description: |
+        Atomically increments a specific journey counter.
+
+        **Behavior**:
+        - Thread-safe atomic operation
+        - Initializes to 0 if counter doesn't exist
+        - Supports negative increments for decrements
+
+        **Use Cases**:
+        - Increment event attendance count
+        - Track match count
+        - Count milestones reached
+      tags:
+        - Journey Flags
+      operationId: incrementJourneyCounter
+      parameters:
+        - $ref: '#/components/parameters/ProfileId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IncrementCounterRequest'
+            examples:
+              increment_events:
+                summary: Increment event attendance
+                value:
+                  counterKey: "buddy_events_attended"
+                  increment: 1
+              decrement_matches:
+                summary: Decrement match count
+                value:
+                  counterKey: "buddy_match_count"
+                  increment: -1
+      responses:
+        '200':
+          description: Counter incremented successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IncrementCounterResponse'
+              examples:
+                success:
+                  value:
+                    success: true
+                    profileId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                    counterKey: "buddy_events_attended"
+                    newValue: 13
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/ProfileNotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  parameters:
+    ProfileId:
+      name: id
+      in: path
+      required: true
+      description: UUID of the CSR Platform user profile
+      schema:
+        type: string
+        format: uuid
+      example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+
+  schemas:
+    LinkExternalIdRequest:
+      type: object
+      required:
+        - profileId
+        - provider
+        - externalId
+      properties:
+        profileId:
+          type: string
+          format: uuid
+          description: CSR Platform user profile UUID
+          example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+        provider:
+          type: string
+          enum: [buddy, discord, kintell, upskilling]
+          description: External system identifier
+          example: "buddy"
+        externalId:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: User ID in the external system
+          example: "buddy-user-123"
+        metadata:
+          type: object
+          description: Optional provider-specific metadata
+          additionalProperties: true
+          example:
+            matchId: "match-456"
+            matchedAt: "2025-11-14T10:00:00Z"
+
+    LinkExternalIdResponse:
+      type: object
+      required:
+        - success
+        - mappingId
+        - isNew
+        - profileId
+        - provider
+      properties:
+        success:
+          type: boolean
+          example: true
+        mappingId:
+          type: string
+          format: uuid
+          description: UUID of the created/updated mapping
+          example: "m1n2o3p4-q5r6-7890-stuv-wx1234567890"
+        isNew:
+          type: boolean
+          description: True if new mapping created, false if updated
+          example: true
+        profileId:
+          type: string
+          format: uuid
+          example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+        provider:
+          type: string
+          example: "buddy"
+
+    ExternalIdsResponse:
+      type: object
+      required:
+        - profileId
+        - externalIds
+      properties:
+        profileId:
+          type: string
+          format: uuid
+          example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+        externalIds:
+          type: object
+          description: Map of provider to external ID details
+          additionalProperties:
+            $ref: '#/components/schemas/ExternalIdDetails'
+          example:
+            buddy:
+              externalId: "buddy-user-123"
+              metadata:
+                matchId: "match-456"
+              createdAt: "2025-11-14T10:00:00Z"
+              updatedAt: "2025-11-14T10:00:00Z"
+
+    ExternalIdDetails:
+      type: object
+      required:
+        - externalId
+        - createdAt
+        - updatedAt
+      properties:
+        externalId:
+          type: string
+          example: "buddy-user-123"
+        metadata:
+          type: object
+          additionalProperties: true
+          example:
+            matchId: "match-456"
+        createdAt:
+          type: string
+          format: date-time
+          example: "2025-11-14T10:00:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2025-11-14T10:00:00Z"
+
+    UpdateJourneyFlagsRequest:
+      type: object
+      required:
+        - flags
+      properties:
+        flags:
+          type: object
+          description: Journey flags to update (partial updates supported)
+          additionalProperties: true
+          example:
+            is_buddy_participant: true
+            buddy_match_count: 3
+            buddy_events_attended: 12
+
+    UpdateJourneyFlagsResponse:
+      type: object
+      required:
+        - success
+        - profileId
+        - journeyFlags
+      properties:
+        success:
+          type: boolean
+          example: true
+        profileId:
+          type: string
+          format: uuid
+          example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+        journeyFlags:
+          type: object
+          description: All journey flags after update
+          additionalProperties: true
+          example:
+            is_buddy_participant: true
+            buddy_match_count: 3
+            buddy_events_attended: 12
+            buddy_milestones_count: 5
+
+    JourneyFlagsResponse:
+      type: object
+      required:
+        - profileId
+        - journeyFlags
+      properties:
+        profileId:
+          type: string
+          format: uuid
+          example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+        journeyFlags:
+          type: object
+          description: All journey flags for this profile
+          additionalProperties: true
+          example:
+            is_buddy_participant: true
+            buddy_match_count: 3
+            buddy_events_attended: 12
+
+    IncrementCounterRequest:
+      type: object
+      required:
+        - counterKey
+      properties:
+        counterKey:
+          type: string
+          description: Journey counter to increment
+          example: "buddy_events_attended"
+        increment:
+          type: integer
+          description: Amount to increment (can be negative)
+          default: 1
+          example: 1
+
+    IncrementCounterResponse:
+      type: object
+      required:
+        - success
+        - profileId
+        - counterKey
+        - newValue
+      properties:
+        success:
+          type: boolean
+          example: true
+        profileId:
+          type: string
+          format: uuid
+          example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+        counterKey:
+          type: string
+          example: "buddy_events_attended"
+        newValue:
+          type: integer
+          description: New counter value after increment
+          example: 13
+
+    Error:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          description: Error type
+          example: "NotFoundError"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Profile with id a1b2c3d4-e5f6-7890-abcd-ef1234567890 not found"
+        details:
+          type: object
+          description: Optional additional error details
+          additionalProperties: true
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            invalid_provider:
+              summary: Invalid provider
+              value:
+                error: "ValidationError"
+                message: "Invalid request body"
+                details:
+                  errors:
+                    - path: ["provider"]
+                      message: "Invalid enum value. Expected 'buddy' | 'discord' | 'kintell' | 'upskilling'"
+            missing_field:
+              summary: Missing required field
+              value:
+                error: "ValidationError"
+                message: "Invalid request body"
+                details:
+                  errors:
+                    - path: ["profileId"]
+                      message: "Required"
+
+    ProfileNotFound:
+      description: Profile does not exist
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "NotFoundError"
+            message: "Profile with id a1b2c3d4-e5f6-7890-abcd-ef1234567890 not found"
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "InternalServerError"
+            message: "An unexpected error occurred"
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT-based authentication for service-to-service communication.
+
+        **Future (Phase 2)**: RBAC with service-specific scopes.
+
+security:
+  - bearerAuth: []

@@ -11,6 +11,7 @@ import { tenantScoped } from '../middleware/tenantScope';
 import { requireFeature, FEATURE_FLAGS } from '../utils/featureFlags';
 import { generateQuarterlyReportPrompt, PROMPT_METADATA } from '../prompts/quarterlyReport';
 import { redactPII, validateRedaction } from '../utils/redaction';
+import { getCachedOrRenderPDF } from '../utils/pdfRenderer';
 
 /**
  * Generative Reports API Routes
@@ -230,6 +231,106 @@ export async function genReportsRoutes(fastify: FastifyInstance) {
         return reply.status(500).send({
           error: 'Internal Server Error',
           message: 'Failed to generate report',
+        });
+      }
+    }
+  );
+
+  /**
+   * POST /api/gen-reports/:reportId/export/pdf
+   * Export a generated report as PDF
+   *
+   * CRITICAL: PDF includes company branding, charts, and citations
+   * CRITICAL: Watermark applied for draft reports
+   */
+  fastify.post<{
+    Params: { reportId: string };
+    Body: {
+      includeCharts?: boolean;
+      includeCitations?: boolean;
+      watermark?: string;
+      theme?: {
+        logo?: string;
+        primaryColor?: string;
+        secondaryColor?: string;
+      };
+    };
+  }>(
+    '/api/gen-reports/:reportId/export/pdf',
+    {
+      preHandler: [tenantScoped.preHandler, requireFeature(FEATURE_FLAGS.GEN_REPORTS)],
+    },
+    async (request, reply) => {
+      try {
+        const { reportId } = request.params;
+        const tenantId = (request as any).tenantId;
+        const options = request.body || {};
+
+        request.log.info({ tenantId, reportId, options }, 'Exporting report to PDF');
+
+        // 1. Fetch report from database
+        // TODO: Replace with actual database query
+        const report = {
+          reportId,
+          reportType: 'quarterly',
+          period: { from: new Date('2024-01-01'), to: new Date('2024-03-31') },
+          sections: [
+            {
+              order: 0,
+              title: 'Executive Summary',
+              narrative: 'Sample executive summary with citations [evidence-001]...',
+              citations: [
+                {
+                  evidenceId: 'evidence-001',
+                  snippet: 'Sample evidence snippet',
+                  sourceType: 'buddy_feedback',
+                  dateCollected: new Date('2024-02-15'),
+                  confidence: 0.92,
+                },
+              ],
+            },
+          ],
+          metadata: {
+            companyName: 'Pilot Corp Inc.',
+            generatedAt: new Date(),
+            promptVersion: '1.0.0',
+            modelUsed: 'gpt-4-turbo',
+            tokenCount: 2847,
+          },
+        };
+
+        // 2. Render PDF
+        const result = await getCachedOrRenderPDF(reportId, report as any, {
+          includeCharts: options.includeCharts !== false,
+          includeCitations: options.includeCitations !== false,
+          watermark: options.watermark,
+          theme: options.theme,
+        });
+
+        // 3. Log success
+        request.log.info(
+          {
+            tenantId,
+            reportId,
+            fileSize: result.metadata.fileSize,
+            pageCount: result.metadata.pageCount,
+            renderTime: result.metadata.renderTime,
+          },
+          'PDF export successful'
+        );
+
+        // 4. Return PDF
+        reply
+          .header('Content-Type', 'application/pdf')
+          .header('Content-Disposition', `attachment; filename="report-${reportId}.pdf"`)
+          .header('Content-Length', result.buffer.length)
+          .send(result.buffer);
+      } catch (error) {
+        request.log.error({ error }, 'PDF export failed');
+        return reply.status(500).send({
+          error: 'Internal Server Error',
+          message: 'Failed to export PDF',
+          details: error.message,
         });
       }
     }

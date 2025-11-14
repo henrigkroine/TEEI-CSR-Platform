@@ -1,0 +1,113 @@
+---
+import BaseLayout from '../../../../layouts/BaseLayout.astro';
+import { hasPermission } from '../../../../utils/rbac';
+import ReportsListTable from '../../../../components/reports/ReportsListTable';
+
+// Extract route parameters
+const { lang, companyId } = Astro.params;
+const user = Astro.locals.user;
+const tenantContext = Astro.locals.tenantContext;
+
+// Auth checks
+if (!user || !tenantContext) {
+  return Astro.redirect('/login');
+}
+
+// Verify tenant context
+if (tenantContext.companyId !== companyId || tenantContext.lang !== lang) {
+  return Astro.redirect(`/${lang}/cockpit/401`);
+}
+
+// Check permission
+const canGenerateReports = hasPermission(user.role, 'GENERATE_REPORTS');
+if (!canGenerateReports) {
+  return Astro.redirect(`/${lang}/cockpit/${companyId}?error=no_permission`);
+}
+
+// Page titles by language
+const pageTitles = {
+  en: 'Generated Reports',
+  no: 'Genererte Rapporter',
+  uk: 'Згенеровані Звіти'
+};
+
+const pageTitle = pageTitles[lang as keyof typeof pageTitles] || pageTitles.en;
+---
+
+<BaseLayout title={`${pageTitle} - TEEI Corporate Cockpit`} lang={lang}>
+  <div class="reports-page">
+    {/* Breadcrumb */}
+    <nav aria-label="Breadcrumb" class="breadcrumb">
+      <ol>
+        <li>
+          <a href={`/${lang}/cockpit/${companyId}`}>Dashboard</a>
+        </li>
+        <li aria-current="page">{pageTitle}</li>
+      </ol>
+    </nav>
+
+    {/* Main Content */}
+    <main class="reports-content">
+      <ReportsListTable 
+        companyId={companyId} 
+        lang={lang}
+        client:load
+      />
+    </main>
+  </div>
+
+  <style>
+    .reports-page {
+      padding: 2rem;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .breadcrumb {
+      margin-bottom: 2rem;
+    }
+
+    .breadcrumb ol {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      font-size: 0.875rem;
+    }
+
+    .breadcrumb li:not(:last-child)::after {
+      content: '›';
+      margin-left: 0.5rem;
+      color: var(--color-foreground);
+      opacity: 0.4;
+    }
+
+    .breadcrumb a {
+      color: var(--color-primary);
+      text-decoration: none;
+      transition: opacity 0.2s;
+    }
+
+    .breadcrumb a:hover {
+      opacity: 0.8;
+      text-decoration: underline;
+    }
+
+    .breadcrumb li[aria-current='page'] {
+      color: var(--color-foreground);
+      opacity: 0.6;
+    }
+
+    .reports-content {
+      background: var(--color-background);
+    }
+
+    @media (max-width: 768px) {
+      .reports-page {
+        padding: 1rem;
+      }
+    }
+  </style>
+</BaseLayout>

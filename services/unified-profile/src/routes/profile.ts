@@ -1,8 +1,18 @@
 import type { FastifyInstance } from 'fastify';
-import { db, users, externalIdMappings, programEnrollments } from '@teei/shared-schema';
+import { db, users, externalIdMappings, programEnrollments, userExternalIds } from '@teei/shared-schema';
 import { eq, and } from 'drizzle-orm';
 import { NotFoundError, ValidationError } from '@teei/shared-utils';
 import { z } from 'zod';
+import {
+  linkExternalId,
+  getExternalIds,
+  updateJourneyFlag,
+  incrementJourneyCounter,
+  getJourneyFlags,
+  updateJourneyFlags,
+  type IdentityProvider,
+  type JourneyFlagKey,
+} from '../utils/profile-linking.js';
 
 const CreateMappingSchema = z.object({
   userId: z.string().uuid(),
@@ -14,6 +24,23 @@ const UpdateProfileSchema = z.object({
   firstName: z.string().optional(),
   lastName: z.string().optional(),
   email: z.string().email().optional(),
+});
+
+// New schemas for TASK-A-05
+const LinkExternalIdSchema = z.object({
+  profileId: z.string().uuid(),
+  provider: z.enum(['buddy', 'discord', 'kintell', 'upskilling']),
+  externalId: z.string().min(1),
+  metadata: z.record(z.any()).optional(),
+});
+
+const UpdateJourneyFlagsSchema = z.object({
+  flags: z.record(z.any()),
+});
+
+const IncrementCounterSchema = z.object({
+  counterKey: z.string(),
+  increment: z.number().int().default(1),
 });
 
 export async function profileRoutes(app: FastifyInstance) {
@@ -139,4 +166,140 @@ export async function profileRoutes(app: FastifyInstance) {
 
     return mapping;
   });
+
+  // ======================================
+  // NEW ENDPOINTS - TASK-A-05
+  // ======================================
+
+  // POST /profile/link-external - Link external ID to profile
+  app.post<{ Body: unknown }>('/link-external', async (request, reply) => {
+    const parsed = LinkExternalIdSchema.safeParse(request.body);
+
+    if (!parsed.success) {
+      throw new ValidationError('Invalid request body', { errors: parsed.error.errors });
+    }
+
+    const { profileId, provider, externalId, metadata } = parsed.data;
+
+    // Verify profile exists
+    const [profile] = await db.select().from(users).where(eq(users.id, profileId)).limit(1);
+
+    if (!profile) {
+      throw new NotFoundError(`Profile with id ${profileId} not found`);
+    }
+
+    const result = await linkExternalId(
+      profileId,
+      provider as IdentityProvider,
+      externalId,
+      metadata,
+      'api-request'
+    );
+
+    return {
+      success: true,
+      mappingId: result.id,
+      isNew: result.isNew,
+      profileId,
+      provider,
+    };
+  });
+
+  // GET /profile/:id/external-ids - Get all external IDs for a profile
+  app.get<{ Params: { id: string } }>('/:id/external-ids', async (request, reply) => {
+    const { id } = request.params;
+
+    // Verify profile exists
+    const [profile] = await db.select().from(users).where(eq(users.id, id)).limit(1);
+
+    if (!profile) {
+      throw new NotFoundError(`Profile with id ${id} not found`);
+    }
+
+    const externalIds = await getExternalIds(id);
+
+    return {
+      profileId: id,
+      externalIds,
+    };
+  });
+
+  // PUT /profile/:id/flags - Update journey flags
+  app.put<{ Params: { id: string }; Body: unknown }>('/:id/flags', async (request, reply) => {
+    const { id } = request.params;
+    const parsed = UpdateJourneyFlagsSchema.safeParse(request.body);
+
+    if (!parsed.success) {
+      throw new ValidationError('Invalid request body', { errors: parsed.error.errors });
+    }
+
+    const { flags } = parsed.data;
+
+    // Verify profile exists
+    const [profile] = await db.select().from(users).where(eq(users.id, id)).limit(1);
+
+    if (!profile) {
+      throw new NotFoundError(`Profile with id ${id} not found`);
+    }
+
+    await updateJourneyFlags(id, flags);
+
+    const updatedFlags = await getJourneyFlags(id);
+
+    return {
+      success: true,
+      profileId: id,
+      journeyFlags: updatedFlags,
+    };
+  });
+
+  // GET /profile/:id/flags - Get journey flags
+  app.get<{ Params: { id: string } }>('/:id/flags', async (request, reply) => {
+    const { id } = request.params;
+
+    // Verify profile exists
+    const [profile] = await db.select().from(users).where(eq(users.id, id)).limit(1);
+
+    if (!profile) {
+      throw new NotFoundError(`Profile with id ${id} not found`);
+    }
+
+    const flags = await getJourneyFlags(id);
+
+    return {
+      profileId: id,
+      journeyFlags: flags,
+    };
+  });
+
+  // POST /profile/:id/increment-counter - Increment a journey counter
+  app.post<{ Params: { id: string }; Body: unknown }>(
+    '/:id/increment-counter',
+    async (request, reply) => {
+      const { id } = request.params;
+      const parsed = IncrementCounterSchema.safeParse(request.body);
+
+      if (!parsed.success) {
+        throw new ValidationError('Invalid request body', { errors: parsed.error.errors });
+      }
+
+      const { counterKey, increment } = parsed.data;
+
+      // Verify profile exists
+      const [profile] = await db.select().from(users).where(eq(users.id, id)).limit(1);
+
+      if (!profile) {
+        throw new NotFoundError(`Profile with id ${id} not found`);
+      }
+
+      const newValue = await incrementJourneyCounter(id, counterKey as JourneyFlagKey, increment);
+
+      return {
+        success: true,
+        profileId: id,
+        counterKey,
+        newValue,
+      };
+    }
+  );
 }
