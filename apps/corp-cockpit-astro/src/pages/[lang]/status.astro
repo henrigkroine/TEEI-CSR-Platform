@@ -1,0 +1,390 @@
+---
+/**
+ * Public Status Page
+ *
+ * Displays platform health, SLO metrics, and incident history.
+ * No authentication required - this is a public page.
+ *
+ * Features:
+ * - Overall platform status (operational/degraded/outage)
+ * - Service component health
+ * - SLO metrics with targets
+ * - Incident history timeline
+ * - Auto-refresh every 60 seconds
+ */
+
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import StatusDisplay from '../../components/status/StatusDisplay.tsx';
+import SLOMetrics from '../../components/status/SLOMetrics.tsx';
+import IncidentHistory from '../../components/status/IncidentHistory.tsx';
+
+// Extract route parameters
+const { lang = 'en' } = Astro.params;
+
+// Status page is public - no auth required
+// This allows customers and stakeholders to check platform health
+---
+
+<BaseLayout
+  title={`Platform Status - TEEI Corporate Cockpit`}
+  description="Real-time platform status, uptime metrics, and incident history for TEEI Corporate Cockpit"
+>
+  <div class="status-page">
+    {/* Page Header */}
+    <div class="page-header">
+      <div class="header-content">
+        <h1>Platform Status</h1>
+        <p class="subtitle">
+          Real-time platform health and performance metrics
+        </p>
+      </div>
+      <div class="header-actions">
+        <a
+          href="https://status.teei.platform"
+          class="external-link"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Detailed Status Page →
+        </a>
+      </div>
+    </div>
+
+    {/* Alert Banner (if needed) */}
+    <div class="alert-info">
+      <span class="alert-icon">ℹ️</span>
+      <div class="alert-content">
+        <strong>Live Status Updates</strong>
+        <p>
+          This page automatically refreshes every 60 seconds to provide the latest status information.
+          For detailed historical data and API uptime metrics, visit our
+          <a href="https://status.teei.platform" target="_blank" rel="noopener noreferrer">
+            dedicated status page
+          </a>.
+        </p>
+      </div>
+    </div>
+
+    {/* Overall Status & Component Health */}
+    <section class="status-section">
+      <StatusDisplay client:load />
+    </section>
+
+    {/* SLO Metrics */}
+    <section class="metrics-section">
+      <SLOMetrics client:load />
+    </section>
+
+    {/* Incident History */}
+    <section class="incidents-section">
+      <IncidentHistory client:load />
+    </section>
+
+    {/* Footer Information */}
+    <div class="status-footer">
+      <div class="footer-grid">
+        <div class="footer-card">
+          <h3>Subscribe to Updates</h3>
+          <p>
+            Get notified when incidents are created, updated, or resolved.
+          </p>
+          <a href="https://status.teei.platform/subscribe" class="btn-primary">
+            Subscribe via Email
+          </a>
+        </div>
+
+        <div class="footer-card">
+          <h3>API Status Endpoint</h3>
+          <p>
+            Programmatically check platform status via our API.
+          </p>
+          <code class="api-endpoint">GET https://api.teei.platform/v1/status</code>
+          <a href="https://docs.teei.platform/api/status" class="btn-secondary">
+            View API Docs
+          </a>
+        </div>
+
+        <div class="footer-card">
+          <h3>Status History</h3>
+          <p>
+            View historical uptime data and past incidents.
+          </p>
+          <a href="https://status.teei.platform/history" class="btn-secondary">
+            View History
+          </a>
+        </div>
+      </div>
+
+      <div class="footer-note">
+        <p>
+          <strong>Questions or concerns?</strong> Contact our support team at
+          <a href="mailto:support@teei.platform">support@teei.platform</a>
+        </p>
+        <p class="last-update">
+          Page last loaded: <span id="page-load-time"></span>
+        </p>
+      </div>
+    </div>
+  </div>
+</BaseLayout>
+
+<style>
+  .status-page {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  /* Page Header */
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: calc(var(--spacing-unit) * 4);
+    padding-bottom: calc(var(--spacing-unit) * 3);
+    border-bottom: 2px solid var(--color-border);
+  }
+
+  .header-content h1 {
+    font-size: 2.5rem;
+    margin: 0 0 calc(var(--spacing-unit) * 1) 0;
+    color: var(--color-text);
+  }
+
+  .subtitle {
+    font-size: 1.125rem;
+    color: var(--color-text-secondary);
+    margin: 0;
+  }
+
+  .header-actions {
+    display: flex;
+    gap: calc(var(--spacing-unit) * 2);
+  }
+
+  .external-link {
+    padding: calc(var(--spacing-unit) * 1.5) calc(var(--spacing-unit) * 3);
+    background: var(--color-primary);
+    color: white;
+    text-decoration: none;
+    border-radius: var(--border-radius);
+    font-weight: 600;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .external-link:hover {
+    background: #0052a3;
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+  }
+
+  /* Alert Banner */
+  .alert-info {
+    display: flex;
+    gap: calc(var(--spacing-unit) * 2);
+    background: #dbeafe;
+    border: 1px solid #3b82f6;
+    border-left: 4px solid #3b82f6;
+    padding: calc(var(--spacing-unit) * 3);
+    border-radius: var(--border-radius);
+    margin-bottom: calc(var(--spacing-unit) * 4);
+  }
+
+  .alert-icon {
+    font-size: 1.5rem;
+    flex-shrink: 0;
+  }
+
+  .alert-content {
+    flex: 1;
+  }
+
+  .alert-content strong {
+    display: block;
+    margin-bottom: calc(var(--spacing-unit) * 1);
+    color: #1e40af;
+    font-size: 1rem;
+  }
+
+  .alert-content p {
+    margin: 0;
+    color: #1e3a8a;
+    line-height: 1.6;
+  }
+
+  .alert-content a {
+    color: #1e40af;
+    font-weight: 600;
+    text-decoration: underline;
+  }
+
+  .alert-content a:hover {
+    color: #1e3a8a;
+  }
+
+  /* Sections */
+  .status-section,
+  .metrics-section,
+  .incidents-section {
+    margin-bottom: calc(var(--spacing-unit) * 6);
+  }
+
+  /* Footer */
+  .status-footer {
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius);
+    padding: calc(var(--spacing-unit) * 4);
+    margin-top: calc(var(--spacing-unit) * 6);
+  }
+
+  .footer-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: calc(var(--spacing-unit) * 3);
+    margin-bottom: calc(var(--spacing-unit) * 4);
+  }
+
+  .footer-card {
+    padding: calc(var(--spacing-unit) * 3);
+    background: var(--color-bg-secondary);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--color-border);
+  }
+
+  .footer-card h3 {
+    margin: 0 0 calc(var(--spacing-unit) * 2) 0;
+    font-size: 1.125rem;
+    color: var(--color-text);
+  }
+
+  .footer-card p {
+    margin: 0 0 calc(var(--spacing-unit) * 2) 0;
+    color: var(--color-text-secondary);
+    line-height: 1.6;
+  }
+
+  .api-endpoint {
+    display: block;
+    padding: calc(var(--spacing-unit) * 2);
+    background: #f3f4f6;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.875rem;
+    color: var(--color-text);
+    margin-bottom: calc(var(--spacing-unit) * 2);
+    word-break: break-all;
+  }
+
+  .btn-primary,
+  .btn-secondary {
+    display: inline-block;
+    padding: calc(var(--spacing-unit) * 1.5) calc(var(--spacing-unit) * 3);
+    border-radius: var(--border-radius);
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s;
+    text-align: center;
+  }
+
+  .btn-primary {
+    background: var(--color-primary);
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background: #0052a3;
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+  }
+
+  .btn-secondary {
+    background: white;
+    color: var(--color-primary);
+    border: 1px solid var(--color-primary);
+  }
+
+  .btn-secondary:hover {
+    background: var(--color-primary);
+    color: white;
+  }
+
+  .footer-note {
+    padding-top: calc(var(--spacing-unit) * 3);
+    border-top: 1px solid var(--color-border);
+    text-align: center;
+  }
+
+  .footer-note p {
+    margin: calc(var(--spacing-unit) * 1) 0;
+    color: var(--color-text-secondary);
+  }
+
+  .footer-note strong {
+    color: var(--color-text);
+  }
+
+  .footer-note a {
+    color: var(--color-primary);
+    text-decoration: none;
+    font-weight: 600;
+  }
+
+  .footer-note a:hover {
+    text-decoration: underline;
+  }
+
+  .last-update {
+    font-size: 0.875rem;
+    color: #9ca3af;
+  }
+
+  /* Responsive Design */
+  @media (max-width: 768px) {
+    .page-header {
+      flex-direction: column;
+      gap: calc(var(--spacing-unit) * 2);
+    }
+
+    .header-content h1 {
+      font-size: 2rem;
+    }
+
+    .header-actions {
+      width: 100%;
+    }
+
+    .external-link {
+      width: 100%;
+      text-align: center;
+    }
+
+    .footer-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<script>
+  // Display page load time
+  if (typeof window !== 'undefined') {
+    const loadTimeElement = document.getElementById('page-load-time');
+    if (loadTimeElement) {
+      const now = new Date();
+      loadTimeElement.textContent = now.toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        second: '2-digit',
+      });
+    }
+
+    // Auto-refresh every 60 seconds
+    setTimeout(() => {
+      window.location.reload();
+    }, 60000);
+  }
+</script>
