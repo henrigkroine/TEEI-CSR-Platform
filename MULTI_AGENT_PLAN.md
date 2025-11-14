@@ -741,14 +741,14 @@ Phase B delivered production-grade security, observability, and compliance. Work
 - [x] Benchmarks API - MV-based comparisons
 
 ### QA-Platform Lead Progress
-- [ ] OpenAPI Publisher - Finalize specs
-- [ ] SDK Generator - TypeScript SDK
-- [ ] Pact Author - Contract tests
-- [ ] K6 Scenarios - Load tests
-- [ ] AI Cost Meter - Metrics tracking
-- [ ] Cost Guardrails - Budget enforcement
-- [ ] Security Validator - Compliance tests
-- [ ] Retention Enforcer - TTL policies
+- [x] OpenAPI Publisher - Finalize specs
+- [x] SDK Generator - TypeScript SDK
+- [x] Pact Author - Contract tests
+- [x] K6 Scenarios - Load tests
+- [x] AI Cost Meter - Metrics tracking
+- [x] Cost Guardrails - Budget enforcement
+- [x] Security Validator - Compliance tests
+- [x] Retention Enforcer - TTL policies
 
 ---
 
@@ -779,30 +779,34 @@ Phase B delivered production-grade security, observability, and compliance. Work
 - [ ] Impact-In idempotency tests
 - [ ] Notification delivery tests
 - [ ] Analytics query performance tests
-- [ ] Contract tests for all new services
-- [ ] k6 load test: Gen-AI endpoint
-- [ ] k6 load test: Analytics queries
-- [ ] k6 load test: Impact-In push
+- [x] Contract tests for all new services
+- [x] k6 load test: Gen-AI endpoint
+- [x] k6 load test: Analytics queries
+- [x] k6 load test: Impact-In push
+- [x] k6 load test: Notifications
+- [x] GDPR DSAR exercise tests
+- [x] Retention policy validation tests
 
 ### Documentation
 - [ ] `/docs/Q2Q_GenReports_Wiring.md`
 - [ ] `/docs/ImpactIn_Connectors.md`
 - [x] `/docs/Notifications_Service.md`
 - [ ] `/docs/Analytics_APIs.md`
-- [ ] `/docs/Compliance_Backend_Additions.md`
+- [x] `/docs/Compliance_Backend_Additions.md`
 - [ ] `/reports/gen_reports_eval.md`
 - [ ] `/reports/impactin_cert_pack.md`
 - [x] `/reports/notifications_test_matrix.md`
-- [ ] `/reports/perf_gen_analytics.md`
-- [ ] `/reports/ai_costs_controls.md`
+- [x] `/reports/perf_gen_analytics.md`
+- [x] `/reports/ai_costs_controls.md`
+- [x] `/reports/qa_platform_lead_report.md` (QA-PLATFORM REPORT)
 - [ ] `/reports/worker2_core_complete.md` (MASTER REPORT)
 
 ### CI/CD
-- [ ] OpenAPI specs finalized for all services
-- [ ] TypeScript SDK generated
-- [ ] Contract tests in CI pipeline
-- [ ] AI cost metrics in Prometheus
-- [ ] Cost guardrail alerts configured
+- [x] OpenAPI specs finalized for all services
+- [x] TypeScript SDK generated
+- [x] Contract tests in CI pipeline
+- [x] AI cost metrics in Prometheus
+- [x] Cost guardrail alerts configured
 
 ---
 
