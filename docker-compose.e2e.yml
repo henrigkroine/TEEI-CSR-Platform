@@ -1,0 +1,244 @@
+version: '3.9'
+
+# E2E Test Environment for Buddy System → CSR Platform Integration
+# Purpose: Provides isolated, reproducible test environment with all dependencies
+
+services:
+  # Database - PostgreSQL for both systems
+  postgres-e2e:
+    image: postgres:15-alpine
+    container_name: teei-postgres-e2e
+    environment:
+      POSTGRES_DB: teei_e2e
+      POSTGRES_USER: teei_test
+      POSTGRES_PASSWORD: teei_test_password
+    ports:
+      - "5433:5432"  # Different port to avoid conflict with dev DB
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U teei_test"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    tmpfs:
+      - /var/lib/postgresql/data  # Use tmpfs for faster tests
+
+  # Event Bus - NATS with JetStream
+  nats-e2e:
+    image: nats:2.10-alpine
+    container_name: teei-nats-e2e
+    ports:
+      - "4223:4222"  # Different port
+      - "8223:8222"  # HTTP monitoring
+    command:
+      - "-js"
+      - "-m"
+      - "8222"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8222/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Redis - Caching and rate limiting
+  redis-e2e:
+    image: redis:7-alpine
+    container_name: teei-redis-e2e
+    ports:
+      - "6380:6379"  # Different port
+    command: redis-server --appendonly no --save ""  # No persistence for tests
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # ClickHouse - Analytics database
+  clickhouse-e2e:
+    image: clickhouse/clickhouse-server:24.1-alpine
+    container_name: teei-clickhouse-e2e
+    ports:
+      - "8124:8123"  # HTTP
+      - "9001:9000"  # Native
+    environment:
+      CLICKHOUSE_USER: teei_test
+      CLICKHOUSE_PASSWORD: teei_test_password
+      CLICKHOUSE_DB: teei_analytics_e2e
+    healthcheck:
+      test: ["CMD", "clickhouse-client", "--query", "SELECT 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    tmpfs:
+      - /var/lib/clickhouse  # Use tmpfs for faster tests
+
+  # Buddy System Service
+  buddy-system:
+    build:
+      context: ../Teei Buddy System
+      dockerfile: Dockerfile.test
+    container_name: buddy-system-e2e
+    environment:
+      NODE_ENV: test
+      PORT: 3001
+      DATABASE_URL: postgresql://teei_test:teei_test_password@postgres-e2e:5432/teei_e2e
+      REDIS_URL: redis://redis-e2e:6379
+      CSR_WEBHOOK_URL: http://buddy-connector:3010/v1/webhooks/buddy
+      SESSION_SECRET: test-session-secret-for-e2e
+      FRONTEND_URL: http://localhost:3001
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres-e2e:
+        condition: service_healthy
+      redis-e2e:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3001/api/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 15s
+
+  # CSR Platform - Buddy Connector Service
+  buddy-connector:
+    build:
+      context: .
+      dockerfile: services/buddy-connector/Dockerfile.test
+    container_name: buddy-connector-e2e
+    environment:
+      NODE_ENV: test
+      PORT: 3010
+      DATABASE_URL: postgresql://teei_test:teei_test_password@postgres-e2e:5432/teei_e2e
+      NATS_URL: nats://nats-e2e:4222
+      REDIS_URL: redis://redis-e2e:6379
+      BUDDY_WEBHOOK_SECRET: test-webhook-secret-buddy-e2e
+    ports:
+      - "3010:3010"
+    depends_on:
+      postgres-e2e:
+        condition: service_healthy
+      nats-e2e:
+        condition: service_healthy
+      redis-e2e:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3010/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 15s
+
+  # CSR Platform - Unified Profile Service
+  unified-profile:
+    build:
+      context: .
+      dockerfile: services/unified-profile/Dockerfile.test
+    container_name: unified-profile-e2e
+    environment:
+      NODE_ENV: test
+      PORT: 3011
+      DATABASE_URL: postgresql://teei_test:teei_test_password@postgres-e2e:5432/teei_e2e
+      NATS_URL: nats://nats-e2e:4222
+      REDIS_URL: redis://redis-e2e:6379
+    ports:
+      - "3011:3011"
+    depends_on:
+      postgres-e2e:
+        condition: service_healthy
+      nats-e2e:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3011/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 15s
+
+  # CSR Platform - Analytics Service
+  analytics:
+    build:
+      context: .
+      dockerfile: services/analytics/Dockerfile.test
+    container_name: analytics-e2e
+    environment:
+      NODE_ENV: test
+      PORT: 3012
+      DATABASE_URL: postgresql://teei_test:teei_test_password@postgres-e2e:5432/teei_e2e
+      CLICKHOUSE_URL: http://clickhouse-e2e:8123
+      CLICKHOUSE_USER: teei_test
+      CLICKHOUSE_PASSWORD: teei_test_password
+      CLICKHOUSE_DB: teei_analytics_e2e
+      NATS_URL: nats://nats-e2e:4222
+      REDIS_URL: redis://redis-e2e:6379
+    ports:
+      - "3012:3012"
+    depends_on:
+      clickhouse-e2e:
+        condition: service_healthy
+      nats-e2e:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3012/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 15s
+
+  # CSR Platform - Corporate Cockpit Frontend
+  corp-cockpit:
+    build:
+      context: .
+      dockerfile: apps/corp-cockpit-astro/Dockerfile.test
+    container_name: corp-cockpit-e2e
+    environment:
+      NODE_ENV: test
+      PORT: 4321
+      API_GATEWAY_URL: http://api-gateway:3000
+      PUBLIC_API_URL: http://localhost:3000
+    ports:
+      - "4321:4321"
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:4321/"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 20s
+
+  # CSR Platform - API Gateway
+  api-gateway:
+    build:
+      context: .
+      dockerfile: services/api-gateway/Dockerfile.test
+    container_name: api-gateway-e2e
+    environment:
+      NODE_ENV: test
+      PORT: 3000
+      DATABASE_URL: postgresql://teei_test:teei_test_password@postgres-e2e:5432/teei_e2e
+      REDIS_URL: redis://redis-e2e:6379
+      UNIFIED_PROFILE_URL: http://unified-profile:3011
+      ANALYTICS_URL: http://analytics:3012
+      BUDDY_CONNECTOR_URL: http://buddy-connector:3010
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres-e2e:
+        condition: service_healthy
+      redis-e2e:
+        condition: service_healthy
+      unified-profile:
+        condition: service_healthy
+      analytics:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 15s
+
+networks:
+  default:
+    name: teei-e2e-network

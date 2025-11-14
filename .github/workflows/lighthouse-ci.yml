@@ -1,0 +1,221 @@
+name: Lighthouse CI
+
+on:
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'apps/corp-cockpit-astro/**'
+      - 'packages/**'
+      - '.github/workflows/lighthouse-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'apps/corp-cockpit-astro/**'
+
+jobs:
+  lighthouse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build application
+        run: pnpm --filter @teei/corp-cockpit-astro build
+        env:
+          PUBLIC_API_URL: http://localhost:3000
+          NODE_ENV: production
+
+      - name: Start preview server
+        run: |
+          pnpm --filter @teei/corp-cockpit-astro preview &
+          sleep 5
+        env:
+          PORT: 4321
+
+      - name: Wait for server
+        run: |
+          timeout 30 bash -c 'until curl -f http://localhost:4321/en/cockpit/demo; do sleep 1; done'
+
+      - name: Run Lighthouse CI
+        run: |
+          npm install -g @lhci/cli@0.12.x
+          lhci autorun
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+
+      - name: Upload Lighthouse reports
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: lighthouse-reports
+          path: .lighthouseci/
+          retention-days: 30
+
+      - name: Comment PR with Lighthouse scores
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const manifestPath = '.lighthouseci/manifest.json';
+
+            if (!fs.existsSync(manifestPath)) {
+              console.log('Manifest file not found');
+              return;
+            }
+
+            const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+            const results = manifest[0];
+
+            if (!results || !results.summary) {
+              console.log('No summary found in manifest');
+              return;
+            }
+
+            const { performance, accessibility, 'best-practices': bestPractices, seo } = results.summary;
+
+            const comment = \`## ⚡ Lighthouse Performance Report
+
+            | Category | Score | Status |
+            |----------|-------|--------|
+            | Performance | \${Math.round(performance * 100)} | \${performance >= 0.9 ? '✅' : performance >= 0.5 ? '⚠️' : '❌'} |
+            | Accessibility | \${Math.round(accessibility * 100)} | \${accessibility >= 0.95 ? '✅' : accessibility >= 0.9 ? '⚠️' : '❌'} |
+            | Best Practices | \${Math.round(bestPractices * 100)} | \${bestPractices >= 0.9 ? '✅' : bestPractices >= 0.8 ? '⚠️' : '❌'} |
+            | SEO | \${Math.round(seo * 100)} | \${seo >= 0.9 ? '✅' : seo >= 0.8 ? '⚠️' : '❌'} |
+
+            ### Performance Budget
+            - **Target**: Performance ≥ 90, Accessibility ≥ 95
+            - **Status**: \${performance >= 0.9 && accessibility >= 0.95 ? '✅ Passing' : '❌ Failing'}
+
+            [View detailed reports in artifacts](https://github.com/\${context.repo.owner}/\${context.repo.repo}/actions/runs/\${context.runId})
+            \`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+      - name: Fail if performance budget not met
+        run: |
+          node -e "
+            const fs = require('fs');
+            const manifest = JSON.parse(fs.readFileSync('.lighthouseci/manifest.json', 'utf8'));
+            const results = manifest[0].summary;
+
+            if (results.performance < 0.9) {
+              console.error('❌ Performance score below 90:', Math.round(results.performance * 100));
+              process.exit(1);
+            }
+
+            if (results.accessibility < 0.95) {
+              console.error('❌ Accessibility score below 95:', Math.round(results.accessibility * 100));
+              process.exit(1);
+            }
+
+            console.log('✅ Performance budget met!');
+          "
+
+  performance-regression:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    needs: lighthouse
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download current Lighthouse reports
+        uses: actions/download-artifact@v3
+        with:
+          name: lighthouse-reports
+          path: ./current-reports
+
+      - name: Checkout base branch
+        run: |
+          git fetch origin ${{ github.base_ref }}
+          git checkout origin/${{ github.base_ref }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build base version
+        run: pnpm --filter @teei/corp-cockpit-astro build
+
+      - name: Start base preview server
+        run: |
+          pnpm --filter @teei/corp-cockpit-astro preview &
+          sleep 5
+
+      - name: Run Lighthouse on base
+        run: |
+          npm install -g @lhci/cli@0.12.x
+          lhci autorun --config=apps/corp-cockpit-astro/lighthouse.config.js
+
+      - name: Compare performance
+        run: |
+          node -e "
+            const fs = require('fs');
+            const current = JSON.parse(fs.readFileSync('./current-reports/manifest.json', 'utf8'))[0].summary;
+            const base = JSON.parse(fs.readFileSync('./.lighthouseci/manifest.json', 'utf8'))[0].summary;
+
+            const perfDiff = (current.performance - base.performance) * 100;
+            const a11yDiff = (current.accessibility - base.accessibility) * 100;
+
+            console.log('Performance diff:', perfDiff.toFixed(1), '%');
+            console.log('Accessibility diff:', a11yDiff.toFixed(1), '%');
+
+            if (perfDiff < -5) {
+              console.error('❌ Performance regression detected: -' + Math.abs(perfDiff).toFixed(1) + '%');
+              process.exit(1);
+            }
+
+            if (a11yDiff < -2) {
+              console.error('❌ Accessibility regression detected: -' + Math.abs(a11yDiff).toFixed(1) + '%');
+              process.exit(1);
+            }
+
+            console.log('✅ No significant performance regression');
+          "

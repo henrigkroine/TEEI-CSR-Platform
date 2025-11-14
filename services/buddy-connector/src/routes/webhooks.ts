@@ -34,11 +34,20 @@ import {
   processFeedbackSubmitted,
   processMilestoneReached,
 } from '../processors/index.js';
+import {
+  categorizeError,
+  createErrorResponse,
+  logError,
+  ErrorCategory,
+} from '../utils/error-handling.js';
+import { sendToDeadLetterQueue, getDeadLetterQueueStats } from '../utils/dead-letter-queue.js';
+import { bulkheads, rateLimiters, withTimeout, getResilienceStats } from '../utils/resilience.js';
+import { circuitBreakers } from '../utils/retry.js';
 
 const logger = createServiceLogger('buddy-connector:webhooks');
 
 /**
- * Generic webhook handler with validation, idempotency, and error handling
+ * Generic webhook handler with comprehensive error handling and resilience patterns
  */
 async function handleWebhook<T>(
   request: any,
@@ -50,26 +59,45 @@ async function handleWebhook<T>(
   const deliveryId = request.headers['x-delivery-id'] as string;
   const rawPayload = request.body;
 
+  // Rate limiting check
+  if (!rateLimiters.webhookDelivery.tryAcquire()) {
+    logger.warn({ deliveryId, eventType }, 'Rate limit exceeded for webhook delivery');
+    return reply.status(429).send({
+      status: 'error',
+      message: 'Rate limit exceeded. Please try again later.',
+      deliveryId,
+      retryAfter: 60, // seconds
+    });
+  }
+
   try {
     // Validate event schema
     const validationResult = schema.safeParse(rawPayload);
     if (!validationResult.success) {
-      logger.warn(
-        { deliveryId, eventType, errors: validationResult.error.errors },
-        'Event validation failed'
-      );
-      return reply.status(400).send({
-        status: 'error',
-        message: 'Invalid event payload',
-        errors: validationResult.error.errors,
+      const validationError = new Error('Invalid event payload');
+      (validationError as any).errors = validationResult.error.errors;
+      (validationError as any).name = 'ValidationError';
+
+      const categorized = categorizeError(validationError, {
         deliveryId,
+        eventType,
+        errors: validationResult.error.errors,
+      });
+
+      logError(categorized, deliveryId, eventType);
+
+      return reply.status(400).send({
+        ...createErrorResponse(categorized, deliveryId),
+        errors: validationResult.error.errors,
       });
     }
 
     const event = validationResult.data as T;
 
     // Check idempotency
-    const idempotency = await checkIdempotency(deliveryId, eventType, rawPayload);
+    const idempotency = await bulkheads.database.execute(() =>
+      checkIdempotency(deliveryId, eventType, rawPayload)
+    );
 
     if (idempotency.alreadyProcessed) {
       logger.info({ deliveryId, eventType }, 'Webhook already processed (idempotent response)');
@@ -81,19 +109,44 @@ async function handleWebhook<T>(
     }
 
     if (!idempotency.shouldProcess) {
-      logger.warn({ deliveryId, eventType }, 'Webhook exceeded max retries');
+      logger.warn({ deliveryId, eventType }, 'Webhook exceeded max retries, sending to DLQ');
+
+      // Send to dead letter queue
+      const dlqError = new Error('Exceeded max retry attempts');
+      const categorized = categorizeError(dlqError, {
+        deliveryId,
+        eventType,
+        retryCount: idempotency.delivery?.retryCount || 0,
+      });
+
+      await sendToDeadLetterQueue(
+        deliveryId,
+        eventType,
+        rawPayload,
+        categorized,
+        idempotency.delivery?.retryCount || 0
+      );
+
       return reply.status(202).send({
         status: 'accepted',
-        message: 'Webhook exceeded max retries, manual review required',
+        message: 'Webhook exceeded max retries, sent to dead letter queue for manual review',
         deliveryId,
       });
     }
 
-    // Process webhook
-    await processor(event, deliveryId);
+    // Process webhook with bulkhead isolation, timeout, and circuit breaker
+    await bulkheads.webhookProcessing.execute(async () => {
+      await circuitBreakers.buddySystem.execute(async () => {
+        await withTimeout(
+          () => processor(event, deliveryId),
+          30000, // 30 second timeout
+          `Processing ${eventType}`
+        );
+      });
+    });
 
     // Mark as processed
-    await markProcessed(deliveryId);
+    await bulkheads.database.execute(() => markProcessed(deliveryId));
 
     return reply.status(200).send({
       status: 'success',
@@ -101,16 +154,53 @@ async function handleWebhook<T>(
       deliveryId,
     });
   } catch (error: any) {
-    logger.error({ error, deliveryId, eventType }, 'Error processing webhook');
-
-    // Mark as failed
-    await markFailed(deliveryId, error.message);
-
-    return reply.status(500).send({
-      status: 'error',
-      message: 'Webhook processing failed',
-      error: error.message,
+    // Categorize error
+    const categorized = categorizeError(error, {
       deliveryId,
+      eventType,
+    });
+
+    // Log error with appropriate severity
+    logError(categorized, deliveryId, eventType);
+
+    // Mark as failed and increment retry count
+    try {
+      await bulkheads.database.execute(() =>
+        markFailed(deliveryId, categorized.error.message)
+      );
+    } catch (markFailedError) {
+      logger.error(
+        { error: markFailedError, deliveryId },
+        'Failed to mark webhook as failed'
+      );
+    }
+
+    // Check if we should send to DLQ
+    const idempotency = await bulkheads.database.execute(() =>
+      checkIdempotency(deliveryId, eventType, rawPayload)
+    );
+
+    if (idempotency.delivery && idempotency.delivery.retryCount >= 3) {
+      logger.warn(
+        { deliveryId, eventType, retryCount: idempotency.delivery.retryCount },
+        'Max retries reached, sending to dead letter queue'
+      );
+
+      await sendToDeadLetterQueue(
+        deliveryId,
+        eventType,
+        rawPayload,
+        categorized,
+        idempotency.delivery.retryCount
+      );
+    }
+
+    // Return error response
+    const errorResponse = createErrorResponse(categorized, deliveryId);
+
+    return reply.status(categorized.statusCode || 500).send({
+      ...errorResponse,
+      error: categorized.error.message,
     });
   }
 }
@@ -221,10 +311,12 @@ export async function webhookRoutes(app: FastifyInstance) {
 
   /**
    * GET /webhooks/stats
-   * Get statistics about webhook processing
+   * Get comprehensive statistics about webhook processing
    */
   app.get('/stats', async () => {
-    // This could be expanded to query the database for actual stats
+    const dlqStats = await getDeadLetterQueueStats();
+    const resilienceStats = getResilienceStats();
+
     return {
       service: 'buddy-connector',
       supportedEventTypes: [
@@ -237,7 +329,148 @@ export async function webhookRoutes(app: FastifyInstance) {
         'buddy.feedback.submitted',
         'buddy.milestone.reached',
       ],
+      deadLetterQueue: dlqStats,
+      resilience: resilienceStats,
+      circuitBreakers: {
+        buddySystem: circuitBreakers.buddySystem.getState(),
+        database: circuitBreakers.database.getState(),
+      },
       timestamp: new Date().toISOString(),
     };
+  });
+
+  /**
+   * GET /webhooks/health
+   * Health check endpoint with circuit breaker status
+   */
+  app.get('/health', async (request, reply) => {
+    const buddySystemCircuit = circuitBreakers.buddySystem.getState();
+    const databaseCircuit = circuitBreakers.database.getState();
+
+    const isHealthy =
+      buddySystemCircuit.state !== 'open' &&
+      databaseCircuit.state !== 'open';
+
+    const status = isHealthy ? 'healthy' : 'degraded';
+    const statusCode = isHealthy ? 200 : 503;
+
+    return reply.status(statusCode).send({
+      status,
+      service: 'buddy-connector',
+      timestamp: new Date().toISOString(),
+      circuitBreakers: {
+        buddySystem: buddySystemCircuit,
+        database: databaseCircuit,
+      },
+      resilience: getResilienceStats(),
+    });
+  });
+
+  /**
+   * GET /webhooks/dlq
+   * Get dead letter queue entries (admin only)
+   */
+  app.get('/dlq', async (request, reply) => {
+    try {
+      const { limit = 100, offset = 0 } = request.query as any;
+
+      const entries = await getDeadLetterQueueStats();
+
+      return {
+        status: 'success',
+        data: entries,
+        pagination: {
+          limit: Number(limit),
+          offset: Number(offset),
+        },
+      };
+    } catch (error: any) {
+      logger.error({ error }, 'Error fetching DLQ entries');
+
+      return reply.status(500).send({
+        status: 'error',
+        message: 'Failed to fetch dead letter queue entries',
+        error: error.message,
+      });
+    }
+  });
+
+  /**
+   * POST /webhooks/circuit-breaker/reset
+   * Reset circuit breaker (admin only)
+   */
+  app.post('/circuit-breaker/reset', async (request, reply) => {
+    try {
+      const { name } = request.body as any;
+
+      if (name === 'buddySystem') {
+        circuitBreakers.buddySystem.reset();
+      } else if (name === 'database') {
+        circuitBreakers.database.reset();
+      } else if (name === 'all') {
+        circuitBreakers.buddySystem.reset();
+        circuitBreakers.database.reset();
+      } else {
+        return reply.status(400).send({
+          status: 'error',
+          message: 'Invalid circuit breaker name. Use: buddySystem, database, or all',
+        });
+      }
+
+      logger.info({ circuitBreaker: name }, 'Circuit breaker reset');
+
+      return {
+        status: 'success',
+        message: `Circuit breaker ${name} reset successfully`,
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error: any) {
+      logger.error({ error }, 'Error resetting circuit breaker');
+
+      return reply.status(500).send({
+        status: 'error',
+        message: 'Failed to reset circuit breaker',
+        error: error.message,
+      });
+    }
+  });
+
+  /**
+   * POST /webhooks/rate-limiter/reset
+   * Reset rate limiter (admin only)
+   */
+  app.post('/rate-limiter/reset', async (request, reply) => {
+    try {
+      const { name } = request.body as any;
+
+      if (name === 'webhookDelivery') {
+        rateLimiters.webhookDelivery.reset();
+      } else if (name === 'all') {
+        rateLimiters.webhookDelivery.reset();
+        rateLimiters.externalApi.reset();
+        rateLimiters.databaseWrites.reset();
+      } else {
+        return reply.status(400).send({
+          status: 'error',
+          message: 'Invalid rate limiter name. Use: webhookDelivery or all',
+        });
+      }
+
+      logger.info({ rateLimiter: name }, 'Rate limiter reset');
+
+      return {
+        status: 'success',
+        message: `Rate limiter ${name} reset successfully`,
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error: any) {
+      logger.error({ error }, 'Error resetting rate limiter');
+
+      return reply.status(500).send({
+        status: 'error',
+        message: 'Failed to reset rate limiter',
+        error: error.message,
+      });
+    }
   });
 }

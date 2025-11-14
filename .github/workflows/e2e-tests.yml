@@ -1,0 +1,313 @@
+name: E2E Tests - Buddy System Integration
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    # Run nightly at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '20'
+  PNPM_VERSION: '8'
+
+jobs:
+  e2e-tests:
+    name: E2E Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: teei_e2e
+          POSTGRES_USER: teei_test
+          POSTGRES_PASSWORD: teei_test_password
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6380:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      nats:
+        image: nats:2.10-alpine
+        ports:
+          - 4223:4222
+          - 8223:8222
+        options: >-
+          --health-cmd "wget --spider -q http://localhost:8222/healthz"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build packages and services
+        run: pnpm build
+
+      - name: Run database migrations
+        run: pnpm db:migrate
+        env:
+          DATABASE_URL: postgresql://teei_test:teei_test_password@localhost:5433/teei_e2e
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium firefox webkit
+
+      - name: Start services in background
+        run: |
+          # Start all services needed for E2E tests
+          pnpm --filter @teei/api-gateway dev &
+          pnpm --filter @teei/buddy-connector dev &
+          pnpm --filter @teei/unified-profile dev &
+          pnpm --filter @teei/analytics dev &
+          pnpm --filter @teei/corp-cockpit-astro dev &
+
+          # Give services time to start
+          sleep 30
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgresql://teei_test:teei_test_password@localhost:5433/teei_e2e
+          REDIS_URL: redis://localhost:6380
+          NATS_URL: nats://localhost:4223
+          BUDDY_WEBHOOK_SECRET: test-webhook-secret-buddy-e2e
+
+      - name: Wait for services to be healthy
+        run: |
+          timeout 120 bash -c '
+            until curl -f http://localhost:3000/health > /dev/null 2>&1; do
+              echo "Waiting for API Gateway..."
+              sleep 2
+            done
+
+            until curl -f http://localhost:3010/health > /dev/null 2>&1; do
+              echo "Waiting for Buddy Connector..."
+              sleep 2
+            done
+
+            until curl -f http://localhost:4321/ > /dev/null 2>&1; do
+              echo "Waiting for Corporate Cockpit..."
+              sleep 2
+            done
+
+            echo "All services are healthy!"
+          '
+
+      - name: Run E2E tests
+        run: pnpm test:e2e
+        env:
+          BUDDY_SYSTEM_URL: http://localhost:3001
+          CSR_PLATFORM_URL: http://localhost:4321
+          API_GATEWAY_URL: http://localhost:3000
+          BUDDY_CONNECTOR_URL: http://localhost:3010
+          BUDDY_WEBHOOK_SECRET: test-webhook-secret-buddy-e2e
+          CI: true
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: playwright-results
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 30
+
+      - name: Upload screenshots
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: e2e-screenshots
+          path: test-results/screenshots/
+          retention-days: 7
+
+      - name: Comment PR with test results
+        if: github.event_name == 'pull_request' && always()
+        uses: daun/playwright-report-comment@v3
+        with:
+          report-path: playwright-report/index.html
+
+  visual-regression:
+    name: Visual Regression Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build packages and services
+        run: pnpm build
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Start services
+        run: |
+          pnpm --filter @teei/corp-cockpit-astro dev &
+          sleep 20
+        env:
+          NODE_ENV: test
+
+      - name: Run visual regression tests
+        run: pnpm exec playwright test tests/e2e/visual-regression.spec.ts
+        env:
+          CSR_PLATFORM_URL: http://localhost:4321
+          CI: true
+
+      - name: Upload visual diffs
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: visual-regression-diffs
+          path: test-results/
+          retention-days: 7
+
+  performance-benchmarks:
+    name: Performance Benchmarks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright
+        run: pnpm exec playwright install chromium
+
+      - name: Run performance benchmarks
+        run: pnpm exec playwright test --grep "@performance"
+        env:
+          CI: true
+
+      - name: Upload performance results
+        uses: actions/upload-artifact@v3
+        with:
+          name: performance-benchmarks
+          path: test-results/performance/
+          retention-days: 30
+
+      - name: Comment PR with performance metrics
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const results = JSON.parse(fs.readFileSync('test-results/performance/summary.json', 'utf8'));
+
+            const comment = `## Performance Benchmark Results
+
+            | Metric | Value | Target | Status |
+            |--------|-------|--------|--------|
+            | Buddy Match Flow | ${results.buddyMatchMs}ms | < 3000ms | ${results.buddyMatchMs < 3000 ? '✅' : '❌'} |
+            | Event Processing | ${results.eventProcessMs}ms | < 2000ms | ${results.eventProcessMs < 2000 ? '✅' : '❌'} |
+            | Dashboard Load | ${results.dashboardLoadMs}ms | < 2000ms | ${results.dashboardLoadMs < 2000 ? '✅' : '❌'} |
+            | Webhook Accept | ${results.webhookAcceptMs}ms | < 500ms | ${results.webhookAcceptMs < 500 ? '✅' : '❌'} |
+            `;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+  test-summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    needs: [e2e-tests, visual-regression, performance-benchmarks]
+    if: always()
+
+    steps:
+      - name: Check test results
+        run: |
+          echo "E2E Tests: ${{ needs.e2e-tests.result }}"
+          echo "Visual Regression: ${{ needs.visual-regression.result }}"
+          echo "Performance: ${{ needs.performance-benchmarks.result }}"
+
+          if [ "${{ needs.e2e-tests.result }}" != "success" ]; then
+            echo "❌ E2E tests failed"
+            exit 1
+          fi
+
+          if [ "${{ needs.visual-regression.result }}" != "success" ]; then
+            echo "⚠️ Visual regression tests failed"
+            # Don't fail the build on visual regressions
+          fi
+
+          if [ "${{ needs.performance-benchmarks.result }}" != "success" ]; then
+            echo "⚠️ Performance benchmarks failed"
+            # Don't fail the build on performance issues
+          fi
+
+          echo "✅ All critical tests passed!"
