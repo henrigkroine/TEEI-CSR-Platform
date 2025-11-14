@@ -1,0 +1,748 @@
+openapi: 3.0.3
+info:
+  title: TEEI Analytics Service API
+  version: 1.0.0
+  description: |
+    Advanced analytics service powered by ClickHouse for high-performance queries.
+    Provides trends, cohort analysis, funnels, and benchmarking capabilities.
+  contact:
+    name: TEEI Platform Team
+    email: platform@teei.io
+
+servers:
+  - url: https://api.teei.io/v1
+    description: Production
+  - url: https://staging-api.teei.io/v1
+    description: Staging
+  - url: http://localhost:3007/v1
+    description: Local development
+
+security:
+  - bearerAuth: []
+
+paths:
+  /analytics/trends:
+    get:
+      summary: Time-series trends query
+      description: |
+        Query time-series data for CSR metrics with aggregation and grouping.
+        Supports multiple metrics, custom intervals, and dimension breakdowns.
+      operationId: getTrends
+      tags:
+        - Trends
+      parameters:
+        - name: companyId
+          in: query
+          required: true
+          description: Company identifier
+          schema:
+            type: string
+            format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        - name: metrics
+          in: query
+          required: true
+          description: Metrics to query (comma-separated)
+          schema:
+            type: string
+          example: "participants,sessions,avg_confidence,avg_belonging"
+        - name: startDate
+          in: query
+          required: true
+          description: Start date for time range
+          schema:
+            type: string
+            format: date
+          example: "2024-01-01"
+        - name: endDate
+          in: query
+          required: true
+          description: End date for time range
+          schema:
+            type: string
+            format: date
+          example: "2024-12-31"
+        - name: interval
+          in: query
+          description: Aggregation interval
+          schema:
+            type: string
+            enum: [day, week, month, quarter, year]
+            default: month
+          example: "month"
+        - name: groupBy
+          in: query
+          description: Dimension to group by (optional)
+          schema:
+            type: string
+            enum: [program, cohort, region, outcome_dimension]
+          example: "program"
+        - name: filters
+          in: query
+          description: JSON object with additional filters
+          schema:
+            type: string
+          example: '{"region":"North America","program":"Mentorship"}'
+        - name: page
+          in: query
+          description: Page number for pagination
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          example: 1
+        - name: limit
+          in: query
+          description: Results per page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 100
+          example: 100
+      responses:
+        '200':
+          description: Trends data retrieved successfully
+          headers:
+            X-Query-Duration-Ms:
+              description: Query execution time in milliseconds
+              schema:
+                type: integer
+              example: 45
+            X-Cache-Status:
+              description: Cache hit/miss status
+              schema:
+                type: string
+                enum: [hit, miss]
+              example: "hit"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrendsResponse'
+              examples:
+                monthly:
+                  summary: Monthly trends
+                  value:
+                    data:
+                      - period: "2024-01"
+                        participants: 120
+                        sessions: 340
+                        avg_confidence: 0.78
+                        avg_belonging: 0.82
+                      - period: "2024-02"
+                        participants: 135
+                        sessions: 380
+                        avg_confidence: 0.81
+                        avg_belonging: 0.84
+                    pagination:
+                      page: 1
+                      limit: 100
+                      total: 12
+                      hasNext: false
+                    metadata:
+                      companyId: "550e8400-e29b-41d4-a716-446655440000"
+                      interval: "month"
+                      queryDurationMs: 45
+                      cacheHit: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /analytics/cohorts:
+    get:
+      summary: Cohort comparison query
+      description: |
+        Compare metrics across different cohorts (e.g., program types, regions, time periods).
+        Useful for identifying best-performing segments.
+      operationId: getCohorts
+      tags:
+        - Cohorts
+      parameters:
+        - name: companyId
+          in: query
+          required: true
+          description: Company identifier
+          schema:
+            type: string
+            format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        - name: metrics
+          in: query
+          required: true
+          description: Metrics to compare
+          schema:
+            type: string
+          example: "avg_confidence,avg_belonging,avg_job_readiness"
+        - name: cohortDimension
+          in: query
+          required: true
+          description: Dimension to create cohorts from
+          schema:
+            type: string
+            enum: [program, region, age_group, gender, enrollment_month]
+          example: "program"
+        - name: startDate
+          in: query
+          required: true
+          description: Start date for analysis
+          schema:
+            type: string
+            format: date
+          example: "2024-01-01"
+        - name: endDate
+          in: query
+          required: true
+          description: End date for analysis
+          schema:
+            type: string
+            format: date
+          example: "2024-12-31"
+        - name: filters
+          in: query
+          description: JSON object with additional filters
+          schema:
+            type: string
+          example: '{"region":"North America"}'
+      responses:
+        '200':
+          description: Cohort analysis retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CohortsResponse'
+              examples:
+                programs:
+                  summary: Program cohort comparison
+                  value:
+                    data:
+                      - cohort: "Mentorship"
+                        participantsCount: 450
+                        avg_confidence: 0.82
+                        avg_belonging: 0.85
+                        avg_job_readiness: 0.71
+                      - cohort: "Skills Training"
+                        participantsCount: 320
+                        avg_confidence: 0.75
+                        avg_belonging: 0.78
+                        avg_job_readiness: 0.79
+                      - cohort: "Career Coaching"
+                        participantsCount: 180
+                        avg_confidence: 0.79
+                        avg_belonging: 0.81
+                        avg_job_readiness: 0.88
+                    metadata:
+                      companyId: "550e8400-e29b-41d4-a716-446655440000"
+                      cohortDimension: "program"
+                      periodStart: "2024-01-01"
+                      periodEnd: "2024-12-31"
+                      queryDurationMs: 62
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /analytics/funnels:
+    get:
+      summary: Conversion funnel analysis
+      description: |
+        Analyze participant progression through program stages.
+        Identifies drop-off points and conversion rates.
+      operationId: getFunnels
+      tags:
+        - Funnels
+      parameters:
+        - name: companyId
+          in: query
+          required: true
+          description: Company identifier
+          schema:
+            type: string
+            format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        - name: funnelType
+          in: query
+          required: true
+          description: Type of funnel to analyze
+          schema:
+            type: string
+            enum: [enrollment, engagement, completion, outcome_progression]
+          example: "enrollment"
+        - name: startDate
+          in: query
+          required: true
+          description: Start date for funnel
+          schema:
+            type: string
+            format: date
+          example: "2024-01-01"
+        - name: endDate
+          in: query
+          required: true
+          description: End date for funnel
+          schema:
+            type: string
+            format: date
+          example: "2024-12-31"
+        - name: groupBy
+          in: query
+          description: Break down funnel by dimension
+          schema:
+            type: string
+            enum: [program, region, cohort]
+          example: "program"
+      responses:
+        '200':
+          description: Funnel analysis retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FunnelsResponse'
+              examples:
+                enrollment:
+                  summary: Enrollment funnel
+                  value:
+                    data:
+                      stages:
+                        - stage: "Registered"
+                          count: 1000
+                          percentage: 100.0
+                          dropoffRate: 0.0
+                        - stage: "Onboarded"
+                          count: 850
+                          percentage: 85.0
+                          dropoffRate: 15.0
+                        - stage: "First Session"
+                          count: 720
+                          percentage: 72.0
+                          dropoffRate: 13.0
+                        - stage: "Active (3+ sessions)"
+                          count: 580
+                          percentage: 58.0
+                          dropoffRate: 14.0
+                        - stage: "Completed"
+                          count: 450
+                          percentage: 45.0
+                          dropoffRate: 13.0
+                      overallConversionRate: 45.0
+                    metadata:
+                      companyId: "550e8400-e29b-41d4-a716-446655440000"
+                      funnelType: "enrollment"
+                      periodStart: "2024-01-01"
+                      periodEnd: "2024-12-31"
+                      queryDurationMs: 78
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /analytics/benchmarks:
+    get:
+      summary: Industry benchmarks and peer comparisons
+      description: |
+        Compare company metrics against industry benchmarks and peer cohorts.
+        Uses materialized views for fast aggregation.
+      operationId: getBenchmarks
+      tags:
+        - Benchmarks
+      parameters:
+        - name: companyId
+          in: query
+          required: true
+          description: Company identifier
+          schema:
+            type: string
+            format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        - name: metrics
+          in: query
+          required: true
+          description: Metrics to benchmark
+          schema:
+            type: string
+          example: "avg_confidence,avg_belonging,sroi_ratio"
+        - name: peerGroup
+          in: query
+          description: Peer group for comparison
+          schema:
+            type: string
+            enum: [industry, size, region, all]
+            default: all
+          example: "industry"
+        - name: period
+          in: query
+          description: Time period for benchmark
+          schema:
+            type: string
+            enum: [current_quarter, last_quarter, current_year, last_year]
+            default: current_quarter
+          example: "current_quarter"
+      responses:
+        '200':
+          description: Benchmarks retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BenchmarksResponse'
+              examples:
+                industry:
+                  summary: Industry benchmarks
+                  value:
+                    data:
+                      companyMetrics:
+                        avg_confidence: 0.82
+                        avg_belonging: 0.85
+                        sroi_ratio: 5.23
+                      benchmarks:
+                        - metric: "avg_confidence"
+                          companyValue: 0.82
+                          peerMedian: 0.75
+                          peerP25: 0.68
+                          peerP75: 0.83
+                          percentile: 72
+                          performance: "above_average"
+                        - metric: "avg_belonging"
+                          companyValue: 0.85
+                          peerMedian: 0.79
+                          peerP25: 0.72
+                          peerP75: 0.86
+                          percentile: 65
+                          performance: "above_average"
+                        - metric: "sroi_ratio"
+                          companyValue: 5.23
+                          peerMedian: 4.80
+                          peerP25: 3.50
+                          peerP75: 6.20
+                          percentile: 58
+                          performance: "average"
+                    metadata:
+                      companyId: "550e8400-e29b-41d4-a716-446655440000"
+                      peerGroup: "industry"
+                      period: "current_quarter"
+                      peerCount: 47
+                      queryDurationMs: 32
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: RS256 JWT token with company_id claim
+
+  schemas:
+    TrendsResponse:
+      type: object
+      required:
+        - data
+        - pagination
+        - metadata
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+            description: Dynamic properties based on requested metrics
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+        metadata:
+          type: object
+          properties:
+            companyId:
+              type: string
+              format: uuid
+            interval:
+              type: string
+            queryDurationMs:
+              type: integer
+            cacheHit:
+              type: boolean
+
+    CohortsResponse:
+      type: object
+      required:
+        - data
+        - metadata
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            required:
+              - cohort
+              - participantsCount
+            properties:
+              cohort:
+                type: string
+                description: Cohort identifier
+              participantsCount:
+                type: integer
+                description: Number of participants in cohort
+            additionalProperties: true
+            description: Additional properties based on requested metrics
+        metadata:
+          type: object
+          properties:
+            companyId:
+              type: string
+              format: uuid
+            cohortDimension:
+              type: string
+            periodStart:
+              type: string
+              format: date
+            periodEnd:
+              type: string
+              format: date
+            queryDurationMs:
+              type: integer
+
+    FunnelsResponse:
+      type: object
+      required:
+        - data
+        - metadata
+      properties:
+        data:
+          type: object
+          required:
+            - stages
+            - overallConversionRate
+          properties:
+            stages:
+              type: array
+              items:
+                type: object
+                required:
+                  - stage
+                  - count
+                  - percentage
+                  - dropoffRate
+                properties:
+                  stage:
+                    type: string
+                    description: Stage name
+                  count:
+                    type: integer
+                    description: Participants at this stage
+                  percentage:
+                    type: number
+                    format: float
+                    description: Percentage of initial cohort
+                  dropoffRate:
+                    type: number
+                    format: float
+                    description: Drop-off rate from previous stage
+            overallConversionRate:
+              type: number
+              format: float
+              description: Overall conversion rate (%)
+        metadata:
+          type: object
+          properties:
+            companyId:
+              type: string
+              format: uuid
+            funnelType:
+              type: string
+            periodStart:
+              type: string
+              format: date
+            periodEnd:
+              type: string
+              format: date
+            queryDurationMs:
+              type: integer
+
+    BenchmarksResponse:
+      type: object
+      required:
+        - data
+        - metadata
+      properties:
+        data:
+          type: object
+          required:
+            - companyMetrics
+            - benchmarks
+          properties:
+            companyMetrics:
+              type: object
+              additionalProperties: true
+              description: Company's metric values
+            benchmarks:
+              type: array
+              items:
+                type: object
+                required:
+                  - metric
+                  - companyValue
+                  - peerMedian
+                  - peerP25
+                  - peerP75
+                  - percentile
+                  - performance
+                properties:
+                  metric:
+                    type: string
+                    description: Metric name
+                  companyValue:
+                    type: number
+                    format: float
+                    description: Company's value
+                  peerMedian:
+                    type: number
+                    format: float
+                    description: Peer group median
+                  peerP25:
+                    type: number
+                    format: float
+                    description: 25th percentile
+                  peerP75:
+                    type: number
+                    format: float
+                    description: 75th percentile
+                  percentile:
+                    type: integer
+                    description: Company's percentile rank
+                  performance:
+                    type: string
+                    enum: [well_below_average, below_average, average, above_average, well_above_average]
+                    description: Performance category
+        metadata:
+          type: object
+          properties:
+            companyId:
+              type: string
+              format: uuid
+            peerGroup:
+              type: string
+            period:
+              type: string
+            peerCount:
+              type: integer
+              description: Number of peers in comparison
+            queryDurationMs:
+              type: integer
+
+    Pagination:
+      type: object
+      required:
+        - page
+        - limit
+        - total
+        - hasNext
+      properties:
+        page:
+          type: integer
+          description: Current page number
+        limit:
+          type: integer
+          description: Items per page
+        total:
+          type: integer
+          description: Total items matching query
+        hasNext:
+          type: boolean
+          description: Whether there are more pages
+
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Error message
+        message:
+          type: string
+          description: Detailed error message
+        details:
+          type: object
+          description: Additional error details
+          additionalProperties: true
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Validation error"
+            message: "Invalid date range: startDate must be before endDate"
+
+    Unauthorized:
+      description: Missing or invalid authentication
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Unauthorized"
+            message: "Invalid or expired JWT token"
+
+    TooManyRequests:
+      description: Query budget exceeded
+      headers:
+        X-Query-Budget-Limit:
+          description: Maximum queries per hour
+          schema:
+            type: integer
+        X-Query-Budget-Remaining:
+          description: Remaining queries
+          schema:
+            type: integer
+        X-Query-Budget-Reset:
+          description: Time when budget resets
+          schema:
+            type: integer
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Query budget exceeded"
+            message: "Maximum queries per hour reached. Retry after 1800 seconds"
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Internal Server Error"
+            message: "Query execution failed"
+
+tags:
+  - name: Trends
+    description: Time-series trend analysis
+  - name: Cohorts
+    description: Cohort comparison and segmentation
+  - name: Funnels
+    description: Conversion funnel analysis
+  - name: Benchmarks
+    description: Industry benchmarking and peer comparisons

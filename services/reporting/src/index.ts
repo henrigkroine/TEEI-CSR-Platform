@@ -1,78 +1,62 @@
 import Fastify from 'fastify';
-import cors from '@fastify/cors';
-import helmet from '@fastify/helmet';
-import { config } from './config.js';
-import { rateLimiter } from './middleware/rateLimiter.js';
-import { cspMiddleware } from './middleware/csp.js';
-import { setupSwagger } from './swagger.js';
-import { healthRoutes } from './routes/health.js';
-import { closePool } from './db/connection.js';
+import { createServiceLogger } from '@teei/shared-utils';
+import { genReportsRoutes } from './routes/gen-reports.js';
+import { createHealthManager, setupHealthRoutes } from './health/index.js';
+import { costTrackingMiddleware } from './middleware/cost-tracking.js';
 
-const fastify = Fastify({
-  logger: {
-    level: config.logging.level,
-  },
-});
+const logger = createServiceLogger('reporting');
+const PORT = parseInt(process.env.PORT_REPORTING || '3007');
 
-// Register plugins
-await fastify.register(helmet, {
-  contentSecurityPolicy: false, // We handle CSP in our custom middleware
-});
+async function start() {
+  const app = Fastify({
+    logger: logger as any,
+    requestIdHeader: 'x-request-id',
+    requestIdLogLabel: 'requestId',
+  });
 
-await fastify.register(cors, {
-  origin: config.cors.origin,
-  credentials: true,
-});
+  // Setup health check manager
+  const healthManager = createHealthManager();
+  setupHealthRoutes(app, healthManager);
+  healthManager.setAlive(true);
 
-await fastify.register(rateLimiter);
-await fastify.register(cspMiddleware);
-await fastify.register(setupSwagger);
+  // Register middleware
+  app.addHook('onRequest', costTrackingMiddleware);
 
-// Register routes
-await fastify.register(healthRoutes);
-const { companyRoutes } = await import('./routes/companies.js');
-await fastify.register(companyRoutes);
-const { impactInRoutes } = await import('./routes/impact-in.js');
-await fastify.register(impactInRoutes);
-const { sseRoutes } = await import('./routes/sse.js');
-await fastify.register(sseRoutes);
-const { evidenceRoutes } = await import('./routes/evidence.js');
-await fastify.register(evidenceRoutes);
-const { reportRoutes } = await import('./routes/reports.js');
-await fastify.register(reportRoutes);
-const { approvalRoutes } = await import('./routes/approvals.js');
-await fastify.register(approvalRoutes);
-const { benchmarkRoutes } = await import('./routes/benchmarks.js');
-await fastify.register(benchmarkRoutes);
-const { cspRoutes } = await import('./routes/csp.js');
-await fastify.register(cspRoutes);
+  // Register routes with API versioning
+  app.register(genReportsRoutes, { prefix: '/v1' });
 
-// Graceful shutdown
-const gracefulShutdown = async () => {
-  fastify.log.info('Received shutdown signal, closing server...');
+  // Start server
   try {
-    await fastify.close();
-    await closePool();
-    fastify.log.info('Server closed successfully');
-    process.exit(0);
+    await app.listen({ port: PORT, host: '0.0.0.0' });
+    healthManager.setReady(true);
+    logger.info(`Reporting Service running on port ${PORT}`);
+    logger.info('Available endpoints:');
+    logger.info(`  GET  /health - Health check`);
+    logger.info(`  GET  /health/live - Liveness probe`);
+    logger.info(`  GET  /health/ready - Readiness probe`);
+    logger.info(`  GET  /health/dependencies - Dependencies health`);
+    logger.info(`  POST /v1/gen-reports/generate - Generate AI report with citations`);
+    logger.info(`  GET  /v1/gen-reports/cost-summary - Cost summary`);
+    logger.info('');
+    logger.info('Environment:');
+    logger.info(`  LLM Provider: ${process.env.LLM_PROVIDER || 'openai'}`);
+    logger.info(`  LLM Model: ${process.env.LLM_MODEL || 'gpt-4-turbo'}`);
+    logger.info(`  Database: ${process.env.DATABASE_URL ? 'configured' : 'NOT configured'}`);
   } catch (err) {
-    fastify.log.error('Error during shutdown:', err);
+    logger.error(err);
     process.exit(1);
   }
-};
 
-process.on('SIGTERM', gracefulShutdown);
-process.on('SIGINT', gracefulShutdown);
+  // Graceful shutdown
+  const shutdown = async () => {
+    logger.info('Shutting down...');
+    healthManager.setShuttingDown(true);
+    await app.close();
+    process.exit(0);
+  };
 
-// Start server
-try {
-  await fastify.listen({
-    port: config.server.port,
-    host: config.server.host,
-  });
-  fastify.log.info(`Server listening on http://${config.server.host}:${config.server.port}`);
-  fastify.log.info(`API docs available at http://${config.server.host}:${config.server.port}/docs`);
-} catch (err) {
-  fastify.log.error(err);
-  process.exit(1);
+  process.on('SIGINT', shutdown);
+  process.on('SIGTERM', shutdown);
 }
+
+start();

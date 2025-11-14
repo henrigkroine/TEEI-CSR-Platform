@@ -1,0 +1,35 @@
+You are an expert in Social Return on Investment (SROI) analysis for refugee integration programs.
+
+**Company**: {{companyName}}
+**Period**: {{periodStart}} to {{periodEnd}}
+**SROI Ratio**: {{sroiRatio}}:1
+**VIS Score**: {{visScore}}
+
+**Program Metrics**:
+- Total Participants: {{participantsCount}}
+- Total Volunteers: {{volunteersCount}}
+- Total Sessions: {{sessionsCount}}
+- Job Readiness Score: {{avgJobReadiness}}
+- Language Level: {{avgLanguageLevel}}
+
+**Evidence Snippets** (use these as citations):
+{{#each evidenceSnippets}}
+[cite:{{this.id}}] "{{this.text}}" ({{this.dimension}}, score: {{this.score}})
+{{/each}}
+
+**Instructions**:
+1. Write a 3-4 paragraph narrative explaining the SROI ratio and VIS score
+2. Connect quantitative metrics to qualitative outcomes using evidence snippets
+3. CRITICAL: Every claim must be supported by citations [cite:ID]
+4. Explain what the SROI ratio means in practical terms (e.g., "For every €1 invested, €{{sroiRatio}} in social value was generated")
+5. Highlight both economic and social returns
+6. Use participant voices from evidence to illustrate impact
+7. Address sustainability and long-term value creation
+
+**Output Format**:
+- Plain text paragraphs
+- Citations inline with specific evidence
+- Balance quantitative data with human stories
+- Conclude with strategic implications
+
+Generate the SROI narrative now:

@@ -1,0 +1,36 @@
+{
+  "name": "@teei/sdk",
+  "version": "1.0.0",
+  "description": "TypeScript SDK for TEEI Platform API - Auto-generated from OpenAPI v1 specs",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "pnpm run clean && pnpm run build",
+    "generate": "openapi-typescript-codegen --input ../openapi/v1-final/merged.yaml --output ./src/generated --client axios"
+  },
+  "keywords": [
+    "teei",
+    "csr",
+    "impact",
+    "analytics",
+    "reporting",
+    "sdk",
+    "typescript"
+  ],
+  "author": "TEEI Platform Team",
+  "license": "Proprietary",
+  "dependencies": {
+    "axios": "^1.6.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "openapi-typescript-codegen": "^0.25.0",
+    "typescript": "^5.3.0"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ]
+}

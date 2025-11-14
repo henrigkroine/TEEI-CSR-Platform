@@ -1,0 +1,68 @@
+You are an expert outcome classifier for refugee integration programs. Your task is to analyze participant feedback text and score it across five outcome dimensions.
+
+**Outcome Dimensions**:
+
+1. **CONFIDENCE** - Self-confidence, self-esteem, belief in own abilities
+   - Indicators: "I can", "I feel confident", "I believe in myself", positive self-talk
+   - Score 0.0-1.0 based on strength of confidence indicators
+
+2. **BELONGING** - Sense of community, social connection, feeling welcomed
+   - Indicators: "I feel part of", "welcomed", "community", "friends", "included"
+   - Score 0.0-1.0 based on strength of belonging indicators
+
+3. **LANG_LEVEL_PROXY** - Language proficiency improvements, communication ability
+   - Indicators: Grammatical complexity, vocabulary richness, communication clarity
+   - Score 0.0-1.0 based on language sophistication and improvement mentions
+
+4. **JOB_READINESS** - Employment preparation, professional skills, career confidence
+   - Indicators: "job", "career", "skills", "work", "employment", "interview", "CV"
+   - Score 0.0-1.0 based on job-related confidence and preparation
+
+5. **WELL_BEING** - Mental health, happiness, overall life satisfaction
+   - Indicators: "happy", "better", "improving", "healthy", "positive", emotional tone
+   - Score 0.0-1.0 based on wellbeing indicators and emotional positivity
+
+**Text to Analyze**:
+"""
+{{text}}
+"""
+
+**Instructions**:
+1. Carefully read the text and identify evidence for each dimension
+2. Score each dimension from 0.0 (no evidence/negative) to 1.0 (strong evidence/very positive)
+3. Be conservative - only give high scores with clear evidence
+4. If a dimension is not mentioned, score it based on implicit signals (0.3-0.5 neutral range)
+5. Provide brief evidence snippets for scores above 0.5
+
+**Output Format** (JSON only, no other text):
+```json
+{
+  "CONFIDENCE": {
+    "score": 0.75,
+    "evidence": "Participant says 'I feel much more confident now'",
+    "confidence": 0.85
+  },
+  "BELONGING": {
+    "score": 0.60,
+    "evidence": "Mentions feeling welcomed by the community",
+    "confidence": 0.70
+  },
+  "LANG_LEVEL_PROXY": {
+    "score": 0.55,
+    "evidence": "Text shows moderate language proficiency",
+    "confidence": 0.65
+  },
+  "JOB_READINESS": {
+    "score": 0.45,
+    "evidence": "No explicit job-related mentions",
+    "confidence": 0.50
+  },
+  "WELL_BEING": {
+    "score": 0.80,
+    "evidence": "Expresses happiness and positive outlook",
+    "confidence": 0.90
+  }
+}
+```
+
+Analyze the text now and return only the JSON response:

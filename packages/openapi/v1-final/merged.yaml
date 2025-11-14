@@ -1,0 +1,883 @@
+openapi: 3.0.3
+info:
+  title: TEEI Platform API - Worker 2 Services
+  version: 1.0.0
+  description: |
+    Comprehensive API documentation for TEEI Worker 2 services:
+    - **Reporting**: Gen-AI powered impact reports with citations
+    - **Analytics**: ClickHouse-powered analytics (trends, cohorts, funnels, benchmarks)
+    - **Impact-In**: External platform integrations (Benevity, Goodera, Workday)
+    - **Notifications**: Multi-channel notifications (email, SMS, push)
+
+    All endpoints require RS256 JWT authentication with company_id claim.
+  contact:
+    name: TEEI Platform Team
+    email: platform@teei.io
+  license:
+    name: Proprietary
+    url: https://teei.io/license
+
+servers:
+  - url: https://api.teei.io/v1
+    description: Production
+  - url: https://staging-api.teei.io/v1
+    description: Staging
+  - url: http://localhost:3000/v1
+    description: Local API Gateway
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Reporting - Gen-AI
+    description: AI-powered report generation with citations and cost tracking
+  - name: Analytics - Trends
+    description: Time-series trend analysis
+  - name: Analytics - Cohorts
+    description: Cohort comparison and segmentation
+  - name: Analytics - Funnels
+    description: Conversion funnel analysis
+  - name: Analytics - Benchmarks
+    description: Industry benchmarking and peer comparisons
+  - name: Impact-In - Deliveries
+    description: Delivery log management and retrieval
+  - name: Impact-In - Replay
+    description: Manual retry of failed deliveries
+  - name: Impact-In - Statistics
+    description: Delivery statistics and analytics
+  - name: Notifications - Send
+    description: Send and schedule notifications
+  - name: Notifications - History
+    description: Query notification history and details
+  - name: Notifications - Quotas
+    description: Check notification quotas
+  - name: Notifications - Webhooks
+    description: Webhook endpoints for delivery status events
+
+paths:
+  # ==================== REPORTING SERVICE ====================
+  /gen-reports/generate:
+    post:
+      summary: Generate AI report with citations
+      description: Generates a CSR impact report using AI with evidence-based citations
+      operationId: generateReport
+      tags:
+        - Reporting - Gen-AI
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateReportRequest'
+      responses:
+        '200':
+          description: Report generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerateReportResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /gen-reports/cost-summary:
+    get:
+      summary: Get cost summary for generated reports
+      description: Returns aggregated AI cost metrics
+      operationId: getCostSummary
+      tags:
+        - Reporting - Gen-AI
+      responses:
+        '200':
+          description: Cost summary retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CostSummaryResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # ==================== ANALYTICS SERVICE ====================
+  /analytics/trends:
+    get:
+      summary: Time-series trends query
+      description: Query time-series data for CSR metrics
+      operationId: getTrends
+      tags:
+        - Analytics - Trends
+      parameters:
+        - $ref: '#/components/parameters/CompanyIdQuery'
+        - name: metrics
+          in: query
+          required: true
+          schema:
+            type: string
+          example: "participants,sessions,avg_confidence"
+        - $ref: '#/components/parameters/StartDate'
+        - $ref: '#/components/parameters/EndDate'
+        - name: interval
+          in: query
+          schema:
+            type: string
+            enum: [day, week, month, quarter, year]
+            default: month
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Trends data retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrendsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /analytics/cohorts:
+    get:
+      summary: Cohort comparison query
+      description: Compare metrics across different cohorts
+      operationId: getCohorts
+      tags:
+        - Analytics - Cohorts
+      parameters:
+        - $ref: '#/components/parameters/CompanyIdQuery'
+        - name: metrics
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: cohortDimension
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [program, region, age_group, gender]
+        - $ref: '#/components/parameters/StartDate'
+        - $ref: '#/components/parameters/EndDate'
+      responses:
+        '200':
+          description: Cohort analysis retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CohortsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /analytics/funnels:
+    get:
+      summary: Conversion funnel analysis
+      description: Analyze participant progression through program stages
+      operationId: getFunnels
+      tags:
+        - Analytics - Funnels
+      parameters:
+        - $ref: '#/components/parameters/CompanyIdQuery'
+        - name: funnelType
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [enrollment, engagement, completion]
+        - $ref: '#/components/parameters/StartDate'
+        - $ref: '#/components/parameters/EndDate'
+      responses:
+        '200':
+          description: Funnel analysis retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FunnelsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /analytics/benchmarks:
+    get:
+      summary: Industry benchmarks and peer comparisons
+      description: Compare company metrics against industry benchmarks
+      operationId: getBenchmarks
+      tags:
+        - Analytics - Benchmarks
+      parameters:
+        - $ref: '#/components/parameters/CompanyIdQuery'
+        - name: metrics
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: peerGroup
+          in: query
+          schema:
+            type: string
+            enum: [industry, size, region, all]
+            default: all
+      responses:
+        '200':
+          description: Benchmarks retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BenchmarksResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # ==================== IMPACT-IN SERVICE ====================
+  /impact-in/deliveries:
+    get:
+      summary: List deliveries with filtering
+      description: Returns delivery history with pagination
+      operationId: listDeliveries
+      tags:
+        - Impact-In - Deliveries
+      parameters:
+        - name: companyId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: provider
+          in: query
+          schema:
+            type: string
+            enum: [benevity, goodera, workday]
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, success, failed, retrying]
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Deliveries retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeliveryListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /impact-in/deliveries/{id}:
+    get:
+      summary: Get single delivery by ID
+      description: Returns detailed delivery information
+      operationId: getDelivery
+      tags:
+        - Impact-In - Deliveries
+      parameters:
+        - $ref: '#/components/parameters/DeliveryId'
+      responses:
+        '200':
+          description: Delivery retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeliveryDetailResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /impact-in/deliveries/{id}/replay:
+    post:
+      summary: Retry a failed delivery
+      description: Manually retry a failed delivery
+      operationId: replayDelivery
+      tags:
+        - Impact-In - Replay
+      parameters:
+        - $ref: '#/components/parameters/DeliveryId'
+      responses:
+        '200':
+          description: Delivery replayed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReplayResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /impact-in/stats:
+    get:
+      summary: Get delivery statistics
+      description: Returns aggregated statistics
+      operationId: getDeliveryStats
+      tags:
+        - Impact-In - Statistics
+      parameters:
+        - name: companyId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Statistics retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatsResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # ==================== NOTIFICATIONS SERVICE ====================
+  /notifications/send:
+    post:
+      summary: Send notification immediately
+      description: Queue notification for immediate delivery
+      operationId: sendNotification
+      tags:
+        - Notifications - Send
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendNotificationRequest'
+      responses:
+        '202':
+          description: Notification queued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SendNotificationResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /notifications/schedule:
+    post:
+      summary: Schedule notification
+      description: Schedule notification for future delivery
+      operationId: scheduleNotification
+      tags:
+        - Notifications - Send
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScheduleNotificationRequest'
+      responses:
+        '201':
+          description: Notification scheduled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScheduleNotificationResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /notifications/history:
+    get:
+      summary: Query notification history
+      description: Retrieve notification history with filtering
+      operationId: getNotificationHistory
+      tags:
+        - Notifications - History
+      parameters:
+        - name: companyId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [email, sms, push]
+        - $ref: '#/components/parameters/Limit'
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: History retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationHistoryResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /notifications/quota:
+    get:
+      summary: Check remaining quota
+      description: Check notification quota status
+      operationId: getQuota
+      tags:
+        - Notifications - Quotas
+      parameters:
+        - $ref: '#/components/parameters/CompanyIdQuery'
+      responses:
+        '200':
+          description: Quota status retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuotaResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: RS256 JWT token with company_id claim
+
+  parameters:
+    CompanyIdQuery:
+      name: companyId
+      in: query
+      required: true
+      description: Company identifier
+      schema:
+        type: string
+        format: uuid
+      example: "550e8400-e29b-41d4-a716-446655440000"
+
+    DeliveryId:
+      name: id
+      in: path
+      required: true
+      description: Delivery or notification ID
+      schema:
+        type: string
+      example: "650e8400-e29b-41d4-a716-446655440000"
+
+    StartDate:
+      name: startDate
+      in: query
+      required: true
+      description: Start date
+      schema:
+        type: string
+        format: date
+      example: "2024-01-01"
+
+    EndDate:
+      name: endDate
+      in: query
+      required: true
+      description: End date
+      schema:
+        type: string
+        format: date
+      example: "2024-12-31"
+
+    Page:
+      name: page
+      in: query
+      description: Page number
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+      example: 1
+
+    Limit:
+      name: limit
+      in: query
+      description: Items per page
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+      example: 20
+
+  schemas:
+    # Reporting Schemas
+    GenerateReportRequest:
+      type: object
+      required:
+        - companyId
+        - period
+        - sections
+      properties:
+        companyId:
+          type: string
+          format: uuid
+        period:
+          type: object
+          required:
+            - start
+            - end
+          properties:
+            start:
+              type: string
+              format: date
+            end:
+              type: string
+              format: date
+        locale:
+          type: string
+          enum: [en, es, fr]
+          default: en
+        sections:
+          type: array
+          items:
+            type: string
+            enum: [impact-summary, sroi-narrative, outcome-trends]
+        deterministic:
+          type: boolean
+          default: false
+        temperature:
+          type: number
+          minimum: 0
+          maximum: 2
+        maxTokens:
+          type: integer
+          minimum: 100
+          maximum: 8000
+
+    GenerateReportResponse:
+      type: object
+      required:
+        - reportId
+        - sections
+        - lineage
+      properties:
+        reportId:
+          type: string
+        sections:
+          type: array
+          items:
+            type: object
+        lineage:
+          type: object
+        warnings:
+          type: array
+          items:
+            type: string
+
+    CostSummaryResponse:
+      type: object
+      properties:
+        totalCostUsd:
+          type: string
+        requestsCount:
+          type: integer
+        totalTokens:
+          type: integer
+        avgCostPerRequest:
+          type: string
+
+    # Analytics Schemas
+    TrendsResponse:
+      type: object
+      required:
+        - data
+        - pagination
+        - metadata
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+        metadata:
+          type: object
+
+    CohortsResponse:
+      type: object
+      required:
+        - data
+        - metadata
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+        metadata:
+          type: object
+
+    FunnelsResponse:
+      type: object
+      required:
+        - data
+        - metadata
+      properties:
+        data:
+          type: object
+          properties:
+            stages:
+              type: array
+              items:
+                type: object
+            overallConversionRate:
+              type: number
+        metadata:
+          type: object
+
+    BenchmarksResponse:
+      type: object
+      required:
+        - data
+        - metadata
+      properties:
+        data:
+          type: object
+        metadata:
+          type: object
+
+    # Impact-In Schemas
+    DeliveryListResponse:
+      type: object
+      required:
+        - data
+        - pagination
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    DeliveryDetailResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: object
+
+    ReplayResponse:
+      type: object
+      required:
+        - success
+        - message
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        newStatus:
+          type: string
+
+    StatsResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: object
+
+    # Notifications Schemas
+    SendNotificationRequest:
+      type: object
+      required:
+        - type
+        - templateId
+        - recipient
+        - payload
+      properties:
+        companyId:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [email, sms, push]
+        templateId:
+          type: string
+        recipient:
+          type: string
+        subject:
+          type: string
+        payload:
+          type: object
+          additionalProperties: true
+
+    ScheduleNotificationRequest:
+      allOf:
+        - $ref: '#/components/schemas/SendNotificationRequest'
+        - type: object
+          required:
+            - scheduledAt
+          properties:
+            scheduledAt:
+              type: string
+              format: date-time
+
+    SendNotificationResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        notificationId:
+          type: string
+        status:
+          type: string
+        message:
+          type: string
+
+    ScheduleNotificationResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        notificationId:
+          type: string
+        scheduledAt:
+          type: string
+          format: date-time
+        message:
+          type: string
+
+    NotificationHistoryResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        notifications:
+          type: array
+          items:
+            type: object
+        pagination:
+          type: object
+
+    QuotaResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        companyId:
+          type: string
+        quotas:
+          type: object
+
+    # Common Schemas
+    Pagination:
+      type: object
+      required:
+        - page
+        - limit
+        - total
+        - hasNext
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        hasNext:
+          type: boolean
+
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Unauthorized:
+      description: Missing or invalid authentication
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Forbidden:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    TooManyRequests:
+      description: Rate limit exceeded
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

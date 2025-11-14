@@ -1,0 +1,498 @@
+openapi: 3.0.3
+info:
+  title: TEEI Reporting Service API
+  version: 1.0.0
+  description: |
+    Gen-AI powered reporting service with citations, redaction, and lineage tracking.
+    Generates impact narratives with evidence-based citations and cost controls.
+  contact:
+    name: TEEI Platform Team
+    email: platform@teei.io
+
+servers:
+  - url: https://api.teei.io/v1
+    description: Production
+  - url: https://staging-api.teei.io/v1
+    description: Staging
+  - url: http://localhost:3004/v1
+    description: Local development
+
+security:
+  - bearerAuth: []
+
+paths:
+  /gen-reports/generate:
+    post:
+      summary: Generate AI report with citations
+      description: |
+        Generates a CSR impact report using AI with evidence-based citations.
+        Automatically redacts PII before sending to LLM and tracks full lineage.
+      operationId: generateReport
+      tags:
+        - Gen-AI Reports
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateReportRequest'
+            examples:
+              basic:
+                summary: Basic report generation
+                value:
+                  companyId: "550e8400-e29b-41d4-a716-446655440000"
+                  period:
+                    start: "2024-01-01"
+                    end: "2024-12-31"
+                  locale: "en"
+                  sections:
+                    - "impact-summary"
+                    - "sroi-narrative"
+              multilingual:
+                summary: Spanish report with all sections
+                value:
+                  companyId: "550e8400-e29b-41d4-a716-446655440000"
+                  period:
+                    start: "2024-01-01"
+                    end: "2024-12-31"
+                  locale: "es"
+                  sections:
+                    - "impact-summary"
+                    - "sroi-narrative"
+                    - "outcome-trends"
+                  deterministic: true
+                  temperature: 0.3
+      responses:
+        '200':
+          description: Report generated successfully
+          headers:
+            X-RateLimit-Limit:
+              description: Maximum requests per hour
+              schema:
+                type: integer
+                example: 100
+            X-RateLimit-Remaining:
+              description: Remaining requests in current window
+              schema:
+                type: integer
+                example: 95
+            X-RateLimit-Reset:
+              description: Time when rate limit resets (Unix timestamp)
+              schema:
+                type: integer
+                example: 1704067200
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerateReportResponse'
+              examples:
+                success:
+                  summary: Successful report generation
+                  value:
+                    reportId: "rpt_7f8a9b0c1d2e3f4a"
+                    sections:
+                      - type: "impact-summary"
+                        content: "Sample Company achieved remarkable impact in 2024, engaging 150 participants through 450 mentorship sessions [1]. The program demonstrated strong outcomes across multiple dimensions, with participants showing 82% improvement in belonging [2] and 78% increase in confidence [3]."
+                        citations:
+                          - id: "cite-0"
+                            snippetId: "snip_abc123"
+                            text: "150 young participants completed the program with 450 total sessions"
+                            relevanceScore: 0.95
+                          - id: "cite-1"
+                            snippetId: "snip_def456"
+                            text: "Belonging scores increased from 0.45 to 0.82 (82% improvement)"
+                            relevanceScore: 0.92
+                          - id: "cite-2"
+                            snippetId: "snip_ghi789"
+                            text: "Confidence dimension showed 78% positive trajectory"
+                            relevanceScore: 0.89
+                        wordCount: 52
+                        characterCount: 378
+                    lineage:
+                      modelName: "gpt-4-turbo"
+                      promptVersion: "v2.1.0"
+                      timestamp: "2024-11-14T10:30:00Z"
+                      tokensUsed: 1500
+                      tokensInput: 800
+                      tokensOutput: 700
+                      estimatedCostUsd: "0.0195"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /gen-reports/cost-summary:
+    get:
+      summary: Get cost summary for generated reports
+      description: Returns aggregated AI cost metrics for monitoring spend
+      operationId: getCostSummary
+      tags:
+        - Gen-AI Reports
+      responses:
+        '200':
+          description: Cost summary retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CostSummaryResponse'
+              examples:
+                summary:
+                  value:
+                    totalCostUsd: "45.67"
+                    requestsCount: 234
+                    totalTokens: 567890
+                    avgCostPerRequest: "0.195"
+                    byModel:
+                      - modelName: "gpt-4-turbo"
+                        requestsCount: 200
+                        totalCostUsd: "40.00"
+                        totalTokens: 500000
+                      - modelName: "gpt-3.5-turbo"
+                        requestsCount: 34
+                        totalCostUsd: "5.67"
+                        totalTokens: 67890
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: RS256 JWT token with company_id claim
+
+  schemas:
+    GenerateReportRequest:
+      type: object
+      required:
+        - companyId
+        - period
+        - sections
+      properties:
+        companyId:
+          type: string
+          format: uuid
+          description: Company identifier
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        period:
+          type: object
+          required:
+            - start
+            - end
+          properties:
+            start:
+              type: string
+              format: date
+              description: Period start date (ISO 8601)
+              example: "2024-01-01"
+            end:
+              type: string
+              format: date
+              description: Period end date (ISO 8601)
+              example: "2024-12-31"
+        locale:
+          type: string
+          enum: [en, es, fr]
+          default: en
+          description: Report language/locale
+          example: "en"
+        sections:
+          type: array
+          items:
+            type: string
+            enum:
+              - impact-summary
+              - sroi-narrative
+              - outcome-trends
+          minItems: 1
+          description: Sections to generate
+          example: ["impact-summary", "sroi-narrative"]
+        deterministic:
+          type: boolean
+          default: false
+          description: Use fixed seed for reproducible outputs
+          example: false
+        temperature:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 2
+          description: LLM temperature (0=deterministic, 2=creative)
+          example: 0.7
+        maxTokens:
+          type: integer
+          minimum: 100
+          maximum: 8000
+          description: Maximum tokens per section
+          example: 2000
+
+    GenerateReportResponse:
+      type: object
+      required:
+        - reportId
+        - sections
+        - lineage
+      properties:
+        reportId:
+          type: string
+          description: Unique report identifier
+          example: "rpt_7f8a9b0c1d2e3f4a"
+        sections:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReportSection'
+        lineage:
+          $ref: '#/components/schemas/LineageMetadata'
+        warnings:
+          type: array
+          items:
+            type: string
+          description: Non-fatal warnings (e.g., low evidence count)
+          example: ["Insufficient evidence found for the period. Report quality may be limited."]
+
+    ReportSection:
+      type: object
+      required:
+        - type
+        - content
+        - citations
+        - wordCount
+        - characterCount
+      properties:
+        type:
+          type: string
+          enum:
+            - impact-summary
+            - sroi-narrative
+            - outcome-trends
+          description: Section type
+          example: "impact-summary"
+        content:
+          type: string
+          description: Generated narrative text with citation markers [1], [2], etc.
+          example: "Sample Company achieved remarkable impact [1]..."
+        citations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Citation'
+        wordCount:
+          type: integer
+          description: Word count of content
+          example: 52
+        characterCount:
+          type: integer
+          description: Character count of content
+          example: 378
+
+    Citation:
+      type: object
+      required:
+        - id
+        - snippetId
+        - text
+      properties:
+        id:
+          type: string
+          description: Citation identifier in response
+          example: "cite-0"
+        snippetId:
+          type: string
+          description: Source evidence snippet ID
+          example: "snip_abc123"
+        text:
+          type: string
+          description: Citation text excerpt
+          example: "150 young participants completed the program"
+        relevanceScore:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Citation relevance score (0-1)
+          example: 0.95
+
+    LineageMetadata:
+      type: object
+      required:
+        - modelName
+        - promptVersion
+        - timestamp
+        - tokensUsed
+        - tokensInput
+        - tokensOutput
+        - estimatedCostUsd
+      properties:
+        modelName:
+          type: string
+          description: LLM model identifier
+          example: "gpt-4-turbo"
+        promptVersion:
+          type: string
+          description: Template version used
+          example: "v2.1.0"
+        timestamp:
+          type: string
+          format: date-time
+          description: Generation timestamp (ISO 8601)
+          example: "2024-11-14T10:30:00Z"
+        tokensUsed:
+          type: integer
+          description: Total tokens consumed
+          example: 1500
+        tokensInput:
+          type: integer
+          description: Input tokens (prompt + context)
+          example: 800
+        tokensOutput:
+          type: integer
+          description: Output tokens (generated text)
+          example: 700
+        estimatedCostUsd:
+          type: string
+          description: Estimated cost in USD
+          example: "0.0195"
+
+    CostSummaryResponse:
+      type: object
+      required:
+        - totalCostUsd
+        - requestsCount
+        - totalTokens
+        - avgCostPerRequest
+        - byModel
+      properties:
+        totalCostUsd:
+          type: string
+          description: Total cost across all requests
+          example: "45.67"
+        requestsCount:
+          type: integer
+          description: Number of report generation requests
+          example: 234
+        totalTokens:
+          type: integer
+          description: Total tokens consumed
+          example: 567890
+        avgCostPerRequest:
+          type: string
+          description: Average cost per request
+          example: "0.195"
+        byModel:
+          type: array
+          items:
+            $ref: '#/components/schemas/ModelCostBreakdown'
+
+    ModelCostBreakdown:
+      type: object
+      properties:
+        modelName:
+          type: string
+          example: "gpt-4-turbo"
+        requestsCount:
+          type: integer
+          example: 200
+        totalCostUsd:
+          type: string
+          example: "40.00"
+        totalTokens:
+          type: integer
+          example: 500000
+
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Error message
+          example: "Validation error"
+        message:
+          type: string
+          description: Detailed error message
+          example: "Invalid period: start date must be before end date"
+        details:
+          type: object
+          description: Additional error details
+          additionalProperties: true
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            validation:
+              value:
+                error: "Validation error"
+                details:
+                  - field: "companyId"
+                    message: "Invalid UUID format"
+
+    Unauthorized:
+      description: Missing or invalid authentication
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Unauthorized"
+            message: "Invalid or expired JWT token"
+
+    Forbidden:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Forbidden"
+            message: "AI budget exceeded for tenant"
+
+    TooManyRequests:
+      description: Rate limit exceeded
+      headers:
+        X-RateLimit-Limit:
+          description: Maximum requests per hour
+          schema:
+            type: integer
+        X-RateLimit-Remaining:
+          description: Remaining requests (0)
+          schema:
+            type: integer
+        X-RateLimit-Reset:
+          description: Time when rate limit resets
+          schema:
+            type: integer
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Too Many Requests"
+            message: "Rate limit exceeded. Retry after 3600 seconds"
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Internal Server Error"
+            message: "Report generation failed"
+
+tags:
+  - name: Gen-AI Reports
+    description: AI-powered report generation with citations and cost tracking

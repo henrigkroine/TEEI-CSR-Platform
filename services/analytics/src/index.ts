@@ -1,115 +1,69 @@
 import Fastify from 'fastify';
-import cors from '@fastify/cors';
-import { createServiceLogger, getEventBus } from '@teei/shared-utils';
-import { metricsRoutes } from './routes/metrics.js';
-import { cohortRoutes } from './routes/cohort.js';
-import { streamRoutes } from './routes/stream.js';
-import { sroiRoutes } from './routes/sroi.js';
-import { initRedis, healthCheck as redisHealthCheck, disconnect as redisDisconnect } from './cache/redis.js';
-import { subscribeToInvalidationEvents } from './cache/invalidation.js';
-import { initNATSBridge, shutdownNATSBridge } from './stream/nats-bridge.js';
-import { initClickHouseSink, stopClickHouseSink } from './sinks/clickhouse.js';
-import { getClickHouseClient, isClickHouseEnabled } from './sinks/clickhouse-client.js';
+import { createServiceLogger } from '@teei/shared-utils';
+import { createHealthManager, setupHealthRoutes } from './health/index.js';
+import { trendsRoutes } from './routes/trends.js';
+import { cohortsRoutes } from './routes/cohorts.js';
+import { funnelsRoutes } from './routes/funnels.js';
+import { benchmarksRoutes } from './routes/benchmarks.js';
+import { startSyncScheduler, stopSyncScheduler } from './loaders/ingestion.js';
+import { closeClient as closeClickHouse } from './lib/clickhouse-client.js';
+import { closeRedis } from './lib/cache.js';
 
 const logger = createServiceLogger('analytics');
-const PORT = parseInt(process.env.PORT_ANALYTICS || '3007');
+const PORT = parseInt(process.env.PORT_ANALYTICS || '3008');
+
+let syncTimer: NodeJS.Timeout | null = null;
 
 async function start() {
   const app = Fastify({
     logger: logger as any,
+    requestIdHeader: 'x-request-id',
+    requestIdLogLabel: 'requestId',
   });
 
-  // Register CORS
-  app.register(cors, {
-    origin: true, // Allow all origins in development
-  });
+  // Setup health check manager
+  const healthManager = createHealthManager();
+  setupHealthRoutes(app, healthManager);
+  healthManager.setAlive(true);
 
-  // Initialize Redis
-  try {
-    initRedis();
-    logger.info('Redis client initialized');
-  } catch (error) {
-    logger.error({ error }, 'Failed to initialize Redis - caching will be disabled');
-  }
-
-  // Health check
-  app.get('/health', async () => {
-    const redis = await redisHealthCheck();
-
-    // Check ClickHouse health if enabled
-    let clickhouseHealthy = false;
-    if (isClickHouseEnabled()) {
-      try {
-        const ch = getClickHouseClient();
-        clickhouseHealthy = await ch.ping();
-      } catch (error) {
-        logger.error({ error }, 'ClickHouse health check failed');
-      }
-    }
-
-    return {
-      status: 'ok',
-      service: 'analytics',
-      timestamp: new Date().toISOString(),
-      dependencies: {
-        redis: redis.healthy ? 'ok' : 'degraded',
-        clickhouse: isClickHouseEnabled()
-          ? (clickhouseHealthy ? 'ok' : 'degraded')
-          : 'disabled',
-      },
-      features: {
-        streaming: process.env.STREAMING_ENABLED === 'true',
-        clickhouse: isClickHouseEnabled(),
-      },
-    };
-  });
-
-  // Register routes
-  app.register(metricsRoutes, { prefix: '/metrics' });
-  app.register(cohortRoutes, { prefix: '/cohort' });
-  app.register(streamRoutes, { prefix: '/stream' });
-  app.register(sroiRoutes, { prefix: '/impact' });
-
-  // Connect to event bus
-  const eventBus = getEventBus();
-  await eventBus.connect();
-
-  // Subscribe to cache invalidation events
-  try {
-    await subscribeToInvalidationEvents();
-    logger.info('Cache invalidation event subscriptions established');
-  } catch (error) {
-    logger.error({ error }, 'Failed to subscribe to invalidation events - cache may become stale');
-  }
-
-  // Initialize SSE streaming (if enabled)
-  if (process.env.STREAMING_ENABLED === 'true') {
-    try {
-      await initNATSBridge();
-      logger.info('SSE streaming initialized');
-    } catch (error) {
-      logger.error({ error }, 'Failed to initialize SSE streaming');
-    }
-  } else {
-    logger.info('SSE streaming disabled by configuration');
-  }
-
-  // Initialize ClickHouse sink (if enabled)
-  if (isClickHouseEnabled()) {
-    try {
-      await initClickHouseSink();
-      logger.info('ClickHouse event sink initialized');
-    } catch (error) {
-      logger.error({ error }, 'Failed to initialize ClickHouse sink - analytics DW will not be populated');
-    }
-  } else {
-    logger.info('ClickHouse analytics disabled by configuration');
-  }
+  // Register API routes with versioning
+  app.register(async (instance) => {
+    await instance.register(trendsRoutes);
+    await instance.register(cohortsRoutes);
+    await instance.register(funnelsRoutes);
+    await instance.register(benchmarksRoutes);
+  }, { prefix: '/v1/analytics' });
 
   // Start server
   try {
     await app.listen({ port: PORT, host: '0.0.0.0' });
+    healthManager.setReady(true);
+
     logger.info(`Analytics Service running on port ${PORT}`);
+    logger.info('Available endpoints:');
+    logger.info('  Health:');
+    logger.info('    GET  /health - Health check');
+    logger.info('    GET  /health/live - Liveness probe');
+    logger.info('    GET  /health/ready - Readiness probe');
+    logger.info('    GET  /health/dependencies - Dependencies health');
+    logger.info('    GET  /health/cache - Cache statistics');
+    logger.info('');
+    logger.info('  Analytics APIs:');
+    logger.info('    GET  /v1/analytics/trends - Time-series trends');
+    logger.info('    GET  /v1/analytics/cohorts - Cohort comparisons');
+    logger.info('    GET  /v1/analytics/funnels - Conversion funnels');
+    logger.info('    GET  /v1/analytics/benchmarks - Industry/region/size benchmarks');
+    logger.info('');
+    logger.info('Environment:');
+    logger.info(`  ClickHouse: ${process.env.CLICKHOUSE_URL || 'http://localhost:8123'}`);
+    logger.info(`  Redis: ${process.env.REDIS_URL || 'redis://localhost:6379'}`);
+    logger.info(`  Database: ${process.env.DATABASE_URL ? 'configured' : 'NOT configured'}`);
+    logger.info(`  NATS: ${process.env.NATS_URL || 'nats://localhost:4222'}`);
+    logger.info('');
+
+    // Start ingestion sync scheduler
+    syncTimer = startSyncScheduler();
+    logger.info('Ingestion sync scheduler started');
   } catch (err) {
     logger.error(err);
     process.exit(1);
@@ -118,28 +72,21 @@ async function start() {
   // Graceful shutdown
   const shutdown = async () => {
     logger.info('Shutting down...');
+    healthManager.setShuttingDown(true);
 
-    // Shutdown SSE streaming
-    if (process.env.STREAMING_ENABLED === 'true') {
-      try {
-        await shutdownNATSBridge();
-      } catch (error) {
-        logger.error({ error }, 'Error shutting down SSE streaming');
-      }
+    // Stop sync scheduler
+    if (syncTimer) {
+      stopSyncScheduler(syncTimer);
     }
 
-    // Shutdown ClickHouse sink
-    if (isClickHouseEnabled()) {
-      try {
-        await stopClickHouseSink();
-      } catch (error) {
-        logger.error({ error }, 'Error shutting down ClickHouse sink');
-      }
-    }
+    // Close connections
+    await Promise.all([
+      app.close(),
+      closeClickHouse(),
+      closeRedis(),
+    ]);
 
-    await eventBus.disconnect();
-    await redisDisconnect();
-    await app.close();
+    logger.info('Shutdown complete');
     process.exit(0);
   };
 

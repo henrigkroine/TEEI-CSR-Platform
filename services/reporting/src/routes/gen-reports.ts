@@ -1,393 +1,366 @@
-import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { z } from 'zod';
+import { createServiceLogger } from '@teei/shared-utils';
+import { createLLMClient, LLMClient } from '../lib/llm-client.js';
+import { createCitationExtractor, CitationExtractor } from '../lib/citations.js';
+import { createRedactionEnforcer, RedactionEnforcer } from '../lib/redaction.js';
 import {
-  GenerateReportRequestSchema,
-  GenerateReportResponseSchema,
-  type GenerateReportRequest,
-  type GenerateReportResponse,
-  type ReportSection,
-  type Citation,
-} from '@teei/shared-types';
-import { tenantScoped } from '../middleware/tenantScope';
-import { requireFeature, FEATURE_FLAGS } from '../utils/featureFlags';
-import { generateQuarterlyReportPrompt, PROMPT_METADATA } from '../prompts/quarterlyReport';
-import { redactPII, validateRedaction } from '../utils/redaction';
-import { getCachedOrRenderPDF } from '../utils/pdfRenderer';
+  createLineageTracker,
+  buildLineageMetadata,
+  LineageTracker,
+  SectionMetadata,
+  CitationMetadata,
+} from '../lib/lineage.js';
+import { getTemplateManager, SectionType, Locale } from '../lib/prompts/index.js';
+import { getCostAggregator } from '../middleware/cost-tracking.js';
+
+const logger = createServiceLogger('reporting:gen-reports');
 
 /**
- * Generative Reports API Routes
- * Server-side AI report generation with mandatory evidence citations
+ * Request schema validation
  */
-export async function genReportsRoutes(fastify: FastifyInstance) {
-  /**
-   * POST /api/gen-reports:generate
-   * Generate an AI-powered CSR report with evidence citations
-   *
-   * CRITICAL: All AI calls happen SERVER-SIDE. No API keys exposed to frontend.
-   * CRITICAL: All generated content MUST include evidence citations.
-   * CRITICAL: PII redaction applied before AND after AI generation.
-   */
-  fastify.post<{
-    Body: GenerateReportRequest;
-    Reply: GenerateReportResponse;
-  }>(
-    '/api/gen-reports:generate',
-    {
-      preHandler: [
-        tenantScoped.preHandler,
-        requireFeature(FEATURE_FLAGS.GEN_REPORTS),
-        requireFeature(FEATURE_FLAGS.GEN_REPORTS_CITATIONS),
-      ],
-    },
-    async (request: FastifyRequest, reply: FastifyReply) => {
-      const startTime = Date.now();
+const GenerateReportRequestSchema = z.object({
+  companyId: z.string().uuid(),
+  period: z.object({
+    start: z.string(),
+    end: z.string(),
+  }),
+  locale: z.enum(['en', 'es', 'fr']).default('en'),
+  sections: z.array(z.enum(['impact-summary', 'sroi-narrative', 'outcome-trends'])),
+  deterministic: z.boolean().default(false),
+  temperature: z.number().min(0).max(2).optional(),
+  maxTokens: z.number().min(100).max(8000).optional(),
+});
 
-      try {
-        const tenantId = (request as any).tenantId;
+type GenerateReportRequest = z.infer<typeof GenerateReportRequestSchema>;
 
-        // Validate request body
-        const req = GenerateReportRequestSchema.parse(request.body);
+/**
+ * Response schema
+ */
+interface Citation {
+  id: string;
+  snippetId: string;
+  text: string;
+  relevanceScore?: number;
+}
 
-        request.log.info({
-          tenantId,
-          period: req.period,
-          filters: req.filters,
-        }, 'Generating AI report');
+interface ReportSection {
+  type: string;
+  content: string;
+  citations: Citation[];
+  wordCount: number;
+  characterCount: number;
+}
 
-        // 1. Fetch company data
-        // TODO: Replace with actual database query
-        const companyName = 'Pilot Corp Inc.';
+interface GenerateReportResponse {
+  reportId: string;
+  sections: ReportSection[];
+  lineage: {
+    modelName: string;
+    promptVersion: string;
+    timestamp: string;
+    tokensUsed: number;
+    tokensInput: number;
+    tokensOutput: number;
+    estimatedCostUsd: string;
+  };
+  warnings?: string[];
+}
 
-        // 2. Fetch metrics for the period
-        // TODO: Replace with actual database query
-        const metrics = {
-          sroi: 3.2,
-          vis: 85,
-          integrationScore: 0.78,
-          participantCount: 247,
-          completionRate: 0.89,
-        };
+/**
+ * Report generator - orchestrates the entire generation pipeline
+ */
+class ReportGenerator {
+  constructor(
+    private llmClient: LLMClient,
+    private citationExtractor: CitationExtractor,
+    private redactionEnforcer: RedactionEnforcer,
+    private lineageTracker: LineageTracker
+  ) {}
 
-        // 3. Fetch evidence snippets for the period
-        // TODO: Replace with actual database query that fetches Q2Q evidence
-        // Apply filters (programs, cohorts, metrics)
-        const evidence = [
-          {
-            id: '550e8400-e29b-41d4-a716-446655440001',
-            snippetText: 'I feel more confident speaking in meetings now. My mentor helped me practice.',
-            source: 'Buddy feedback, Q1 2024',
-            confidence: 0.92,
-          },
-          {
-            id: '550e8400-e29b-41d4-a716-446655440005',
-            snippetText: 'The language sessions improved my communication skills significantly.',
-            source: 'Language Connect feedback, Q1 2024',
-            confidence: 0.95,
-          },
-          {
-            id: '550e8400-e29b-41d4-a716-446655440009',
-            snippetText: 'Feeling more integrated into the team after the buddy program.',
-            source: 'Checkin note, Q1 2024',
-            confidence: 0.87,
-          },
-        ];
+  async generate(request: GenerateReportRequest): Promise<GenerateReportResponse> {
+    const startTime = Date.now();
+    const warnings: string[] = [];
 
-        // 4. Apply redaction to evidence (PRE-AI)
-        const redactedEvidence = evidence.map((e) => ({
-          ...e,
-          snippetText: redactPII(e.snippetText).redacted,
-        }));
+    logger.info(`Generating report for company ${request.companyId}`, { request });
 
-        // 5. Generate prompt
-        const prompt = generateQuarterlyReportPrompt({
-          companyName,
-          period: req.period,
-          metrics,
-          evidence: redactedEvidence,
-        });
+    // Step 1: Extract evidence snippets from database
+    const periodStart = new Date(request.period.start);
+    const periodEnd = new Date(request.period.end);
 
-        // 6. Call LLM API (OpenAI or Anthropic)
-        // TODO: Replace with actual LLM API call
-        // const llmResponse = await callLLM(prompt, req.options);
+    const evidenceSnippets = await this.citationExtractor.extractEvidence(
+      request.companyId,
+      periodStart,
+      periodEnd
+    );
 
-        // Mock LLM response for now
-        const llmResponse = {
-          sections: [
-            {
-              title: 'Executive Summary',
-              content: `In Q1 2024, ${companyName} achieved exceptional results across all CSR programs, with a Social Return on Investment of 3.2x [citation:550e8400-e29b-41d4-a716-446655440001] and a Value of Integration Score of 85 [citation:550e8400-e29b-41d4-a716-446655440009]. Our programs reached 247 active participants, with an impressive 89% completion rate. Participants reported significant improvements in confidence [citation:550e8400-e29b-41d4-a716-446655440001] and communication skills [citation:550e8400-e29b-41d4-a716-446655440005], demonstrating the tangible impact of our initiatives.`,
-              order: 1,
-            },
-            {
-              title: 'Impact Metrics',
-              content: `The SROI of 3.2x indicates that for every dollar invested in our CSR programs, $3.20 of social value was generated [citation:550e8400-e29b-41d4-a716-446655440001]. The VIS score of 85 reflects high participant integration [citation:550e8400-e29b-41d4-a716-446655440009], while the overall integration score of 0.78 shows strong progress toward our goal of 0.85. With 247 active participants and an 89% completion rate, our programs demonstrate both reach and effectiveness.`,
-              order: 2,
-            },
-            {
-              title: 'Qualitative Insights',
-              content: `Participants consistently reported increased confidence in professional settings. One participant noted, "I feel more confident speaking in meetings now" [citation:550e8400-e29b-41d4-a716-446655440001]. Language Connect participants highlighted communication improvements, with one stating, "The language sessions improved my communication skills significantly" [citation:550e8400-e29b-41d4-a716-446655440005]. The buddy program fostered social integration, with participants reporting feeling "more integrated into the team" [citation:550e8400-e29b-41d4-a716-446655440009].`,
-              order: 3,
-            },
-            {
-              title: 'Recommendations',
-              content: `Based on the strong SROI of 3.2x [citation:550e8400-e29b-41d4-a716-446655440001] and high participant satisfaction [citation:550e8400-e29b-41d4-a716-446655440005], we recommend expanding program capacity by 20% in Q2. Continue prioritizing communication skills development [citation:550e8400-e29b-41d4-a716-446655440005] and mentorship quality [citation:550e8400-e29b-41d4-a716-446655440001]. Explore additional buddy program cohorts to maintain the high integration score [citation:550e8400-e29b-41d4-a716-446655440009].`,
-              order: 4,
-            },
-          ],
-          citations: [
-            {
-              id: 'cite-001',
-              evidenceId: '550e8400-e29b-41d4-a716-446655440001',
-              snippetText: 'I feel more confident speaking in meetings now. My mentor helped me practice.',
-              source: 'Buddy feedback, Q1 2024',
-              confidence: 0.92,
-            },
-            {
-              id: 'cite-002',
-              evidenceId: '550e8400-e29b-41d4-a716-446655440005',
-              snippetText: 'The language sessions improved my communication skills significantly.',
-              source: 'Language Connect feedback, Q1 2024',
-              confidence: 0.95,
-            },
-            {
-              id: 'cite-003',
-              evidenceId: '550e8400-e29b-41d4-a716-446655440009',
-              snippetText: 'Feeling more integrated into the team after the buddy program.',
-              source: 'Checkin note, Q1 2024',
-              confidence: 0.87,
-            },
-          ],
-        };
-
-        // 7. Validate citations
-        const citationErrors = validateCitations(llmResponse.sections, llmResponse.citations, evidence);
-        if (citationErrors.length > 0) {
-          request.log.error({ citationErrors }, 'Citation validation failed');
-          return reply.status(500).send({
-            error: 'Internal Server Error',
-            message: 'Generated report failed citation validation',
-            details: citationErrors,
-          });
-        }
-
-        // 8. Apply redaction to generated narrative (POST-AI)
-        const redactedSections = llmResponse.sections.map((section) => ({
-          ...section,
-          content: redactPII(section.content).redacted,
-        }));
-
-        // 9. Validate redaction
-        for (const section of redactedSections) {
-          const validationErrors = validateRedaction(section.content);
-          if (validationErrors.length > 0) {
-            request.log.warn({ validationErrors, section: section.title }, 'Redaction validation warnings');
-          }
-        }
-
-        // 10. Build response
-        const reportId = generateReportId(); // Generate UUID
-        const response: GenerateReportResponse = {
-          reportId,
-          generatedAt: new Date().toISOString(),
-          narrative: {
-            sections: redactedSections,
-            citations: llmResponse.citations,
-          },
-          metadata: {
-            model: 'gpt-4-turbo-2024-04-09', // TODO: Use actual model from LLM call
-            promptVersion: PROMPT_METADATA.version,
-            tokensUsed: 2847, // TODO: Get from LLM response
-            seed: req.options?.seed,
-            generatedAt: new Date().toISOString(),
-          },
-        };
-
-        // 11. Validate response schema
-        const validatedResponse = GenerateReportResponseSchema.parse(response);
-
-        // 12. Log audit trail
-        const duration = Date.now() - startTime;
-        request.log.info({
-          tenantId,
-          reportId,
-          tokensUsed: response.metadata.tokensUsed,
-          citationCount: response.narrative.citations.length,
-          duration,
-        }, 'Report generated successfully');
-
-        // TODO: Save report to database for audit log
-
-        return reply.send(validatedResponse);
-      } catch (error) {
-        request.log.error({ error }, 'Failed to generate report');
-
-        if (error instanceof Error && error.name === 'ZodError') {
-          return reply.status(400).send({
-            error: 'Bad Request',
-            message: 'Invalid request parameters',
-            details: error,
-          });
-        }
-
-        return reply.status(500).send({
-          error: 'Internal Server Error',
-          message: 'Failed to generate report',
-        });
-      }
+    if (evidenceSnippets.length === 0) {
+      warnings.push('Insufficient evidence found for the period. Report quality may be limited.');
     }
-  );
 
-  /**
-   * POST /api/gen-reports/:reportId/export/pdf
-   * Export a generated report as PDF
-   *
-   * CRITICAL: PDF includes company branding, charts, and citations
-   * CRITICAL: Watermark applied for draft reports
-   */
-  fastify.post<{
-    Params: { reportId: string };
-    Body: {
-      includeCharts?: boolean;
-      includeCitations?: boolean;
-      watermark?: string;
-      theme?: {
-        logo?: string;
-        primaryColor?: string;
-        secondaryColor?: string;
-      };
+    logger.info(`Extracted ${evidenceSnippets.length} evidence snippets`);
+
+    // Step 2: Redact PII from evidence before sending to LLM
+    const { redactedSnippets } = this.redactionEnforcer.redactSnippets(
+      evidenceSnippets.map(s => ({ id: s.id, text: s.text, dimension: s.dimension, score: s.score }))
+    );
+
+    // Step 3: Fetch metrics for the company/period
+    // TODO: Query metrics_company_period table
+    const metrics = {
+      companyName: 'Sample Company', // TODO: Fetch from database
+      participantsCount: 150,
+      sessionsCount: 450,
+      volunteersCount: 30,
+      avgConfidence: 0.78,
+      avgBelonging: 0.82,
+      avgJobReadiness: 0.65,
+      avgLanguageLevel: 0.71,
+      avgWellBeing: 0.76,
+      sroiRatio: 5.23,
+      visScore: 87.5,
     };
-  }>(
-    '/api/gen-reports/:reportId/export/pdf',
-    {
-      preHandler: [tenantScoped.preHandler, requireFeature(FEATURE_FLAGS.GEN_REPORTS)],
-    },
-    async (request, reply) => {
-      try {
-        const { reportId } = request.params;
-        const tenantId = (request as any).tenantId;
-        const options = request.body || {};
 
-        request.log.info({ tenantId, reportId, options }, 'Exporting report to PDF');
+    // Step 4: Generate each section using LLM
+    const templateManager = getTemplateManager();
+    const generatedSections: ReportSection[] = [];
+    let totalTokensInput = 0;
+    let totalTokensOutput = 0;
 
-        // 1. Fetch report from database
-        // TODO: Replace with actual database query
-        const report = {
-          reportId,
-          reportType: 'quarterly',
-          period: { from: new Date('2024-01-01'), to: new Date('2024-03-31') },
-          sections: [
-            {
-              order: 0,
-              title: 'Executive Summary',
-              narrative: 'Sample executive summary with citations [evidence-001]...',
-              citations: [
-                {
-                  evidenceId: 'evidence-001',
-                  snippet: 'Sample evidence snippet',
-                  sourceType: 'buddy_feedback',
-                  dateCollected: new Date('2024-02-15'),
-                  confidence: 0.92,
-                },
-              ],
-            },
-          ],
-          metadata: {
-            companyName: 'Pilot Corp Inc.',
-            generatedAt: new Date(),
-            promptVersion: '1.0.0',
-            modelUsed: 'gpt-4-turbo',
-            tokenCount: 2847,
-          },
-        };
+    for (const sectionType of request.sections) {
+      logger.info(`Generating section: ${sectionType}`);
 
-        // 2. Render PDF
-        const result = await getCachedOrRenderPDF(reportId, report as any, {
-          includeCharts: options.includeCharts !== false,
-          includeCitations: options.includeCitations !== false,
-          watermark: options.watermark,
-          theme: options.theme,
+      // Prepare template data
+      const templateData = {
+        ...metrics,
+        periodStart: request.period.start,
+        periodEnd: request.period.end,
+        evidenceSnippets: redactedSnippets,
+      };
+
+      // Render prompt template
+      const prompt = templateManager.render(
+        sectionType as SectionType,
+        templateData,
+        request.locale
+      );
+
+      // Generate content using LLM
+      const response = await this.llmClient.generateCompletion(
+        [
+          { role: 'system', content: 'You are an expert CSR impact analyst.' },
+          { role: 'user', content: prompt },
+        ],
+        {
+          temperature: request.temperature,
+          maxTokens: request.maxTokens,
+          seed: request.deterministic ? 42 : undefined,
+        }
+      );
+
+      totalTokensInput += response.tokensInput;
+      totalTokensOutput += response.tokensOutput;
+
+      // Validate citations in generated content
+      const validation = this.citationExtractor.validateCitations(
+        response.content,
+        evidenceSnippets
+      );
+
+      if (!validation.valid) {
+        logger.warn(`Citation validation failed for ${sectionType}`, {
+          errors: validation.errors,
         });
+        warnings.push(`Section "${sectionType}" has citation issues: ${validation.errors.join(', ')}`);
+      }
 
-        // 3. Log success
-        request.log.info(
-          {
-            tenantId,
-            reportId,
-            fileSize: result.metadata.fileSize,
-            pageCount: result.metadata.pageCount,
-            renderTime: result.metadata.renderTime,
-          },
-          'PDF export successful'
-        );
+      // Extract citations from content
+      const citationIds = this.citationExtractor.extractCitationIds(response.content);
+      const citations: Citation[] = citationIds.map((id, index) => {
+        const snippet = evidenceSnippets.find(s => s.id === id);
+        return {
+          id: `cite-${index}`,
+          snippetId: id,
+          text: snippet?.text || 'Unknown',
+          relevanceScore: snippet?.relevanceScore,
+        };
+      });
 
-        // 4. Return PDF
-        reply
-          .header('Content-Type', 'application/pdf')
-          .header('Content-Disposition', `attachment; filename="report-${reportId}.pdf"`)
-          .header('Content-Length', result.buffer.length)
-          .send(result.buffer);
-      } catch (error) {
-        request.log.error({ error }, 'PDF export failed');
-        return reply.status(500).send({
-          error: 'Internal Server Error',
-          message: 'Failed to export PDF',
-          details: error.message,
+      // Calculate content metrics
+      const wordCount = response.content.trim().split(/\s+/).length;
+      const characterCount = response.content.length;
+
+      generatedSections.push({
+        type: sectionType,
+        content: response.content,
+        citations,
+        wordCount,
+        characterCount,
+      });
+    }
+
+    // Step 5: Build lineage metadata
+    const promptVersion = templateManager.getTemplateVersion(
+      request.sections[0] as SectionType,
+      request.locale
+    );
+
+    const allCitationIds = generatedSections.flatMap(s => s.citations.map(c => c.snippetId));
+
+    const lineageMetadata = buildLineageMetadata({
+      companyId: request.companyId,
+      periodStart,
+      periodEnd,
+      modelName: this.llmClient['config'].model,
+      providerName: this.llmClient['config'].provider,
+      promptVersion,
+      locale: request.locale,
+      tokensInput: totalTokensInput,
+      tokensOutput: totalTokensOutput,
+      sections: request.sections,
+      citationIds: allCitationIds,
+      deterministic: request.deterministic,
+      temperature: request.temperature,
+      durationMs: Date.now() - startTime,
+    });
+
+    // Step 6: Store lineage in database
+    const sectionMetadata: SectionMetadata[] = generatedSections.map(s => ({
+      sectionType: s.type,
+      content: s.content,
+      citationIds: s.citations.map(c => c.snippetId),
+      wordCount: s.wordCount,
+      characterCount: s.characterCount,
+    }));
+
+    const citationMetadata: CitationMetadata[] = [];
+    let citationNumber = 1;
+    for (const section of generatedSections) {
+      for (const citation of section.citations) {
+        citationMetadata.push({
+          citationNumber: citationNumber++,
+          snippetId: citation.snippetId,
+          snippetText: citation.text,
+          relevanceScore: citation.relevanceScore?.toString(),
         });
       }
     }
+
+    await this.lineageTracker.storeLineage(
+      lineageMetadata,
+      sectionMetadata,
+      citationMetadata
+    );
+
+    // Step 7: Track costs
+    const costAggregator = getCostAggregator();
+    costAggregator.addCost({
+      requestId: lineageMetadata.requestId || 'unknown',
+      companyId: request.companyId,
+      tokensInput: totalTokensInput,
+      tokensOutput: totalTokensOutput,
+      tokensTotal: lineageMetadata.tokensTotal,
+      estimatedCostUsd: lineageMetadata.estimatedCostUsd,
+      modelName: lineageMetadata.modelName,
+      provider: lineageMetadata.providerName,
+      timestamp: new Date().toISOString(),
+      durationMs: lineageMetadata.durationMs || 0,
+    });
+
+    logger.info(`Report generation completed`, {
+      reportId: lineageMetadata.reportId,
+      sectionsCount: generatedSections.length,
+      citationsCount: allCitationIds.length,
+      tokensTotal: lineageMetadata.tokensTotal,
+      cost: lineageMetadata.estimatedCostUsd,
+    });
+
+    return {
+      reportId: lineageMetadata.reportId,
+      sections: generatedSections,
+      lineage: {
+        modelName: lineageMetadata.modelName,
+        promptVersion: lineageMetadata.promptVersion,
+        timestamp: new Date().toISOString(),
+        tokensUsed: lineageMetadata.tokensTotal,
+        tokensInput: totalTokensInput,
+        tokensOutput: totalTokensOutput,
+        estimatedCostUsd: lineageMetadata.estimatedCostUsd,
+      },
+      warnings: warnings.length > 0 ? warnings : undefined,
+    };
+  }
+}
+
+/**
+ * Register gen-reports routes
+ */
+export async function genReportsRoutes(
+  app: FastifyInstance,
+  options: any
+): Promise<void> {
+  // Initialize services
+  const llmClient = createLLMClient();
+  const citationExtractor = createCitationExtractor();
+  const redactionEnforcer = createRedactionEnforcer();
+  const lineageTracker = createLineageTracker();
+
+  const reportGenerator = new ReportGenerator(
+    llmClient,
+    citationExtractor,
+    redactionEnforcer,
+    lineageTracker
   );
-}
 
-/**
- * Validate that all citations in the narrative exist and are correct
- */
-function validateCitations(
-  sections: ReportSection[],
-  citations: Citation[],
-  evidence: Array<{ id: string }>
-): string[] {
-  const errors: string[] = [];
+  /**
+   * POST /gen-reports/generate
+   * Generate AI report with citations
+   */
+  app.post<{ Body: GenerateReportRequest }>(
+    '/gen-reports/generate',
+    async (request: FastifyRequest<{ Body: GenerateReportRequest }>, reply: FastifyReply) => {
+      try {
+        // Validate request
+        const validatedRequest = GenerateReportRequestSchema.parse(request.body);
 
-  // Extract all citation IDs from sections
-  const referencedIds = new Set<string>();
-  for (const section of sections) {
-    const matches = section.content.matchAll(/\[citation:([^\]]+)\]/g);
-    for (const match of matches) {
-      referencedIds.add(match[1]);
+        // Generate report
+        const result = await reportGenerator.generate(validatedRequest);
+
+        reply.code(200).send(result);
+      } catch (error: any) {
+        logger.error(`Report generation failed: ${error.message}`, { error });
+
+        if (error.name === 'ZodError') {
+          reply.code(400).send({
+            error: 'Validation error',
+            details: error.errors,
+          });
+        } else {
+          reply.code(500).send({
+            error: 'Report generation failed',
+            message: error.message,
+          });
+        }
+      }
     }
-  }
+  );
 
-  // Check that all referenced IDs exist in citations
-  const citationMap = new Map(citations.map((c) => [c.evidenceId, c]));
-  for (const refId of referencedIds) {
-    if (!citationMap.has(refId)) {
-      errors.push(`Referenced evidence ID ${refId} not found in citations`);
+  /**
+   * GET /gen-reports/cost-summary
+   * Get cost summary for generated reports
+   */
+  app.get('/gen-reports/cost-summary', async (request, reply) => {
+    try {
+      const costAggregator = getCostAggregator();
+      const summary = costAggregator.getSummary();
+
+      reply.code(200).send(summary);
+    } catch (error: any) {
+      logger.error(`Failed to get cost summary: ${error.message}`, { error });
+      reply.code(500).send({
+        error: 'Failed to get cost summary',
+        message: error.message,
+      });
     }
-  }
-
-  // Check that all citation evidence IDs exist in original evidence
-  const evidenceIds = new Set(evidence.map((e) => e.id));
-  for (const citation of citations) {
-    if (!evidenceIds.has(citation.evidenceId)) {
-      errors.push(`Citation evidence ID ${citation.evidenceId} not found in original evidence`);
-    }
-  }
-
-  // Check that at least some citations were used
-  if (referencedIds.size === 0) {
-    errors.push('No citations found in generated narrative');
-  }
-
-  return errors;
-}
-
-/**
- * Generate a unique report ID
- */
-function generateReportId(): string {
-  // Simple UUID v4 generation (in production, use a proper UUID library)
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === 'x' ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
   });
 }

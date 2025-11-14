@@ -1,0 +1,148 @@
+<mjml>
+  <mj-head>
+    <mj-title>Welcome to TEEI Platform</mj-title>
+    <mj-preview>Get started with your impact measurement journey</mj-preview>
+    <mj-attributes>
+      <mj-all font-family="Arial, sans-serif" />
+      <mj-text font-size="14px" color="#333333" line-height="20px" />
+    </mj-attributes>
+    <mj-style inline="inline">
+      .step-number { background-color: #2563eb; color: white; border-radius: 50%; width: 30px; height: 30px; display: inline-block; text-align: center; line-height: 30px; font-weight: bold; }
+      .feature-box { background-color: #f9fafb; padding: 16px; border-radius: 8px; margin: 8px 0; }
+    </mj-style>
+  </mj-head>
+  <mj-body background-color="#f3f4f6">
+    <!-- Header -->
+    <mj-section background-color="#2563eb" padding="40px 20px">
+      <mj-column>
+        <mj-text align="center" color="#ffffff" font-size="32px" font-weight="bold">
+          Welcome to TEEI Platform
+        </mj-text>
+        <mj-text align="center" color="#ffffff" font-size="16px">
+          Transforming CSR programs into measurable impact
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <!-- Greeting -->
+    <mj-section background-color="#ffffff" padding="30px 20px">
+      <mj-column>
+        <mj-text font-size="18px" font-weight="bold">
+          Hello {{userName}},
+        </mj-text>
+        <mj-text>
+          Thank you for joining TEEI Platform! We're excited to help you measure and maximize the impact of your CSR programs.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <!-- Getting Started Steps -->
+    <mj-section background-color="#ffffff" padding="20px">
+      <mj-column>
+        <mj-text font-size="20px" font-weight="bold" padding-bottom="10px">
+          Getting Started in 3 Easy Steps
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section background-color="#ffffff" padding="10px 20px">
+      <mj-column width="10%">
+        <mj-text align="center">
+          <span class="step-number">1</span>
+        </mj-text>
+      </mj-column>
+      <mj-column width="90%">
+        <mj-text font-weight="bold">Set Up Your Profile</mj-text>
+        <mj-text>Complete your company profile and configure your CSR programs</mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section background-color="#ffffff" padding="10px 20px">
+      <mj-column width="10%">
+        <mj-text align="center">
+          <span class="step-number">2</span>
+        </mj-text>
+      </mj-column>
+      <mj-column width="90%">
+        <mj-text font-weight="bold">Connect Your Data</mj-text>
+        <mj-text>Import participant data from your existing systems</mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section background-color="#ffffff" padding="10px 20px">
+      <mj-column width="10%">
+        <mj-text align="center">
+          <span class="step-number">3</span>
+        </mj-text>
+      </mj-column>
+      <mj-column width="90%">
+        <mj-text font-weight="bold">Generate Reports</mj-text>
+        <mj-text>Create AI-powered impact reports with citations and insights</mj-text>
+      </mj-column>
+    </mj-section>
+
+    <!-- Key Features -->
+    <mj-section background-color="#ffffff" padding="30px 20px 20px 20px">
+      <mj-column>
+        <mj-text font-size="20px" font-weight="bold">
+          Key Features
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section background-color="#f9fafb" padding="16px 20px" border-radius="8px">
+      <mj-column>
+        <mj-text font-weight="bold">📊 Real-time Analytics</mj-text>
+        <mj-text>Track participant outcomes and program effectiveness</mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section background-color="#f9fafb" padding="16px 20px" border-radius="8px">
+      <mj-column>
+        <mj-text font-weight="bold">🤖 AI-Powered Insights</mj-text>
+        <mj-text>Generate comprehensive reports with citations</mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section background-color="#f9fafb" padding="16px 20px" border-radius="8px">
+      <mj-column>
+        <mj-text font-weight="bold">🔒 Privacy-First Design</mj-text>
+        <mj-text>GDPR-compliant with PII protection and data minimization</mj-text>
+      </mj-column>
+    </mj-section>
+
+    <!-- CTA -->
+    <mj-section background-color="#ffffff" padding="30px 20px">
+      <mj-column>
+        <mj-button href="{{dashboardUrl}}" background-color="#2563eb" border-radius="6px">
+          Get Started Now
+        </mj-button>
+      </mj-column>
+    </mj-section>
+
+    <!-- Support -->
+    <mj-section background-color="#ffffff" padding="20px">
+      <mj-column>
+        <mj-text font-size="16px" font-weight="bold">
+          Need Help?
+        </mj-text>
+        <mj-text>
+          Our support team is here to help you get started.<br/>
+          Email us at support@teei-platform.com or check out our <a href="{{helpCenterUrl}}">Help Center</a>.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <!-- Footer -->
+    <mj-section background-color="#f9fafb" padding="20px">
+      <mj-column>
+        <mj-text align="center" font-size="12px" color="#6b7280">
+          TEEI Platform - Measuring Impact, Transforming Communities
+        </mj-text>
+        <mj-text align="center" font-size="12px" color="#6b7280">
+          © 2025 TEEI Platform. All rights reserved.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>
