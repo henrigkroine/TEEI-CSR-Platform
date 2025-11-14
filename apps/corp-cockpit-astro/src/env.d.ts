@@ -1,9 +1,11 @@
 /// <reference types="astro/client" />
 
 interface ImportMetaEnv {
+  readonly REPORTING_SERVICE_URL: string;
   readonly JWT_SECRET: string;
-  readonly ANALYTICS_SERVICE_URL: string;
-  readonly API_GATEWAY_URL: string;
+  readonly SESSION_COOKIE_NAME: string;
+  readonly SESSION_SECRET: string;
+  readonly NODE_ENV: 'development' | 'production' | 'test';
 }
 
 interface ImportMeta {
@@ -13,11 +15,23 @@ interface ImportMeta {
 declare namespace App {
   interface Locals {
     user?: {
-      userId: string;
+      id: string;
       email: string;
-      role: string;
-      organizationId?: string;
+      name: string;
+      company_id: string;
+      role: 'ADMIN' | 'MANAGER' | 'VIEWER' | 'SUPER_ADMIN';
     };
-    isAuthenticated: boolean;
+    isAuthenticated?: boolean;
+    tenantContext?: {
+      companyId: string;
+      lang: string;
+      validatedAt: string;
+    };
+    sessionMetadata?: {
+      sessionId?: string;
+      createdAt?: string;
+      lastActivityAt: string;
+      ipAddress?: string;
+    };
   }
 }

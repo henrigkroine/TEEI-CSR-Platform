@@ -1,240 +1,698 @@
-import { useState, useEffect, useRef } from 'react';
-import type { EvidenceLineage } from '@teei/shared-types';
+/**
+ * Lineage Drawer Component
+ *
+ * Visualizes evidence lineage showing:
+ * - Evidence dependencies ("Why this metric?")
+ * - Calculation steps with formulas
+ * - Data transformations
+ * - Source traceability
+ *
+ * @module evidence/LineageDrawer
+ */
+
+import React, { useState, useEffect } from 'react';
+import { memoize } from '../../utils/memoization';
+
+interface LineageData {
+  evidence_id: string;
+  metric_name: string;
+  value: number | string;
+  source: string;
+  collected_at: string;
+  dependencies: Dependency[];
+  calculations: CalculationStep[];
+  transformations: TransformationStep[];
+}
+
+interface Dependency {
+  evidence_id: string;
+  metric_name: string;
+  value: number | string;
+  relationship: 'input' | 'reference' | 'derived_from';
+}
+
+interface CalculationStep {
+  step: number;
+  operation: string;
+  formula: string;
+  inputs: Record<string, number>;
+  output: number;
+  timestamp?: string;
+}
+
+interface TransformationStep {
+  step: number;
+  type: 'normalization' | 'aggregation' | 'conversion' | 'validation';
+  description: string;
+  input_value: unknown;
+  output_value: unknown;
+  timestamp?: string;
+}
 
 interface LineageDrawerProps {
-  metricId: string;
-  metricName: string;
-  isOpen: boolean;
+  companyId: string;
+  evidenceId: string;
   onClose: () => void;
 }
 
-export default function LineageDrawer({
-  metricId,
-  metricName,
-  isOpen,
-  onClose,
-}: LineageDrawerProps) {
-  const [lineage, setLineage] = useState<EvidenceLineage | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const closeButtonRef = useRef<HTMLButtonElement>(null);
+/**
+ * Lineage Drawer Component
+ */
+function LineageDrawer({ companyId, evidenceId, onClose }: LineageDrawerProps) {
+  const [lineage, setLineage] = useState<LineageData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'dependencies' | 'calculations' | 'transformations'>('dependencies');
 
   useEffect(() => {
-    if (isOpen) {
-      fetchLineage();
-      // Focus close button when drawer opens (accessibility)
-      setTimeout(() => closeButtonRef.current?.focus(), 100);
-    }
-  }, [isOpen, metricId]);
-
-  useEffect(() => {
-    // Trap focus in drawer when open
-    if (!isOpen) return;
-
-    function handleEscape(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        onClose();
-      }
-    }
-
-    document.addEventListener('keydown', handleEscape);
-    return () => document.removeEventListener('keydown', handleEscape);
-  }, [isOpen, onClose]);
+    fetchLineage();
+  }, [companyId, evidenceId]);
 
   async function fetchLineage() {
     setLoading(true);
-    setError(null);
-
     try {
-      const response = await fetch(`/api/lineage/${metricId}`);
+      const url = `http://localhost:3001/companies/${companyId}/evidence/${evidenceId}/lineage`;
+      const response = await fetch(url);
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch lineage');
+      if (response.ok) {
+        const data = await response.json();
+        setLineage(data);
       }
-
-      const data: EvidenceLineage = await response.json();
-      setLineage(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+    } catch (error) {
+      console.error('[LineageDrawer] Fetch error:', error);
     } finally {
       setLoading(false);
     }
   }
 
-  function getLevelIcon(level: number) {
-    if (level === 3) return '📊'; // Metric
-    if (level === 2) return '🎯'; // Outcome score
-    return '💬'; // Evidence snippet
-  }
-
-  function getLevelLabel(level: number) {
-    if (level === 3) return 'Metric';
-    if (level === 2) return 'Outcome Score';
-    return 'Evidence';
-  }
-
-  if (!isOpen) return null;
-
   return (
-    <>
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 z-40 bg-black/50"
-        onClick={onClose}
-        aria-hidden="true"
-      />
-
-      {/* Drawer */}
-      <div
-        className="fixed right-0 top-0 z-50 h-full w-full max-w-2xl overflow-y-auto bg-background shadow-2xl"
-        role="dialog"
-        aria-labelledby="lineage-drawer-title"
-        aria-modal="true"
-      >
-        {/* Header */}
-        <div className="sticky top-0 z-10 border-b border-border bg-background px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 id="lineage-drawer-title" className="text-xl font-bold">
-                Evidence Lineage
-              </h2>
-              <p className="mt-1 text-sm text-foreground/60">{metricName}</p>
-            </div>
-            <button
-              ref={closeButtonRef}
-              onClick={onClose}
-              className="btn-secondary"
-              aria-label="Close lineage drawer"
-            >
-              <svg
-                className="h-5 w-5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
+    <div className="drawer-overlay" onClick={onClose}>
+      <div className="drawer" onClick={(e) => e.stopPropagation()}>
+        <div className="drawer-header">
+          <div>
+            <h3>Evidence Lineage</h3>
+            {lineage && <p className="metric-name">{lineage.metric_name}</p>}
           </div>
+          <button onClick={onClose} className="close-btn" aria-label="Close drawer">
+            ×
+          </button>
         </div>
 
-        {/* Content */}
-        <div className="p-6">
+        <div className="drawer-content">
           {loading ? (
-            <div className="py-12 text-center">
-              <div className="mb-4 h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto" />
-              <p className="text-foreground/60">Loading lineage...</p>
-            </div>
-          ) : error ? (
-            <div className="py-12 text-center">
-              <p className="text-red-600">{error}</p>
-              <button onClick={fetchLineage} className="btn-secondary mt-4">
-                Retry
-              </button>
-            </div>
-          ) : lineage ? (
+            <div className="loading">Loading lineage...</div>
+          ) : !lineage ? (
+            <div className="error">Failed to load lineage</div>
+          ) : (
             <>
-              {/* Summary */}
-              <div className="card mb-6 bg-primary/5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-sm font-medium text-foreground/60">
-                      Metric Value
-                    </div>
-                    <div className="text-3xl font-bold">{lineage.metricValue}</div>
-                  </div>
-                  <div>
-                    <div className="text-sm font-medium text-foreground/60">
-                      Aggregation Method
-                    </div>
-                    <div className="text-foreground">{lineage.aggregationMethod}</div>
-                  </div>
-                  <div>
-                    <div className="text-sm font-medium text-foreground/60">
-                      Evidence Count
-                    </div>
-                    <div className="text-2xl font-bold">{lineage.totalEvidenceCount}</div>
-                  </div>
+              {/* Summary Section */}
+              <div className="summary-section">
+                <div className="summary-item">
+                  <span className="label">Value:</span>
+                  <span className="value">{formatValue(lineage.value)}</span>
+                </div>
+                <div className="summary-item">
+                  <span className="label">Source:</span>
+                  <span className="value">{formatSource(lineage.source)}</span>
+                </div>
+                <div className="summary-item">
+                  <span className="label">Collected:</span>
+                  <span className="value">{formatDate(lineage.collected_at)}</span>
                 </div>
               </div>
 
-              {/* Lineage Chain */}
-              <div className="space-y-4">
-                <h3 className="font-semibold">Traceability Chain</h3>
-
-                {/* Group by level */}
-                {[3, 2, 1].map((level) => {
-                  const items = lineage.evidenceChain.filter((item) => item.level === level);
-                  if (items.length === 0) return null;
-
-                  return (
-                    <div key={level} className="space-y-2">
-                      <div className="flex items-center gap-2 text-sm font-medium text-foreground/60">
-                        <span>{getLevelIcon(level)}</span>
-                        <span>{getLevelLabel(level)}</span>
-                        <span className="text-xs">({items.length})</span>
-                      </div>
-
-                      <div className="space-y-2 pl-6">
-                        {items.map((item) => (
-                          <div
-                            key={item.id}
-                            className="rounded-md border border-border bg-background p-4"
-                          >
-                            <div className="mb-2 flex items-start justify-between">
-                              <p className="text-sm text-foreground">{item.description}</p>
-                              {item.contributionWeight !== undefined && (
-                                <span className="ml-4 shrink-0 rounded-full bg-border px-2 py-0.5 text-xs font-medium">
-                                  {(item.contributionWeight * 100).toFixed(0)}%
-                                </span>
-                              )}
-                            </div>
-                            <div className="text-xs text-foreground/40">ID: {item.id}</div>
-                          </div>
-                        ))}
-                      </div>
-
-                      {/* Arrow pointing to next level */}
-                      {level > 1 && (
-                        <div className="flex justify-center py-2">
-                          <svg
-                            className="h-6 w-6 text-border"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M19 9l-7 7-7-7"
-                            />
-                          </svg>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+              {/* Tabs */}
+              <div className="tabs">
+                <button
+                  className={`tab ${activeTab === 'dependencies' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('dependencies')}
+                >
+                  Dependencies ({lineage.dependencies.length})
+                </button>
+                <button
+                  className={`tab ${activeTab === 'calculations' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('calculations')}
+                >
+                  Calculations ({lineage.calculations.length})
+                </button>
+                <button
+                  className={`tab ${activeTab === 'transformations' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('transformations')}
+                >
+                  Transformations ({lineage.transformations.length})
+                </button>
               </div>
 
-              {/* Period */}
-              <div className="mt-6 card bg-border/20">
-                <div className="text-sm">
-                  <span className="font-medium">Analysis Period:</span>{' '}
-                  <span className="text-foreground/60">
-                    {lineage.period.start} to {lineage.period.end}
-                  </span>
-                </div>
+              {/* Tab Content */}
+              <div className="tab-content">
+                {activeTab === 'dependencies' && (
+                  <DependenciesTab dependencies={lineage.dependencies} />
+                )}
+                {activeTab === 'calculations' && (
+                  <CalculationsTab calculations={lineage.calculations} />
+                )}
+                {activeTab === 'transformations' && (
+                  <TransformationsTab transformations={lineage.transformations} />
+                )}
               </div>
             </>
-          ) : null}
+          )}
         </div>
+
+        <style>{`
+          .drawer-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            animation: fadeIn 0.2s;
+          }
+
+          @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+          }
+
+          .drawer {
+            position: fixed;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            width: 700px;
+            max-width: 90vw;
+            background: white;
+            box-shadow: -4px 0 16px rgba(0, 0, 0, 0.1);
+            overflow-y: auto;
+            animation: slideIn 0.3s;
+          }
+
+          @keyframes slideIn {
+            from { transform: translateX(100%); }
+            to { transform: translateX(0); }
+          }
+
+          .drawer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 24px;
+            border-bottom: 1px solid var(--color-border);
+            background: var(--color-bg-secondary);
+          }
+
+          .drawer-header h3 {
+            font-size: 1.25rem;
+            margin: 0 0 4px 0;
+          }
+
+          .metric-name {
+            font-size: 0.875rem;
+            color: var(--color-text-secondary);
+          }
+
+          .close-btn {
+            background: none;
+            border: none;
+            font-size: 2rem;
+            cursor: pointer;
+            color: var(--color-text-secondary);
+            line-height: 1;
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            transition: background 0.2s;
+          }
+
+          .close-btn:hover {
+            background: rgba(0, 0, 0, 0.05);
+          }
+
+          .drawer-content {
+            padding: 24px;
+          }
+
+          .loading, .error {
+            text-align: center;
+            padding: 48px 24px;
+            color: var(--color-text-secondary);
+          }
+
+          .error {
+            color: #dc2626;
+          }
+
+          .summary-section {
+            display: grid;
+            gap: 16px;
+            margin-bottom: 24px;
+            padding: 16px;
+            background: var(--color-bg-secondary);
+            border-radius: 8px;
+          }
+
+          .summary-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+          }
+
+          .summary-item .label {
+            font-size: 0.875rem;
+            color: var(--color-text-secondary);
+            font-weight: 600;
+          }
+
+          .summary-item .value {
+            font-size: 1rem;
+            font-weight: 500;
+          }
+
+          .tabs {
+            display: flex;
+            gap: 8px;
+            border-bottom: 2px solid var(--color-border);
+            margin-bottom: 24px;
+          }
+
+          .tab {
+            padding: 12px 16px;
+            background: none;
+            border: none;
+            font-size: 0.9375rem;
+            font-weight: 500;
+            color: var(--color-text-secondary);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            transition: all 0.2s;
+          }
+
+          .tab:hover {
+            color: var(--color-text);
+          }
+
+          .tab.active {
+            color: var(--color-primary);
+            border-bottom-color: var(--color-primary);
+          }
+
+          .tab-content {
+            min-height: 200px;
+          }
+        `}</style>
       </div>
-    </>
+    </div>
   );
 }
+
+/**
+ * Dependencies Tab
+ */
+const DependenciesTab = memoize<{ dependencies: Dependency[] }>(function DependenciesTab({
+  dependencies,
+}) {
+  if (dependencies.length === 0) {
+    return <div className="empty-tab">No dependencies found</div>;
+  }
+
+  return (
+    <div className="dependencies-list">
+      <p className="tab-description">
+        This metric depends on the following evidence items:
+      </p>
+      {dependencies.map((dep, index) => (
+        <div key={index} className="dependency-item">
+          <div className="dep-header">
+            <div className="dep-name">{dep.metric_name}</div>
+            <div className="dep-relationship">{formatRelationship(dep.relationship)}</div>
+          </div>
+          <div className="dep-details">
+            <span className="dep-id">{dep.evidence_id}</span>
+            <span className="dep-value">{formatValue(dep.value)}</span>
+          </div>
+        </div>
+      ))}
+      <style>{`
+        .tab-description {
+          margin-bottom: 16px;
+          color: var(--color-text-secondary);
+          font-size: 0.9375rem;
+        }
+
+        .dependencies-list {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        .dependency-item {
+          padding: 16px;
+          background: var(--color-bg-secondary);
+          border-radius: 8px;
+          border-left: 4px solid var(--color-primary);
+        }
+
+        .dep-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 8px;
+        }
+
+        .dep-name {
+          font-weight: 600;
+          font-size: 0.9375rem;
+        }
+
+        .dep-relationship {
+          padding: 2px 8px;
+          background: var(--color-primary);
+          color: white;
+          border-radius: 4px;
+          font-size: 0.75rem;
+          font-weight: 600;
+          text-transform: uppercase;
+        }
+
+        .dep-details {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          font-size: 0.875rem;
+        }
+
+        .dep-id {
+          color: var(--color-text-secondary);
+          font-family: monospace;
+        }
+
+        .dep-value {
+          font-weight: 600;
+          font-size: 1rem;
+        }
+      `}</style>
+    </div>
+  );
+});
+
+/**
+ * Calculations Tab
+ */
+const CalculationsTab = memoize<{ calculations: CalculationStep[] }>(function CalculationsTab({
+  calculations,
+}) {
+  if (calculations.length === 0) {
+    return <div className="empty-tab">No calculations found</div>;
+  }
+
+  return (
+    <div className="calculations-list">
+      <p className="tab-description">
+        Step-by-step calculation breakdown:
+      </p>
+      {calculations.map((calc, index) => (
+        <div key={index} className="calculation-step">
+          <div className="step-header">
+            <div className="step-number">Step {calc.step}</div>
+            <div className="step-operation">{calc.operation}</div>
+          </div>
+          <div className="step-formula">
+            <code>{calc.formula}</code>
+          </div>
+          <div className="step-inputs">
+            <div className="inputs-label">Inputs:</div>
+            {Object.entries(calc.inputs).map(([key, value]) => (
+              <div key={key} className="input-item">
+                <span className="input-key">{key}:</span>
+                <span className="input-value">{value.toLocaleString()}</span>
+              </div>
+            ))}
+          </div>
+          <div className="step-output">
+            <span className="output-label">Output:</span>
+            <span className="output-value">{calc.output.toLocaleString()}</span>
+          </div>
+        </div>
+      ))}
+      <style>{`
+        .calculations-list {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
+
+        .calculation-step {
+          padding: 16px;
+          background: var(--color-bg-secondary);
+          border-radius: 8px;
+          border-left: 4px solid #10b981;
+        }
+
+        .step-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 12px;
+        }
+
+        .step-number {
+          font-weight: 700;
+          color: var(--color-primary);
+        }
+
+        .step-operation {
+          padding: 4px 8px;
+          background: white;
+          border-radius: 4px;
+          font-size: 0.75rem;
+          font-weight: 600;
+          text-transform: uppercase;
+        }
+
+        .step-formula {
+          margin-bottom: 12px;
+          padding: 12px;
+          background: #f8f9fa;
+          border-radius: 4px;
+          overflow-x: auto;
+        }
+
+        .step-formula code {
+          font-family: 'Courier New', monospace;
+          font-size: 0.875rem;
+          color: #1e293b;
+        }
+
+        .step-inputs {
+          margin-bottom: 12px;
+          padding: 12px;
+          background: white;
+          border-radius: 4px;
+        }
+
+        .inputs-label {
+          font-size: 0.75rem;
+          font-weight: 600;
+          color: var(--color-text-secondary);
+          text-transform: uppercase;
+          margin-bottom: 8px;
+        }
+
+        .input-item {
+          display: flex;
+          justify-content: space-between;
+          padding: 4px 0;
+          font-size: 0.875rem;
+        }
+
+        .input-key {
+          color: var(--color-text-secondary);
+        }
+
+        .input-value {
+          font-weight: 600;
+        }
+
+        .step-output {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 12px;
+          background: #10b981;
+          color: white;
+          border-radius: 4px;
+          font-weight: 600;
+        }
+
+        .output-label {
+          font-size: 0.875rem;
+        }
+
+        .output-value {
+          font-size: 1.125rem;
+        }
+      `}</style>
+    </div>
+  );
+});
+
+/**
+ * Transformations Tab
+ */
+const TransformationsTab = memoize<{ transformations: TransformationStep[] }>(
+  function TransformationsTab({ transformations }) {
+    if (transformations.length === 0) {
+      return <div className="empty-tab">No transformations found</div>;
+    }
+
+    return (
+      <div className="transformations-list">
+        <p className="tab-description">
+          Data transformations applied to raw input:
+        </p>
+        {transformations.map((transform, index) => (
+          <div key={index} className="transformation-step">
+            <div className="transform-header">
+              <div className="step-number">Step {transform.step}</div>
+              <div className="transform-type">{transform.type}</div>
+            </div>
+            <p className="transform-description">{transform.description}</p>
+            <div className="transform-values">
+              <div className="value-block">
+                <div className="value-label">Input</div>
+                <div className="value-content">
+                  <code>{JSON.stringify(transform.input_value, null, 2)}</code>
+                </div>
+              </div>
+              <div className="arrow">→</div>
+              <div className="value-block">
+                <div className="value-label">Output</div>
+                <div className="value-content">
+                  <code>{JSON.stringify(transform.output_value, null, 2)}</code>
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+        <style>{`
+          .transformations-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+          }
+
+          .transformation-step {
+            padding: 16px;
+            background: var(--color-bg-secondary);
+            border-radius: 8px;
+            border-left: 4px solid #f59e0b;
+          }
+
+          .transform-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+          }
+
+          .transform-type {
+            padding: 4px 8px;
+            background: #f59e0b;
+            color: white;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: capitalize;
+          }
+
+          .transform-description {
+            margin-bottom: 16px;
+            font-size: 0.9375rem;
+            color: var(--color-text-secondary);
+          }
+
+          .transform-values {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 16px;
+            align-items: center;
+          }
+
+          .value-block {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+          }
+
+          .value-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--color-text-secondary);
+            text-transform: uppercase;
+          }
+
+          .value-content {
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            overflow-x: auto;
+          }
+
+          .value-content code {
+            font-family: 'Courier New', monospace;
+            font-size: 0.8125rem;
+            white-space: pre-wrap;
+          }
+
+          .arrow {
+            font-size: 1.5rem;
+            color: var(--color-text-secondary);
+          }
+        `}</style>
+      </div>
+    );
+  }
+);
+
+/**
+ * Format helpers
+ */
+function formatValue(value: number | string): string {
+  if (typeof value === 'number') {
+    return value.toLocaleString();
+  }
+  return String(value);
+}
+
+function formatSource(source: string): string {
+  return source
+    .split('_')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
+function formatDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function formatRelationship(relationship: string): string {
+  return relationship
+    .split('_')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
+export default memoize(LineageDrawer);

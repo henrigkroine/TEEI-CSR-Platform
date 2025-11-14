@@ -1,0 +1,28 @@
+---
+import CockpitLayout from '@layouts/CockpitLayout.astro';
+import AdminSettings from '@components/admin/AdminSettings';
+
+const { companyId } = Astro.params;
+
+// TODO: Verify admin access
+// const hasAdminAccess = await verifyAdminAccess(companyId);
+// if (!hasAdminAccess) return Astro.redirect(`/no/cockpit/${companyId}`);
+
+// Mock company data
+const company = {
+  id: companyId,
+  name: 'Pilot Corp Inc.',
+};
+
+// TODO: Get actual admin status from auth
+const isAdmin = true;
+---
+
+<CockpitLayout
+  title="Admin-konsoll"
+  lang="no"
+  companyId={companyId}
+  companyName={company.name}
+>
+  <AdminSettings client:load companyId={companyId} lang="no" isAdmin={isAdmin} />
+</CockpitLayout>

@@ -1,79 +1,161 @@
 /**
- * Report Generation Modal (Enhanced for Executive Packs)
+ * Report Generation Modal
  *
- * 5-step wizard for generating executive-grade reports:
- * 1. Template Selection
- * 2. Configure Parameters
- * 3. Narrative Editor (for executive templates)
- * 4. Generate Report
- * 5. Download (with PPTX option)
+ * Modal interface for creating custom reports with:
+ * - Template selection
+ * - Parameter configuration
+ * - Section customization
+ * - Format selection (PDF, HTML, CSV, XLSX)
+ * - Real-time generation progress
  *
- * @module components/reports/ReportGenerationModal
+ * @module reports/ReportGenerationModal
  */
 
 import React, { useState, useEffect } from 'react';
-import NarrativeEditor from './NarrativeEditor';
-
-interface ReportGenerationModalProps {
-  companyId: string;
-  onClose: () => void;
-  onReportGenerated: (reportId: string) => void;
-}
+import { memoize } from '../../utils/memoization';
 
 interface ReportTemplate {
   id: string;
   name: string;
   description: string;
   category: string;
+  sections: ReportSection[];
   estimated_pages: number;
-  supports_narrative: boolean;
-  supports_pptx: boolean;
 }
 
-type ReportFormat = 'pdf' | 'html' | 'pptx';
+interface ReportSection {
+  id: string;
+  name: string;
+  description: string;
+  required: boolean;
+}
 
-export default function ReportGenerationModal({
+interface ReportGenerationModalProps {
+  companyId: string;
+  onClose: () => void;
+  onReportGenerated?: (reportId: string) => void;
+}
+
+const TEMPLATES: ReportTemplate[] = [
+  {
+    id: 'executive-summary',
+    name: 'Executive Summary',
+    description: 'High-level overview for executive stakeholders',
+    category: 'executive',
+    estimated_pages: 8,
+    sections: [
+      { id: 'cover', name: 'Cover Page', description: 'Title and branding', required: true },
+      { id: 'at-a-glance', name: 'Impact At-a-Glance', description: 'Key metrics', required: true },
+      { id: 'sroi', name: 'SROI Analysis', description: 'Social ROI breakdown', required: true },
+      { id: 'outcomes', name: 'Outcome Highlights', description: 'Top achievements', required: false },
+    ],
+  },
+  {
+    id: 'detailed-impact',
+    name: 'Detailed Impact Report',
+    description: 'Comprehensive analysis with evidence trail',
+    category: 'detailed',
+    estimated_pages: 35,
+    sections: [
+      { id: 'cover', name: 'Cover Page', description: 'Title and branding', required: true },
+      { id: 'executive-summary', name: 'Executive Summary', description: '1-page overview', required: true },
+      { id: 'methodology', name: 'Methodology', description: 'Calculation approaches', required: true },
+      { id: 'sroi-detailed', name: 'SROI Detailed', description: 'Full SROI with evidence', required: true },
+      { id: 'vis-detailed', name: 'VIS Detailed', description: 'Volunteer impact breakdown', required: true },
+      { id: 'outcomes', name: 'Outcome Analysis', description: 'All dimensions over time', required: true },
+      { id: 'evidence-appendix', name: 'Evidence Appendix', description: 'Complete trail', required: false },
+    ],
+  },
+  {
+    id: 'stakeholder-briefing',
+    name: 'Stakeholder Briefing',
+    description: 'Narrative-focused for external partners',
+    category: 'stakeholder',
+    estimated_pages: 12,
+    sections: [
+      { id: 'cover', name: 'Cover Page', description: 'Title and branding', required: true },
+      { id: 'narrative', name: 'Impact Narrative', description: 'Story-driven summary', required: true },
+      { id: 'key-achievements', name: 'Key Achievements', description: 'Highlighted successes', required: true },
+      { id: 'social-value', name: 'Social Value Created', description: 'SROI and impact', required: true },
+      { id: 'next-steps', name: 'Looking Forward', description: 'Future goals', required: false },
+    ],
+  },
+  {
+    id: 'csrd-compliance',
+    name: 'CSRD Compliance',
+    description: 'EU sustainability reporting directive',
+    category: 'compliance',
+    estimated_pages: 45,
+    sections: [
+      { id: 'cover', name: 'Cover Page', description: 'Title and entity', required: true },
+      { id: 'esrs-s1', name: 'ESRS S1 - Own Workforce', description: 'Workforce disclosures', required: true },
+      { id: 'esrs-s2', name: 'ESRS S2 - Value Chain', description: 'Value chain workers', required: true },
+      { id: 'esrs-s3', name: 'ESRS S3 - Communities', description: 'Community impact', required: true },
+      { id: 'data-quality', name: 'Data Quality', description: 'Evidence verification', required: true },
+    ],
+  },
+];
+
+/**
+ * Report Generation Modal Component
+ */
+function ReportGenerationModal({
   companyId,
   onClose,
   onReportGenerated,
 }: ReportGenerationModalProps) {
-  const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
-  const [templates, setTemplates] = useState<ReportTemplate[]>([]);
+  const [step, setStep] = useState<'template' | 'configure' | 'generating' | 'complete'>('template');
   const [selectedTemplate, setSelectedTemplate] = useState<ReportTemplate | null>(null);
-  const [format, setFormat] = useState<ReportFormat>('pdf');
   const [title, setTitle] = useState('');
   const [period, setPeriod] = useState('2024-Q4');
-  const [sections, setSections] = useState<string[]>([]);
+  const [format, setFormat] = useState<'pdf' | 'html'>('pdf');
+  const [selectedSections, setSelectedSections] = useState<string[]>([]);
   const [includeCharts, setIncludeCharts] = useState(true);
   const [includeEvidence, setIncludeEvidence] = useState(false);
-  const [includeLineage, setIncludeLineage] = useState(false);
-  const [narrative, setNarrative] = useState('');
-  const [generating, setGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [reportId, setReportId] = useState<string | null>(null);
+  const [generatedReportId, setGeneratedReportId] = useState<string | null>(null);
 
+  // Initialize selected sections when template changes
   useEffect(() => {
-    fetchTemplates();
-  }, []);
+    if (selectedTemplate) {
+      const requiredSections = selectedTemplate.sections
+        .filter((s) => s.required)
+        .map((s) => s.id);
+      setSelectedSections(requiredSections);
+      setTitle(`${selectedTemplate.name} - ${period}`);
 
-  async function fetchTemplates() {
-    try {
-      const response = await fetch(`/api/companies/${companyId}/reports/templates`);
-      const data = await response.json();
-      setTemplates(data.templates || []);
-    } catch (error) {
-      console.error('Failed to fetch templates:', error);
+      // Set defaults based on template
+      if (selectedTemplate.id === 'detailed-impact') {
+        setIncludeEvidence(true);
+      }
     }
-  }
+  }, [selectedTemplate, period]);
 
-  async function generateReport() {
+  const handleTemplateSelect = (template: ReportTemplate) => {
+    setSelectedTemplate(template);
+    setStep('configure');
+  };
+
+  const toggleSection = (sectionId: string) => {
+    const section = selectedTemplate?.sections.find((s) => s.id === sectionId);
+    if (section?.required) return; // Can't toggle required sections
+
+    setSelectedSections((prev) =>
+      prev.includes(sectionId)
+        ? prev.filter((id) => id !== sectionId)
+        : [...prev, sectionId]
+    );
+  };
+
+  const handleGenerate = async () => {
     if (!selectedTemplate) return;
 
-    setGenerating(true);
+    setStep('generating');
     setProgress(0);
 
     try {
-      const response = await fetch(`/api/companies/${companyId}/reports`, {
+      // Start report generation
+      const response = await fetch(`http://localhost:3001/companies/${companyId}/reports`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -82,344 +164,299 @@ export default function ReportGenerationModal({
           format,
           parameters: {
             period,
-            sections,
+            sections: selectedSections,
             include_charts: includeCharts,
             include_evidence: includeEvidence,
-            include_lineage: includeLineage,
-            narrative: narrative || undefined,
+            include_lineage: includeEvidence,
           },
         }),
       });
 
-      const result = await response.json();
-
-      if (response.ok) {
-        setReportId(result.report_id);
-        setStep(5);
-        onReportGenerated(result.report_id);
-        // Simulate progress updates (in production, use SSE)
-        simulateProgress();
-      } else {
-        alert(`Error: ${result.message}`);
-        setGenerating(false);
+      if (!response.ok) {
+        throw new Error('Report generation failed');
       }
-    } catch (error) {
-      console.error('Failed to generate report:', error);
-      alert('Failed to generate report');
-      setGenerating(false);
-    }
-  }
 
-  function simulateProgress() {
+      const result = await response.json();
+      setGeneratedReportId(result.report_id);
+
+      // Simulate progress (in real implementation, poll for status)
+      simulateProgress();
+    } catch (error) {
+      console.error('[ReportGenerationModal] Generation error:', error);
+      alert('Failed to generate report. Please try again.');
+      setStep('configure');
+    }
+  };
+
+  const simulateProgress = () => {
     let current = 0;
     const interval = setInterval(() => {
-      current += 10;
-      setProgress(current);
+      current += Math.random() * 15;
       if (current >= 100) {
+        current = 100;
         clearInterval(interval);
-        setGenerating(false);
+        setStep('complete');
       }
+      setProgress(Math.min(current, 100));
     }, 500);
-  }
+  };
 
-  function handleTemplateSelect(template: ReportTemplate) {
-    setSelectedTemplate(template);
-    setTitle(`${template.name} - ${period}`);
-    setSections(['cover', 'at-a-glance', 'sroi']);
-    setFormat(template.supports_pptx ? 'pptx' : 'pdf');
-    setStep(2);
-  }
-
-  function handleNext() {
-    if (step === 2 && selectedTemplate?.supports_narrative) {
-      setStep(3);
-    } else if (step === 2 || step === 3) {
-      setStep(4);
+  const handleDownload = () => {
+    if (generatedReportId) {
+      window.open(
+        `http://localhost:3001/companies/${companyId}/reports/${generatedReportId}/download`,
+        '_blank'
+      );
+      onReportGenerated?.(generatedReportId);
+      onClose();
     }
-  }
+  };
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2>Generate Report</h2>
-          <button onClick={onClose} className="close-btn">
+          <button onClick={onClose} className="close-btn" aria-label="Close modal">
             ×
           </button>
         </div>
 
-        {/* Progress Steps */}
-        <div className="steps-indicator">
-          <div className={`step ${step >= 1 ? 'active' : ''}`}>1. Template</div>
-          <div className={`step ${step >= 2 ? 'active' : ''}`}>2. Configure</div>
-          {selectedTemplate?.supports_narrative && (
-            <div className={`step ${step >= 3 ? 'active' : ''}`}>3. Narrative</div>
-          )}
-          <div className={`step ${step >= 4 ? 'active' : ''}`}>
-            {selectedTemplate?.supports_narrative ? '4' : '3'}. Generate
-          </div>
-          <div className={`step ${step >= 5 ? 'active' : ''}`}>
-            {selectedTemplate?.supports_narrative ? '5' : '4'}. Download
-          </div>
-        </div>
-
-        <div className="modal-body">
+        <div className="modal-content">
           {/* Step 1: Template Selection */}
-          {step === 1 && (
-            <div className="step-content">
-              <h3>Select Report Template</h3>
-              <div className="templates-grid">
-                {templates.map((template) => (
-                  <div
+          {step === 'template' && (
+            <div className="template-selection">
+              <p className="step-description">
+                Choose a report template that best fits your needs:
+              </p>
+              <div className="template-grid">
+                {TEMPLATES.map((template) => (
+                  <TemplateCard
                     key={template.id}
-                    className="template-card"
-                    onClick={() => handleTemplateSelect(template)}
-                  >
-                    <h4>{template.name}</h4>
-                    <p className="template-desc">{template.description}</p>
-                    <div className="template-meta">
-                      <span className="category">{template.category}</span>
-                      <span className="pages">~{template.estimated_pages} pages</span>
-                    </div>
-                    {template.supports_pptx && (
-                      <span className="pptx-badge">📊 PPTX Available</span>
-                    )}
-                  </div>
+                    template={template}
+                    onSelect={() => handleTemplateSelect(template)}
+                  />
                 ))}
               </div>
             </div>
           )}
 
-          {/* Step 2: Configure Parameters */}
-          {step === 2 && (
-            <div className="step-content">
-              <h3>Configure Report</h3>
+          {/* Step 2: Configuration */}
+          {step === 'configure' && selectedTemplate && (
+            <div className="configuration">
+              <button onClick={() => setStep('template')} className="back-btn">
+                ← Change Template
+              </button>
 
-              <div className="form-group">
+              <div className="config-section">
                 <label>Report Title</label>
                 <input
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="form-input"
+                  placeholder="Enter report title"
+                  className="text-input"
                 />
               </div>
 
-              <div className="form-group">
+              <div className="config-section">
                 <label>Reporting Period</label>
-                <input
-                  type="text"
-                  value={period}
-                  onChange={(e) => setPeriod(e.target.value)}
-                  placeholder="e.g., 2024-Q4, 2024, Jan-Dec 2024"
-                  className="form-input"
-                />
+                <select value={period} onChange={(e) => setPeriod(e.target.value)} className="select-input">
+                  <option value="2024-Q4">Q4 2024</option>
+                  <option value="2024-Q3">Q3 2024</option>
+                  <option value="2024-Q2">Q2 2024</option>
+                  <option value="2024-Q1">Q1 2024</option>
+                  <option value="2024">Full Year 2024</option>
+                </select>
               </div>
 
-              <div className="form-group">
+              <div className="config-section">
                 <label>Output Format</label>
                 <div className="format-options">
-                  <label className="format-option">
+                  <label className="radio-label">
                     <input
                       type="radio"
                       value="pdf"
                       checked={format === 'pdf'}
-                      onChange={(e) => setFormat(e.target.value as ReportFormat)}
+                      onChange={() => setFormat('pdf')}
                     />
-                    <span>PDF Document</span>
+                    <span>PDF (Recommended)</span>
                   </label>
-                  {selectedTemplate?.supports_pptx && (
-                    <label className="format-option">
-                      <input
-                        type="radio"
-                        value="pptx"
-                        checked={format === 'pptx'}
-                        onChange={(e) => setFormat(e.target.value as ReportFormat)}
-                      />
-                      <span>PowerPoint (PPTX)</span>
-                    </label>
-                  )}
-                  <label className="format-option">
+                  <label className="radio-label">
                     <input
                       type="radio"
                       value="html"
                       checked={format === 'html'}
-                      onChange={(e) => setFormat(e.target.value as ReportFormat)}
+                      onChange={() => setFormat('html')}
                     />
-                    <span>Web Page (HTML)</span>
+                    <span>HTML (Web View)</span>
                   </label>
                 </div>
               </div>
 
-              <div className="form-group">
+              <div className="config-section">
+                <label>Sections</label>
+                <div className="sections-list">
+                  {selectedTemplate.sections.map((section) => (
+                    <label key={section.id} className="section-checkbox">
+                      <input
+                        type="checkbox"
+                        checked={selectedSections.includes(section.id)}
+                        onChange={() => toggleSection(section.id)}
+                        disabled={section.required}
+                      />
+                      <div className="section-info">
+                        <div className="section-name">
+                          {section.name}
+                          {section.required && <span className="required-badge">Required</span>}
+                        </div>
+                        <div className="section-description">{section.description}</div>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="config-section">
                 <label>Options</label>
-                <div className="checkbox-group">
-                  <label className="checkbox-option">
-                    <input
-                      type="checkbox"
-                      checked={includeCharts}
-                      onChange={(e) => setIncludeCharts(e.target.checked)}
-                    />
-                    <span>Include Charts & Visualizations</span>
-                  </label>
-                  <label className="checkbox-option">
-                    <input
-                      type="checkbox"
-                      checked={includeEvidence}
-                      onChange={(e) => setIncludeEvidence(e.target.checked)}
-                    />
-                    <span>Include Evidence Appendix</span>
-                  </label>
-                  <label className="checkbox-option">
-                    <input
-                      type="checkbox"
-                      checked={includeLineage}
-                      onChange={(e) => setIncludeLineage(e.target.checked)}
-                    />
-                    <span>Include Calculation Lineage</span>
-                  </label>
-                </div>
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={includeCharts}
+                    onChange={(e) => setIncludeCharts(e.target.checked)}
+                  />
+                  <span>Include Charts and Visualizations</span>
+                </label>
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={includeEvidence}
+                    onChange={(e) => setIncludeEvidence(e.target.checked)}
+                  />
+                  <span>Include Evidence Trail and Lineage</span>
+                </label>
               </div>
 
-              <div className="step-actions">
-                <button onClick={() => setStep(1)} className="btn btn-secondary">
-                  Back
-                </button>
-                <button onClick={handleNext} className="btn btn-primary">
-                  Next
-                </button>
+              <div className="estimated-pages">
+                Estimated pages: ~{selectedTemplate.estimated_pages}
+                {includeEvidence && ' (+10-15 with evidence)'}
               </div>
             </div>
           )}
 
-          {/* Step 3: Narrative Editor (for executive templates) */}
-          {step === 3 && selectedTemplate?.supports_narrative && (
-            <div className="step-content">
-              <h3>Executive Narrative</h3>
-              <p className="help-text">
-                Write a compelling narrative for your board or stakeholders. This will appear in the
-                executive summary section.
+          {/* Step 3: Generating */}
+          {step === 'generating' && (
+            <div className="generating">
+              <div className="progress-spinner" />
+              <h3>Generating Report...</h3>
+              <div className="progress-bar">
+                <div className="progress-fill" style={{ width: `${progress}%` }} />
+              </div>
+              <p className="progress-text">{Math.round(progress)}% complete</p>
+              <p className="progress-step">
+                {progress < 30 && 'Collecting data...'}
+                {progress >= 30 && progress < 60 && 'Calculating metrics...'}
+                {progress >= 60 && progress < 90 && 'Rendering sections...'}
+                {progress >= 90 && 'Finalizing report...'}
               </p>
-
-              <NarrativeEditor
-                value={narrative}
-                onChange={setNarrative}
-                maxLength={2000}
-                showWordCount
-                showPreview
-              />
-
-              <div className="step-actions">
-                <button onClick={() => setStep(2)} className="btn btn-secondary">
-                  Back
-                </button>
-                <button onClick={handleNext} className="btn btn-primary">
-                  Next
-                </button>
-              </div>
             </div>
           )}
 
-          {/* Step 4: Generate */}
-          {step === 4 && (
-            <div className="step-content">
-              <h3>Ready to Generate</h3>
-
-              <div className="summary-box">
-                <h4>Report Summary</h4>
-                <dl className="summary-list">
-                  <dt>Template:</dt>
-                  <dd>{selectedTemplate?.name}</dd>
-                  <dt>Title:</dt>
-                  <dd>{title}</dd>
-                  <dt>Period:</dt>
-                  <dd>{period}</dd>
-                  <dt>Format:</dt>
-                  <dd>{format.toUpperCase()}</dd>
-                  {narrative && (
-                    <>
-                      <dt>Narrative:</dt>
-                      <dd>{narrative.substring(0, 100)}...</dd>
-                    </>
-                  )}
-                </dl>
-              </div>
-
-              <div className="step-actions">
-                <button onClick={() => setStep(selectedTemplate?.supports_narrative ? 3 : 2)} className="btn btn-secondary">
-                  Back
-                </button>
-                <button onClick={generateReport} disabled={generating} className="btn btn-primary">
-                  {generating ? 'Generating...' : 'Generate Report'}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Step 5: Download */}
-          {step === 5 && (
-            <div className="step-content">
-              <div className="success-message">
-                <div className="success-icon">✓</div>
-                <h3>Report Generated Successfully!</h3>
-                <p>Your {format.toUpperCase()} report is ready to download.</p>
-              </div>
-
-              {generating && (
-                <div className="progress-bar">
-                  <div className="progress-fill" style={{ width: `${progress}%` }} />
-                  <span className="progress-label">{progress}%</span>
+          {/* Step 4: Complete */}
+          {step === 'complete' && (
+            <div className="complete">
+              <div className="success-icon">✓</div>
+              <h3>Report Ready!</h3>
+              <p>Your report has been generated successfully.</p>
+              <div className="report-info">
+                <div className="info-item">
+                  <span className="label">Title:</span>
+                  <span className="value">{title}</span>
                 </div>
-              )}
-
-              {!generating && reportId && (
-                <div className="download-actions">
-                  <a
-                    href={`/api/companies/${companyId}/reports/${reportId}/download`}
-                    className="btn btn-primary btn-lg"
-                  >
-                    📥 Download Report
-                  </a>
-                  <button onClick={() => setStep(1)} className="btn btn-secondary">
-                    Generate Another Report
-                  </button>
+                <div className="info-item">
+                  <span className="label">Format:</span>
+                  <span className="value">{format.toUpperCase()}</span>
                 </div>
-              )}
+                <div className="info-item">
+                  <span className="label">Period:</span>
+                  <span className="value">{period}</span>
+                </div>
+              </div>
             </div>
           )}
         </div>
 
-        <style jsx>{`
+        <div className="modal-footer">
+          {step === 'configure' && (
+            <>
+              <button onClick={onClose} className="btn btn-secondary">
+                Cancel
+              </button>
+              <button
+                onClick={handleGenerate}
+                className="btn btn-primary"
+                disabled={!title || selectedSections.length === 0}
+              >
+                Generate Report
+              </button>
+            </>
+          )}
+
+          {step === 'complete' && (
+            <>
+              <button onClick={onClose} className="btn btn-secondary">
+                Close
+              </button>
+              <button onClick={handleDownload} className="btn btn-primary">
+                Download Report
+              </button>
+            </>
+          )}
+        </div>
+
+        <style>{`
           .modal-overlay {
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 2000;
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 9999;
-            padding: 20px;
+            animation: fadeIn 0.2s;
           }
 
-          .modal-content {
+          @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+          }
+
+          .modal {
             background: white;
             border-radius: 12px;
-            width: 100%;
-            max-width: 900px;
+            width: 900px;
+            max-width: 90vw;
             max-height: 90vh;
-            overflow-y: auto;
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            animation: slideUp 0.3s;
+          }
+
+          @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
           }
 
           .modal-header {
+            padding: 24px;
+            border-bottom: 1px solid var(--color-border);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 24px;
-            border-bottom: 1px solid #e5e7eb;
           }
 
           .modal-header h2 {
@@ -428,309 +465,332 @@ export default function ReportGenerationModal({
           }
 
           .close-btn {
+            background: none;
+            border: none;
+            font-size: 2rem;
+            cursor: pointer;
+            color: var(--color-text-secondary);
+            line-height: 1;
             width: 32px;
             height: 32px;
-            border: none;
-            background: #f3f4f6;
-            border-radius: 50%;
-            font-size: 24px;
-            cursor: pointer;
-            line-height: 1;
+            border-radius: 4px;
+            transition: background 0.2s;
           }
 
           .close-btn:hover {
-            background: #e5e7eb;
+            background: rgba(0, 0, 0, 0.05);
           }
 
-          .steps-indicator {
-            display: flex;
-            justify-content: center;
-            gap: 16px;
+          .modal-content {
             padding: 24px;
-            background: #f9fafb;
-            border-bottom: 1px solid #e5e7eb;
+            overflow-y: auto;
+            flex: 1;
           }
 
-          .step {
-            padding: 8px 16px;
-            background: white;
-            border: 1px solid #d1d5db;
-            border-radius: 20px;
-            font-size: 0.875rem;
-            font-weight: 600;
-            color: #9ca3af;
-          }
-
-          .step.active {
-            background: #3b82f6;
-            color: white;
-            border-color: #3b82f6;
-          }
-
-          .modal-body {
-            padding: 24px;
-          }
-
-          .step-content h3 {
-            margin-top: 0;
+          .step-description {
             margin-bottom: 24px;
+            color: var(--color-text-secondary);
           }
 
-          .templates-grid {
+          .template-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
             gap: 16px;
           }
 
-          .template-card {
-            padding: 20px;
-            border: 2px solid #e5e7eb;
-            border-radius: 8px;
+          .back-btn {
+            margin-bottom: 24px;
+            padding: 8px 16px;
+            background: var(--color-bg-secondary);
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
             cursor: pointer;
-            transition: all 0.2s;
-          }
-
-          .template-card:hover {
-            border-color: #3b82f6;
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
-          }
-
-          .template-card h4 {
-            margin: 0 0 8px;
-            font-size: 1.125rem;
-          }
-
-          .template-desc {
-            margin: 0 0 16px;
             font-size: 0.875rem;
-            color: #6b7280;
-            line-height: 1.5;
+            transition: background 0.2s;
           }
 
-          .template-meta {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.8125rem;
-            color: #9ca3af;
+          .back-btn:hover {
+            background: var(--color-border);
           }
 
-          .category {
-            text-transform: uppercase;
-            font-weight: 600;
-          }
-
-          .pptx-badge {
-            display: inline-block;
-            margin-top: 8px;
-            padding: 4px 8px;
-            background: #dbeafe;
-            color: #1e40af;
-            border-radius: 12px;
-            font-size: 0.75rem;
-            font-weight: 600;
-          }
-
-          .form-group {
+          .config-section {
             margin-bottom: 24px;
           }
 
-          .form-group label {
+          .config-section label {
             display: block;
-            margin-bottom: 8px;
             font-weight: 600;
-            color: #374151;
+            margin-bottom: 8px;
+            font-size: 0.9375rem;
           }
 
-          .form-input {
+          .text-input, .select-input {
             width: 100%;
-            padding: 12px;
-            border: 1px solid #d1d5db;
+            padding: 10px 12px;
+            border: 1px solid var(--color-border);
             border-radius: 6px;
-            font-size: 1rem;
-            font-family: inherit;
+            font-size: 0.9375rem;
           }
 
-          .form-input:focus {
-            outline: none;
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-          }
-
-          .format-options,
-          .checkbox-group {
+          .format-options, .sections-list {
             display: flex;
             flex-direction: column;
             gap: 12px;
           }
 
-          .format-option,
-          .checkbox-option {
+          .radio-label, .checkbox-label, .section-checkbox {
             display: flex;
             align-items: center;
             gap: 8px;
             cursor: pointer;
-          }
-
-          .format-option input,
-          .checkbox-option input {
-            cursor: pointer;
-          }
-
-          .help-text {
-            color: #6b7280;
-            font-size: 0.9375rem;
-            margin-bottom: 16px;
-          }
-
-          .summary-box {
-            background: #f9fafb;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 24px;
-          }
-
-          .summary-box h4 {
-            margin-top: 0;
-          }
-
-          .summary-list {
-            display: grid;
-            grid-template-columns: 120px 1fr;
-            gap: 12px;
-            margin: 0;
-          }
-
-          .summary-list dt {
-            font-weight: 600;
-            color: #6b7280;
-          }
-
-          .summary-list dd {
-            margin: 0;
-            color: #374151;
-          }
-
-          .step-actions {
-            display: flex;
-            gap: 12px;
-            justify-content: flex-end;
-            margin-top: 32px;
-          }
-
-          .btn {
-            padding: 12px 24px;
-            border: none;
+            padding: 12px;
+            border: 1px solid var(--color-border);
             border-radius: 6px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
             transition: all 0.2s;
           }
 
+          .radio-label:hover, .checkbox-label:hover, .section-checkbox:hover {
+            border-color: var(--color-primary);
+            background: var(--color-primary-light, #e6f2ff);
+          }
+
+          .section-info {
+            flex: 1;
+          }
+
+          .section-name {
+            font-weight: 600;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+          }
+
+          .required-badge {
+            padding: 2px 6px;
+            background: var(--color-primary);
+            color: white;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+          }
+
+          .section-description {
+            font-size: 0.875rem;
+            color: var(--color-text-secondary);
+          }
+
+          .estimated-pages {
+            padding: 12px;
+            background: var(--color-bg-secondary);
+            border-radius: 6px;
+            font-size: 0.875rem;
+            color: var(--color-text-secondary);
+          }
+
+          .generating, .complete {
+            text-align: center;
+            padding: 48px 24px;
+          }
+
+          .progress-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid var(--color-bg-secondary);
+            border-top-color: var(--color-primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 24px;
+          }
+
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+
+          .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: var(--color-bg-secondary);
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 24px 0 12px;
+          }
+
+          .progress-fill {
+            height: 100%;
+            background: var(--color-primary);
+            transition: width 0.3s;
+          }
+
+          .progress-text {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+          }
+
+          .progress-step {
+            color: var(--color-text-secondary);
+            font-size: 0.9375rem;
+          }
+
+          .success-icon {
+            width: 80px;
+            height: 80px;
+            background: #10b981;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            margin: 0 auto 24px;
+          }
+
+          .report-info {
+            margin-top: 24px;
+            padding: 16px;
+            background: var(--color-bg-secondary);
+            border-radius: 8px;
+            text-align: left;
+          }
+
+          .info-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--color-border);
+          }
+
+          .info-item:last-child {
+            border-bottom: none;
+          }
+
+          .info-item .label {
+            font-weight: 600;
+          }
+
+          .modal-footer {
+            padding: 24px;
+            border-top: 1px solid var(--color-border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+          }
+
+          .btn {
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 0.9375rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+          }
+
+          .btn-secondary {
+            background: var(--color-bg-secondary);
+            color: var(--color-text);
+            border: 1px solid var(--color-border);
+          }
+
+          .btn-secondary:hover {
+            background: var(--color-border);
+          }
+
           .btn-primary {
-            background: #3b82f6;
+            background: var(--color-primary);
             color: white;
           }
 
-          .btn-primary:hover:not(:disabled) {
-            background: #2563eb;
+          .btn-primary:hover {
+            opacity: 0.9;
           }
 
           .btn-primary:disabled {
             opacity: 0.5;
             cursor: not-allowed;
           }
-
-          .btn-secondary {
-            background: #f3f4f6;
-            color: #374151;
-            border: 1px solid #d1d5db;
-          }
-
-          .btn-secondary:hover {
-            background: #e5e7eb;
-          }
-
-          .btn-lg {
-            padding: 16px 32px;
-            font-size: 1.125rem;
-          }
-
-          .success-message {
-            text-align: center;
-            margin-bottom: 32px;
-          }
-
-          .success-icon {
-            width: 80px;
-            height: 80px;
-            margin: 0 auto 16px;
-            background: #d1fae5;
-            color: #059669;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 48px;
-          }
-
-          .success-message h3 {
-            margin: 16px 0 8px;
-            color: #059669;
-          }
-
-          .success-message p {
-            margin: 0;
-            color: #6b7280;
-          }
-
-          .progress-bar {
-            position: relative;
-            height: 32px;
-            background: #e5e7eb;
-            border-radius: 16px;
-            overflow: hidden;
-            margin-bottom: 24px;
-          }
-
-          .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #3b82f6, #2563eb);
-            transition: width 0.3s ease-in-out;
-          }
-
-          .progress-label {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-weight: 700;
-            color: #374151;
-          }
-
-          .download-actions {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 16px;
-          }
-
-          @media (max-width: 768px) {
-            .steps-indicator {
-              flex-wrap: wrap;
-            }
-
-            .templates-grid {
-              grid-template-columns: 1fr;
-            }
-
-            .summary-list {
-              grid-template-columns: 1fr;
-              gap: 8px;
-            }
-          }
         `}</style>
       </div>
     </div>
   );
 }
+
+/**
+ * Template Card Component
+ */
+const TemplateCard = memoize<{
+  template: ReportTemplate;
+  onSelect: () => void;
+}>(function TemplateCard({ template, onSelect }) {
+  const categoryColors: Record<string, string> = {
+    executive: '#6366f1',
+    detailed: '#10b981',
+    stakeholder: '#f59e0b',
+    compliance: '#8b5cf6',
+  };
+
+  return (
+    <button className="template-card" onClick={onSelect}>
+      <div className="template-category" style={{ backgroundColor: categoryColors[template.category] }}>
+        {template.category}
+      </div>
+      <h3 className="template-name">{template.name}</h3>
+      <p className="template-description">{template.description}</p>
+      <div className="template-meta">
+        {template.sections.length} sections · ~{template.estimated_pages} pages
+      </div>
+      <style>{`
+        .template-card {
+          padding: 20px;
+          border: 2px solid var(--color-border);
+          border-radius: 8px;
+          text-align: left;
+          cursor: pointer;
+          transition: all 0.2s;
+          background: white;
+          width: 100%;
+        }
+
+        .template-card:hover {
+          border-color: var(--color-primary);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+          transform: translateY(-2px);
+        }
+
+        .template-category {
+          display: inline-block;
+          padding: 4px 8px;
+          border-radius: 4px;
+          color: white;
+          font-size: 0.75rem;
+          font-weight: 600;
+          text-transform: uppercase;
+          margin-bottom: 12px;
+        }
+
+        .template-name {
+          font-size: 1.125rem;
+          margin: 0 0 8px 0;
+          color: var(--color-text);
+        }
+
+        .template-description {
+          font-size: 0.875rem;
+          color: var(--color-text-secondary);
+          margin: 0 0 12px 0;
+          line-height: 1.5;
+        }
+
+        .template-meta {
+          font-size: 0.8125rem;
+          color: var(--color-text-secondary);
+          padding-top: 12px;
+          border-top: 1px solid var(--color-border);
+        }
+      `}</style>
+    </button>
+  );
+});
+
+export default memoize(ReportGenerationModal);

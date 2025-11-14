@@ -1,195 +1,215 @@
 /**
- * PII Redaction Utility
- * Removes or masks personally identifiable information from text
+ * PII Redaction Utilities
+ *
+ * Automatically detect and redact personally identifiable information (PII)
+ * from evidence data to ensure GDPR/privacy compliance.
+ *
+ * @module utils/redaction
  */
 
-export interface RedactionPattern {
+export interface RedactionRule {
   name: string;
-  regex: RegExp;
+  pattern: RegExp;
   replacement: string;
+  category: 'email' | 'phone' | 'ssn' | 'credit_card' | 'address' | 'name' | 'custom';
 }
 
 /**
- * Redaction patterns for common PII types
+ * Predefined redaction rules for common PII
  */
-export const REDACTION_PATTERNS: RedactionPattern[] = [
-  // Email addresses
+export const DEFAULT_REDACTION_RULES: RedactionRule[] = [
   {
     name: 'email',
-    regex: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/gi,
-    replacement: '[REDACTED_EMAIL]',
+    pattern: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g,
+    replacement: '[EMAIL_REDACTED]',
+    category: 'email',
   },
-
-  // Phone numbers (various formats)
   {
-    name: 'phone',
-    regex: /\b(?:\+?(\d{1,3}))?[-.\s]?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b/g,
-    replacement: '[REDACTED_PHONE]',
+    name: 'phone_us',
+    pattern: /\b(\+?1[-.\s]?)?(\(?\d{3}\)?[-.\s]?)?\d{3}[-.\s]?\d{4}\b/g,
+    replacement: '[PHONE_REDACTED]',
+    category: 'phone',
   },
-
-  // Social Security Numbers (US format)
   {
     name: 'ssn',
-    regex: /\b\d{3}-\d{2}-\d{4}\b/g,
-    replacement: '[REDACTED_SSN]',
+    pattern: /\b\d{3}-?\d{2}-?\d{4}\b/g,
+    replacement: '[SSN_REDACTED]',
+    category: 'ssn',
   },
-
-  // Credit card numbers (basic pattern)
   {
     name: 'credit_card',
-    regex: /\b(?:\d{4}[-\s]?){3}\d{4}\b/g,
-    replacement: '[REDACTED_CARD]',
+    pattern: /\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b/g,
+    replacement: '[CC_REDACTED]',
+    category: 'credit_card',
   },
-
-  // Street addresses (basic pattern)
-  {
-    name: 'address',
-    regex: /\b\d{1,5}\s[\w\s]{1,50}(?:Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Lane|Ln|Drive|Dr|Court|Ct|Circle|Cir|Way)\b/gi,
-    replacement: '[REDACTED_ADDRESS]',
-  },
-
-  // Postal codes (US ZIP codes)
-  {
-    name: 'zip_code',
-    regex: /\b\d{5}(?:-\d{4})?\b/g,
-    replacement: '[REDACTED_ZIP]',
-  },
-
-  // Norwegian postal codes
-  {
-    name: 'norwegian_postal',
-    regex: /\b\d{4}\s[A-ZÆØÅ]{1}[a-zæøå]+\b/g,
-    replacement: '[REDACTED_POSTAL]',
-  },
-
-  // IP addresses
   {
     name: 'ip_address',
-    regex: /\b(?:\d{1,3}\.){3}\d{1,3}\b/g,
-    replacement: '[REDACTED_IP]',
-  },
-
-  // URLs (basic pattern)
-  {
-    name: 'url',
-    regex: /https?:\/\/[^\s]+/gi,
-    replacement: '[REDACTED_URL]',
+    pattern: /\b(?:\d{1,3}\.){3}\d{1,3}\b/g,
+    replacement: '[IP_REDACTED]',
+    category: 'custom',
   },
 ];
 
-export interface RedactionResult {
+/**
+ * Redact PII from text
+ */
+export function redactText(
+  text: string,
+  rules: RedactionRule[] = DEFAULT_REDACTION_RULES
+): { redacted: string; matches: RedactionMatch[] } {
+  let redacted = text;
+  const matches: RedactionMatch[] = [];
+
+  rules.forEach((rule) => {
+    const ruleMatches = Array.from(text.matchAll(rule.pattern));
+
+    ruleMatches.forEach((match) => {
+      matches.push({
+        original: match[0],
+        replacement: rule.replacement,
+        category: rule.category,
+        position: match.index || 0,
+      });
+    });
+
+    redacted = redacted.replace(rule.pattern, rule.replacement);
+  });
+
+  return { redacted, matches };
+}
+
+export interface RedactionMatch {
   original: string;
-  redacted: string;
-  redactionCount: number;
-  patterns: string[]; // Patterns that matched
+  replacement: string;
+  category: string;
+  position: number;
 }
 
 /**
- * Redact PII from text using predefined patterns
- *
- * @param text - Text to redact
- * @param customPatterns - Additional patterns to apply (optional)
- * @returns Redaction result with original, redacted text, and metadata
+ * Redact PII from evidence object
  */
-export function redactPII(text: string, customPatterns: RedactionPattern[] = []): RedactionResult {
-  let redacted = text;
-  let redactionCount = 0;
-  const matchedPatterns: Set<string> = new Set();
+export function redactEvidence(evidence: any): {
+  redacted: any;
+  redactions: RedactionLog[];
+} {
+  const redacted = { ...evidence };
+  const redactions: RedactionLog[] = [];
 
-  const allPatterns = [...REDACTION_PATTERNS, ...customPatterns];
-
-  for (const pattern of allPatterns) {
-    const matches = text.match(pattern.regex);
-    if (matches) {
-      redactionCount += matches.length;
-      matchedPatterns.add(pattern.name);
-      redacted = redacted.replace(pattern.regex, pattern.replacement);
+  // Redact string fields
+  ['metric_name', 'source_identifier'].forEach((field) => {
+    if (typeof redacted[field] === 'string') {
+      const result = redactText(redacted[field]);
+      if (result.matches.length > 0) {
+        redacted[field] = result.redacted;
+        redactions.push({
+          field,
+          original_length: (evidence[field] as string).length,
+          redacted_length: result.redacted.length,
+          matches: result.matches.length,
+          categories: result.matches.map((m) => m.category),
+        });
+      }
     }
+  });
+
+  // Redact metadata
+  if (redacted.metadata && typeof redacted.metadata === 'object') {
+    Object.keys(redacted.metadata).forEach((key) => {
+      const value = redacted.metadata[key];
+      if (typeof value === 'string') {
+        const result = redactText(value);
+        if (result.matches.length > 0) {
+          redacted.metadata[key] = result.redacted;
+          redactions.push({
+            field: `metadata.${key}`,
+            original_length: value.length,
+            redacted_length: result.redacted.length,
+            matches: result.matches.length,
+            categories: result.matches.map((m) => m.category),
+          });
+        }
+      }
+    });
   }
 
-  return {
-    original: text,
-    redacted,
-    redactionCount,
-    patterns: Array.from(matchedPatterns),
-  };
+  // Mark as redacted
+  redacted.redacted = redactions.length > 0;
+
+  return { redacted, redactions };
+}
+
+export interface RedactionLog {
+  field: string;
+  original_length: number;
+  redacted_length: number;
+  matches: number;
+  categories: string[];
 }
 
 /**
- * Check if text contains potential PII
- * Useful for validation before sending to LLM
- *
- * @param text - Text to check
- * @returns true if PII detected, false otherwise
+ * Sanitize user input to prevent XSS
+ */
+export function sanitizeInput(input: string): string {
+  return input
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
+    .replace(/\//g, '&#x2F;');
+}
+
+/**
+ * Sanitize HTML content
+ */
+export function sanitizeHtml(html: string): string {
+  // Strip all HTML tags except safe ones
+  const safeTags = ['b', 'i', 'em', 'strong', 'code', 'pre', 'br', 'p'];
+  const tagPattern = /<\/?([a-z][a-z0-9]*)\b[^>]*>/gi;
+
+  return html.replace(tagPattern, (match, tag) => {
+    if (safeTags.includes(tag.toLowerCase())) {
+      return match;
+    }
+    return '';
+  });
+}
+
+/**
+ * Sanitize object recursively
+ */
+export function sanitizeObject(obj: any): any {
+  if (typeof obj === 'string') {
+    return sanitizeInput(obj);
+  }
+
+  if (Array.isArray(obj)) {
+    return obj.map(sanitizeObject);
+  }
+
+  if (typeof obj === 'object' && obj !== null) {
+    const sanitized: any = {};
+    Object.keys(obj).forEach((key) => {
+      sanitized[key] = sanitizeObject(obj[key]);
+    });
+    return sanitized;
+  }
+
+  return obj;
+}
+
+/**
+ * Check if string contains potential PII
  */
 export function containsPII(text: string): boolean {
-  return REDACTION_PATTERNS.some((pattern) => pattern.regex.test(text));
+  const result = redactText(text);
+  return result.matches.length > 0;
 }
 
 /**
- * Redact names from text (basic pattern matching)
- * This is more conservative and may have false positives
- *
- * @param text - Text to redact
- * @returns Redacted text with names replaced
+ * Get PII categories detected in text
  */
-export function redactNames(text: string): string {
-  // Replace capitalized words that look like names (2-20 characters)
-  // This is a simple heuristic and may need refinement
-  return text.replace(/\b[A-Z][a-z]{1,19}\s[A-Z][a-z]{1,19}\b/g, '[REDACTED_NAME]');
-}
-
-/**
- * Apply multiple redaction passes with logging
- * Useful for debugging redaction issues
- *
- * @param text - Text to redact
- * @returns Redaction result with detailed logging
- */
-export function redactWithLogging(text: string): RedactionResult {
-  console.log('[Redaction] Starting PII redaction...');
-  console.log(`[Redaction] Original text length: ${text.length} characters`);
-
-  const result = redactPII(text);
-
-  console.log(`[Redaction] Redaction complete`);
-  console.log(`[Redaction] Redactions made: ${result.redactionCount}`);
-  console.log(`[Redaction] Patterns matched: ${result.patterns.join(', ')}`);
-  console.log(`[Redaction] Redacted text length: ${result.redacted.length} characters`);
-
-  if (result.redactionCount > 0) {
-    console.warn(
-      `[Redaction] WARNING: ${result.redactionCount} PII instances found and redacted`
-    );
-  }
-
-  return result;
-}
-
-/**
- * Validate that redacted text doesn't contain obvious PII
- * This is a secondary check to catch edge cases
- *
- * @param text - Text to validate
- * @returns Array of validation errors (empty if valid)
- */
-export function validateRedaction(text: string): string[] {
-  const errors: string[] = [];
-
-  // Check for @ symbol (email)
-  if (text.includes('@') && !text.includes('[REDACTED_EMAIL]')) {
-    errors.push('Possible unredacted email detected');
-  }
-
-  // Check for phone number patterns
-  if (/\d{3}[-.\s]?\d{3}[-.\s]?\d{4}/.test(text)) {
-    errors.push('Possible unredacted phone number detected');
-  }
-
-  // Check for credit card patterns
-  if (/\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}/.test(text)) {
-    errors.push('Possible unredacted credit card number detected');
-  }
-
-  return errors;
+export function detectPIICategories(text: string): string[] {
+  const result = redactText(text);
+  const categories = new Set(result.matches.map((m) => m.category));
+  return Array.from(categories);
 }

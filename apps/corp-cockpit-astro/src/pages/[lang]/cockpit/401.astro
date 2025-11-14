@@ -1,0 +1,204 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+
+const { lang } = Astro.params;
+const url = Astro.url;
+const reason = url.searchParams.get('reason') || 'unknown';
+const user = Astro.locals.user;
+
+// Map reasons to user-friendly messages
+const messages: Record<string, { title: string; description: string }> = {
+  unauthorized_company_access: {
+    title: 'Access Denied',
+    description: 'You do not have permission to access this company\'s data. Please contact your administrator if you believe this is an error.',
+  },
+  insufficient_permissions: {
+    title: 'Insufficient Permissions',
+    description: 'Your role does not have the required permissions to access this resource.',
+  },
+  unknown: {
+    title: 'Unauthorized',
+    description: 'You are not authorized to access this resource.',
+  },
+};
+
+const message = messages[reason] || messages.unknown;
+---
+
+<BaseLayout title="401 - Unauthorized" lang={lang || 'en'}>
+  <div class="error-container">
+    <div class="error-code">401</div>
+    <h1 class="error-title">{message.title}</h1>
+    <p class="error-description">{message.description}</p>
+
+    <div class="error-details">
+      <p><strong>Request Path:</strong> <code>{url.pathname}</code></p>
+      {user && (
+        <p><strong>Your Role:</strong> <code>{user.role}</code></p>
+      )}
+      {user && user.company_id && (
+        <p><strong>Your Company ID:</strong> <code>{user.company_id}</code></p>
+      )}
+      {reason !== 'unknown' && (
+        <p><strong>Reason:</strong> <code>{reason}</code></p>
+      )}
+    </div>
+
+    <div class="security-notice">
+      <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+      </svg>
+      <p>This access attempt has been logged for security purposes.</p>
+    </div>
+
+    <div class="error-actions">
+      {user && user.company_id ? (
+        <a href={`/${lang || 'en'}/cockpit/${user.company_id}`} class="btn btn-primary">
+          Go to Your Dashboard
+        </a>
+      ) : (
+        <a href="/" class="btn btn-primary">Go to Home</a>
+      )}
+      <a href="/login" class="btn btn-secondary">Sign In as Different User</a>
+    </div>
+  </div>
+</BaseLayout>
+
+<style>
+  .error-container {
+    max-width: 600px;
+    margin: calc(var(--spacing-unit) * 8) auto;
+    text-align: center;
+    padding: calc(var(--spacing-unit) * 4);
+  }
+
+  .error-code {
+    font-size: 6rem;
+    font-weight: 700;
+    color: #e74c3c;
+    line-height: 1;
+    margin-bottom: calc(var(--spacing-unit) * 2);
+  }
+
+  .error-title {
+    font-size: 2rem;
+    margin-bottom: calc(var(--spacing-unit) * 2);
+    color: var(--color-text);
+  }
+
+  .error-description {
+    font-size: 1.125rem;
+    color: var(--color-text-secondary);
+    margin-bottom: calc(var(--spacing-unit) * 4);
+    line-height: 1.6;
+  }
+
+  .error-details {
+    background-color: var(--color-bg-secondary);
+    padding: calc(var(--spacing-unit) * 3);
+    border-radius: var(--border-radius);
+    margin-bottom: calc(var(--spacing-unit) * 3);
+    text-align: left;
+  }
+
+  .error-details p {
+    margin-bottom: calc(var(--spacing-unit) * 1);
+    font-size: 0.9375rem;
+  }
+
+  .error-details p:last-child {
+    margin-bottom: 0;
+  }
+
+  .error-details code {
+    background-color: var(--color-bg);
+    padding: calc(var(--spacing-unit) * 0.5) calc(var(--spacing-unit) * 1);
+    border-radius: calc(var(--border-radius) / 2);
+    font-family: 'Courier New', monospace;
+    font-size: 0.875rem;
+  }
+
+  .security-notice {
+    display: flex;
+    align-items: center;
+    gap: calc(var(--spacing-unit) * 2);
+    padding: calc(var(--spacing-unit) * 2);
+    background-color: #fff3cd;
+    border: 1px solid #ffc107;
+    border-radius: var(--border-radius);
+    margin-bottom: calc(var(--spacing-unit) * 4);
+    color: #856404;
+  }
+
+  .security-notice .icon {
+    flex-shrink: 0;
+  }
+
+  .security-notice p {
+    margin: 0;
+    font-size: 0.875rem;
+    text-align: left;
+  }
+
+  .error-actions {
+    display: flex;
+    gap: calc(var(--spacing-unit) * 2);
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    padding: calc(var(--spacing-unit) * 1.5) calc(var(--spacing-unit) * 3);
+    border: none;
+    border-radius: var(--border-radius);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+    display: inline-block;
+    min-width: 140px;
+  }
+
+  .btn-primary {
+    background-color: var(--color-primary);
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background-color: var(--color-primary-dark);
+  }
+
+  .btn-secondary {
+    background-color: var(--color-bg-secondary);
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+  }
+
+  .btn-secondary:hover {
+    background-color: var(--color-border);
+  }
+
+  @media (max-width: 768px) {
+    .error-code {
+      font-size: 4rem;
+    }
+
+    .error-title {
+      font-size: 1.5rem;
+    }
+
+    .error-actions {
+      flex-direction: column;
+    }
+
+    .btn {
+      width: 100%;
+    }
+
+    .security-notice {
+      flex-direction: column;
+      text-align: center;
+    }
+  }
+</style>

@@ -1,4 +1,100 @@
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
-pnpm lint-staged
+# Pre-commit hook to prevent committing secrets and demo credentials
+# This runs automatically before each commit
+
+echo "🔍 Running pre-commit checks..."
+
+# Check for hardcoded passwords, API keys, secrets
+echo "Checking for potential secrets..."
+
+# Patterns to search for
+PATTERNS=(
+  "password\s*=\s*['\"].*['\"]"
+  "api_key\s*=\s*['\"].*['\"]"
+  "secret\s*=\s*['\"].*['\"]"
+  "token\s*=\s*['\"].*['\"]"
+  "apiKey:\s*['\"].*['\"]"
+  "REACT_APP_.*=.*"
+  "AWS_ACCESS_KEY"
+  "AWS_SECRET_KEY"
+  "-----BEGIN (RSA|EC|DSA|OPENSSH) PRIVATE KEY-----"
+)
+
+FOUND_SECRETS=false
+
+for pattern in "${PATTERNS[@]}"; do
+  # Check staged files only
+  if git diff --cached --name-only | xargs grep -E -i "$pattern" 2>/dev/null; then
+    FOUND_SECRETS=true
+    echo "❌ Found potential secret: $pattern"
+  fi
+done
+
+# Check for demo credentials
+echo "Checking for demo credentials..."
+
+DEMO_PATTERNS=(
+  "admin@acme\.com"
+  "viewer@acme\.com"
+  "manager@acme\.com"
+  "admin123"
+  "viewer123"
+  "manager123"
+  "test@example\.com"
+  "demo@"
+)
+
+FOUND_DEMO=false
+
+for pattern in "${DEMO_PATTERNS[@]}"; do
+  # Allow demo credentials in test files and docs
+  if git diff --cached --name-only | grep -v -E "\.(test|spec)\.(ts|js)$" | grep -v "docs/" | xargs grep -E "$pattern" 2>/dev/null; then
+    # Check if it's in a comment or string literal with "(Demo)" marker
+    if ! git diff --cached | grep "$pattern" | grep -E "//.*$pattern|Demo|DEV|TEST"; then
+      FOUND_DEMO=true
+      echo "❌ Found demo credential without proper marker: $pattern"
+    fi
+  fi
+done
+
+# If secrets or unmarked demo credentials found, block commit
+if [ "$FOUND_SECRETS" = true ] || [ "$FOUND_DEMO" = true ]; then
+  echo ""
+  echo "❌ COMMIT BLOCKED: Potential secrets or demo credentials detected"
+  echo ""
+  echo "If these are false positives:"
+  echo "  1. Add proper markers: (Demo), // DEV ONLY, // TEST DATA"
+  echo "  2. Move to test files (*.test.ts, *.spec.js)"
+  echo "  3. Use environment variables instead"
+  echo ""
+  echo "To bypass this check (NOT RECOMMENDED):"
+  echo "  git commit --no-verify"
+  echo ""
+  exit 1
+fi
+
+# Check for files larger than 5MB (potential binary secrets)
+echo "Checking for large files..."
+
+LARGE_FILES=$(git diff --cached --name-only | while read file; do
+  if [ -f "$file" ]; then
+    size=$(wc -c < "$file")
+    if [ "$size" -gt 5242880 ]; then  # 5MB
+      echo "$file ($(numfmt --to=iec-i --suffix=B $size))"
+    fi
+  fi
+done)
+
+if [ -n "$LARGE_FILES" ]; then
+  echo "⚠️  Warning: Large files detected:"
+  echo "$LARGE_FILES"
+  echo ""
+  echo "Consider using Git LFS or excluding from version control"
+  echo ""
+fi
+
+# Success
+echo "✅ Pre-commit checks passed"
+echo ""

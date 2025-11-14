@@ -1,0 +1,250 @@
+### TEEI CSR Platform - Tenant API Manual Tests
+### Requires VS Code REST Client extension or similar
+
+@baseUrl = http://localhost:3000
+@companyId = 550e8400-e29b-41d4-a716-446655440000
+@userId = user-123
+@adminId = admin-123
+
+### Variables (replace with actual values)
+@jwt_token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+@admin_token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+################################################################################
+# Authentication Tests
+################################################################################
+
+### Test 1: Health Check (No auth required)
+GET {{baseUrl}}/health
+
+### Test 2: Root Endpoint (No auth required)
+GET {{baseUrl}}/
+
+################################################################################
+# Company Listing
+################################################################################
+
+### Test 3: List accessible companies (JWT required)
+GET {{baseUrl}}/api/companies
+Authorization: Bearer {{jwt_token}}
+
+### Test 4: List companies without auth (should fail with 401)
+GET {{baseUrl}}/api/companies
+
+################################################################################
+# Company Details
+################################################################################
+
+### Test 5: Get company details (user access)
+GET {{baseUrl}}/api/companies/{{companyId}}
+Authorization: Bearer {{jwt_token}}
+
+### Test 6: Get company with invalid UUID (should fail with 400)
+GET {{baseUrl}}/api/companies/invalid-uuid
+Authorization: Bearer {{jwt_token}}
+
+### Test 7: Get company without auth (should fail with 401)
+GET {{baseUrl}}/api/companies/{{companyId}}
+
+### Test 8: Get company with X-Tenant-ID header
+GET {{baseUrl}}/api/companies/{{companyId}}
+Authorization: Bearer {{jwt_token}}
+X-Tenant-ID: {{companyId}}
+
+################################################################################
+# Company Settings (Admin Only)
+################################################################################
+
+### Test 9: Update company settings (admin)
+PUT {{baseUrl}}/api/companies/{{companyId}}/settings
+Authorization: Bearer {{admin_token}}
+Content-Type: application/json
+
+{
+  "feature_flags": {
+    "sroi_calculator": true,
+    "vis_scoring": true,
+    "advanced_analytics": true
+  },
+  "sroi_overrides": {
+    "mentorship": 2.5,
+    "skills_training": 3.0
+  },
+  "branding": {
+    "primaryColor": "#0066CC",
+    "secondaryColor": "#FF6600"
+  }
+}
+
+### Test 10: Update settings as non-admin (should fail with 403)
+PUT {{baseUrl}}/api/companies/{{companyId}}/settings
+Authorization: Bearer {{jwt_token}}
+Content-Type: application/json
+
+{
+  "feature_flags": {
+    "sroi_calculator": false
+  }
+}
+
+### Test 11: Update settings with invalid keys (should fail with 400)
+PUT {{baseUrl}}/api/companies/{{companyId}}/settings
+Authorization: Bearer {{admin_token}}
+Content-Type: application/json
+
+{
+  "invalid_key": "value",
+  "another_bad_key": 123
+}
+
+################################################################################
+# API Key Management (Admin Only)
+################################################################################
+
+### Test 12: List API keys (admin)
+GET {{baseUrl}}/api/companies/{{companyId}}/api-keys
+Authorization: Bearer {{admin_token}}
+
+### Test 13: List API keys as non-admin (should fail with 403)
+GET {{baseUrl}}/api/companies/{{companyId}}/api-keys
+Authorization: Bearer {{jwt_token}}
+
+### Test 14: Generate new API key (admin)
+POST {{baseUrl}}/api/companies/{{companyId}}/api-keys/regenerate
+Authorization: Bearer {{admin_token}}
+Content-Type: application/json
+
+{
+  "name": "Production API Key",
+  "scopes": ["data:read", "data:write", "report:view"]
+}
+
+### Test 15: Generate API key as non-admin (should fail with 403)
+POST {{baseUrl}}/api/companies/{{companyId}}/api-keys/regenerate
+Authorization: Bearer {{jwt_token}}
+Content-Type: application/json
+
+{
+  "name": "Test Key"
+}
+
+### Test 16: Revoke API key (admin)
+@keyId = 123e4567-e89b-12d3-a456-426614174000
+DELETE {{baseUrl}}/api/companies/{{companyId}}/api-keys/{{keyId}}
+Authorization: Bearer {{admin_token}}
+
+### Test 17: Revoke API key as non-admin (should fail with 403)
+DELETE {{baseUrl}}/api/companies/{{companyId}}/api-keys/{{keyId}}
+Authorization: Bearer {{jwt_token}}
+
+################################################################################
+# User Management (Admin Only)
+################################################################################
+
+### Test 18: List company users (admin)
+GET {{baseUrl}}/api/companies/{{companyId}}/users
+Authorization: Bearer {{admin_token}}
+
+### Test 19: List users as non-admin (should fail with 403)
+GET {{baseUrl}}/api/companies/{{companyId}}/users
+Authorization: Bearer {{jwt_token}}
+
+################################################################################
+# Permissions
+################################################################################
+
+### Test 20: Get user permissions
+GET {{baseUrl}}/api/companies/{{companyId}}/permissions
+Authorization: Bearer {{jwt_token}}
+
+### Test 21: Get admin permissions
+GET {{baseUrl}}/api/companies/{{companyId}}/permissions
+Authorization: Bearer {{admin_token}}
+
+################################################################################
+# Tenant Isolation Tests
+################################################################################
+
+### Test 22: Try to access another company (should fail)
+@otherCompanyId = 123e4567-e89b-12d3-a456-426614174999
+GET {{baseUrl}}/api/companies/{{otherCompanyId}}
+Authorization: Bearer {{jwt_token}}
+
+### Test 23: System admin accessing any company (should succeed)
+@system_admin_token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+GET {{baseUrl}}/api/companies/{{companyId}}
+Authorization: Bearer {{system_admin_token}}
+
+################################################################################
+# Error Cases
+################################################################################
+
+### Test 24: Malformed JWT (should fail with 401)
+GET {{baseUrl}}/api/companies
+Authorization: Bearer invalid.jwt.token
+
+### Test 25: Expired JWT (should fail with 401)
+GET {{baseUrl}}/api/companies
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjB9.invalid
+
+### Test 26: Missing Authorization header (should fail with 401)
+GET {{baseUrl}}/api/companies/{{companyId}}
+
+### Test 27: Invalid HTTP method (should fail with 404)
+PATCH {{baseUrl}}/api/companies/{{companyId}}
+Authorization: Bearer {{admin_token}}
+
+################################################################################
+# Generate JWT Tokens (for testing)
+################################################################################
+
+### How to generate test JWTs:
+###
+### 1. Start the API gateway: pnpm -w dev
+###
+### 2. Use Node.js to generate tokens:
+###
+### const fastify = require('fastify')();
+### fastify.register(require('@fastify/jwt'), { secret: 'test-secret-key' });
+###
+### const userToken = fastify.jwt.sign({
+###   userId: 'user-123',
+###   email: 'user@test.com',
+###   role: 'company_user',
+###   companyId: '550e8400-e29b-41d4-a716-446655440000'
+### });
+###
+### const adminToken = fastify.jwt.sign({
+###   userId: 'admin-123',
+###   email: 'admin@test.com',
+###   role: 'company_admin',
+###   companyId: '550e8400-e29b-41d4-a716-446655440000'
+### });
+###
+### console.log('User Token:', userToken);
+### console.log('Admin Token:', adminToken);
+
+################################################################################
+# Notes
+################################################################################
+
+# Expected Status Codes:
+# - 200: Success
+# - 400: Bad Request (invalid UUID, invalid settings keys)
+# - 401: Unauthorized (no auth, invalid JWT)
+# - 403: Forbidden (insufficient permissions, wrong tenant)
+# - 404: Not Found (non-existent resource)
+# - 500: Internal Server Error
+
+# Permission Requirements:
+# - company:read → Any authenticated user
+# - company:write → Company admin or system admin
+# - company:settings → Company admin or system admin
+# - api_key:* → Company admin or system admin
+# - user:read → Company admin or system admin
+
+# Tenant Context Sources (priority order):
+# 1. Route params (/api/companies/:companyId)
+# 2. X-Tenant-ID header
+# 3. JWT companyId claim
+# 4. Query parameter (?companyId=xxx)

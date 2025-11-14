@@ -1,0 +1,122 @@
+---
+import CockpitLayout from '@layouts/CockpitLayout.astro';
+import MetricCard from '@components/shared/MetricCard';
+import DashboardActions from '@components/dashboard/DashboardActions';
+
+const { companyId } = Astro.params;
+
+// TODO: Fetch company data and verify access
+// const company = await fetchCompany(companyId);
+// if (!company) return Astro.redirect('/uk');
+
+// Mock company data
+const company = {
+  id: companyId,
+  name: 'Pilot Corp Inc.',
+};
+---
+
+<CockpitLayout
+  title="Панель керування"
+  lang="uk"
+  companyId={companyId}
+  companyName={company.name}
+>
+  <div class="mx-auto max-w-7xl p-6">
+    <!-- Header -->
+    <div class="mb-8">
+      <h1 class="mb-2 text-3xl font-bold">Панель CSR</h1>
+      <p class="text-foreground/60">
+        Ласкаво просимо до вашої панелі корпоративної соціальної відповідальності
+      </p>
+    </div>
+
+    <!-- Quick stats grid with "Why this metric?" buttons -->
+    <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
+      <MetricCard
+        metricId="sroi"
+        label="SROI"
+        value="3.2x"
+        change="+12% від минулого кварталу"
+        changePositive={true}
+        showLineage={true}
+        client:load
+      />
+
+      <MetricCard
+        metricId="vis"
+        label="Оцінка VIS"
+        value={85}
+        change="+5 балів від минулого кварталу"
+        changePositive={true}
+        showLineage={true}
+        client:load
+      />
+
+      <MetricCard
+        metricId="participants"
+        label="Активні учасники"
+        value={247}
+        change="У всіх програмах"
+        showLineage={false}
+        client:load
+      />
+
+      <MetricCard
+        metricId="integration_score"
+        label="Оцінка інтеграції"
+        value={0.78}
+        change="+8% від минулого кварталу"
+        changePositive={true}
+        showLineage={true}
+        client:load
+      />
+    </div>
+
+    <!-- Main content area -->
+    <div class="grid gap-6 lg:grid-cols-3">
+      <!-- Program Overview -->
+      <div class="card lg:col-span-2">
+        <h2 class="mb-4 text-xl font-semibold">Огляд програми</h2>
+        <div class="space-y-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="font-medium">Програма напарників</div>
+              <div class="text-sm text-foreground/60">89% рівень завершення</div>
+            </div>
+            <div class="text-2xl font-bold text-primary">142</div>
+          </div>
+          <div class="h-px bg-border"></div>
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="font-medium">Мовний зв'язок</div>
+              <div class="text-sm text-foreground/60">67 сесій завершено</div>
+            </div>
+            <div class="text-2xl font-bold text-primary">67</div>
+          </div>
+          <div class="h-px bg-border"></div>
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="font-medium">Підвищення кваліфікації</div>
+              <div class="text-sm text-foreground/60">38 курсів у процесі</div>
+            </div>
+            <div class="text-2xl font-bold text-primary">38</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="card">
+        <h2 class="mb-4 text-xl font-semibold">Швидкі дії</h2>
+        <DashboardActions companyId={companyId!} client:load />
+      </div>
+    </div>
+
+    <!-- Phase C Notice -->
+    <div class="mt-8 rounded-lg bg-primary/10 p-4 text-center">
+      <p class="text-sm font-medium">
+        🎉 Пілотні функції фази C тепер доступні: Дослідник доказів, звітність на основі ШІ з обов'язковими цитатами та відстеження походження!
+      </p>
+    </div>
+  </div>
+</CockpitLayout>

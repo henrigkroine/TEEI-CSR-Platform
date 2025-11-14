@@ -1,0 +1,91 @@
+---
+import BaseLayout from '../../../../layouts/BaseLayout.astro';
+import { hasPermission } from '../../../../utils/rbac';
+import EvidenceList from '../../../../components/evidence/EvidenceList.tsx';
+
+// Extract route parameters
+const { lang, companyId } = Astro.params;
+const user = Astro.locals.user;
+const tenantContext = Astro.locals.tenantContext;
+
+// Middleware handles auth/tenant validation, but double-check
+if (!user || !tenantContext) {
+  return Astro.redirect('/login');
+}
+
+// Verify the tenant context matches the route
+if (tenantContext.companyId !== companyId || tenantContext.lang !== lang) {
+  return Astro.redirect(`/${lang}/cockpit/401`);
+}
+
+// Check permissions
+const canViewEvidence = hasPermission(user.role, 'VIEW_EVIDENCE');
+if (!canViewEvidence) {
+  return Astro.redirect(`/${lang}/cockpit/${companyId}?error=permission_denied`);
+}
+---
+
+<BaseLayout title="Evidence Explorer - TEEI Corporate Cockpit" lang={lang}>
+  <div class="evidence-page">
+    <div class="page-header">
+      <div>
+        <a href={`/${lang}/cockpit/${companyId}`} class="back-link">
+          ← Back to Dashboard
+        </a>
+        <h1>Evidence Explorer</h1>
+        <p class="page-description">
+          Explore and trace the data sources behind your impact metrics. View evidence lineage,
+          verification status, and confidence scores.
+        </p>
+      </div>
+    </div>
+
+    <EvidenceList companyId={companyId} role={user.role} client:load />
+  </div>
+</BaseLayout>
+
+<style>
+  .evidence-page {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: calc(var(--spacing-unit) * 4);
+  }
+
+  .page-header {
+    margin-bottom: calc(var(--spacing-unit) * 4);
+  }
+
+  .back-link {
+    display: inline-block;
+    color: var(--color-primary);
+    text-decoration: none;
+    font-size: 0.9375rem;
+    margin-bottom: calc(var(--spacing-unit) * 2);
+  }
+
+  .back-link:hover {
+    text-decoration: underline;
+  }
+
+  h1 {
+    font-size: 2rem;
+    margin-bottom: calc(var(--spacing-unit) * 1);
+  }
+
+  .page-description {
+    color: var(--color-text-secondary);
+    font-size: 1rem;
+    line-height: 1.5;
+    max-width: 800px;
+  }
+
+  @media (max-width: 768px) {
+    .evidence-page {
+      padding: calc(var(--spacing-unit) * 2);
+    }
+
+    h1 {
+      font-size: 1.5rem;
+    }
+  }
+</style>

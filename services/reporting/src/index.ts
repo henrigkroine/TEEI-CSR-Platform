@@ -38,8 +38,6 @@ const { evidenceRoutes } = await import('./routes/evidence.js');
 await fastify.register(evidenceRoutes);
 const { reportRoutes } = await import('./routes/reports.js');
 await fastify.register(reportRoutes);
-const { approvalRoutes } = await import('./routes/approvals.js');
-await fastify.register(approvalRoutes);
 
 // Graceful shutdown
 const gracefulShutdown = async () => {
