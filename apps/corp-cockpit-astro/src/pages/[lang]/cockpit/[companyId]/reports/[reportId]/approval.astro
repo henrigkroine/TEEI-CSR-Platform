@@ -1,0 +1,267 @@
+---
+import BaseLayout from '../../../../../../layouts/BaseLayout.astro';
+import { hasPermission } from '../../../../../../utils/rbac';
+import ApprovalWorkflowPanel from '../../../../../../components/approvals/ApprovalWorkflowPanel.tsx';
+
+// Extract route parameters
+const { lang, companyId, reportId } = Astro.params;
+const user = Astro.locals.user;
+const tenantContext = Astro.locals.tenantContext;
+
+// Middleware handles auth/tenant validation
+if (!user || !tenantContext) {
+  return Astro.redirect('/login');
+}
+
+// Verify tenant context matches route
+if (tenantContext.companyId !== companyId || tenantContext.lang !== lang) {
+  return Astro.redirect(`/${lang}/cockpit/401`);
+}
+
+// Check permissions (MANAGER+ can access approval workflow)
+const canManageApprovals = hasPermission(user.role, 'GENERATE_REPORTS');
+if (!canManageApprovals) {
+  return Astro.redirect(`/${lang}/cockpit/${companyId}/401`);
+}
+
+// TODO: Fetch report details from API
+const reportTitle = 'Executive Summary - Q4 2024'; // Mock
+---
+
+<BaseLayout title={`Approval Workflow - ${reportTitle}`} lang={lang}>
+  <div class="approval-page">
+    <div class="page-header">
+      <div>
+        <a href={`/${lang}/cockpit/${companyId}`} class="back-link">
+          ← Back to Dashboard
+        </a>
+        <h1>Approval Workflow</h1>
+        <p class="report-title">{reportTitle}</p>
+      </div>
+    </div>
+
+    <ApprovalWorkflowPanel
+      companyId={companyId}
+      reportId={reportId}
+      userRole={user.role}
+      client:load
+    />
+
+    <div class="help-section">
+      <h3>Approval Workflow Guide</h3>
+      <div class="workflow-diagram">
+        <div class="workflow-step">
+          <div class="step-marker">1</div>
+          <div class="step-content">
+            <h4>Draft</h4>
+            <p>Report created, editable by creator</p>
+            <span class="action-required">Action: Submit for Review</span>
+          </div>
+        </div>
+
+        <div class="workflow-arrow">→</div>
+
+        <div class="workflow-step">
+          <div class="step-marker">2</div>
+          <div class="step-content">
+            <h4>In Review</h4>
+            <p>Reviewer evaluates content and accuracy</p>
+            <span class="action-required">Action: Approve or Request Changes</span>
+          </div>
+        </div>
+
+        <div class="workflow-arrow">→</div>
+
+        <div class="workflow-step">
+          <div class="step-marker">3</div>
+          <div class="step-content">
+            <h4>Approved</h4>
+            <p>Final approver signs off on report</p>
+            <span class="action-required">Action: Lock Report</span>
+          </div>
+        </div>
+
+        <div class="workflow-arrow">→</div>
+
+        <div class="workflow-step">
+          <div class="step-marker">4</div>
+          <div class="step-content">
+            <h4>Locked</h4>
+            <p>Immutable, watermarked, audit-ready</p>
+            <span class="final-state">✓ Final State</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="roles-section">
+        <h4>Role Permissions</h4>
+        <ul>
+          <li><strong>MANAGER:</strong> Create drafts, submit for review, comment</li>
+          <li><strong>ADMIN:</strong> Review reports, request changes, approve (reviewer level)</li>
+          <li><strong>SUPER_ADMIN:</strong> Final approval, lock/unlock reports, all actions</li>
+        </ul>
+      </div>
+
+      <div class="features-section">
+        <h4>Key Features</h4>
+        <ul>
+          <li>✓ Multi-step approval workflow with role-based access control</li>
+          <li>✓ Comment threads for collaboration and change requests</li>
+          <li>✓ Complete audit trail of all actions and transitions</li>
+          <li>✓ Version history with snapshots at each approval stage</li>
+          <li>✓ Automatic watermarking on final lock</li>
+          <li>✓ Email notifications on status changes (coming soon)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</BaseLayout>
+
+<style>
+  .approval-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: calc(var(--spacing-unit) * 4);
+  }
+
+  .page-header {
+    margin-bottom: calc(var(--spacing-unit) * 4);
+  }
+
+  .back-link {
+    color: var(--color-primary);
+    text-decoration: none;
+    font-size: 0.9375rem;
+    margin-bottom: calc(var(--spacing-unit) * 2);
+    display: inline-block;
+  }
+
+  .back-link:hover {
+    text-decoration: underline;
+  }
+
+  h1 {
+    font-size: 2rem;
+    margin: calc(var(--spacing-unit) * 2) 0 calc(var(--spacing-unit) * 1);
+  }
+
+  .report-title {
+    color: var(--color-text-secondary);
+    font-size: 1.125rem;
+    margin: 0;
+  }
+
+  .help-section {
+    margin-top: calc(var(--spacing-unit) * 6);
+    padding: calc(var(--spacing-unit) * 4);
+    background: var(--color-bg-secondary);
+    border-radius: var(--border-radius);
+  }
+
+  .help-section h3 {
+    margin-top: 0;
+    margin-bottom: calc(var(--spacing-unit) * 3);
+  }
+
+  .workflow-diagram {
+    display: flex;
+    align-items: center;
+    gap: calc(var(--spacing-unit) * 2);
+    margin-bottom: calc(var(--spacing-unit) * 4);
+    overflow-x: auto;
+    padding: calc(var(--spacing-unit) * 2);
+  }
+
+  .workflow-step {
+    flex: 1;
+    min-width: 200px;
+    background: white;
+    padding: calc(var(--spacing-unit) * 3);
+    border-radius: var(--border-radius);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  }
+
+  .step-marker {
+    width: 32px;
+    height: 32px;
+    background: var(--color-primary);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    margin-bottom: calc(var(--spacing-unit) * 2);
+  }
+
+  .step-content h4 {
+    margin: 0 0 calc(var(--spacing-unit) * 1);
+    font-size: 1.125rem;
+  }
+
+  .step-content p {
+    color: var(--color-text-secondary);
+    font-size: 0.9375rem;
+    margin: 0 0 calc(var(--spacing-unit) * 2);
+  }
+
+  .action-required,
+  .final-state {
+    display: inline-block;
+    padding: calc(var(--spacing-unit) * 1) calc(var(--spacing-unit) * 2);
+    background: #fef3c7;
+    color: #92400e;
+    border-radius: calc(var(--border-radius) / 2);
+    font-size: 0.8125rem;
+    font-weight: 600;
+  }
+
+  .final-state {
+    background: #d1fae5;
+    color: #065f46;
+  }
+
+  .workflow-arrow {
+    font-size: 2rem;
+    color: var(--color-text-secondary);
+    flex-shrink: 0;
+  }
+
+  .roles-section,
+  .features-section {
+    margin-top: calc(var(--spacing-unit) * 4);
+  }
+
+  .roles-section h4,
+  .features-section h4 {
+    margin-bottom: calc(var(--spacing-unit) * 2);
+  }
+
+  .roles-section ul,
+  .features-section ul {
+    list-style: none;
+    padding: 0;
+  }
+
+  .roles-section li,
+  .features-section li {
+    padding: calc(var(--spacing-unit) * 1.5);
+    background: white;
+    margin-bottom: calc(var(--spacing-unit) * 1);
+    border-radius: calc(var(--border-radius) / 2);
+  }
+
+  @media (max-width: 768px) {
+    .workflow-diagram {
+      flex-direction: column;
+    }
+
+    .workflow-arrow {
+      transform: rotate(90deg);
+    }
+
+    .workflow-step {
+      width: 100%;
+    }
+  }
+</style>
