@@ -446,3 +446,430 @@
 **Last Updated**: Phase B completion
 **Status**: 🟢 COMPLETE
 **Orchestrator**: All 6 leads delivered | 30 specialists complete | 100% acceptance criteria met
+
+
+
+---
+---
+---
+
+# Worker 2: Core Backend Features - Multi-Agent Orchestration Plan
+
+**Mission**: Deliver production-critical backend features: Gen-AI reporting with citations, Impact-In integrations, Notifications, Analytics, and final platform hardening.
+
+**Orchestrator**: Tech Lead (Worker 2)
+**Team Size**: 30 agents (5 leads × 5-6 specialists each)
+**Branch**: `claude/worker2-core-complete`
+**Timeline**: Sequential lead deployment with parallel specialist execution
+
+---
+
+## Executive Summary
+
+### Building on Phase B Foundation
+Phase B delivered production-grade security, observability, and compliance. Worker 2 now adds business-critical features that deliver value to end users.
+
+### Current State (Post Phase B)
+- ✅ 7 microservices with RS256 JWT, OIDC, health checks, OTel tracing
+- ✅ Database schema with outcome_scores, evidence_snippets, metrics tables
+- ✅ NATS event bus with DLQ, idempotency, circuit breakers
+- ✅ Compliance infrastructure: audit logs, PII encryption, GDPR endpoints
+- ⚠️ Q2Q AI is STUB (random scores)
+- ❌ No Gen-AI reporting service
+- ❌ No Analytics endpoints (ClickHouse not deployed)
+- ❌ No Notifications service
+- ❌ No external integrations (Benevity, Goodera, Workday)
+
+### Critical Gaps for Worker 2
+| Priority | Gap | Impact |
+|----------|-----|--------|
+| 🔴 CRITICAL | Gen-AI Reporting with citations | Can't generate impact narratives |
+| 🔴 CRITICAL | Real Q2Q AI (upgrade stub) | Outcome scores are fake |
+| 🔴 CRITICAL | Analytics endpoints | No trends/cohorts/funnels for users |
+| 🟡 HIGH | Impact-In connectors | Can't push data to external platforms |
+| 🟡 HIGH | Notifications service | No email communication |
+| 🟢 MEDIUM | Performance guardrails | AI costs uncontrolled |
+
+---
+
+## Team Structure
+
+### Lead 1: Gen-Reports Lead (6 specialists)
+**Mission**: Server-side Gen-AI reporting with citations, redaction, and lineage tracking
+
+#### Specialists:
+1. **Prompt Engineer** - Template library with locale variants, token budgets, deterministic seeds
+2. **Citation Extractor** - Evidence selector with scoring/thresholding, snippet ID attachment
+3. **Redaction Enforcer** - PII scrubbing, server-side redaction before model calls
+4. **Provenance Mapper** - Store model card, prompt version, lineage map for auditability
+5. **Q2Q Upgrader** - Replace stub with real LLM (OpenAI/Claude), implement actual classification
+6. **Report Validator** - Ensure every paragraph has ≥1 citation, quality checks
+
+**Deliverables**:
+- `/services/reporting/routes/gen-reports.ts` - `POST /v1/gen-reports/generate`
+- `/services/reporting/lib/prompts/` - Template library
+- `/services/reporting/lib/citations.ts` - Citation extraction + validation
+- `/services/reporting/lib/redaction.ts` - PII scrubbing
+- `/services/reporting/lib/lineage.ts` - Provenance tracking
+- `/services/q2q-ai/src/classifier-real.ts` - Real LLM integration (replace stub)
+- `/docs/Q2Q_GenReports_Wiring.md` - Implementation guide
+- `/reports/gen_reports_eval.md` - Quality evaluation
+
+**Acceptance**:
+- Gen-AI endpoint returns narratives with ≥1 citation per paragraph
+- Redaction enforced before LLM calls
+- Lineage stored (model, prompt version, timestamp)
+- Q2Q AI produces real outcome scores (not random)
+
+---
+
+### Lead 2: Integrations Lead (5 specialists)
+**Mission**: Impact-In connectors for Benevity, Goodera, Workday + delivery monitoring
+
+#### Specialists:
+1. **Benevity Mapper** - Auth, schema versioning, signed delivery
+2. **Goodera Mapper** - OAuth flow, data normalization, retry/backoff
+3. **Workday Mapper** - SOAP/REST adapter, idempotency keys
+4. **Delivery Logger** - Log table + APIs for Worker-3 UI (history, filter, replay)
+5. **Replay Endpoint** - Manual retry for failed deliveries
+
+**Deliverables**:
+- `/services/impact-in/benevity.ts` - Benevity connector
+- `/services/impact-in/goodera.ts` - Goodera connector
+- `/services/impact-in/workday.ts` - Workday connector
+- `/services/impact-in/routes/deliveries.ts` - Delivery log APIs
+- `/packages/shared-schema/src/schema/impact_deliveries.ts` - Delivery tracking table
+- `/docs/ImpactIn_Connectors.md` - Integration guide
+- `/reports/impactin_cert_pack.md` - Certification test results
+
+**Acceptance**:
+- All 3 connectors deliver data with signed requests
+- Delivery log APIs return history with filtering
+- Replay endpoint successfully retries failed deliveries
+- Idempotency prevents duplicate sends
+
+---
+
+### Lead 3: Notifications Lead (5 specialists)
+**Mission**: Email service with templates, queue, rate limits + SMS/push stubs
+
+#### Specialists:
+1. **Email Templates** - MJML/Handlebars templates for reports, alerts
+2. **Mail Provider Adapter** - SendGrid or Postmark integration, delivery receipts
+3. **Notification Scheduler** - Queue scheduled report emails, SLO breach alerts
+4. **SMS/Push Stub** - Provider adapters (Twilio, FCM) for future implementation
+5. **Rate Limiter** - Per-tenant email quotas, backpressure handling
+
+**Deliverables**:
+- `/services/notifications/api/index.ts` - Service entry point
+- `/services/notifications/routes/send.ts` - `POST /v1/notifications/send`
+- `/services/notifications/workers/email-worker.ts` - Queue processor
+- `/services/notifications/templates/` - MJML email templates
+- `/services/notifications/providers/sendgrid.ts` (or postmark)
+- `/services/notifications/providers/twilio-stub.ts` - SMS stub
+- `/docs/Notifications_Service.md` - Service documentation
+- `/reports/notifications_test_matrix.md` - Test results
+
+**Acceptance**:
+- Scheduled report emails sent via SendGrid/Postmark
+- SLO breach alerts trigger notifications
+- Rate limits enforced per tenant
+- Delivery receipts tracked
+- SMS/push stubs documented for future
+
+---
+
+### Lead 4: Analytics Lead (6 specialists)
+**Mission**: ClickHouse setup + trends/cohorts/funnels endpoints with caching
+
+#### Specialists:
+1. **ClickHouse Loader** - Setup, schema migration, real-time ingestion pipeline
+2. **Trends API** - `GET /v1/analytics/trends` - Time-series queries
+3. **Cohorts API** - `GET /v1/analytics/cohorts` - Cohort comparisons
+4. **Funnels API** - `GET /v1/analytics/funnels` - Conversion funnels
+5. **Cache Engineer** - Redis caching for expensive queries, invalidation strategy
+6. **Benchmarks API** - Cohort comparison endpoints using materialized views
+
+**Deliverables**:
+- `/services/analytics/clickhouse/schema.sql` - ClickHouse tables
+- `/services/analytics/loaders/ingestion.ts` - Pipeline from Postgres → ClickHouse
+- `/services/analytics/routes/trends.ts` - Trends endpoint
+- `/services/analytics/routes/cohorts.ts` - Cohorts endpoint
+- `/services/analytics/routes/funnels.ts` - Funnels endpoint
+- `/services/analytics/routes/benchmarks.ts` - Comparison endpoint
+- `/packages/shared-schema/src/schema/query_budgets.ts` - Per-tenant query limits
+- `/docs/Analytics_APIs.md` - API documentation
+
+**Acceptance**:
+- ClickHouse deployed with materialized views
+- Trends/cohorts/funnels endpoints serve paginated data
+- Redis caching reduces query load
+- Per-tenant query budgets enforced
+- Benchmarks API works for cohort comparisons
+
+---
+
+### Lead 5: QA-Platform Lead (8 specialists)
+**Mission**: Contracts, performance tests, cost guardrails, compliance validation
+
+#### Specialists:
+1. **OpenAPI Publisher** - Finalize /v1 OpenAPI specs for all services
+2. **SDK Generator** - Generate typed TypeScript/Python SDKs from OpenAPI
+3. **Pact Author** - Contract tests: Gateway ↔ Reporting/Analytics/Impact-In/Notifications
+4. **K6 Scenarios** - Load tests for gen-reports, analytics, Impact-In push
+5. **AI Cost Meter** - Prometheus metrics for LLM token usage per tenant
+6. **Cost Guardrails** - Alerts when approaching per-tenant AI spend caps
+7. **Security Validator** - Webhook signature tests, DSAR endpoint exercise
+8. **Retention Enforcer** - TTLs on evidence caches, audit log retention policies
+
+**Deliverables**:
+- `/packages/openapi/v1-final/` - Complete OpenAPI 3.0 specs
+- `/packages/sdk/typescript/` - Generated TypeScript SDK
+- `/packages/contracts/pact-tests/` - Extended contract tests
+- `/tests/load/gen-reports.js` - k6 test for Gen-AI endpoint
+- `/tests/load/analytics.js` - k6 test for analytics queries
+- `/packages/observability/src/ai-costs.ts` - AI cost tracking
+- `/services/reporting/middleware/cost-guardrails.ts` - Budget enforcement
+- `/docs/Compliance_Backend_Additions.md` - Updated compliance docs
+- `/reports/perf_gen_analytics.md` - Performance benchmarks
+- `/reports/ai_costs_controls.md` - AI cost control validation
+
+**Acceptance**:
+- All services have finalized /v1 OpenAPI specs
+- TypeScript SDK generated and functional
+- Contract tests pass in CI (Pact)
+- k6 tests establish p95/p99 targets for Gen-AI and Analytics
+- AI cost metrics visible in Prometheus
+- Alerts fire when tenants approach spend caps
+- DSAR endpoints successfully execute deletion flows
+- Evidence cache TTLs enforced
+
+---
+
+## Execution Phases
+
+### Phase 1: Gen-AI Foundation (Lead 1) - Days 1-3
+**Serial Execution**:
+- Prompt Engineer: Build template library
+- Q2Q Upgrader: Replace stub with real LLM
+- Citation Extractor: Implement evidence scoring
+- Redaction Enforcer: PII scrubbing
+- Provenance Mapper: Lineage tracking
+- Report Validator: Quality checks
+
+**Sync Point**: Gen-AI endpoint functional with citations + lineage
+
+---
+
+### Phase 2: Integrations & Notifications (Leads 2-3) - Days 4-6
+**Parallel Execution**:
+- Integrations Lead: Benevity/Goodera/Workday connectors + delivery log
+- Notifications Lead: Email templates + queue + SendGrid integration
+
+**Sync Point**: Impact-In delivering data; email notifications sending
+
+---
+
+### Phase 3: Analytics & Platform (Leads 4-5) - Days 7-10
+**Parallel Execution**:
+- Analytics Lead: ClickHouse + trends/cohorts/funnels endpoints
+- QA-Platform Lead: OpenAPI finalization + contracts + perf tests + cost guardrails
+
+**Sync Point**: Analytics serving queries; all tests green; cost controls enforced
+
+---
+
+### Phase 4: Integration & Validation - Days 11-12
+**Orchestrator Activities**:
+1. Run full test suite (integration + perf + contract)
+2. Verify all acceptance criteria
+3. Generate consolidated Worker 2 completion report
+4. Update architecture documentation
+5. Final commit + push to `claude/worker2-core-complete`
+
+---
+
+## Communication Protocol
+
+### Specialist → Lead
+- Commit artifacts to repository
+- Update status in this file (see Status Tracking below)
+- Report blockers immediately
+
+### Lead → Orchestrator
+- Integration report in `/reports/{lead}_report.md`
+- Blockers requiring orchestration decisions
+- Acceptance criteria validation
+
+### All Commits
+- Prefix: `feat(worker2):` or `docs(worker2):` or `test(worker2):`
+- Small, incremental commits per artifact
+- Reference this plan: `Ref: MULTI_AGENT_PLAN.md § Worker 2/{Lead}/{Specialist}`
+
+---
+
+## Status Tracking
+
+### Gen-Reports Lead Progress
+- [x] Prompt Engineer - Template library
+- [x] Citation Extractor - Evidence scoring
+- [x] Redaction Enforcer - PII scrubbing
+- [x] Provenance Mapper - Lineage tracking
+- [x] Q2Q Upgrader - Real LLM integration
+- [x] Report Validator - Quality checks
+
+### Integrations Lead Progress
+- [ ] Benevity Mapper - Connector + auth
+- [ ] Goodera Mapper - OAuth + normalization
+- [ ] Workday Mapper - SOAP/REST adapter
+- [ ] Delivery Logger - Log APIs
+- [ ] Replay Endpoint - Retry logic
+
+### Notifications Lead Progress
+- [ ] Email Templates - MJML templates
+- [ ] Mail Provider Adapter - SendGrid integration
+- [ ] Notification Scheduler - Queue + scheduler
+- [ ] SMS/Push Stub - Future providers
+- [ ] Rate Limiter - Tenant quotas
+
+### Analytics Lead Progress
+- [ ] ClickHouse Loader - Setup + ingestion
+- [ ] Trends API - Time-series endpoint
+- [ ] Cohorts API - Cohort comparisons
+- [ ] Funnels API - Conversion tracking
+- [ ] Cache Engineer - Redis caching
+- [ ] Benchmarks API - MV-based comparisons
+
+### QA-Platform Lead Progress
+- [ ] OpenAPI Publisher - Finalize specs
+- [ ] SDK Generator - TypeScript SDK
+- [ ] Pact Author - Contract tests
+- [ ] K6 Scenarios - Load tests
+- [ ] AI Cost Meter - Metrics tracking
+- [ ] Cost Guardrails - Budget enforcement
+- [ ] Security Validator - Compliance tests
+- [ ] Retention Enforcer - TTL policies
+
+---
+
+## Final Deliverables Checklist
+
+### Code Artifacts
+- [ ] Gen-AI reporting endpoint with citations
+- [ ] Real Q2Q AI classifier (not stub)
+- [ ] Prompt template library
+- [ ] Citation extraction + validation
+- [ ] PII redaction + lineage tracking
+- [ ] Benevity connector
+- [ ] Goodera connector
+- [ ] Workday connector
+- [ ] Delivery log APIs + replay endpoint
+- [ ] Notifications service with email queue
+- [ ] MJML email templates
+- [ ] SendGrid integration + delivery receipts
+- [ ] SMS/push provider stubs
+- [ ] ClickHouse deployment + schema
+- [ ] Trends/cohorts/funnels endpoints
+- [ ] Redis caching for analytics
+- [ ] Per-tenant query budgets
+- [ ] Benchmarks API
+
+### Tests
+- [ ] Gen-AI citation validation tests
+- [ ] Impact-In idempotency tests
+- [ ] Notification delivery tests
+- [ ] Analytics query performance tests
+- [ ] Contract tests for all new services
+- [ ] k6 load test: Gen-AI endpoint
+- [ ] k6 load test: Analytics queries
+- [ ] k6 load test: Impact-In push
+
+### Documentation
+- [ ] `/docs/Q2Q_GenReports_Wiring.md`
+- [ ] `/docs/ImpactIn_Connectors.md`
+- [ ] `/docs/Notifications_Service.md`
+- [ ] `/docs/Analytics_APIs.md`
+- [ ] `/docs/Compliance_Backend_Additions.md`
+- [ ] `/reports/gen_reports_eval.md`
+- [ ] `/reports/impactin_cert_pack.md`
+- [ ] `/reports/notifications_test_matrix.md`
+- [ ] `/reports/perf_gen_analytics.md`
+- [ ] `/reports/ai_costs_controls.md`
+- [ ] `/reports/worker2_core_complete.md` (MASTER REPORT)
+
+### CI/CD
+- [ ] OpenAPI specs finalized for all services
+- [ ] TypeScript SDK generated
+- [ ] Contract tests in CI pipeline
+- [ ] AI cost metrics in Prometheus
+- [ ] Cost guardrail alerts configured
+
+---
+
+## Acceptance Criteria (FINAL GATE)
+
+### Gen-AI Reporting ✅
+- Endpoint returns narratives with citations (≥1 per paragraph)
+- Redaction enforced before LLM calls
+- Lineage stored (model, prompt version, timestamp)
+- Q2Q AI produces real scores (not random)
+
+### Impact-In Integrations ✅
+- Benevity/Goodera/Workday connectors deliver successfully
+- Delivery log APIs return history with filtering
+- Replay endpoint retries failed deliveries
+- Certification pack documents test results
+
+### Notifications ✅
+- Scheduled report emails sent via SendGrid/Postmark
+- SLO breach alerts trigger notifications
+- Rate limits enforced per tenant
+- Delivery receipts tracked
+
+### Analytics ✅
+- ClickHouse deployed with materialized views
+- Trends/cohorts/funnels endpoints serve data
+- Redis caching reduces query load
+- Per-tenant query budgets enforced
+
+### Platform Hardening ✅
+- OpenAPI v1 finalized for all services
+- TypeScript SDK functional
+- Contract tests pass in CI
+- k6 performance targets met (p95/p99)
+- AI cost metrics tracked
+- Cost guardrails alert appropriately
+- DSAR endpoints execute successfully
+- Evidence cache TTLs enforced
+
+---
+
+## Risk Register
+
+| Risk | Impact | Mitigation | Owner |
+|------|--------|------------|-------|
+| LLM API rate limits | HIGH | Implement exponential backoff + queue | Gen-Reports Lead |
+| ClickHouse learning curve | MEDIUM | Use managed ClickHouse Cloud; start simple | Analytics Lead |
+| Impact-In API changes | MEDIUM | Version all connectors; automated tests | Integrations Lead |
+| Email deliverability issues | MEDIUM | Use reputable provider (SendGrid); monitor bounce rates | Notifications Lead |
+| AI cost overruns | HIGH | Enforce strict per-tenant budgets; alerts at 80% | QA-Platform Lead |
+| Citation quality | HIGH | Implement validation; fallback to "insufficient evidence" | Gen-Reports Lead |
+
+---
+
+## Next Steps (Orchestrator)
+
+1. ✅ Deploy Gen-Reports Lead team
+2. Deploy Integrations + Notifications Leads (parallel)
+3. Deploy Analytics + QA-Platform Leads (parallel)
+4. Monitor commits; unblock dependencies
+5. Synthesize final reports
+6. Validate all acceptance criteria
+7. Commit + push to branch
+
+---
+
+**Last Updated**: Worker 2 initiation
+**Status**: 🟡 IN PROGRESS
+**Orchestrator**: Active
+
