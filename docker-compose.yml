@@ -51,8 +51,48 @@ services:
     depends_on:
       - postgres
 
+  redis:
+    image: redis:7-alpine
+    container_name: teei-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:23.8-alpine
+    container_name: teei-clickhouse
+    restart: unless-stopped
+    environment:
+      CLICKHOUSE_DB: teei_analytics
+      CLICKHOUSE_USER: teei
+      CLICKHOUSE_PASSWORD: teei_dev_password
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+    ports:
+      - "8123:8123"  # HTTP interface
+      - "9000:9000"  # Native client port
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - ./services/analytics/src/clickhouse/schema.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8123/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 volumes:
   postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  clickhouse_data:
     driver: local
 
 networks:

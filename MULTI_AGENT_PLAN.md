@@ -733,12 +733,12 @@ Phase B delivered production-grade security, observability, and compliance. Work
 - [x] Rate Limiter - Tenant quotas
 
 ### Analytics Lead Progress
-- [ ] ClickHouse Loader - Setup + ingestion
-- [ ] Trends API - Time-series endpoint
-- [ ] Cohorts API - Cohort comparisons
-- [ ] Funnels API - Conversion tracking
-- [ ] Cache Engineer - Redis caching
-- [ ] Benchmarks API - MV-based comparisons
+- [x] ClickHouse Loader - Setup + ingestion
+- [x] Trends API - Time-series endpoint
+- [x] Cohorts API - Cohort comparisons
+- [x] Funnels API - Conversion tracking
+- [x] Cache Engineer - Redis caching
+- [x] Benchmarks API - MV-based comparisons
 
 ### QA-Platform Lead Progress
 - [ ] OpenAPI Publisher - Finalize specs

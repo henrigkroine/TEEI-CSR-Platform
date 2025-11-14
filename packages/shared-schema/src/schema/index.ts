@@ -12,3 +12,4 @@ export * from './pii.js';
 export * from './report_lineage.js';
 export * from './impact_deliveries.js';
 export * from './notifications.js';
+export * from './query_budgets.js';

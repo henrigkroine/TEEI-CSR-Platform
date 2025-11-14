@@ -1,7 +1,10 @@
 import { pgTable, uuid, varchar, timestamp, decimal, text } from 'drizzle-orm/pg-core';
+import { users, companies } from './users.js';
 
 export const outcomeScores = pgTable('outcome_scores', {
   id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').references(() => users.id), // For analytics joins
+  companyId: uuid('company_id').references(() => companies.id), // For tenant filtering
   textId: uuid('text_id').notNull(), // Reference to source (feedback_id, checkin_id, etc.)
   textType: varchar('text_type', { length: 50 }), // buddy_feedback, kintell_feedback, checkin_note, etc.
   dimension: varchar('dimension', { length: 50 }).notNull(), // confidence, belonging, lang_level_proxy, job_readiness, well_being
