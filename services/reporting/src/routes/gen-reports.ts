@@ -25,8 +25,23 @@ const GenerateReportRequestSchema = z.object({
     start: z.string(),
     end: z.string(),
   }),
-  locale: z.enum(['en', 'es', 'fr']).default('en'),
-  sections: z.array(z.enum(['impact-summary', 'sroi-narrative', 'outcome-trends'])),
+  locale: z.enum(['en', 'es', 'fr', 'uk', 'no']).default('en'),
+  reportType: z
+    .enum(['quarterly-report', 'annual-report', 'investor-update', 'impact-deep-dive'])
+    .optional(),
+  sections: z
+    .array(
+      z.enum([
+        'impact-summary',
+        'sroi-narrative',
+        'outcome-trends',
+        'quarterly-report',
+        'annual-report',
+        'investor-update',
+        'impact-deep-dive',
+      ])
+    )
+    .optional(),
   deterministic: z.boolean().default(false),
   temperature: z.number().min(0).max(2).optional(),
   maxTokens: z.number().min(100).max(8000).optional(),
@@ -84,6 +99,22 @@ class ReportGenerator {
 
     logger.info(`Generating report for company ${request.companyId}`, { request });
 
+    // Determine sections to generate
+    let sectionsToGenerate: string[];
+    if (request.reportType) {
+      // Use report type as a single comprehensive template
+      sectionsToGenerate = [request.reportType];
+      logger.info(`Using report type template: ${request.reportType}`);
+    } else if (request.sections && request.sections.length > 0) {
+      // Use specified sections
+      sectionsToGenerate = request.sections;
+      logger.info(`Generating ${sectionsToGenerate.length} sections`);
+    } else {
+      // Default to impact summary
+      sectionsToGenerate = ['impact-summary'];
+      warnings.push('No sections or report type specified, defaulting to impact-summary');
+    }
+
     // Step 1: Extract evidence snippets from database
     const periodStart = new Date(request.period.start);
     const periodEnd = new Date(request.period.end);
@@ -101,9 +132,37 @@ class ReportGenerator {
     logger.info(`Extracted ${evidenceSnippets.length} evidence snippets`);
 
     // Step 2: Redact PII from evidence before sending to LLM
-    const { redactedSnippets } = this.redactionEnforcer.redactSnippets(
+    const redactionStartTime = Date.now();
+    const { redactedSnippets, redactionMaps } = this.redactionEnforcer.redactSnippets(
       evidenceSnippets.map(s => ({ id: s.id, text: s.text, dimension: s.dimension, score: s.score }))
     );
+
+    // Count total redactions for audit trail
+    let totalRedactions = 0;
+    for (const redactionMap of redactionMaps.values()) {
+      totalRedactions += redactionMap.size;
+    }
+
+    // Validate that all redacted content has no PII leaks
+    for (const snippet of redactedSnippets) {
+      const validation = this.redactionEnforcer.validate(snippet.text);
+      if (!validation.isValid) {
+        logger.error('PII LEAK DETECTED after redaction', {
+          snippetId: snippet.id,
+          violations: validation.violations,
+        });
+        throw new Error(
+          `PII redaction failed for snippet ${snippet.id}: ${validation.violations.join(', ')}`
+        );
+      }
+    }
+
+    logger.info(`PII redaction complete`, {
+      totalSnippets: evidenceSnippets.length,
+      totalRedactions,
+      redactionTimeMs: Date.now() - redactionStartTime,
+      companyId: request.companyId,
+    });
 
     // Step 3: Fetch metrics for the company/period
     // TODO: Query metrics_company_period table
@@ -127,7 +186,7 @@ class ReportGenerator {
     let totalTokensInput = 0;
     let totalTokensOutput = 0;
 
-    for (const sectionType of request.sections) {
+    for (const sectionType of sectionsToGenerate) {
       logger.info(`Generating section: ${sectionType}`);
 
       // Prepare template data
@@ -168,11 +227,32 @@ class ReportGenerator {
       );
 
       if (!validation.valid) {
-        logger.warn(`Citation validation failed for ${sectionType}`, {
+        logger.error(`Citation validation FAILED for ${sectionType}`, {
           errors: validation.errors,
+          citationCount: validation.citationCount,
+          paragraphCount: validation.paragraphCount,
+          citationDensity: validation.citationDensity,
         });
-        warnings.push(`Section "${sectionType}" has citation issues: ${validation.errors.join(', ')}`);
+
+        // In strict mode, fail the entire generation if citations are invalid
+        throw new Error(
+          `Citation validation failed for section "${sectionType}": ${validation.errors.join('; ')}`
+        );
       }
+
+      // Log warnings even if valid
+      if (validation.warnings && validation.warnings.length > 0) {
+        logger.warn(`Citation warnings for ${sectionType}`, {
+          warnings: validation.warnings,
+        });
+        warnings.push(...validation.warnings.map(w => `${sectionType}: ${w}`));
+      }
+
+      logger.info(`Citation validation passed for ${sectionType}`, {
+        citationCount: validation.citationCount,
+        paragraphCount: validation.paragraphCount,
+        citationDensity: validation.citationDensity.toFixed(2),
+      });
 
       // Extract citations from content
       const citationIds = this.citationExtractor.extractCitationIds(response.content);
@@ -201,7 +281,7 @@ class ReportGenerator {
 
     // Step 5: Build lineage metadata
     const promptVersion = templateManager.getTemplateVersion(
-      request.sections[0] as SectionType,
+      sectionsToGenerate[0] as SectionType,
       request.locale
     );
 
@@ -217,7 +297,7 @@ class ReportGenerator {
       locale: request.locale,
       tokensInput: totalTokensInput,
       tokensOutput: totalTokensOutput,
-      sections: request.sections,
+      sections: sectionsToGenerate,
       citationIds: allCitationIds,
       deterministic: request.deterministic,
       temperature: request.temperature,

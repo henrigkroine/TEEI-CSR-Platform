@@ -1042,3 +1042,346 @@ cacheMiddleware({
 **Orchestrator**: Worker 2 Backend Lead (Claude)
 **Last Updated**: 2025-11-14
 
+---
+
+# Worker 3 Phase D: Gen-AI Reporting Cockpit Enterprise Production
+
+**Status**: 🚀 In Progress
+**Branch**: `claude/genai-reporting-cockpit-phase-d-01Hppffi2ErgfUV2G5jXiN7b`
+**Started**: 2025-11-14
+**Priority**: P0 - Enterprise Production Launch
+**Target Completion**: TBD
+
+---
+
+## Mission
+
+Finish Gen-AI reporting end-to-end, complete cockpit enterprise polish, and ship export/scheduling with evidence-level citations and redaction—ready for tenant pilots.
+
+### Scope (Must Deliver)
+
+1. Wire POST /gen-reports:generate to real LLMs with prompt templates, citation extraction, redaction enforcement, token budgets, and cost logging
+2. Evidence lineage → narrative: each generated statement must cite source evidence IDs; redaction rules applied before render
+3. Server-side charts/figures for PDF/PPTX; scheduled exports with email delivery; "Boardroom mode"
+4. Saved views & signed share links; white-label/theming; SSO/RBAC UI wiring; A11y WCAG 2.2 AA; Playwright E2E for core flows
+5. Performance budgets (Lighthouse) enforced in CI; SSE resume/backoff verified at scale
+
+---
+
+## 30-Agent Team Structure
+
+### Team 1: Requirements & Orchestration (5 agents)
+**Lead**: orchestrator-lead
+
+| Agent | Trigger | Deliverable |
+|-------|---------|-------------|
+| **orchestrator-lead** | Task decomposition needed | Multi-agent plan, PR synthesis |
+| **requirements-mapper** | Audit gaps identified | Gap analysis → acceptance criteria mapping |
+| **docs-writer** | Documentation needed | GenAI_Reporting.md, Exports_Scheduling.md, A11y_Perf_Playbook.md |
+| **release-manager** | PR ready | Branch management, changelog, rollout plan |
+| **post-merge-verifier** | After merge | Validate all acceptance checks green |
+
+**Status**: ✅ Planning complete
+
+---
+
+### Team 2: Gen-AI Core (6 agents)
+**Lead**: prompt-architect
+
+| Agent | Trigger | Deliverable |
+|-------|---------|-------------|
+| **prompt-architect** | Report templates needed | 4 templates (Quarterly/Annual/Investor/Impact) with token budgets |
+| **citation-extractor** | Evidence linking needed | Citation extraction, validation (min 1/paragraph) |
+| **redaction-engineer** | PII detected | Pre-LLM redaction enforcement, audit logging |
+| **narrative-composer** | CSRD-ready prose needed | Assemble metrics + Q2Q with inline citations |
+| **cost-telemetry** | Token tracking needed | Log tokens/$ per report with tenant/type tags |
+| **audit-logger** | Report lifecycle events | Structured audit log (who/what/when) |
+
+**Status**: 🚧 In Progress
+
+**Implementation Tasks**:
+1. Create prompt templates in `/services/reporting/src/templates/prompts/`:
+   - `quarterly-report.hbs` (Q1-Q4 summary, KPIs, trends)
+   - `annual-report.hbs` (yearly narrative, CSRD-aligned)
+   - `investor-update.hbs` (SROI-focused, ROI metrics)
+   - `impact-deep-dive.hbs` (outcome-centric, evidence-heavy)
+2. Enhance `/services/reporting/src/routes/gen-reports.ts`:
+   - Wire template selection logic
+   - Add pre-LLM redaction step
+   - Enforce citation validation (min 1/paragraph)
+   - Log cost telemetry to database
+3. Update `/services/reporting/src/lib/citations.ts`:
+   - Add citation density validation
+   - Reject unverifiable claims
+4. Create cost telemetry table and logger:
+   - `llm_cost_telemetry` table (report_id, tenant_id, model, tokens_in, tokens_out, cost_usd, timestamp)
+
+---
+
+### Team 3: Export & Charts (5 agents)
+**Lead**: chart-ssr-engineer
+
+| Agent | Trigger | Deliverable |
+|-------|---------|-------------|
+| **chart-ssr-engineer** | Charts needed for exports | Server-side Chart.js → PNG/SVG renderer |
+| **pdf-renderer** | Print-quality PDF needed | Enhanced PDF with watermarks, evidence hash, A4/US-Letter |
+| **pptx-generator** | Executive pack needed | PPTX with brand theme, embedded charts |
+| **theming-white-label** | Tenant branding needed | Tenant logo/colors → PDF/PPTX theme sync |
+| **visual-regression** | Chart snapshots needed | Visual diff baselines for charts/prints |
+
+**Status**: ⏳ Pending
+
+**Implementation Tasks**:
+1. Create server-side chart renderer in `/services/reporting/src/utils/chartRenderer.ts`:
+   - Use `chart.js` + `canvas` (Node.js canvas library)
+   - Support bar, line, pie, area charts
+   - Return PNG/SVG base64 for embedding
+2. Enhance `/services/reporting/src/utils/pdfGenerator.ts`:
+   - Add evidence hash to footer
+   - Support tenant logo/colors from white-label config
+   - Add watermarking based on approval status
+3. Complete `/services/reporting/src/utils/pptxGenerator.ts`:
+   - Remove TODO placeholders
+   - Add chart embedding via base64 images
+   - Support tenant theme (logo, primary/secondary colors)
+4. Create white-label config table:
+   - `tenant_themes` table (tenant_id, logo_url, primary_color, secondary_color, font_family)
+5. Add visual regression tests:
+   - Snapshot charts in `/tests/visual/charts/`
+   - Use Playwright `toHaveScreenshot()`
+
+---
+
+### Team 4: Scheduling & Delivery (7 agents)
+**Lead**: report-scheduler
+
+| Agent | Trigger | Deliverable |
+|-------|---------|-------------|
+| **report-scheduler** | Cron scheduling needed | Enhanced scheduler with retry, status tracking |
+| **email-delivery-ui** | Email config needed | Recipient config, templates, attachments |
+| **saved-views-architect** | Dashboard persistence needed | RBAC-scoped saved views (filters, queries) |
+| **share-link-signer** | External sharing needed | JWT-signed URLs with TTL, no PII |
+| **rate-limit-guardian** | Endpoint abuse risk | Rate limiting for /gen-reports:generate |
+| **feature-flags** | Tenant-gated features | Feature flag system for gradual rollout |
+| **sse-caching-tuner** | SSE reliability needed | Validate reconnect/resume + ETag caching |
+
+**Status**: ⏳ Pending
+
+**Implementation Tasks**:
+1. Enhance `/services/reporting/src/routes/schedules.ts`:
+   - Add status tracking UI endpoints
+   - Add manual retry capability
+   - Add pause/resume schedule
+2. Create saved views system:
+   - `saved_views` table (user_id, company_id, name, config_json, is_public, created_at)
+   - GET/POST/PATCH/DELETE `/v1/saved-views/:id` endpoints
+   - RBAC enforcement (user can only access own + public views)
+3. Create share link system:
+   - `share_links` table (link_id, report_id, created_by, expires_at, access_count)
+   - JWT signing with RS256 (private key in env)
+   - GET `/v1/share/:linkId` → verify JWT, check TTL, increment access_count
+   - Redact PII from shared report content
+4. Add rate limiting to `/gen-reports:generate`:
+   - Max 10 reports/hour per company
+   - Max 100 reports/day per company
+   - Return 429 with retry-after header
+5. Create feature flags table:
+   - `feature_flags` table (feature_name, tenant_id, enabled, rollout_percentage)
+   - Middleware to check flags before feature access
+
+---
+
+### Team 5: QA, A11y & Performance (7 agents)
+**Lead**: qa-compliance-lead
+
+| Agent | Trigger | Deliverable |
+|-------|---------|-------------|
+| **playwright-e2e** | E2E tests needed | E2E for: login→tenant→Evidence→Report→Export |
+| **a11y-auditor** | WCAG compliance needed | Axe/Pa11y CI integration, WCAG 2.2 AA enforcement |
+| **perf-budgets** | Performance regression risk | Lighthouse budgets, fail PR on regression |
+| **i18n-transcreator** | Localization needed | Prompts/UI for EN/UK/NO with hreflang |
+| **qa-negative-tests** | Edge cases untested | Fuzz inputs, long prompts, missing evidence |
+| **security-reviewer** | Threat modeling needed | Security review of report gen & share links |
+| **visual-regression** | Chart snapshots needed | Visual diff baselines |
+
+**Status**: ⏳ Pending
+
+**Implementation Tasks**:
+1. Expand Playwright E2E tests in `/tests/e2e/`:
+   - `11-gen-ai-reports.spec.ts` (template selection, generation, citation validation)
+   - `12-saved-views.spec.ts` (create, edit, delete, RBAC)
+   - `13-share-links.spec.ts` (create link, access, expiration, PII check)
+   - `14-boardroom-mode.spec.ts` (offline capability, cached data)
+2. Add Lighthouse budgets to CI:
+   - `.github/workflows/lh-budgets.yml` (enhance existing)
+   - Budget: FCP <2s, LCP <2.5s, TBT <300ms, CLS <0.1
+3. Validate SSE caching:
+   - Test `Last-Event-ID` resume in E2E
+   - Test ETag caching with If-None-Match
+   - Test reconnect after network interruption
+4. Add i18n for prompts:
+   - Create `/services/reporting/src/templates/prompts/locales/` (en.json, uk.json, no.json)
+   - Use locale in template selection
+5. Add negative tests in `/tests/unit/negative/`:
+   - Long prompts (>8000 tokens)
+   - Missing evidence references
+   - Invalid citation IDs
+   - PII in report output (should be redacted)
+6. Security review checklist:
+   - SQL injection in filters (use parameterized queries)
+   - XSS in report content (escape HTML)
+   - JWT signature verification (use RS256, not HS256)
+   - PII leakage in logs/errors
+   - Tenant isolation in share links
+
+---
+
+## Acceptance Criteria
+
+### Gen-AI Reports ✅
+- [ ] 4 report templates (Quarterly, Annual, Investor, Impact) produce PDF & PPTX
+- [ ] Each narrative statement cites evidence IDs
+- [ ] 0 PII leaks (redaction verified in tests)
+- [ ] ≤30s generation time (measured in E2E)
+- [ ] Token usage and cost logged per report
+
+### Saved Views & Share Links 💾
+- [ ] Users can save dashboard filter configurations
+- [ ] RBAC enforces view ownership (user sees only own + public)
+- [ ] Signed share links work with JWT
+- [ ] TTL enforced (expired links return 403)
+- [ ] No PII in share link URLs (verified in tests)
+- [ ] Server logs show no PII exposure
+
+### Performance & A11y ⚡
+- [ ] Lighthouse budgets enforced in CI: FCP <2s, LCP <2.5s, TBT <300ms, CLS <0.1
+- [ ] Axe/Pa11y CI tests passing (0 violations)
+- [ ] SSE Last-Event-ID resume working (E2E test)
+- [ ] ETag caching verified (If-None-Match)
+
+### E2E Testing 🧪
+- [ ] Playwright tests pass for admin role: create report, export PDF/PPTX, schedule
+- [ ] Playwright tests pass for viewer role: view reports, access share links
+- [ ] Visual regression tests for charts established
+- [ ] Negative tests cover edge cases (long prompts, missing evidence, PII)
+
+### Documentation 📝
+- [ ] `/docs/GenAI_Reporting.md` - Prompt engineering, redaction, safety
+- [ ] `/docs/Exports_Scheduling.md` - Scheduling runbook, email delivery
+- [ ] `/docs/A11y_Perf_Playbook.md` - Accessibility and performance guidelines
+
+---
+
+## Critical Path
+
+```
+Day 1-2: Prompt Templates (Team 2)
+  ├─→ Day 3-4: Citation & Redaction (Team 2)
+  │
+  ├─→ Day 5-6: Chart Renderer (Team 3)
+  │   └─→ Day 7-8: PDF/PPTX Enhancement (Team 3)
+  │
+  ├─→ Day 9-10: Saved Views & Share Links (Team 4)
+  │
+  └─→ Day 11-12: E2E Tests (Team 5)
+      └─→ Day 13-14: A11y & Perf (Team 5)
+          └─→ Day 15: Documentation & PR (Team 1)
+```
+
+**Estimated Duration**: 15 days (3 weeks)
+
+---
+
+## Progress Tracking
+
+**Overall**: 2 / 28 tasks complete (7%)
+
+| Team | Focus | Tasks | Complete | % |
+|------|-------|-------|----------|---|
+| Team 1: Orchestration | Planning & Docs | 5 | 2 | 40% 🚧 |
+| Team 2: Gen-AI Core | Prompts, Citations, Redaction | 6 | 0 | 0% ⏳ |
+| Team 3: Export & Charts | PDF/PPTX, Server-side rendering | 5 | 0 | 0% ⏳ |
+| Team 4: Scheduling | Saved views, Share links, Feature flags | 7 | 0 | 0% ⏳ |
+| Team 5: QA & Performance | E2E, A11y, Perf budgets | 7 | 0 | 0% ⏳ |
+
+**Last Updated**: 2025-11-14 by orchestrator-lead
+
+---
+
+## Daily Standup Log
+
+### 2025-11-14
+**orchestrator-lead**:
+- ✅ Explored codebase (comprehensive report received)
+- ✅ Created MULTI_AGENT_PLAN.md Phase D section
+- 🚧 Starting Team 2: prompt-architect agent
+
+**Blockers**: None
+
+**Next**: Create 4 prompt templates for report generation
+
+---
+
+## Risk Register
+
+| Risk | Impact | Probability | Mitigation |
+|------|--------|-------------|------------|
+| LLM API rate limits | High | Medium | Exponential backoff, queue system, cost budgets |
+| Citation extraction failures | High | Low | Fallback to template-only mode, alert admin |
+| PII leakage in exports | Critical | Low | Automated redaction testing, manual security review |
+| Performance regression | Medium | Medium | Lighthouse budgets in CI, fail on regression |
+| SSE reconnect failures | Medium | Low | Comprehensive E2E testing, retry logic |
+| Tenant isolation breach | Critical | Very Low | Security review, penetration testing |
+| Report generation timeout | Medium | Medium | Streaming SSE updates, async processing |
+
+---
+
+## Integration Points
+
+### With Worker 1 (IaC/Security/Observability)
+- OTel traces for LLM cost tracking
+- Secrets management for OpenAI/Anthropic API keys
+- Security review for Gen-AI endpoints
+
+### With Worker 2 (Backend Services)
+- Q2Q evidence APIs for citation extraction
+- RBAC enforcement for saved views
+- Privacy orchestrator for PII redaction audit
+
+---
+
+## Success Metrics
+
+| Metric | Target | Current | Status |
+|--------|--------|---------|--------|
+| Report Templates | 4 | 0 | 🔴 |
+| Citation Coverage | 100% paragraphs | 0% | 🔴 |
+| PII Leaks | 0 | Untested | 🔴 |
+| Generation Time | ≤30s | Unmeasured | 🔴 |
+| Cost Logging | Per-report | Not implemented | 🔴 |
+| Saved Views | RBAC-scoped | Not implemented | 🔴 |
+| Share Links | JWT-signed | Not implemented | 🔴 |
+| Lighthouse Score | ≥90 Performance | Not enforced | 🔴 |
+| A11y Compliance | WCAG 2.2 AA | Partial (Pa11y exists) | 🟡 |
+| E2E Coverage | Admin + Viewer | Partial (03-reports.spec.ts) | 🟡 |
+| Documentation | 3 guides | 0 | 🔴 |
+
+---
+
+## Non-Negotiables
+
+1. **Evidence lineage is mandatory** - All AI-generated narratives must cite source evidence IDs
+2. **No uncited claims** - Fail fast if evidence missing, reject unverifiable statements
+3. **Privacy-first** - PII redaction before LLM processing, no raw PII in UI
+4. **Tenant isolation** - Enforce at API boundaries, RBAC for all endpoints
+5. **Performance budgets** - Lighthouse scores enforced in CI, fail PR on regression
+6. **WCAG 2.2 AA compliance** - Automated testing in CI (axe/Pa11y)
+7. **Comprehensive E2E** - Test both admin and viewer roles for all features
+8. **Security review** - Threat model for Gen-AI endpoints and share links
+
+---
+
+**Version**: 1.0
+**Orchestrator**: Tech Lead (Worker 3)
+**Next Review**: After Team 2 (Gen-AI Core) completion
+

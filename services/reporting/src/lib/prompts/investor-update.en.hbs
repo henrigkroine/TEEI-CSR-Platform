@@ -1,0 +1,108 @@
+You are a financial analyst specializing in Social Return on Investment (SROI) and ESG impact measurement for investor relations.
+
+**Investment Briefing Context**:
+- **Company**: {{companyName}}
+- **Reporting Period**: {{periodStart}} to {{periodEnd}}
+- **Report Type**: ESG Impact & SROI Investor Update
+- **Audience**: Impact investors, ESG funds, CSR investment committees, philanthropic partners
+- **Investment Lens**: Return on social capital, stakeholder value creation, ESG risk mitigation
+
+**Financial & Impact Metrics**:
+- **SROI Ratio**: {{formatNumber sroiRatio 2}}:1 (For every €1 invested, €{{formatNumber sroiRatio 2}} in social value created)
+- **Volunteer Impact Score (VIS)**: {{formatNumber visScore 1}}/100
+- **Participants Served**: {{participantsCount}}
+- **Program Efficiency**: {{formatNumber (divide sessionsCount participantsCount) 1}} sessions per participant
+- **Volunteer Leverage**: {{formatNumber (divide participantsCount volunteersCount) 1}}:1 participant-to-volunteer ratio
+
+**Outcome ROI Indicators** (0-1 scale, higher = better outcomes):
+- **Economic Empowerment (Job Readiness)**: {{formatPercent avgJobReadiness}}
+- **Human Capital Development (Language)**: {{formatPercent avgLanguageLevel}}
+- **Workforce Resilience (Confidence)**: {{formatPercent avgConfidence}}
+- **Social Cohesion (Belonging)**: {{formatPercent avgBelonging}}
+- **Well-being Premium**: {{formatPercent avgWellBeing}}
+
+**Evidence-Based Impact Data** (cite with [cite:ID]):
+{{#each evidenceSnippets}}
+[cite:{{this.id}}] "{{this.text}}" ({{this.dimension}}, confidence: {{formatPercent this.score}})
+{{/each}}
+
+---
+
+**INSTRUCTIONS**:
+
+1. **Executive Summary** (1 paragraph, 120-150 words):
+   - Lead with the SROI ratio: {{formatNumber sroiRatio 2}}:1
+   - Translate to investor language: "This program generated €{{formatNumber (subtract sroiRatio 1) 2}} in social value for every €1 deployed"
+   - Headline outcome: strongest performing dimension
+   - Risk mitigation value: workforce diversity, community license to operate
+   - CRITICAL: Cite 1-2 key evidence points
+
+2. **SROI Methodology & Assumptions** (2 paragraphs, 250-300 words):
+   - **Investment (Denominator)**:
+     * Volunteer time valued at market rate (€X/hour × hours)
+     * Program operational costs (facilitators, technology, space)
+     * Overhead allocation
+   - **Social Value Created (Numerator)**:
+     * Employment outcomes valued at salary × employment duration
+     * Tax revenue contributions
+     * Reduced social service costs (welfare, language classes)
+     * Well-being improvements (QALYs or well-being valuation studies)
+   - Sensitivity: How does SROI change if we adjust key assumptions by ±20%?
+   - CRITICAL: Cite evidence for outcome-to-value conversions (e.g., job readiness → employment rate)
+
+3. **Portfolio Performance: Outcome Dimensions** (2 paragraphs, 300-350 words):
+   - Treat each outcome dimension as a "portfolio asset"
+   - **Highest ROI**: Which dimension shows strongest improvement? (e.g., Job Readiness at {{formatPercent avgJobReadiness}})
+   - **Strategic Bets**: Where are we investing effort? (e.g., language coaching, mentorship)
+   - **Risk Areas**: Which dimensions underperform? What's the mitigation plan?
+   - Use participant voices from evidence to illustrate value creation
+   - CRITICAL: Minimum 2 citations per paragraph, linking outcomes to economic value
+
+4. **Volunteer Capital Efficiency (VIS Deep Dive)** (1-2 paragraphs, 200-250 words):
+   - Explain VIS ({{formatNumber visScore 1}}/100) as a measure of volunteer leverage
+   - Calculate implied volunteer value: If VIS is high, volunteers are multiplying impact
+   - Compare to benchmark: What's typical VIS for integration programs? (if data available)
+   - Strategic implication: How do we scale volunteer engagement without diluting quality?
+   - CRITICAL: Cite evidence showing volunteer-participant interaction quality
+
+5. **ESG Risk Mitigation & Upside** (1-2 paragraphs, 200-250 words):
+   - **Risk Mitigation**:
+     * Workforce diversity reduces talent acquisition risk
+     * Community engagement reduces reputational risk
+     * Regulatory compliance (CSRD, ESG disclosure mandates)
+   - **Upside Opportunities**:
+     * Access to multilingual, globally-connected talent
+     * Innovation from diverse perspectives
+     * Brand premium with ESG-conscious customers
+   - CRITICAL: Cite evidence linking program to business outcomes (if available) or participant outcomes as proxy
+
+6. **Forward Guidance & Investment Case** (1 paragraph, 120-150 words):
+   - Expected SROI trajectory for next period
+   - Planned investments to improve outcome dimensions
+   - Scaling strategy: can we maintain or improve SROI at 2x participant volume?
+   - Alignment with investor ESG mandates (e.g., UN PRI, SFDR Article 9)
+   - CRITICAL: Ground projections in evidence-based trends
+
+---
+
+**OUTPUT REQUIREMENTS**:
+- **Total Length**: 1200-1500 words
+- **Tone**: Analytical, ROI-focused, data-driven, investor-grade rigor
+- **Format**: Plain text with section headers (use "# Section Name")
+- **Citations**: Inline [cite:ID] format, minimum 1-2 per paragraph
+- **Metrics First**: Lead with numbers, support with qualitative evidence
+- **Comparative Context**: Benchmarks, year-over-year trends, peer comparisons (if data available)
+- **No PII**: Maintain participant anonymity
+
+**CRITICAL RULES**:
+✅ Every financial claim must be cited or derived from provided metrics
+✅ SROI calculations must be transparent and conservative
+✅ Use evidence snippets to validate outcome valuations
+✅ If insufficient data for a valuation, disclose assumptions clearly
+✅ Plain text only (no markdown)
+✅ Section headers with "# " prefix
+✅ Treat this as an investment memo under fiduciary scrutiny
+
+---
+
+Generate the SROI Investor Update now:

@@ -19,12 +19,19 @@ export interface CitationConfig {
   minRelevanceScore?: number;
   maxSnippetsPerDimension?: number;
   minConfidence?: number;
+  // Validation config
+  minCitationsPerParagraph?: number;
+  minCitationDensity?: number; // Citations per 100 words
+  strictValidation?: boolean; // If true, throw errors instead of warnings
 }
 
 const DEFAULT_CONFIG: CitationConfig = {
   minRelevanceScore: 0.3,
   maxSnippetsPerDimension: 5,
   minConfidence: 0.5,
+  minCitationsPerParagraph: 1,
+  minCitationDensity: 0.5, // At least 1 citation per 200 words
+  strictValidation: true, // Phase D: enforce citations strictly
 };
 
 /**
@@ -165,46 +172,104 @@ export class CitationExtractor {
   /**
    * Validate citations in generated content
    * Ensures every citation ID exists in the evidence set
+   * Enforces minimum citation density requirements
    */
-  validateCitations(content: string, evidenceSnippets: EvidenceSnippet[]): {
+  validateCitations(
+    content: string,
+    evidenceSnippets: EvidenceSnippet[]
+  ): {
     valid: boolean;
     errors: string[];
+    warnings: string[];
     citationCount: number;
+    paragraphCount: number;
+    citationDensity: number; // Citations per 100 words
   } {
     const errors: string[] = [];
+    const warnings: string[] = [];
     const citationRegex = /\[cite:([^\]]+)\]/g;
     const matches = Array.from(content.matchAll(citationRegex));
     const citationCount = matches.length;
 
+    // Calculate word count (exclude citation tags)
+    const textWithoutCitations = content.replace(citationRegex, '');
+    const wordCount = textWithoutCitations.trim().split(/\s+/).length;
+    const citationDensity = wordCount > 0 ? (citationCount / wordCount) * 100 : 0;
+
+    // Check minimum citations
     if (citationCount === 0) {
-      errors.push('No citations found in content');
-      return { valid: false, errors, citationCount: 0 };
+      const msg = 'CRITICAL: No citations found in generated content';
+      if (this.config.strictValidation) {
+        errors.push(msg);
+      } else {
+        warnings.push(msg);
+      }
     }
 
     const validIds = new Set(evidenceSnippets.map(s => s.id));
 
+    // Validate all citation IDs exist
     for (const match of matches) {
       const citationId = match[1];
       if (!validIds.has(citationId)) {
-        errors.push(`Invalid citation ID: ${citationId}`);
+        errors.push(`Invalid citation ID: ${citationId} (not found in evidence set)`);
       }
     }
 
-    // Check that there's at least one citation per paragraph
-    const paragraphs = content.split('\n\n').filter(p => p.trim().length > 0);
+    // Check citation density (citations per 100 words)
+    const minDensity = this.config.minCitationDensity || 0.5;
+    if (citationDensity < minDensity) {
+      const msg = `Citation density ${citationDensity.toFixed(2)} per 100 words is below minimum ${minDensity} (need ${Math.ceil((minDensity * wordCount) / 100)} citations for ${wordCount} words)`;
+      if (this.config.strictValidation) {
+        errors.push(msg);
+      } else {
+        warnings.push(msg);
+      }
+    }
+
+    // Check minimum citations per paragraph
+    const paragraphs = content.split(/\n\n+/).filter(p => p.trim().length > 0);
+    const minPerParagraph = this.config.minCitationsPerParagraph || 1;
+
     for (let i = 0; i < paragraphs.length; i++) {
       const para = paragraphs[i];
+      // Skip if paragraph is a header (starts with #) or very short (<50 chars)
+      if (para.trim().startsWith('#') || para.trim().length < 50) {
+        continue;
+      }
+
       const paraCitations = para.match(citationRegex);
-      if (!paraCitations || paraCitations.length === 0) {
-        errors.push(`Paragraph ${i + 1} has no citations`);
+      const paraCount = paraCitations ? paraCitations.length : 0;
+
+      if (paraCount < minPerParagraph) {
+        const msg = `Paragraph ${i + 1} has ${paraCount} citation(s), minimum ${minPerParagraph} required`;
+        if (this.config.strictValidation) {
+          errors.push(msg);
+        } else {
+          warnings.push(msg);
+        }
       }
     }
 
-    return {
+    const result = {
       valid: errors.length === 0,
       errors,
+      warnings,
       citationCount,
+      paragraphCount: paragraphs.length,
+      citationDensity,
     };
+
+    logger.info('Citation validation complete', {
+      valid: result.valid,
+      citationCount,
+      paragraphCount: paragraphs.length,
+      citationDensity: citationDensity.toFixed(2),
+      errorCount: errors.length,
+      warningCount: warnings.length,
+    });
+
+    return result;
   }
 
   /**

@@ -9,8 +9,15 @@ const logger = createServiceLogger('reporting:prompts');
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-export type SectionType = 'impact-summary' | 'sroi-narrative' | 'outcome-trends';
-export type Locale = 'en' | 'es' | 'fr';
+export type SectionType =
+  | 'impact-summary'
+  | 'sroi-narrative'
+  | 'outcome-trends'
+  | 'quarterly-report'
+  | 'annual-report'
+  | 'investor-update'
+  | 'impact-deep-dive';
+export type Locale = 'en' | 'es' | 'fr' | 'uk' | 'no';
 
 /**
  * Prompt template manager with locale support
@@ -30,8 +37,16 @@ export class PromptTemplateManager {
    * Load all templates from disk
    */
   private loadTemplates(): void {
-    const sections: SectionType[] = ['impact-summary', 'sroi-narrative', 'outcome-trends'];
-    const locales: Locale[] = ['en', 'es', 'fr'];
+    const sections: SectionType[] = [
+      'impact-summary',
+      'sroi-narrative',
+      'outcome-trends',
+      'quarterly-report',
+      'annual-report',
+      'investor-update',
+      'impact-deep-dive'
+    ];
+    const locales: Locale[] = ['en', 'es', 'fr', 'uk', 'no'];
 
     for (const section of sections) {
       for (const locale of locales) {
