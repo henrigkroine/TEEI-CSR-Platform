@@ -1,0 +1,636 @@
+openapi: 3.0.3
+info:
+  title: TEEI Impact-In Service API
+  version: 1.0.0
+  description: |
+    Impact-In integration service for pushing CSR data to external platforms.
+    Supports Benevity, Goodera, and Workday with delivery tracking and replay capabilities.
+  contact:
+    name: TEEI Platform Team
+    email: platform@teei.io
+
+servers:
+  - url: https://api.teei.io/v1
+    description: Production
+  - url: https://staging-api.teei.io/v1
+    description: Staging
+  - url: http://localhost:3005/v1
+    description: Local development
+
+security:
+  - bearerAuth: []
+
+paths:
+  /impact-in/deliveries:
+    get:
+      summary: List deliveries with filtering and pagination
+      description: Returns delivery history with support for filtering by company, provider, status, and date range
+      operationId: listDeliveries
+      tags:
+        - Deliveries
+      parameters:
+        - name: companyId
+          in: query
+          description: Filter by company ID
+          schema:
+            type: string
+            format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        - name: provider
+          in: query
+          description: Filter by provider
+          schema:
+            type: string
+            enum: [benevity, goodera, workday]
+          example: "benevity"
+        - name: status
+          in: query
+          description: Filter by delivery status
+          schema:
+            type: string
+            enum: [pending, success, failed, retrying]
+          example: "success"
+        - name: startDate
+          in: query
+          description: Filter deliveries created after this date
+          schema:
+            type: string
+            format: date-time
+          example: "2024-01-01T00:00:00Z"
+        - name: endDate
+          in: query
+          description: Filter deliveries created before this date
+          schema:
+            type: string
+            format: date-time
+          example: "2024-12-31T23:59:59Z"
+        - name: page
+          in: query
+          description: Page number (1-indexed)
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          example: 1
+        - name: limit
+          in: query
+          description: Items per page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          example: 20
+      responses:
+        '200':
+          description: Deliveries retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeliveryListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /impact-in/deliveries/{id}:
+    get:
+      summary: Get single delivery by ID
+      description: Returns detailed information about a specific delivery
+      operationId: getDelivery
+      tags:
+        - Deliveries
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Delivery ID
+          schema:
+            type: string
+            format: uuid
+          example: "650e8400-e29b-41d4-a716-446655440000"
+      responses:
+        '200':
+          description: Delivery retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeliveryDetailResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /impact-in/deliveries/{id}/replay:
+    post:
+      summary: Retry a failed delivery
+      description: Manually retry a failed delivery (status must be 'failed')
+      operationId: replayDelivery
+      tags:
+        - Replay
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Delivery ID to replay
+          schema:
+            type: string
+            format: uuid
+          example: "650e8400-e29b-41d4-a716-446655440000"
+      responses:
+        '200':
+          description: Delivery replayed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReplayResponse'
+              examples:
+                success:
+                  value:
+                    success: true
+                    message: "Delivery replayed successfully"
+                    newStatus: "success"
+        '400':
+          description: Replay failed or invalid state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                wrongStatus:
+                  value:
+                    error: "Replay failed"
+                    message: "Cannot replay delivery with status: success"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /impact-in/deliveries/bulk-replay:
+    post:
+      summary: Retry multiple failed deliveries
+      description: Batch replay up to 100 deliveries
+      operationId: bulkReplay
+      tags:
+        - Replay
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkReplayRequest'
+            example:
+              ids:
+                - "650e8400-e29b-41d4-a716-446655440001"
+                - "650e8400-e29b-41d4-a716-446655440002"
+                - "650e8400-e29b-41d4-a716-446655440003"
+      responses:
+        '200':
+          description: Bulk replay completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkReplayResponse'
+              example:
+                summary:
+                  total: 3
+                  successful: 2
+                  failed: 1
+                results:
+                  - id: "650e8400-e29b-41d4-a716-446655440001"
+                    success: true
+                    newStatus: "success"
+                  - id: "650e8400-e29b-41d4-a716-446655440002"
+                    success: true
+                    newStatus: "success"
+                  - id: "650e8400-e29b-41d4-a716-446655440003"
+                    success: false
+                    error: "Provider API returned 503"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /impact-in/deliveries/retry-all-failed:
+    post:
+      summary: Retry all failed deliveries for a company
+      description: Automatically retry all failed deliveries (max 100)
+      operationId: retryAllFailed
+      tags:
+        - Replay
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RetryAllFailedRequest'
+            example:
+              companyId: "550e8400-e29b-41d4-a716-446655440000"
+              provider: "benevity"
+      responses:
+        '200':
+          description: Retry completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkReplayResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /impact-in/stats:
+    get:
+      summary: Get delivery statistics
+      description: Returns aggregated statistics by provider and status
+      operationId: getDeliveryStats
+      tags:
+        - Statistics
+      parameters:
+        - name: companyId
+          in: query
+          description: Filter by company ID
+          schema:
+            type: string
+            format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        - name: startDate
+          in: query
+          description: Filter deliveries created after this date
+          schema:
+            type: string
+            format: date-time
+          example: "2024-01-01T00:00:00Z"
+        - name: endDate
+          in: query
+          description: Filter deliveries created before this date
+          schema:
+            type: string
+            format: date-time
+          example: "2024-12-31T23:59:59Z"
+      responses:
+        '200':
+          description: Statistics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: RS256 JWT token with company_id claim
+
+  schemas:
+    Delivery:
+      type: object
+      required:
+        - id
+        - deliveryId
+        - companyId
+        - provider
+        - status
+        - attemptCount
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Database record ID
+          example: "650e8400-e29b-41d4-a716-446655440000"
+        deliveryId:
+          type: string
+          description: Idempotency key for delivery
+          example: "dlv_7f8a9b0c1d2e3f4a"
+        companyId:
+          type: string
+          format: uuid
+          description: Company identifier
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        provider:
+          type: string
+          enum: [benevity, goodera, workday]
+          description: Target provider
+          example: "benevity"
+        status:
+          type: string
+          enum: [pending, success, failed, retrying]
+          description: Delivery status
+          example: "success"
+        attemptCount:
+          type: integer
+          description: Number of delivery attempts
+          example: 1
+        payload:
+          type: object
+          description: Event payload sent to provider
+          additionalProperties: true
+        lastError:
+          type: string
+          nullable: true
+          description: Last error message if failed
+          example: "Provider API returned 503"
+        providerResponse:
+          type: object
+          nullable: true
+          description: Response from provider
+          additionalProperties: true
+        deliveredAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Timestamp when successfully delivered
+          example: "2024-11-14T10:30:00Z"
+        createdAt:
+          type: string
+          format: date-time
+          description: Creation timestamp
+          example: "2024-11-14T10:25:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          description: Last update timestamp
+          example: "2024-11-14T10:30:00Z"
+
+    DeliveryListResponse:
+      type: object
+      required:
+        - data
+        - pagination
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Delivery'
+        pagination:
+          type: object
+          required:
+            - page
+            - limit
+            - total
+            - totalPages
+            - hasNext
+            - hasPrev
+          properties:
+            page:
+              type: integer
+              example: 1
+            limit:
+              type: integer
+              example: 20
+            total:
+              type: integer
+              description: Total number of deliveries
+              example: 145
+            totalPages:
+              type: integer
+              description: Total number of pages
+              example: 8
+            hasNext:
+              type: boolean
+              description: Whether there's a next page
+              example: true
+            hasPrev:
+              type: boolean
+              description: Whether there's a previous page
+              example: false
+
+    DeliveryDetailResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          $ref: '#/components/schemas/Delivery'
+
+    ReplayResponse:
+      type: object
+      required:
+        - success
+        - message
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Delivery replayed successfully"
+        newStatus:
+          type: string
+          enum: [success, failed]
+          example: "success"
+        error:
+          type: string
+          description: Error message if replay failed
+          example: "Provider API returned 503"
+
+    BulkReplayRequest:
+      type: object
+      required:
+        - ids
+      properties:
+        ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          minItems: 1
+          maxItems: 100
+          description: Delivery IDs to replay
+
+    BulkReplayResponse:
+      type: object
+      required:
+        - summary
+        - results
+      properties:
+        summary:
+          type: object
+          required:
+            - total
+            - successful
+            - failed
+          properties:
+            total:
+              type: integer
+              description: Total deliveries processed
+              example: 10
+            successful:
+              type: integer
+              description: Successful replays
+              example: 8
+            failed:
+              type: integer
+              description: Failed replays
+              example: 2
+        results:
+          type: array
+          items:
+            type: object
+            required:
+              - id
+              - success
+            properties:
+              id:
+                type: string
+                format: uuid
+              success:
+                type: boolean
+              newStatus:
+                type: string
+                enum: [success, failed]
+              error:
+                type: string
+
+    RetryAllFailedRequest:
+      type: object
+      required:
+        - companyId
+      properties:
+        companyId:
+          type: string
+          format: uuid
+          description: Company ID to retry deliveries for
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        provider:
+          type: string
+          enum: [benevity, goodera, workday]
+          description: Optional provider filter
+          example: "benevity"
+
+    StatsResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: object
+          required:
+            - overall
+            - byProvider
+          properties:
+            overall:
+              type: object
+              properties:
+                total:
+                  type: integer
+                  description: Total deliveries
+                  example: 1000
+                successful:
+                  type: integer
+                  description: Successful deliveries
+                  example: 950
+                failed:
+                  type: integer
+                  description: Failed deliveries
+                  example: 30
+                pending:
+                  type: integer
+                  description: Pending deliveries
+                  example: 10
+                retrying:
+                  type: integer
+                  description: Deliveries being retried
+                  example: 10
+            byProvider:
+              type: array
+              items:
+                type: object
+                properties:
+                  provider:
+                    type: string
+                    enum: [benevity, goodera, workday]
+                    example: "benevity"
+                  status:
+                    type: string
+                    enum: [pending, success, failed, retrying]
+                    example: "success"
+                  count:
+                    type: integer
+                    example: 320
+                  avgAttempts:
+                    type: number
+                    format: float
+                    description: Average delivery attempts
+                    example: 1.2
+
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Error type
+          example: "Validation error"
+        message:
+          type: string
+          description: Error message
+          example: "Invalid delivery ID format"
+        details:
+          type: object
+          description: Additional error details
+          additionalProperties: true
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Unauthorized:
+      description: Missing or invalid authentication
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Unauthorized"
+            message: "Invalid or expired JWT token"
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Delivery not found"
+            message: "No delivery found with the given ID"
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Internal Server Error"
+            message: "Failed to process request"
+
+tags:
+  - name: Deliveries
+    description: Delivery log management and retrieval
+  - name: Replay
+    description: Manual retry of failed deliveries
+  - name: Statistics
+    description: Delivery statistics and analytics

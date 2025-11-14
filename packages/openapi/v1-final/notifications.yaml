@@ -1,0 +1,785 @@
+openapi: 3.0.3
+info:
+  title: TEEI Notifications Service API
+  version: 1.0.0
+  description: |
+    Multi-channel notification service supporting email, SMS, and push notifications.
+    Includes template management, scheduling, rate limiting, and delivery tracking.
+  contact:
+    name: TEEI Platform Team
+    email: platform@teei.io
+
+servers:
+  - url: https://api.teei.io/v1
+    description: Production
+  - url: https://staging-api.teei.io/v1
+    description: Staging
+  - url: http://localhost:3006/v1
+    description: Local development
+
+security:
+  - bearerAuth: []
+
+paths:
+  /notifications/send:
+    post:
+      summary: Send notification immediately
+      description: Queue a notification for immediate delivery via email, SMS, or push
+      operationId: sendNotification
+      tags:
+        - Notifications
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendNotificationRequest'
+            examples:
+              email:
+                summary: Email notification
+                value:
+                  companyId: "550e8400-e29b-41d4-a716-446655440000"
+                  userId: "650e8400-e29b-41d4-a716-446655440000"
+                  type: "email"
+                  templateId: "report-ready"
+                  recipient: "user@example.com"
+                  subject: "Your Q4 Impact Report is Ready"
+                  payload:
+                    userName: "John Doe"
+                    reportUrl: "https://app.teei.io/reports/rpt_123"
+                    companyName: "Sample Company"
+              sms:
+                summary: SMS notification
+                value:
+                  companyId: "550e8400-e29b-41d4-a716-446655440000"
+                  userId: "650e8400-e29b-41d4-a716-446655440000"
+                  type: "sms"
+                  templateId: "slo-breach-alert"
+                  recipient: "+1234567890"
+                  payload:
+                    metric: "API Response Time"
+                    threshold: "2000ms"
+                    actual: "3500ms"
+      responses:
+        '202':
+          description: Notification queued successfully
+          headers:
+            X-Notification-Id:
+              description: Notification identifier
+              schema:
+                type: string
+              example: "ntf_7f8a9b0c1d2e3f4a"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SendNotificationResponse'
+              example:
+                success: true
+                notificationId: "ntf_7f8a9b0c1d2e3f4a"
+                status: "queued"
+                message: "Notification queued for sending"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /notifications/schedule:
+    post:
+      summary: Schedule notification for future delivery
+      description: Schedule a notification to be sent at a specific future time
+      operationId: scheduleNotification
+      tags:
+        - Notifications
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScheduleNotificationRequest'
+            example:
+              companyId: "550e8400-e29b-41d4-a716-446655440000"
+              type: "email"
+              templateId: "weekly-digest"
+              recipient: "admin@example.com"
+              subject: "Weekly Impact Digest"
+              payload:
+                weekStart: "2024-11-11"
+                weekEnd: "2024-11-17"
+              scheduledAt: "2024-11-18T09:00:00Z"
+      responses:
+        '201':
+          description: Notification scheduled successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScheduleNotificationResponse'
+              example:
+                success: true
+                notificationId: "ntf_7f8a9b0c1d2e3f4a"
+                scheduledAt: "2024-11-18T09:00:00Z"
+                message: "Notification scheduled successfully"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /notifications/{id}/cancel:
+    delete:
+      summary: Cancel scheduled notification
+      description: Cancel a notification that hasn't been sent yet
+      operationId: cancelNotification
+      tags:
+        - Notifications
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Notification ID
+          schema:
+            type: string
+          example: "ntf_7f8a9b0c1d2e3f4a"
+      responses:
+        '200':
+          description: Notification cancelled successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CancelNotificationResponse'
+              example:
+                success: true
+                message: "Notification cancelled successfully"
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /notifications/history:
+    get:
+      summary: Query notification history
+      description: Retrieve notification history with filtering and pagination
+      operationId: getNotificationHistory
+      tags:
+        - History
+      parameters:
+        - name: companyId
+          in: query
+          description: Filter by company ID
+          schema:
+            type: string
+            format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        - name: userId
+          in: query
+          description: Filter by user ID
+          schema:
+            type: string
+            format: uuid
+          example: "650e8400-e29b-41d4-a716-446655440000"
+        - name: type
+          in: query
+          description: Filter by notification type
+          schema:
+            type: string
+            enum: [email, sms, push]
+          example: "email"
+        - name: status
+          in: query
+          description: Filter by status
+          schema:
+            type: string
+            enum: [queued, sent, failed, scheduled, cancelled]
+          example: "sent"
+        - name: limit
+          in: query
+          description: Number of records to return
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+          example: 50
+        - name: offset
+          in: query
+          description: Number of records to skip
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          example: 0
+      responses:
+        '200':
+          description: History retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationHistoryResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /notifications/{id}:
+    get:
+      summary: Get notification details with delivery receipts
+      description: Retrieve detailed information about a notification including delivery receipts
+      operationId: getNotification
+      tags:
+        - History
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Notification ID
+          schema:
+            type: string
+          example: "ntf_7f8a9b0c1d2e3f4a"
+      responses:
+        '200':
+          description: Notification details retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationDetailResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /notifications/quota:
+    get:
+      summary: Check remaining quota
+      description: Check notification quota status for a company
+      operationId: getQuota
+      tags:
+        - Quotas
+      parameters:
+        - name: companyId
+          in: query
+          required: true
+          description: Company ID
+          schema:
+            type: string
+            format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+      responses:
+        '200':
+          description: Quota status retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuotaResponse'
+              example:
+                success: true
+                companyId: "550e8400-e29b-41d4-a716-446655440000"
+                quotas:
+                  email:
+                    limit: 10000
+                    used: 2340
+                    remaining: 7660
+                    resetAt: "2024-12-01T00:00:00Z"
+                  sms:
+                    limit: 1000
+                    used: 45
+                    remaining: 955
+                    resetAt: "2024-12-01T00:00:00Z"
+                  push:
+                    limit: 50000
+                    used: 8920
+                    remaining: 41080
+                    resetAt: "2024-12-01T00:00:00Z"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /notifications/webhooks/sendgrid:
+    post:
+      summary: Webhook receiver for SendGrid delivery events
+      description: Receives delivery status events from SendGrid
+      operationId: sendgridWebhook
+      tags:
+        - Webhooks
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: object
+                additionalProperties: true
+      responses:
+        '200':
+          description: Webhook processed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  received:
+                    type: integer
+                    description: Number of events received
+                    example: 5
+        '400':
+          description: Invalid webhook payload
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /notifications/webhooks/twilio:
+    post:
+      summary: Webhook receiver for Twilio delivery events
+      description: Receives delivery status events from Twilio
+      operationId: twilioWebhook
+      tags:
+        - Webhooks
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Webhook processed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  received:
+                    type: boolean
+                    example: true
+        '400':
+          description: Invalid webhook payload
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: RS256 JWT token with company_id claim
+
+  schemas:
+    SendNotificationRequest:
+      type: object
+      required:
+        - type
+        - templateId
+        - recipient
+        - payload
+      properties:
+        companyId:
+          type: string
+          format: uuid
+          description: Company identifier (optional)
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        userId:
+          type: string
+          format: uuid
+          description: User identifier (optional)
+          example: "650e8400-e29b-41d4-a716-446655440000"
+        type:
+          type: string
+          enum: [email, sms, push]
+          description: Notification channel
+          example: "email"
+        templateId:
+          type: string
+          description: Template identifier
+          example: "report-ready"
+        recipient:
+          type: string
+          description: Email address, phone number, or device token
+          example: "user@example.com"
+        subject:
+          type: string
+          description: Email subject (required for email type)
+          example: "Your Q4 Impact Report is Ready"
+        payload:
+          type: object
+          description: Template variables
+          additionalProperties: true
+          example:
+            userName: "John Doe"
+            reportUrl: "https://app.teei.io/reports/rpt_123"
+
+    ScheduleNotificationRequest:
+      allOf:
+        - $ref: '#/components/schemas/SendNotificationRequest'
+        - type: object
+          required:
+            - scheduledAt
+          properties:
+            scheduledAt:
+              type: string
+              format: date-time
+              description: When to send the notification (ISO 8601)
+              example: "2024-11-18T09:00:00Z"
+
+    SendNotificationResponse:
+      type: object
+      required:
+        - success
+        - notificationId
+        - status
+        - message
+      properties:
+        success:
+          type: boolean
+          example: true
+        notificationId:
+          type: string
+          description: Notification identifier
+          example: "ntf_7f8a9b0c1d2e3f4a"
+        status:
+          type: string
+          enum: [queued]
+          example: "queued"
+        message:
+          type: string
+          example: "Notification queued for sending"
+
+    ScheduleNotificationResponse:
+      type: object
+      required:
+        - success
+        - notificationId
+        - scheduledAt
+        - message
+      properties:
+        success:
+          type: boolean
+          example: true
+        notificationId:
+          type: string
+          description: Notification identifier
+          example: "ntf_7f8a9b0c1d2e3f4a"
+        scheduledAt:
+          type: string
+          format: date-time
+          description: Scheduled delivery time
+          example: "2024-11-18T09:00:00Z"
+        message:
+          type: string
+          example: "Notification scheduled successfully"
+
+    CancelNotificationResponse:
+      type: object
+      required:
+        - success
+        - message
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Notification cancelled successfully"
+
+    NotificationHistoryItem:
+      type: object
+      required:
+        - id
+        - type
+        - templateId
+        - recipient
+        - status
+        - createdAt
+      properties:
+        id:
+          type: string
+          description: Notification ID
+          example: "ntf_7f8a9b0c1d2e3f4a"
+        type:
+          type: string
+          enum: [email, sms, push]
+          example: "email"
+        templateId:
+          type: string
+          example: "report-ready"
+        recipient:
+          type: string
+          example: "user@example.com"
+        status:
+          type: string
+          enum: [queued, sent, failed, scheduled, cancelled]
+          example: "sent"
+        scheduledAt:
+          type: string
+          format: date-time
+          nullable: true
+          example: null
+        sentAt:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2024-11-14T10:30:00Z"
+        failureReason:
+          type: string
+          nullable: true
+          example: null
+        retryCount:
+          type: integer
+          example: 0
+        createdAt:
+          type: string
+          format: date-time
+          example: "2024-11-14T10:25:00Z"
+
+    NotificationHistoryResponse:
+      type: object
+      required:
+        - success
+        - notifications
+        - pagination
+      properties:
+        success:
+          type: boolean
+          example: true
+        notifications:
+          type: array
+          items:
+            $ref: '#/components/schemas/NotificationHistoryItem'
+        pagination:
+          type: object
+          required:
+            - limit
+            - offset
+            - total
+          properties:
+            limit:
+              type: integer
+              example: 50
+            offset:
+              type: integer
+              example: 0
+            total:
+              type: integer
+              description: Total matching records
+              example: 234
+
+    NotificationDetailResponse:
+      type: object
+      required:
+        - success
+        - notification
+        - deliveryReceipts
+      properties:
+        success:
+          type: boolean
+          example: true
+        notification:
+          type: object
+          properties:
+            id:
+              type: string
+              example: "ntf_7f8a9b0c1d2e3f4a"
+            type:
+              type: string
+              enum: [email, sms, push]
+              example: "email"
+            channel:
+              type: string
+              enum: [sendgrid, twilio, fcm]
+              example: "sendgrid"
+            templateId:
+              type: string
+              example: "report-ready"
+            recipient:
+              type: string
+              example: "user@example.com"
+            subject:
+              type: string
+              nullable: true
+              example: "Your Q4 Impact Report is Ready"
+            status:
+              type: string
+              enum: [queued, sent, failed, scheduled, cancelled]
+              example: "sent"
+            scheduledAt:
+              type: string
+              format: date-time
+              nullable: true
+              example: null
+            sentAt:
+              type: string
+              format: date-time
+              nullable: true
+              example: "2024-11-14T10:30:00Z"
+            failureReason:
+              type: string
+              nullable: true
+              example: null
+            retryCount:
+              type: integer
+              example: 0
+            createdAt:
+              type: string
+              format: date-time
+              example: "2024-11-14T10:25:00Z"
+        deliveryReceipts:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              eventType:
+                type: string
+                example: "delivered"
+              eventData:
+                type: object
+                additionalProperties: true
+              receivedAt:
+                type: string
+                format: date-time
+
+    QuotaResponse:
+      type: object
+      required:
+        - success
+        - companyId
+        - quotas
+      properties:
+        success:
+          type: boolean
+          example: true
+        companyId:
+          type: string
+          format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        quotas:
+          type: object
+          required:
+            - email
+            - sms
+            - push
+          properties:
+            email:
+              $ref: '#/components/schemas/QuotaDetail'
+            sms:
+              $ref: '#/components/schemas/QuotaDetail'
+            push:
+              $ref: '#/components/schemas/QuotaDetail'
+
+    QuotaDetail:
+      type: object
+      required:
+        - limit
+        - used
+        - remaining
+        - resetAt
+      properties:
+        limit:
+          type: integer
+          description: Monthly quota limit
+          example: 10000
+        used:
+          type: integer
+          description: Notifications sent this period
+          example: 2340
+        remaining:
+          type: integer
+          description: Remaining quota
+          example: 7660
+        resetAt:
+          type: string
+          format: date-time
+          description: When quota resets
+          example: "2024-12-01T00:00:00Z"
+
+    Error:
+      type: object
+      required:
+        - success
+        - error
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          description: Error message
+          example: "Validation error"
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            success: false
+            error: "Validation error: recipient is required"
+
+    Unauthorized:
+      description: Missing or invalid authentication
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            success: false
+            error: "Unauthorized: Invalid or expired JWT token"
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            success: false
+            error: "Notification not found"
+
+    TooManyRequests:
+      description: Rate limit or quota exceeded
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            success: false
+            error: "Notification quota exceeded for this month"
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            success: false
+            error: "Internal Server Error"
+
+tags:
+  - name: Notifications
+    description: Send and schedule notifications
+  - name: History
+    description: Query notification history and details
+  - name: Quotas
+    description: Check notification quotas
+  - name: Webhooks
+    description: Webhook endpoints for delivery status events
