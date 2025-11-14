@@ -1,0 +1,119 @@
+{
+  "dashboard": {
+    "title": "TEEI Platform - ClickHouse Metrics",
+    "tags": ["teei", "database", "clickhouse", "analytics"],
+    "timezone": "utc",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Query Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(clickhouse_query_total[5m])",
+            "legendFormat": "Queries/sec"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Queries/sec",
+            "format": "qps"
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Query Duration (p95)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(clickhouse_query_duration_seconds_bucket[5m]))",
+            "legendFormat": "p95"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Duration",
+            "format": "s"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Rows Read/Written",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(clickhouse_rows_read_total[5m])",
+            "legendFormat": "Read"
+          },
+          {
+            "expr": "rate(clickhouse_rows_written_total[5m])",
+            "legendFormat": "Written"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Rows/sec",
+            "format": "short"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Disk Usage",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "clickhouse_disk_used_bytes / clickhouse_disk_total_bytes * 100",
+            "legendFormat": "Disk Usage %"
+          }
+        ],
+        "unit": "percent",
+        "thresholds": [
+          {
+            "value": 70,
+            "colorMode": "warning"
+          },
+          {
+            "value": 85,
+            "colorMode": "critical"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Active Connections",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "clickhouse_connections_active",
+            "legendFormat": "Active"
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Memory Usage",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "clickhouse_memory_usage_bytes",
+            "legendFormat": "Memory Usage"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Memory",
+            "format": "bytes"
+          }
+        ]
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "refresh": "30s"
+  }
+}

@@ -1,0 +1,16 @@
+# Production environment: enhanced security settings
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: teei-api-gateway
+spec:
+  template:
+    metadata:
+      annotations:
+        container.apparmor.security.beta.kubernetes.io/api-gateway: runtime/default
+    spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+        runAsNonRoot: true
+        runAsUser: 1000

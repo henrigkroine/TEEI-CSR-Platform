@@ -1,0 +1,78 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: teei-production
+
+namePrefix: prod-
+
+commonLabels:
+  environment: production
+  managed-by: kustomize
+
+# Reference all base services
+resources:
+- ../../base/api-gateway
+- ../../base/unified-profile
+- ../../base/kintell-connector
+- ../../base/buddy-service
+- ../../base/upskilling-connector
+- ../../base/q2q-ai
+- ../../base/safety-moderation
+- ../../base/analytics
+- ../../base/buddy-connector
+- ../../base/discord-bot
+- ../../base/impact-calculator
+- ../../base/impact-in
+- ../../base/journey-engine
+- ../../base/notifications
+- ../../base/reporting
+- ../../base/corp-cockpit-astro
+
+# ConfigMap generator for production environment
+configMapGenerator:
+- name: env-config
+  literals:
+  - ENVIRONMENT=production
+  - LOG_LEVEL=warn
+  - ENABLE_DEBUG=false
+
+# Patches for production environment
+patchesStrategicMerge:
+- replica-patch.yaml
+- resource-limits-patch.yaml
+- security-patch.yaml
+
+# Image tags for production (use specific version tags)
+images:
+- name: ghcr.io/henrigkroine/teei-api-gateway
+  newTag: v1.0.0
+- name: ghcr.io/henrigkroine/teei-unified-profile
+  newTag: v1.0.0
+- name: ghcr.io/henrigkroine/teei-kintell-connector
+  newTag: v1.0.0
+- name: ghcr.io/henrigkroine/teei-buddy-service
+  newTag: v1.0.0
+- name: ghcr.io/henrigkroine/teei-upskilling-connector
+  newTag: v1.0.0
+- name: ghcr.io/henrigkroine/teei-q2q-ai
+  newTag: v1.0.0
+- name: ghcr.io/henrigkroine/teei-safety-moderation
+  newTag: v1.0.0
+- name: ghcr.io/henrigkroine/teei-analytics
+  newTag: v1.0.0
+- name: ghcr.io/henrigkroine/teei-buddy-connector
+  newTag: v1.0.0
+- name: ghcr.io/henrigkroine/teei-discord-bot
+  newTag: v1.0.0
+- name: ghcr.io/henrigkroine/teei-impact-calculator
+  newTag: v1.0.0
+- name: ghcr.io/henrigkroine/teei-impact-in
+  newTag: v1.0.0
+- name: ghcr.io/henrigkroine/teei-journey-engine
+  newTag: v1.0.0
+- name: ghcr.io/henrigkroine/teei-notifications
+  newTag: v1.0.0
+- name: ghcr.io/henrigkroine/teei-reporting
+  newTag: v1.0.0
+- name: ghcr.io/henrigkroine/teei-corp-cockpit
+  newTag: v1.0.0

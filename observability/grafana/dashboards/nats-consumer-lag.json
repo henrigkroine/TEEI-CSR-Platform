@@ -1,0 +1,92 @@
+{
+  "dashboard": {
+    "title": "TEEI Platform - NATS Consumer Metrics",
+    "tags": ["teei", "nats", "messaging"],
+    "timezone": "utc",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Consumer Lag (Pending Messages)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "nats_consumer_num_pending",
+            "legendFormat": "{{ consumer }}"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Pending Messages",
+            "format": "short"
+          }
+        ],
+        "thresholds": [
+          {
+            "value": 1000,
+            "colorMode": "warning"
+          },
+          {
+            "value": 10000,
+            "colorMode": "critical"
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Message Processing Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(nats_consumer_delivered_consumer_seq[5m])",
+            "legendFormat": "{{ consumer }}"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Messages/sec",
+            "format": "msg/s"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Ack Pending",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "nats_consumer_ack_pending",
+            "legendFormat": "{{ consumer }}"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Redeliveries",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(nats_consumer_num_redelivered[5m])",
+            "legendFormat": "{{ consumer }}"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Stream Lag (Time)",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "time() - nats_consumer_last_delivered_time_seconds",
+            "legendFormat": "{{ consumer }}"
+          }
+        ],
+        "unit": "s"
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "refresh": "10s"
+  }
+}

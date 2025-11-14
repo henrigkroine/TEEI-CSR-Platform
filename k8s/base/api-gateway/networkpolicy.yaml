@@ -1,0 +1,84 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: teei-api-gateway
+  labels:
+    app: teei-api-gateway
+    component: gateway
+    part-of: teei-csr-platform
+spec:
+  podSelector:
+    matchLabels:
+      app: teei-api-gateway
+  policyTypes:
+  - Ingress
+  - Egress
+
+  ingress:
+  # Allow ingress from Ingress Controller
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    ports:
+    - protocol: TCP
+      port: 3000
+
+  # Allow ingress from monitoring (Prometheus)
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: monitoring
+    ports:
+    - protocol: TCP
+      port: 3000
+
+  egress:
+  # Allow DNS resolution
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: kube-system
+    ports:
+    - protocol: UDP
+      port: 53
+
+  # Allow egress to downstream services
+  - to:
+    - podSelector:
+        matchLabels:
+          app: teei-unified-profile
+    - podSelector:
+        matchLabels:
+          app: teei-kintell-connector
+    - podSelector:
+        matchLabels:
+          app: teei-buddy-service
+    - podSelector:
+        matchLabels:
+          app: teei-upskilling-connector
+    - podSelector:
+        matchLabels:
+          app: teei-q2q-ai
+    - podSelector:
+        matchLabels:
+          app: teei-safety-moderation
+    ports:
+    - protocol: TCP
+      port: 3000
+
+  # Allow egress to Redis (optional, if using distributed rate limiting)
+  - to:
+    - podSelector:
+        matchLabels:
+          app: redis
+    ports:
+    - protocol: TCP
+      port: 6379
+
+  # Allow egress to external HTTPS (for Vault, external APIs)
+  - to:
+    - namespaceSelector: {}
+    ports:
+    - protocol: TCP
+      port: 443

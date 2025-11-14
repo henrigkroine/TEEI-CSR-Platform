@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: teei-analytics
+  labels:
+    app: teei-analytics
+    component: backend
+    part-of: teei-csr-platform
+spec:
+  type: ClusterIP
+  selector:
+    app: teei-analytics
+  ports:
+  - name: http
+    port: 80
+    targetPort: 3007
+    protocol: TCP
+  sessionAffinity: None
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: teei-analytics
+  labels:
+    app: teei-analytics
+    component: backend
+    part-of: teei-csr-platform
+  annotations:
+    vault.hashicorp.com/role: "teei-analytics"

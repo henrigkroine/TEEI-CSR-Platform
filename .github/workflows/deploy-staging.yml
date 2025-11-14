@@ -1,0 +1,148 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches: [develop]
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Image tag to deploy (default: staging)'
+        required: false
+        default: 'staging'
+
+env:
+  KUBE_NAMESPACE: teei-staging
+  ENVIRONMENT: staging
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+      url: https://staging.teei.example.com
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.28.0'
+
+      - name: Setup kustomize
+        uses: imranismail/setup-kustomize@v2
+        with:
+          kustomize-version: '5.0.0'
+
+      - name: Configure kubectl
+        run: |
+          echo "${{ secrets.KUBE_CONFIG_STAGING }}" | base64 -d > /tmp/kubeconfig
+          echo "KUBECONFIG=/tmp/kubeconfig" >> $GITHUB_ENV
+
+      - name: Verify cluster connection
+        run: |
+          kubectl cluster-info
+          kubectl get nodes
+
+      - name: Update image tags
+        run: |
+          cd k8s/overlays/staging
+          IMAGE_TAG=${{ github.event.inputs.image_tag || 'staging' }}
+
+          # Update all image tags to the specified version
+          kustomize edit set image \
+            ghcr.io/${{ github.repository_owner }}/teei-api-gateway:${IMAGE_TAG} \
+            ghcr.io/${{ github.repository_owner }}/teei-unified-profile:${IMAGE_TAG} \
+            ghcr.io/${{ github.repository_owner }}/teei-kintell-connector:${IMAGE_TAG} \
+            ghcr.io/${{ github.repository_owner }}/teei-buddy-service:${IMAGE_TAG} \
+            ghcr.io/${{ github.repository_owner }}/teei-upskilling-connector:${IMAGE_TAG} \
+            ghcr.io/${{ github.repository_owner }}/teei-q2q-ai:${IMAGE_TAG} \
+            ghcr.io/${{ github.repository_owner }}/teei-safety-moderation:${IMAGE_TAG} \
+            ghcr.io/${{ github.repository_owner }}/teei-analytics:${IMAGE_TAG} \
+            ghcr.io/${{ github.repository_owner }}/teei-buddy-connector:${IMAGE_TAG} \
+            ghcr.io/${{ github.repository_owner }}/teei-discord-bot:${IMAGE_TAG} \
+            ghcr.io/${{ github.repository_owner }}/teei-impact-calculator:${IMAGE_TAG} \
+            ghcr.io/${{ github.repository_owner }}/teei-impact-in:${IMAGE_TAG} \
+            ghcr.io/${{ github.repository_owner }}/teei-journey-engine:${IMAGE_TAG} \
+            ghcr.io/${{ github.repository_owner }}/teei-notifications:${IMAGE_TAG} \
+            ghcr.io/${{ github.repository_owner }}/teei-reporting:${IMAGE_TAG} \
+            ghcr.io/${{ github.repository_owner }}/teei-corp-cockpit:${IMAGE_TAG}
+
+      - name: Run database migrations (gate)
+        run: |
+          echo "Running database migrations..."
+          # TODO: Add actual migration command
+          # kubectl run -n ${KUBE_NAMESPACE} migrate-job --image=... --command -- pnpm db:migrate
+          echo "Migrations complete (placeholder)"
+
+      - name: Render manifests
+        run: |
+          kubectl kustomize k8s/overlays/staging > /tmp/staging-manifests.yaml
+          echo "Generated manifests:"
+          head -n 50 /tmp/staging-manifests.yaml
+
+      - name: Dry-run deployment
+        run: |
+          kubectl apply --dry-run=server -f /tmp/staging-manifests.yaml
+
+      - name: Deploy to staging
+        run: |
+          kubectl apply -f /tmp/staging-manifests.yaml
+          kubectl rollout status deployment -n ${KUBE_NAMESPACE} --timeout=10m
+
+      - name: Wait for all deployments to be ready
+        run: |
+          kubectl wait --for=condition=available --timeout=10m \
+            -n ${KUBE_NAMESPACE} \
+            deployment --all
+
+      - name: Run smoke tests
+        run: |
+          echo "Running smoke tests..."
+
+          # Test API Gateway health
+          GATEWAY_URL=$(kubectl get svc -n ${KUBE_NAMESPACE} staging-teei-api-gateway -o jsonpath='{.status.loadBalancer.ingress[0].ip}' || echo "localhost")
+          echo "Testing Gateway at ${GATEWAY_URL}"
+
+          # TODO: Add actual smoke tests
+          # curl -f http://${GATEWAY_URL}/health || exit 1
+
+          echo "Smoke tests passed (placeholder)"
+
+      - name: Verify health checks
+        run: |
+          # Get all pods and check their health
+          kubectl get pods -n ${KUBE_NAMESPACE}
+
+          # Check if all pods are running
+          NOT_READY=$(kubectl get pods -n ${KUBE_NAMESPACE} --field-selector=status.phase!=Running --no-headers | wc -l)
+          if [ "$NOT_READY" -gt "0" ]; then
+            echo "ERROR: $NOT_READY pods are not running"
+            kubectl get pods -n ${KUBE_NAMESPACE}
+            exit 1
+          fi
+
+          echo "All pods are healthy"
+
+      - name: Deployment summary
+        if: always()
+        run: |
+          echo "## Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** staging" >> $GITHUB_STEP_SUMMARY
+          echo "**Namespace:** ${KUBE_NAMESPACE}" >> $GITHUB_STEP_SUMMARY
+          echo "**Image Tag:** ${{ github.event.inputs.image_tag || 'staging' }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Deployed Services" >> $GITHUB_STEP_SUMMARY
+          kubectl get deployments -n ${KUBE_NAMESPACE} -o wide >> $GITHUB_STEP_SUMMARY
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "Deployment failed! Check logs and pod status."
+          kubectl get events -n ${KUBE_NAMESPACE} --sort-by='.lastTimestamp' | tail -20

@@ -1,0 +1,190 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: teei-api-gateway
+  labels:
+    app: teei-api-gateway
+    component: gateway
+    part-of: teei-csr-platform
+    managed-by: kustomize
+spec:
+  replicas: 2
+  revisionHistoryLimit: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: teei-api-gateway
+  template:
+    metadata:
+      labels:
+        app: teei-api-gateway
+        component: gateway
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3000"
+        prometheus.io/path: "/metrics"
+    spec:
+      # Security Context
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+
+      # Service Account (for Vault integration)
+      serviceAccountName: teei-api-gateway
+
+      containers:
+      - name: api-gateway
+        image: ghcr.io/henrigkroine/teei-api-gateway:latest
+        imagePullPolicy: Always
+
+        # Security Context (container level)
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities:
+            drop:
+            - ALL
+
+        # Ports
+        ports:
+        - name: http
+          containerPort: 3000
+          protocol: TCP
+
+        # Environment Variables
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: PORT_API_GATEWAY
+          value: "3000"
+        - name: HOST
+          value: "0.0.0.0"
+
+        # Service URLs (from ConfigMap)
+        - name: SERVICE_URL_PROFILE
+          valueFrom:
+            configMapKeyRef:
+              name: teei-api-gateway-config
+              key: SERVICE_URL_PROFILE
+        - name: SERVICE_URL_KINTELL
+          valueFrom:
+            configMapKeyRef:
+              name: teei-api-gateway-config
+              key: SERVICE_URL_KINTELL
+        - name: SERVICE_URL_BUDDY
+          valueFrom:
+            configMapKeyRef:
+              name: teei-api-gateway-config
+              key: SERVICE_URL_BUDDY
+        - name: SERVICE_URL_UPSKILLING
+          valueFrom:
+            configMapKeyRef:
+              name: teei-api-gateway-config
+              key: SERVICE_URL_UPSKILLING
+        - name: SERVICE_URL_Q2Q
+          valueFrom:
+            configMapKeyRef:
+              name: teei-api-gateway-config
+              key: SERVICE_URL_Q2Q
+        - name: SERVICE_URL_SAFETY
+          valueFrom:
+            configMapKeyRef:
+              name: teei-api-gateway-config
+              key: SERVICE_URL_SAFETY
+
+        # Secrets (from Vault or Sealed Secrets)
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: teei-api-gateway-secrets
+              key: JWT_SECRET
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: teei-api-gateway-secrets
+              key: REDIS_URL
+              optional: true
+
+        # Resource Limits
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+
+        # Liveness Probe
+        livenessProbe:
+          httpGet:
+            path: /health/live
+            port: 3000
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 3
+
+        # Readiness Probe
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: 3000
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 3
+
+        # Startup Probe (for slow starts)
+        startupProbe:
+          httpGet:
+            path: /health/startup
+            port: 3000
+            scheme: HTTP
+          initialDelaySeconds: 0
+          periodSeconds: 2
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 30
+
+        # Volume Mounts
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        - name: cache
+          mountPath: /app/.cache
+
+      # Volumes
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      - name: cache
+        emptyDir: {}
+
+      # Pod Affinity (spread across nodes)
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - teei-api-gateway
+              topologyKey: kubernetes.io/hostname

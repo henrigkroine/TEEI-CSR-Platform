@@ -1,0 +1,76 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: teei-staging
+
+namePrefix: staging-
+
+commonLabels:
+  environment: staging
+  managed-by: kustomize
+
+# Reference all base services
+resources:
+- ../../base/api-gateway
+- ../../base/unified-profile
+- ../../base/kintell-connector
+- ../../base/buddy-service
+- ../../base/upskilling-connector
+- ../../base/q2q-ai
+- ../../base/safety-moderation
+- ../../base/analytics
+- ../../base/buddy-connector
+- ../../base/discord-bot
+- ../../base/impact-calculator
+- ../../base/impact-in
+- ../../base/journey-engine
+- ../../base/notifications
+- ../../base/reporting
+- ../../base/corp-cockpit-astro
+
+# ConfigMap generator for staging environment
+configMapGenerator:
+- name: env-config
+  literals:
+  - ENVIRONMENT=staging
+  - LOG_LEVEL=info
+  - ENABLE_DEBUG=false
+
+# Patches for staging environment
+patchesStrategicMerge:
+- resource-limits-patch.yaml
+
+# Image tags for staging (use commit SHA or 'staging' tag)
+images:
+- name: ghcr.io/henrigkroine/teei-api-gateway
+  newTag: staging
+- name: ghcr.io/henrigkroine/teei-unified-profile
+  newTag: staging
+- name: ghcr.io/henrigkroine/teei-kintell-connector
+  newTag: staging
+- name: ghcr.io/henrigkroine/teei-buddy-service
+  newTag: staging
+- name: ghcr.io/henrigkroine/teei-upskilling-connector
+  newTag: staging
+- name: ghcr.io/henrigkroine/teei-q2q-ai
+  newTag: staging
+- name: ghcr.io/henrigkroine/teei-safety-moderation
+  newTag: staging
+- name: ghcr.io/henrigkroine/teei-analytics
+  newTag: staging
+- name: ghcr.io/henrigkroine/teei-buddy-connector
+  newTag: staging
+- name: ghcr.io/henrigkroine/teei-discord-bot
+  newTag: staging
+- name: ghcr.io/henrigkroine/teei-impact-calculator
+  newTag: staging
+- name: ghcr.io/henrigkroine/teei-impact-in
+  newTag: staging
+- name: ghcr.io/henrigkroine/teei-journey-engine
+  newTag: staging
+- name: ghcr.io/henrigkroine/teei-notifications
+  newTag: staging
+- name: ghcr.io/henrigkroine/teei-reporting
+  newTag: staging
+- name: ghcr.io/henrigkroine/teei-corp-cockpit
+  newTag: staging

@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: teei-impact-calculator
+  labels:
+    app: teei-impact-calculator
+    component: backend
+    part-of: teei-csr-platform
+spec:
+  type: ClusterIP
+  selector:
+    app: teei-impact-calculator
+  ports:
+  - name: http
+    port: 80
+    targetPort: 3010
+    protocol: TCP
+  sessionAffinity: None
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: teei-impact-calculator
+  labels:
+    app: teei-impact-calculator
+    component: backend
+    part-of: teei-csr-platform
+  annotations:
+    vault.hashicorp.com/role: "teei-impact-calculator"

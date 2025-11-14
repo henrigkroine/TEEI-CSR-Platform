@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: teei-reporting
+  labels:
+    app: teei-reporting
+    component: backend
+    part-of: teei-csr-platform
+spec:
+  type: ClusterIP
+  selector:
+    app: teei-reporting
+  ports:
+  - name: http
+    port: 80
+    targetPort: 3014
+    protocol: TCP
+  sessionAffinity: None
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: teei-reporting
+  labels:
+    app: teei-reporting
+    component: backend
+    part-of: teei-csr-platform
+  annotations:
+    vault.hashicorp.com/role: "teei-reporting"

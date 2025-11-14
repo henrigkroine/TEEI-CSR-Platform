@@ -1,0 +1,116 @@
+{
+  "dashboard": {
+    "title": "TEEI Platform - PostgreSQL Metrics",
+    "tags": ["teei", "database", "postgresql"],
+    "timezone": "utc",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Active Connections",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "pg_stat_database_numbackends",
+            "legendFormat": "{{ datname }}"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Connections",
+            "format": "short"
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Transactions per Second",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(pg_stat_database_xact_commit[5m]) + rate(pg_stat_database_xact_rollback[5m])",
+            "legendFormat": "{{ datname }}"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "TPS",
+            "format": "tps"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Cache Hit Ratio",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "pg_stat_database_blks_hit / (pg_stat_database_blks_hit + pg_stat_database_blks_read) * 100",
+            "legendFormat": "{{ datname }}"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Hit Ratio %",
+            "format": "percent",
+            "max": 100
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Query Duration (avg)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(pg_stat_statements_mean_time_seconds[5m])",
+            "legendFormat": "{{ query }}"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Duration",
+            "format": "s"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Table Sizes",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "pg_table_size_bytes",
+            "format": "table"
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Replication Lag",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "pg_replication_lag_seconds",
+            "legendFormat": "{{ application_name }}"
+          }
+        ],
+        "unit": "s",
+        "thresholds": [
+          {
+            "value": 10,
+            "colorMode": "warning"
+          },
+          {
+            "value": 60,
+            "colorMode": "critical"
+          }
+        ]
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "refresh": "30s"
+  }
+}

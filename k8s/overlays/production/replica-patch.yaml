@@ -1,0 +1,14 @@
+# Production environment: higher replica counts for HA
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: teei-api-gateway
+spec:
+  replicas: 3
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: teei-corp-cockpit
+spec:
+  replicas: 5

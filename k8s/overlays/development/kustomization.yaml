@@ -1,0 +1,76 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: teei-dev
+
+namePrefix: dev-
+
+commonLabels:
+  environment: development
+  managed-by: kustomize
+
+# Reference all base services
+resources:
+- ../../base/api-gateway
+- ../../base/unified-profile
+- ../../base/kintell-connector
+- ../../base/buddy-service
+- ../../base/upskilling-connector
+- ../../base/q2q-ai
+- ../../base/safety-moderation
+- ../../base/analytics
+- ../../base/buddy-connector
+- ../../base/discord-bot
+- ../../base/impact-calculator
+- ../../base/impact-in
+- ../../base/journey-engine
+- ../../base/notifications
+- ../../base/reporting
+- ../../base/corp-cockpit-astro
+
+# ConfigMap generator for development environment
+configMapGenerator:
+- name: env-config
+  literals:
+  - ENVIRONMENT=development
+  - LOG_LEVEL=debug
+  - ENABLE_DEBUG=true
+
+# Patches for development environment
+patchesStrategicMerge:
+- replica-patch.yaml
+
+# Image tags for development (use 'dev' tag)
+images:
+- name: ghcr.io/henrigkroine/teei-api-gateway
+  newTag: dev
+- name: ghcr.io/henrigkroine/teei-unified-profile
+  newTag: dev
+- name: ghcr.io/henrigkroine/teei-kintell-connector
+  newTag: dev
+- name: ghcr.io/henrigkroine/teei-buddy-service
+  newTag: dev
+- name: ghcr.io/henrigkroine/teei-upskilling-connector
+  newTag: dev
+- name: ghcr.io/henrigkroine/teei-q2q-ai
+  newTag: dev
+- name: ghcr.io/henrigkroine/teei-safety-moderation
+  newTag: dev
+- name: ghcr.io/henrigkroine/teei-analytics
+  newTag: dev
+- name: ghcr.io/henrigkroine/teei-buddy-connector
+  newTag: dev
+- name: ghcr.io/henrigkroine/teei-discord-bot
+  newTag: dev
+- name: ghcr.io/henrigkroine/teei-impact-calculator
+  newTag: dev
+- name: ghcr.io/henrigkroine/teei-impact-in
+  newTag: dev
+- name: ghcr.io/henrigkroine/teei-journey-engine
+  newTag: dev
+- name: ghcr.io/henrigkroine/teei-notifications
+  newTag: dev
+- name: ghcr.io/henrigkroine/teei-reporting
+  newTag: dev
+- name: ghcr.io/henrigkroine/teei-corp-cockpit
+  newTag: dev
