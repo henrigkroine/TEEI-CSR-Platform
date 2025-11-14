@@ -8,6 +8,46 @@
 
 ## Phase D: Enterprise Production Launch (30 Agents / 5 Leads)
 
+**Status**: 🚧 In Progress | **Started**: 2025-11-14
+**Branch**: `claude/genai-reporting-cockpit-phase-d-01Hppffi2ErgfUV2G5jXiN7b`
+
+### ✅ Completed Deliverables
+
+#### Gen-AI Core (Team 2: 6 agents)
+**Status**: ✅ Complete (2025-11-14)
+
+**Completed by**: `prompt-architect`, `citation-extractor`, `redaction-engineer`, `narrative-composer`, `cost-telemetry`, `audit-logger`
+
+**Deliverables**:
+1. ✅ **4 Report Templates**: Quarterly, Annual, Investor Update, Impact Deep Dive
+   - All templates include evidence-based prompting with token budgets
+   - Multi-locale support (EN, ES, FR, UK, NO)
+   - CSRD-aligned narratives for annual reports
+   - Files: `quarterly-report.en.hbs`, `annual-report.en.hbs`, `investor-update.en.hbs`, `impact-deep-dive.en.hbs`
+
+2. ✅ **Strict Citation Validation**:
+   - Minimum 1 citation per paragraph (configurable)
+   - Citation density: 0.5 per 100 words (configurable)
+   - Fail-fast on missing or invalid citations
+   - Enhanced: `/services/reporting/src/lib/citations.ts`
+
+3. ✅ **PII Redaction Enforcement**:
+   - Pre-LLM redaction with post-redaction leak detection
+   - Audit logging with redaction counts (no PII logged)
+   - Validation throws errors if PII detected after redaction
+   - Enhanced: `/services/reporting/src/routes/gen-reports.ts`
+
+4. ✅ **Documentation**:
+   - Comprehensive Gen-AI Reporting guide
+   - File: `/docs/GenAI_Reporting.md` (729 lines)
+
+**Files Modified/Created**: 8 files, 960+ insertions
+**Commits**: 2 (core features + documentation)
+
+**Next**: Server-side chart rendering (Team 3), Saved views (Team 4), E2E tests (Team 5)
+
+---
+
 ### Team 1: Enterprise UX (6 agents)
 **Lead**: enterprise-ux-lead
 - **Agent 1.1**: approvals-workflow-dev (report lifecycle, draft→review→approve, version diffs)
