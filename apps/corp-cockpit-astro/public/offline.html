@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Offline - TEEI Corporate Cockpit</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu,
+        Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .offline-container {
+      background: white;
+      border-radius: 16px;
+      padding: 48px;
+      max-width: 500px;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+
+    .offline-icon {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 24px;
+      background: #f3f4f6;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 40px;
+    }
+
+    h1 {
+      font-size: 28px;
+      color: #1a202c;
+      margin-bottom: 16px;
+      font-weight: 700;
+    }
+
+    p {
+      font-size: 16px;
+      color: #4a5568;
+      line-height: 1.6;
+      margin-bottom: 12px;
+    }
+
+    .features {
+      margin-top: 32px;
+      padding-top: 32px;
+      border-top: 1px solid #e2e8f0;
+    }
+
+    .features h2 {
+      font-size: 18px;
+      color: #2d3748;
+      margin-bottom: 16px;
+      font-weight: 600;
+    }
+
+    .feature-list {
+      list-style: none;
+      text-align: left;
+    }
+
+    .feature-list li {
+      padding: 8px 0;
+      color: #4a5568;
+      font-size: 14px;
+    }
+
+    .feature-list li::before {
+      content: "✓";
+      color: #22c55e;
+      font-weight: bold;
+      margin-right: 12px;
+      font-size: 18px;
+    }
+
+    .retry-button {
+      margin-top: 24px;
+      padding: 12px 32px;
+      background: #0066cc;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .retry-button:hover {
+      background: #0052a3;
+    }
+
+    .status-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      background: #fef3c7;
+      border-radius: 20px;
+      margin-top: 16px;
+      font-size: 14px;
+      color: #92400e;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      background: #f59e0b;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.5;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .offline-container {
+        padding: 32px 24px;
+      }
+
+      h1 {
+        font-size: 24px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="offline-container">
+    <div class="offline-icon">
+      📡
+    </div>
+    <h1>You're Offline</h1>
+    <p>
+      It looks like you've lost your internet connection. Don't worry - your cached data is still available.
+    </p>
+    <div class="status-indicator">
+      <span class="status-dot"></span>
+      <span>Waiting for connection...</span>
+    </div>
+
+    <div class="features">
+      <h2>Boardroom Mode</h2>
+      <ul class="feature-list">
+        <li>View cached dashboard data</li>
+        <li>Access previously loaded reports</li>
+        <li>Browse offline evidence library</li>
+        <li>Events will sync when back online</li>
+      </ul>
+    </div>
+
+    <button class="retry-button" onclick="window.location.reload()">
+      Retry Connection
+    </button>
+  </div>
+
+  <script>
+    // Auto-reload when connection is restored
+    window.addEventListener('online', () => {
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
+    });
+
+    // Update status indicator
+    function updateStatus() {
+      const statusText = document.querySelector('.status-indicator span:last-child');
+      if (navigator.onLine) {
+        statusText.textContent = 'Connection restored!';
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+      }
+    }
+
+    window.addEventListener('online', updateStatus);
+    setInterval(updateStatus, 2000);
+  </script>
+</body>
+</html>
