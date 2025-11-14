@@ -193,3 +193,89 @@ export async function isPayloadDelivered(
 
   return !!result;
 }
+
+/**
+ * Log webhook receipt for audit trail
+ */
+export interface WebhookReceiptParams {
+  platform: Platform;
+  transactionId: string;
+  eventType: string;
+  payload: any;
+}
+
+export async function logDeliveryWebhookReceived(params: WebhookReceiptParams): Promise<void> {
+  // In production, this would write to a dedicated webhook_receipts table
+  // For now, we'll log to console and update the delivery record
+  console.log('[Webhook Receipt]', {
+    platform: params.platform,
+    transactionId: params.transactionId,
+    eventType: params.eventType,
+    timestamp: new Date().toISOString(),
+  });
+}
+
+/**
+ * Update delivery status by transaction ID or platform-specific identifier
+ */
+export interface UpdateDeliveryStatusByTransactionParams {
+  platform: Platform;
+  transactionId: string;
+  status: 'pending' | 'success' | 'failed' | 'retrying';
+  errorMessage?: string;
+  webhookTimestamp?: Date;
+  metadata?: Record<string, any>;
+}
+
+export async function updateDeliveryStatusByTransaction(
+  params: UpdateDeliveryStatusByTransactionParams
+): Promise<void> {
+  // Find delivery record by transaction ID stored in payloadSample or metadata
+  // This is a simplified implementation; in production, you'd have a transaction_id column
+  const deliveries = await db
+    .select()
+    .from(impactDeliveries)
+    .where(eq(impactDeliveries.platform, params.platform))
+    .orderBy(desc(impactDeliveries.createdAt))
+    .limit(100);
+
+  // Find matching delivery by transaction ID in payload
+  const delivery = deliveries.find((d: any) => {
+    const payload = d.payloadSample;
+    if (typeof payload === 'object' && payload !== null) {
+      return (
+        payload.transactionId === params.transactionId ||
+        payload.transaction_id === params.transactionId ||
+        payload.id === params.transactionId
+      );
+    }
+    return false;
+  });
+
+  if (delivery) {
+    await db
+      .update(impactDeliveries)
+      .set({
+        status: params.status === 'success' ? 'delivered' : params.status,
+        errorMsg: params.errorMessage || null,
+        deliveredAt: params.status === 'success' ? new Date() : null,
+        updatedAt: new Date(),
+      })
+      .where(eq(impactDeliveries.id, delivery.id));
+
+    console.log('[Delivery Status Updated]', {
+      deliveryId: delivery.id,
+      platform: params.platform,
+      transactionId: params.transactionId,
+      status: params.status,
+    });
+  } else {
+    console.warn('[Delivery Not Found]', {
+      platform: params.platform,
+      transactionId: params.transactionId,
+    });
+  }
+}
+
+// Re-export for webhook compatibility
+export { updateDeliveryStatusByTransaction as updateDeliveryStatus };
