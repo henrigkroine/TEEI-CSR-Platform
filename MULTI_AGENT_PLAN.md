@@ -754,3 +754,526 @@ Take the production-ready Corporate Cockpit from Phase B and transform it into a
 5. **QA Lead**: Set up Playwright E2E framework (Slice I)
 
 **Orchestrator**: Monitor progress, unblock dependencies, update this plan weekly
+
+---
+
+# Worker 4 Phase D: Communications, Experiences & Quality
+
+**Status**: 🚀 In Progress
+**Branch**: `claude/worker4-phase-d-comms-quality-01TBR1yoTekYbhJsRJbFfsij`
+**Started**: 2025-11-14
+**Target Completion**: TBD
+
+---
+
+## Mission
+
+Complete the experience and quality layer for the platform:
+- Multi-channel notifications (email/SMS/push) with GDPR compliance
+- Full Discord bot integration with VIS updates and Q2Q feedback
+- Enhanced cockpit UX (saved views, share links, Impact-In monitor)
+- Comprehensive automated quality gates (E2E, A11y, visual regression)
+- Production-ready reporting exports with watermarking and server-side rendering
+
+---
+
+## Team Structure (30 agents / 5 leads)
+
+### 1. **Notifications & Messaging Lead** (6 agents)
+- **Email Provider Engineer**: SendGrid implementation with templates, tracking, webhooks
+- **SMS Provider Engineer**: Twilio integration with E.164 validation, delivery status
+- **Push Provider Engineer**: FCM implementation with device registry, topics, batching
+- **Queue & Retry Engineer**: BullMQ/RabbitMQ integration, rate limiting, backoff strategies
+- **Template Engineer**: MJML templates, localization (en/no/uk), variable substitution
+- **Delivery Tracking Engineer**: Status webhooks, audit logs, per-tenant quotas
+
+**Lead Responsibilities**: Deliver production-ready notification infrastructure with GDPR compliance, rate limits, and audit trails
+
+---
+
+### 2. **Discord Integration Lead** (5 agents)
+- **Command Developer**: Implement /feedback, /recognize, /help with permissions
+- **Q2Q Integration Engineer**: Wire feedback to Q2Q AI service
+- **Role & VIS Engineer**: Role assignment logic, VIS score updates
+- **Webhook Developer**: Milestone announcements, activity feeds
+- **Testing & Documentation Engineer**: Command testing, usage guides
+
+**Lead Responsibilities**: Complete Discord bot with Q2Q feedback loop and VIS scoring system
+
+---
+
+### 3. **Cockpit Experience Lead** (7 agents)
+- **Saved Views Backend Engineer**: CRUD APIs for dashboard views (tenant-scoped)
+- **Saved Views Frontend Engineer**: Save/load/delete UI components
+- **Share Links Backend Engineer**: Signed URL generation with TTL validation
+- **Share Links Frontend Engineer**: Share modal, read-only mode, boardroom display
+- **Impact-In Monitor Backend Engineer**: Delivery history API, replay functionality
+- **Impact-In Monitor Frontend Engineer**: Delivery timeline UI, mapping preview
+- **UX Polish Engineer**: Loading states, error handling, empty states
+
+**Lead Responsibilities**: Deliver saved views, share links, and Impact-In monitoring UI
+
+---
+
+### 4. **Quality Automation Lead** (7 agents)
+- **E2E Test Engineer**: Playwright tests for tenant routing, evidence, reports, exports
+- **Visual Regression Engineer**: Snapshot testing for widgets, layouts, themes
+- **A11y Testing Engineer**: axe-core/Pa11y integration, WCAG 2.2 AA validation
+- **Performance Test Engineer**: Web vitals tracking, Lighthouse budgets
+- **Security Test Engineer**: Tenant isolation, share link validation, XSS/CSRF tests
+- **CI/CD Engineer**: GitHub Actions workflows, test parallelization, artifact management
+- **Test Data Engineer**: Fixtures, mocks, seed data for test scenarios
+
+**Lead Responsibilities**: Achieve >80% test coverage with automated quality gates in CI
+
+---
+
+### 5. **Reporting & Export Lead** (5 agents)
+- **PDF Watermarking Engineer**: Puppeteer/Playwright PDF generation with branding
+- **Chart Rendering Engineer**: Server-side chart exports (ChartJS → PNG/SVG)
+- **PPT Export Engineer**: PowerPoint generation with charts and narratives
+- **Export Security Engineer**: Redaction, tenant watermarks, download audit logs
+- **Export Testing Engineer**: Test PDF/CSV/JSON/PPT exports across tenants
+
+**Lead Responsibilities**: Production-ready exports with watermarking and audit trails
+
+---
+
+## Deliverables (Slices A-H)
+
+### Slice A: Notifications Service - Email Provider ✉️
+**Owner**: Notifications & Messaging Lead → Email Provider Engineer
+
+**Tasks**:
+- [ ] Complete SendGrid integration (already started)
+  - [ ] Verify template rendering (MJML → HTML)
+  - [ ] Add localization support (en/no/uk)
+  - [ ] Implement webhook endpoint for delivery status
+  - [ ] Add rate limiting per tenant (configurable limits)
+  - [ ] Audit logging for all sends
+- [ ] Test scheduled notifications (weekly reports, milestone alerts)
+- [ ] Document setup in `/docs/Notifications_Integration.md`
+
+**Files**:
+- `services/notifications/src/providers/sendgrid.ts` (✅ exists)
+- `services/notifications/src/templates/*.mjml` (✅ exists)
+- `services/notifications/src/webhooks/sendgrid.ts` (create)
+- `services/notifications/src/lib/rate-limiter.ts` (✅ exists)
+- `services/notifications/src/lib/audit-logger.ts` (create)
+
+**Acceptance**:
+- ✅ SendGrid sends emails with localized templates
+- ✅ Webhooks track delivery/open/click events
+- ✅ Rate limits enforced per tenant
+- ✅ Audit log captures all notification attempts
+
+---
+
+### Slice B: Notifications Service - SMS & Push Providers 📱
+**Owner**: Notifications & Messaging Lead → SMS & Push Engineers
+
+**Tasks**:
+- [ ] Implement Twilio SMS provider (replace stub)
+  - [ ] E.164 phone number validation
+  - [ ] SMS rate limiting and delivery tracking
+  - [ ] Status webhooks (queued/sent/delivered/failed)
+  - [ ] Character count validation (1600 max)
+- [ ] Implement FCM push provider (replace stub)
+  - [ ] Device token registry (per user/tenant)
+  - [ ] Topic-based notifications
+  - [ ] Batch sending for multiple devices
+  - [ ] Push notification analytics
+- [ ] Add per-tenant channel preferences (email/SMS/push toggles)
+- [ ] Test notification workflows end-to-end
+
+**Files**:
+- `services/notifications/src/providers/twilio.ts` (upgrade stub)
+- `services/notifications/src/providers/fcm.ts` (upgrade stub)
+- `services/notifications/src/models/device-tokens.ts` (create)
+- `services/notifications/src/webhooks/twilio.ts` (create)
+- `services/notifications/src/routes/preferences.ts` (create)
+
+**Acceptance**:
+- ✅ Twilio sends SMS with E.164 validation
+- ✅ FCM sends push to registered devices
+- ✅ Batch notifications work for 100+ recipients
+- ✅ Per-tenant channel preferences respected
+
+---
+
+### Slice C: Discord Bot - Commands & Q2Q Integration 🤖
+**Owner**: Discord Integration Lead → Command & Q2Q Engineers
+
+**Tasks**:
+- [ ] Complete `/feedback` command
+  - [ ] Wire to Q2Q AI service (POST /q2q/feedback)
+  - [ ] Add sentiment analysis option
+  - [ ] Store feedback with user/tenant context
+  - [ ] Return confirmation with tracking ID
+- [ ] Complete `/recognize` command
+  - [ ] Assign Discord role based on badge level
+  - [ ] Update VIS score in database (POST /reporting/vis-update)
+  - [ ] Post public recognition in channel
+  - [ ] DM volunteer with achievement details
+- [ ] Implement `/help` command
+  - [ ] List available commands with descriptions
+  - [ ] Role-specific help (admin vs volunteer)
+  - [ ] Link to documentation
+- [ ] Add admin-only permissions guard
+- [ ] Test all commands in staging Discord server
+
+**Files**:
+- `services/discord-bot/src/commands/feedback.ts` (✅ exists, enhance)
+- `services/discord-bot/src/commands/recognize.ts` (✅ exists, complete TODOs)
+- `services/discord-bot/src/commands/help.ts` (create)
+- `services/discord-bot/src/utils/roleManager.ts` (create)
+- `services/discord-bot/src/utils/visUpdater.ts` (create)
+- `services/reporting/routes/vis-update.ts` (create)
+
+**Acceptance**:
+- ✅ `/feedback` ingests to Q2Q pipeline
+- ✅ `/recognize` assigns roles and updates VIS
+- ✅ `/help` displays role-appropriate guidance
+- ✅ Permissions enforced (admin commands)
+
+---
+
+### Slice D: Cockpit - Saved Views (Backend) 💾
+**Owner**: Cockpit Experience Lead → Saved Views Backend Engineer
+
+**Tasks**:
+- [ ] Create saved views data model (tenant-scoped)
+- [ ] Implement CRUD endpoints:
+  - [ ] POST /api/views (create saved view)
+  - [ ] GET /api/views (list views for user/tenant)
+  - [ ] GET /api/views/:id (load view)
+  - [ ] PUT /api/views/:id (update view)
+  - [ ] DELETE /api/views/:id (delete view)
+- [ ] Add view metadata: name, filters, dateRange, chartConfigs
+- [ ] Implement RBAC: users see own views + shared views
+- [ ] Add validation for view payloads
+- [ ] Write integration tests
+
+**Files**:
+- `services/reporting/src/models/saved-views.ts` (create)
+- `services/reporting/src/controllers/savedViews.ts` (create)
+- `services/reporting/src/routes/saved-views.ts` (create)
+- `services/reporting/src/middleware/viewValidation.ts` (create)
+- `services/reporting/tests/saved-views.test.ts` (create)
+
+**Acceptance**:
+- ✅ Users can save dashboard configurations
+- ✅ Views scoped to tenant + user
+- ✅ CRUD operations work with RBAC
+- ✅ Validation prevents malformed views
+
+---
+
+### Slice E: Cockpit - Saved Views (Frontend) 💾
+**Owner**: Cockpit Experience Lead → Saved Views Frontend Engineer
+
+**Tasks**:
+- [ ] Create "Save View" button in dashboard header
+- [ ] Build SaveViewModal component (name, description, visibility)
+- [ ] Create saved views sidebar/dropdown
+- [ ] Implement load view functionality (restore filters/charts)
+- [ ] Add delete/edit view actions
+- [ ] Show loading states and error handling
+- [ ] Add empty state for no saved views
+- [ ] Test responsiveness and keyboard navigation
+
+**Files**:
+- `apps/corp-cockpit-astro/src/components/views/SaveViewModal.tsx` (create)
+- `apps/corp-cockpit-astro/src/components/views/ViewsList.tsx` (create)
+- `apps/corp-cockpit-astro/src/components/views/ViewsDropdown.tsx` (create)
+- `apps/corp-cockpit-astro/src/hooks/useSavedViews.ts` (create)
+- `apps/corp-cockpit-astro/src/lib/viewsApi.ts` (create)
+
+**Acceptance**:
+- ✅ Users can save current dashboard state
+- ✅ Saved views load correctly (filters + charts)
+- ✅ Delete/edit actions work
+- ✅ UI is responsive and accessible
+
+---
+
+### Slice F: Cockpit - Share Links 🔗
+**Owner**: Cockpit Experience Lead → Share Links Engineers
+
+**Tasks**:
+- [ ] Backend: Generate signed share links with TTL
+  - [ ] POST /api/share-links (create link from view)
+  - [ ] GET /api/share-links/:token (validate and load)
+  - [ ] Add expiry validation (1h/24h/7d/30d options)
+  - [ ] Signature verification (HMAC-SHA256)
+  - [ ] Read-only enforcement (no mutations allowed)
+- [ ] Frontend: Share link modal and display
+  - [ ] ShareLinkModal component (generate link UI)
+  - [ ] Copy-to-clipboard functionality
+  - [ ] QR code generation for mobile
+  - [ ] Boardroom mode (auto-refresh, large fonts)
+  - [ ] Share link viewer page (read-only)
+- [ ] Add audit log for share link access
+- [ ] Test tenant isolation for shared links
+
+**Files**:
+- `services/reporting/src/controllers/shareLinks.ts` (create)
+- `services/reporting/src/routes/share-links.ts` (create)
+- `services/reporting/src/utils/signedLinks.ts` (create)
+- `apps/corp-cockpit-astro/src/components/share/ShareLinkModal.tsx` (create)
+- `apps/corp-cockpit-astro/src/pages/[lang]/shared/[token].astro` (create)
+- `apps/corp-cockpit-astro/src/components/share/BoardroomMode.tsx` (create)
+
+**Acceptance**:
+- ✅ Share links generated with TTL
+- ✅ Links validate signature and expiry
+- ✅ Read-only mode enforced
+- ✅ Boardroom mode displays correctly
+- ✅ Tenant isolation verified
+
+---
+
+### Slice G: Cockpit - Impact-In Delivery Monitor 📊
+**Owner**: Cockpit Experience Lead → Impact-In Monitor Engineers
+
+**Tasks**:
+- [ ] Backend: Delivery history API
+  - [ ] GET /api/impact-in/deliveries?platform=benevity
+  - [ ] GET /api/impact-in/deliveries/:id (detail view)
+  - [ ] POST /api/impact-in/replay/:id (retry failed delivery)
+  - [ ] Return: timestamp, platform, payload, status, attempts
+- [ ] Frontend: Delivery monitor page
+  - [ ] Timeline view of all deliveries
+  - [ ] Filter by platform (Benevity/Goodera/Workday)
+  - [ ] Status badges (success/pending/failed)
+  - [ ] Payload preview (JSON diff view)
+  - [ ] Retry button for failed deliveries
+- [ ] Add mapping preview (what we send vs. what they expect)
+- [ ] Test with mock delivery data
+
+**Files**:
+- `services/reporting/src/controllers/impactInMonitor.ts` (create)
+- `services/reporting/src/routes/impact-in-monitor.ts` (create)
+- `apps/corp-cockpit-astro/src/pages/[lang]/cockpit/[companyId]/impact-in.astro` (create)
+- `apps/corp-cockpit-astro/src/components/impact-in/DeliveryTimeline.tsx` (create)
+- `apps/corp-cockpit-astro/src/components/impact-in/PayloadPreview.tsx` (create)
+- `apps/corp-cockpit-astro/src/components/impact-in/MappingPreview.tsx` (create)
+
+**Acceptance**:
+- ✅ Delivery history displays all pushes
+- ✅ Filter by platform works
+- ✅ Replay functionality retries failed deliveries
+- ✅ Payload preview shows JSON diffs
+- ✅ Mapping preview accurate
+
+---
+
+### Slice H: E2E Test Coverage 🧪
+**Owner**: Quality Automation Lead → E2E Test Engineer
+
+**Tasks**:
+- [ ] Tenant routing tests
+  - [ ] Test company selector at login
+  - [ ] Verify tenant-scoped routes (/[lang]/cockpit/[companyId]/*)
+  - [ ] Test RBAC enforcement (admin vs user)
+- [ ] Evidence explorer tests
+  - [ ] Browse Q2Q evidence with filters
+  - [ ] Open lineage drawer
+  - [ ] Copy-for-CSRD export
+- [ ] Saved views & share links tests
+  - [ ] Save dashboard view
+  - [ ] Load saved view
+  - [ ] Generate share link
+  - [ ] Open share link in incognito (read-only)
+- [ ] Report generation tests
+  - [ ] Generate quarterly report
+  - [ ] Preview report
+  - [ ] Export PDF/CSV
+- [ ] Impact-In monitor tests
+  - [ ] View delivery history
+  - [ ] Filter by platform
+  - [ ] Replay failed delivery
+- [ ] Run tests in CI (chromium/firefox/webkit)
+
+**Files**:
+- `apps/corp-cockpit-astro/tests/e2e/tenant-routing.spec.ts` (create)
+- `apps/corp-cockpit-astro/tests/e2e/evidence-explorer.spec.ts` (create)
+- `apps/corp-cockpit-astro/tests/e2e/saved-views.spec.ts` (create)
+- `apps/corp-cockpit-astro/tests/e2e/share-links.spec.ts` (create)
+- `apps/corp-cockpit-astro/tests/e2e/reports.spec.ts` (enhance)
+- `apps/corp-cockpit-astro/tests/e2e/impact-in.spec.ts` (create)
+
+**Acceptance**:
+- ✅ 10+ E2E flows covered
+- ✅ Tests pass in CI across 3 browsers
+- ✅ Video recordings on failure
+- ✅ Test coverage >80%
+
+---
+
+### Slice I: A11y Fixes & Visual Regression 🎨
+**Owner**: Quality Automation Lead → A11y & Visual Engineers
+
+**Tasks**:
+- [ ] Run axe-core audit on all pages
+- [ ] Fix critical WCAG 2.2 AA violations:
+  - [ ] Keyboard navigation issues
+  - [ ] Focus indicators missing
+  - [ ] Color contrast failures
+  - [ ] Missing ARIA labels
+  - [ ] Interactive element target sizes
+- [ ] Run Pa11y CI for automated checks
+- [ ] Visual regression baseline:
+  - [ ] Dashboard widgets
+  - [ ] Evidence drawer
+  - [ ] Report modal
+  - [ ] Saved views UI
+  - [ ] Share link viewer
+  - [ ] Mobile responsive views
+- [ ] Generate A11y audit report (`/reports/a11y_phaseD.md`)
+- [ ] Set CI to fail on critical violations
+
+**Files**:
+- `apps/corp-cockpit-astro/tests/a11y/accessibility.spec.ts` (enhance)
+- `apps/corp-cockpit-astro/tests/e2e/visual.spec.ts` (enhance)
+- `.github/workflows/a11y.yml` (✅ exists)
+- `.github/workflows/e2e.yml` (✅ exists, enhance)
+- `reports/a11y_phaseD.md` (create)
+
+**Acceptance**:
+- ✅ No critical WCAG 2.2 AA violations
+- ✅ A11y CI job passes
+- ✅ Visual regression baselines established
+- ✅ Lighthouse accessibility score ≥95%
+
+---
+
+### Slice J: PDF Watermarking & Chart Rendering 📄
+**Owner**: Reporting & Export Lead → PDF & Chart Engineers
+
+**Tasks**:
+- [ ] Implement server-side chart rendering
+  - [ ] Convert ChartJS canvas to PNG/SVG
+  - [ ] Use Puppeteer/Playwright for headless rendering
+  - [ ] Cache rendered charts (Redis/disk)
+- [ ] Add PDF watermarking utilities
+  - [ ] Tenant logo overlay
+  - [ ] "CONFIDENTIAL" watermark with timestamp
+  - [ ] Page numbering and headers/footers
+- [ ] Wire into reporting service PDF export
+- [ ] Test watermarking across tenants
+- [ ] Add export audit log (who exported what/when)
+- [ ] Document watermark customization options
+
+**Files**:
+- `services/reporting/src/utils/chartRenderer.ts` (create)
+- `services/reporting/src/utils/pdfWatermark.ts` (create)
+- `services/reporting/src/utils/pdfExport.ts` (enhance)
+- `services/reporting/src/lib/exportAudit.ts` (create)
+- `docs/Reporting_Exports.md` (create)
+
+**Acceptance**:
+- ✅ Charts render server-side in PDFs
+- ✅ Watermarks applied per tenant
+- ✅ Export audit log captures all downloads
+- ✅ PDF exports include branding and timestamps
+
+---
+
+## Progress Tracking
+
+**Overall**: 0 / 62 tasks complete (0%)
+
+| Slice | Focus | Tasks | Complete | % |
+|-------|-------|-------|----------|---|
+| A. Notifications - Email | SendGrid completion | 5 | 0 | 0% |
+| B. Notifications - SMS/Push | Twilio + FCM | 6 | 0 | 0% |
+| C. Discord Bot | Commands + Q2Q | 7 | 0 | 0% |
+| D. Saved Views - Backend | CRUD APIs | 6 | 0 | 0% |
+| E. Saved Views - Frontend | UI components | 8 | 0 | 0% |
+| F. Share Links | Backend + Frontend | 10 | 0 | 0% |
+| G. Impact-In Monitor | Delivery tracking UI | 7 | 0 | 0% |
+| H. E2E Tests | Playwright coverage | 6 | 0 | 0% |
+| I. A11y & Visual | WCAG compliance | 6 | 0 | 0% |
+| J. PDF & Watermarking | Export polish | 6 | 0 | 0% |
+
+**Last Updated**: 2025-11-14 by Worker 4 Lead
+
+---
+
+## Integration Points
+
+### Worker 2 (Backend Services)
+**Coordination**:
+- Q2Q AI service must accept feedback from Discord bot
+- Reporting service VIS update endpoint for Discord recognition
+- Impact-In delivery APIs for monitor UI
+
+**Communication**: Tag Worker 2 on PRs for Q2Q integration, VIS updates
+
+### Worker 3 (Corporate Cockpit)
+**Coordination**:
+- Saved views and share links extend cockpit functionality
+- Impact-In monitor is a new cockpit page
+- A11y fixes apply to existing cockpit components
+
+**Communication**: Extend Phase C work, ensure no regressions
+
+---
+
+## Documentation Deliverables
+
+**Phase D Docs** (all in `/docs/`):
+- [ ] `/docs/Notifications_Integration.md` - Email/SMS/Push setup guide
+- [ ] `/docs/Discord_Usage_Guide.md` - Command reference, Q2Q flow
+- [ ] `/docs/Cockpit_Saved_Views.md` - Saved views and share links
+- [ ] `/docs/Impact_In_Monitor.md` - Delivery tracking guide
+- [ ] `/docs/Reporting_Exports.md` - PDF watermarking, chart rendering
+- [ ] `/reports/worker4_phaseD_results.md` - Final execution report
+- [ ] `/reports/a11y_phaseD.md` - Accessibility audit
+- [ ] `/reports/e2e_coverage_phaseD.md` - Test coverage report
+
+---
+
+## Non-Negotiables
+
+1. **GDPR Compliance**: PII redaction in notifications, opt-in per consent
+2. **Multi-tenant Isolation**: All features scoped to company, no data leaks
+3. **Signed Share Links**: HMAC signature, TTL enforcement, read-only
+4. **WCAG 2.2 AA**: No critical violations, Lighthouse ≥95%
+5. **Test Coverage**: E2E for all new flows, visual regression baselines
+6. **Audit Trails**: Log all exports, notifications, share link access
+7. **Rate Limiting**: Per-tenant quotas for notifications and exports
+8. **No Secrets in Code**: All API keys in env vars, never committed
+
+---
+
+## Success Criteria
+
+- ✅ Email/SMS/push notifications deliver with rate limits and audit logs
+- ✅ Discord `/feedback` ingests to Q2Q, `/recognize` updates VIS
+- ✅ Users can save views, generate share links (TTL), open read-only
+- ✅ Impact-In monitor displays delivery history, replay works
+- ✅ E2E suite covers 10+ flows, runs in CI
+- ✅ A11y CI passes (no criticals), Lighthouse ≥95%
+- ✅ Visual regression baselines established
+- ✅ PDF exports include watermarking, server-side charts
+- ✅ Export audit logs track all downloads
+- ✅ All docs written, final report generated
+
+---
+
+## Next Actions
+
+1. **Notifications Lead**: Complete SendGrid integration (Slice A)
+2. **Notifications Lead**: Implement Twilio + FCM (Slice B)
+3. **Discord Lead**: Wire feedback to Q2Q, complete recognize (Slice C)
+4. **Cockpit Lead**: Build saved views backend (Slice D)
+5. **Cockpit Lead**: Build saved views frontend (Slice E)
+6. **Cockpit Lead**: Implement share links (Slice F)
+7. **Cockpit Lead**: Build Impact-In monitor (Slice G)
+8. **Quality Lead**: Expand E2E test coverage (Slice H)
+9. **Quality Lead**: Fix A11y issues, visual baselines (Slice I)
+10. **Reporting Lead**: Add PDF watermarking, chart rendering (Slice J)
+
+**Orchestrator (Worker 4 Lead)**: Coordinate across leads, unblock dependencies, update plan daily
