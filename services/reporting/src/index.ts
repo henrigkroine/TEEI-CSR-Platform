@@ -3,6 +3,7 @@ import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import { config } from './config.js';
 import { rateLimiter } from './middleware/rateLimiter.js';
+import { cspMiddleware } from './middleware/csp.js';
 import { setupSwagger } from './swagger.js';
 import { healthRoutes } from './routes/health.js';
 import { closePool } from './db/connection.js';
@@ -15,7 +16,7 @@ const fastify = Fastify({
 
 // Register plugins
 await fastify.register(helmet, {
-  contentSecurityPolicy: false,
+  contentSecurityPolicy: false, // We handle CSP in our custom middleware
 });
 
 await fastify.register(cors, {
@@ -24,6 +25,7 @@ await fastify.register(cors, {
 });
 
 await fastify.register(rateLimiter);
+await fastify.register(cspMiddleware);
 await fastify.register(setupSwagger);
 
 // Register routes
@@ -42,6 +44,8 @@ const { approvalRoutes } = await import('./routes/approvals.js');
 await fastify.register(approvalRoutes);
 const { benchmarkRoutes } = await import('./routes/benchmarks.js');
 await fastify.register(benchmarkRoutes);
+const { cspRoutes } = await import('./routes/csp.js');
+await fastify.register(cspRoutes);
 
 // Graceful shutdown
 const gracefulShutdown = async () => {
