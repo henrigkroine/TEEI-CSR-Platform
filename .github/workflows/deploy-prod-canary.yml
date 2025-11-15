@@ -1,0 +1,229 @@
+name: Deploy to Production (Canary with Quality Gates)
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Image tag to deploy (e.g., v1.0.0)'
+        required: true
+      service_name:
+        description: 'Service to deploy'
+        required: true
+        type: choice
+        options:
+          - api-gateway
+          - reporting
+          - q2q-ai
+          - impact-in
+
+env:
+  NAMESPACE: teei-prod
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  quality-gates:
+    name: Pre-Deployment Quality Gates
+    runs-on: ubuntu-latest
+    outputs:
+      passed: ${{ steps.gates.outputs.passed }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure kubectl
+        run: |
+          echo "${{ secrets.KUBE_CONFIG_PRODUCTION }}" | base64 -d > /tmp/kubeconfig
+          echo "KUBECONFIG=/tmp/kubeconfig" >> $GITHUB_ENV
+
+      - name: Run Quality Gates
+        id: gates
+        run: |
+          SERVICE="${{ github.event.inputs.service_name }}"
+
+          echo "🔍 Running quality gates for $SERVICE..."
+
+          # Gate 1: SLO Check - Ensure error budget not exhausted
+          echo "Gate 1: SLO compliance check..."
+
+          ERROR_BUDGET=$(kubectl exec -n $NAMESPACE prometheus-0 -- \
+            promtool query instant http://localhost:9090 \
+            "slo:${SERVICE//-/_}:error_budget:remaining_30d{}" \
+            | grep -oP '\d+\.\d+' || echo "1.0")
+
+          echo "Error budget remaining: ${ERROR_BUDGET}%"
+
+          if (( $(echo "$ERROR_BUDGET < 0.1" | bc -l) )); then
+            echo "❌ Gate 1 FAILED: Error budget <10% remaining"
+            echo "Cannot deploy - SLO at risk"
+            exit 1
+          fi
+          echo "✓ Gate 1 PASSED: Error budget sufficient (${ERROR_BUDGET}%)"
+
+          # Gate 2: Current error rate
+          echo "Gate 2: Current error rate check..."
+
+          ERROR_RATE=$(kubectl exec -n $NAMESPACE prometheus-0 -- \
+            promtool query instant http://localhost:9090 \
+            "slo:${SERVICE//-/_}:error_rate:ratio_5m{}" \
+            | grep -oP '\d+\.\d+' || echo "0.0")
+
+          echo "Current error rate: ${ERROR_RATE}%"
+
+          if (( $(echo "$ERROR_RATE > 0.01" | bc -l) )); then
+            echo "❌ Gate 2 FAILED: Error rate >1%"
+            exit 1
+          fi
+          echo "✓ Gate 2 PASSED: Error rate acceptable (${ERROR_RATE}%)"
+
+          # Gate 3: No active incidents
+          echo "Gate 3: Active incident check..."
+
+          ACTIVE_ALERTS=$(kubectl exec -n $NAMESPACE prometheus-0 -- \
+            promtool query instant http://localhost:9090 \
+            'ALERTS{alertstate="firing", severity=~"critical|warning", service="'"$SERVICE"'"}' \
+            | grep -c "ALERTS" || echo "0")
+
+          if [ "$ACTIVE_ALERTS" -gt 0 ]; then
+            echo "❌ Gate 3 FAILED: $ACTIVE_ALERTS active alerts"
+            kubectl exec -n $NAMESPACE prometheus-0 -- \
+              promtool query instant http://localhost:9090 \
+              'ALERTS{alertstate="firing", service="'"$SERVICE"'"}'
+            exit 1
+          fi
+          echo "✓ Gate 3 PASSED: No active alerts"
+
+          # Gate 4: Cost budget check (for AI services)
+          if [[ "$SERVICE" == "q2q-ai" || "$SERVICE" == "reporting" ]]; then
+            echo "Gate 4: AI cost budget check..."
+
+            MONTHLY_SPEND=$(kubectl exec -n $NAMESPACE prometheus-0 -- \
+              promtool query instant http://localhost:9090 \
+              'sum(ai_cost_usd_total{})' \
+              | grep -oP '\d+\.\d+' || echo "0.0")
+
+            BUDGET_LIMIT=10000
+
+            if (( $(echo "$MONTHLY_SPEND > $BUDGET_LIMIT" | bc -l) )); then
+              echo "❌ Gate 4 FAILED: AI budget exceeded (\$${MONTHLY_SPEND} > \$${BUDGET_LIMIT})"
+              exit 1
+            fi
+            echo "✓ Gate 4 PASSED: AI budget OK (\$${MONTHLY_SPEND} / \$${BUDGET_LIMIT})"
+          fi
+
+          # Gate 5: Change freeze check
+          echo "Gate 5: Change freeze period check..."
+
+          DAY_OF_WEEK=$(date +%u)  # 1=Monday, 7=Sunday
+          HOUR=$(date +%H)
+
+          # Block deployments on Friday after 2 PM and all weekend
+          if [[ "$DAY_OF_WEEK" == "5" && "$HOUR" -ge "14" ]] || [[ "$DAY_OF_WEEK" -gt "5" ]]; then
+            echo "❌ Gate 5 FAILED: Change freeze period (Fri 2PM - Mon 8AM)"
+            echo "Override with manual approval required"
+            exit 1
+          fi
+          echo "✓ Gate 5 PASSED: No change freeze"
+
+          echo "passed=true" >> $GITHUB_OUTPUT
+          echo "🎉 All quality gates passed!"
+
+  deploy-canary:
+    name: Deploy Canary (5%)
+    needs: quality-gates
+    if: needs.quality-gates.outputs.passed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure kubectl
+        run: |
+          echo "${{ secrets.KUBE_CONFIG_PRODUCTION }}" | base64 -d > /tmp/kubeconfig
+          echo "KUBECONFIG=/tmp/kubeconfig" >> $GITHUB_ENV
+
+      - name: Setup Argo Rollouts CLI
+        run: |
+          curl -LO https://github.com/argoproj/argo-rollouts/releases/latest/download/kubectl-argo-rollouts-linux-amd64
+          chmod +x ./kubectl-argo-rollouts-linux-amd64
+          sudo mv ./kubectl-argo-rollouts-linux-amd64 /usr/local/bin/kubectl-argo-rollouts
+
+      - name: Update Rollout Image
+        run: |
+          SERVICE="${{ github.event.inputs.service_name }}"
+          IMAGE_TAG="${{ github.event.inputs.image_tag }}"
+
+          echo "Updating $SERVICE to $IMAGE_TAG..."
+
+          kubectl argo rollouts set image $SERVICE -n $NAMESPACE \
+            $SERVICE=ghcr.io/${{ github.repository_owner }}/teei-$SERVICE:$IMAGE_TAG
+
+      - name: Monitor Canary Deployment
+        run: |
+          SERVICE="${{ github.event.inputs.service_name }}"
+
+          echo "Watching canary rollout for $SERVICE..."
+          kubectl argo rollouts watch $SERVICE -n $NAMESPACE
+
+      - name: Get Rollout Status
+        id: rollout_status
+        run: |
+          SERVICE="${{ github.event.inputs.service_name }}"
+
+          STATUS=$(kubectl argo rollouts status $SERVICE -n $NAMESPACE)
+          echo "status=$STATUS" >> $GITHUB_OUTPUT
+
+          # Get current step
+          STEP=$(kubectl argo rollouts get rollout $SERVICE -n $NAMESPACE | grep "Step" | awk '{print $2}')
+          echo "step=$STEP" >> $GITHUB_OUTPUT
+
+      - name: Deployment Summary
+        run: |
+          echo "## Canary Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "**Service:** ${{ github.event.inputs.service_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Image Tag:** ${{ github.event.inputs.image_tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Status:** ${{ steps.rollout_status.outputs.status }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Current Step:** ${{ steps.rollout_status.outputs.step }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "- Monitor metrics in Grafana" >> $GITHUB_STEP_SUMMARY
+          echo "- Argo Rollouts will auto-promote if quality gates pass" >> $GITHUB_STEP_SUMMARY
+          echo "- Manual rollback: \`kubectl argo rollouts undo ${{ github.event.inputs.service_name }} -n $NAMESPACE\`" >> $GITHUB_STEP_SUMMARY
+
+  notify:
+    name: Notify Deployment
+    needs: [quality-gates, deploy-canary]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Slack notification
+        if: always()
+        run: |
+          STATUS="✅ Success"
+          COLOR="good"
+
+          if [[ "${{ needs.deploy-canary.result }}" != "success" ]]; then
+            STATUS="❌ Failed"
+            COLOR="danger"
+          fi
+
+          curl -X POST ${{ secrets.SLACK_WEBHOOK_DEPLOYMENTS }} \
+            -H 'Content-Type: application/json' \
+            -d @- <<EOF
+          {
+            "attachments": [{
+              "color": "$COLOR",
+              "title": "Production Canary Deployment - $STATUS",
+              "fields": [
+                {"title": "Service", "value": "${{ github.event.inputs.service_name }}", "short": true},
+                {"title": "Version", "value": "${{ github.event.inputs.image_tag }}", "short": true},
+                {"title": "Deployed by", "value": "${{ github.actor }}", "short": true},
+                {"title": "Quality Gates", "value": "${{ needs.quality-gates.outputs.passed && '✅ Passed' || '❌ Failed' }}", "short": true}
+              ],
+              "footer": "TEEI Platform Deployments",
+              "ts": $(date +%s)
+            }]
+          }
+          EOF

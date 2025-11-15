@@ -1,0 +1,132 @@
+---
+# Reporting Service Level Objectives (SLOs)
+
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: reporting-slo
+  namespace: teei-prod
+  labels:
+    prometheus: kube-prometheus
+    role: alert-rules
+    service: reporting
+spec:
+  groups:
+  - name: reporting-slo
+    interval: 30s
+    rules:
+
+    # ─────────────────────────────────────────────────────────────
+    # SLO 1: Availability ≥ 99.5% (2.5 nines)
+    # ─────────────────────────────────────────────────────────────
+    # Error budget: 3.6 hours/month
+    # More lenient than API Gateway due to longer operations
+
+    - record: slo:reporting:availability:ratio_rate5m
+      expr: |
+        (
+          sum(rate(http_requests_total{service="reporting", status!~"5.."}[5m]))
+          /
+          sum(rate(http_requests_total{service="reporting"}[5m]))
+        )
+
+    - record: slo:reporting:availability:ratio_rate1h
+      expr: |
+        (
+          sum(rate(http_requests_total{service="reporting", status!~"5.."}[1h]))
+          /
+          sum(rate(http_requests_total{service="reporting"}[1h]))
+        )
+
+    - record: slo:reporting:availability:ratio_rate1d
+      expr: |
+        (
+          sum(rate(http_requests_total{service="reporting", status!~"5.."}[1d]))
+          /
+          sum(rate(http_requests_total{service="reporting"}[1d]))
+        )
+
+    # High burn rate alert
+    - alert: ReportingHighErrorBudgetBurn
+      expr: |
+        (
+          slo:reporting:availability:ratio_rate1h < (1 - 14.4 * (1 - 0.995))
+          and
+          slo:reporting:availability:ratio_rate5m < (1 - 14.4 * (1 - 0.995))
+        )
+      for: 2m
+      labels:
+        severity: critical
+        component: reporting
+        slo: availability
+        page: true
+      annotations:
+        summary: "Reporting service high error budget burn"
+        description: "Availability burn rate >14.4x"
+        current_availability: "{{ $value | humanizePercentage }}"
+        target: "≥99.5%"
+
+    # ─────────────────────────────────────────────────────────────
+    # SLO 2: Report Generation P95 ≤ 15s
+    # ─────────────────────────────────────────────────────────────
+
+    - record: slo:reporting:gen_latency:p95_5m
+      expr: |
+        histogram_quantile(0.95,
+          sum(rate(report_generation_duration_seconds_bucket{service="reporting"}[5m])) by (le)
+        )
+
+    - record: slo:reporting:gen_latency:p95_1h
+      expr: |
+        histogram_quantile(0.95,
+          sum(rate(report_generation_duration_seconds_bucket{service="reporting"}[1h])) by (le)
+        )
+
+    - record: slo:reporting:gen_latency:p95_1d
+      expr: |
+        histogram_quantile(0.95,
+          sum(rate(report_generation_duration_seconds_bucket{service="reporting"}[1d])) by (le)
+        )
+
+    - alert: ReportingGenerationLatencySLOViolation
+      expr: |
+        slo:reporting:gen_latency:p95_1h > 15  # 15 seconds
+      for: 15m
+      labels:
+        severity: warning
+        component: reporting
+        slo: latency
+      annotations:
+        summary: "Report generation P95 exceeds 15s"
+        description: "Current P95: {{ $value | humanizeDuration }}"
+        target: "≤15s"
+
+    # ─────────────────────────────────────────────────────────────
+    # SLO 3: Database Query P95 ≤ 500ms
+    # ─────────────────────────────────────────────────────────────
+
+    - record: slo:reporting:db_latency:p95_5m
+      expr: |
+        histogram_quantile(0.95,
+          sum(rate(db_query_duration_seconds_bucket{service="reporting"}[5m])) by (le)
+        )
+
+    - record: slo:reporting:db_latency:p95_1h
+      expr: |
+        histogram_quantile(0.95,
+          sum(rate(db_query_duration_seconds_bucket{service="reporting"}[1h])) by (le)
+        )
+
+    - alert: ReportingDatabaseLatencySLOViolation
+      expr: |
+        slo:reporting:db_latency:p95_1h > 0.5  # 500ms
+      for: 10m
+      labels:
+        severity: warning
+        component: reporting
+        slo: database-latency
+      annotations:
+        summary: "Database query P95 exceeds 500ms"
+        description: "Current P95: {{ $value | humanizeDuration }}"
+        target: "≤500ms"
+        action: "Check for slow queries, missing indexes, or connection pool exhaustion"

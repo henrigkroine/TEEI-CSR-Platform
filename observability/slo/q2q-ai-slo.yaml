@@ -1,0 +1,172 @@
+---
+# Q2Q AI Service Level Objectives (SLOs)
+
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: q2q-ai-slo
+  namespace: teei-prod
+  labels:
+    prometheus: kube-prometheus
+    role: alert-rules
+    service: q2q-ai
+spec:
+  groups:
+  - name: q2q-ai-slo
+    interval: 30s
+    rules:
+
+    # ─────────────────────────────────────────────────────────────
+    # SLO 1: Availability ≥ 99.9% (3 nines)
+    # ─────────────────────────────────────────────────────────────
+    # Critical AI service, same SLO as API Gateway
+
+    - record: slo:q2q_ai:availability:ratio_rate5m
+      expr: |
+        (
+          sum(rate(http_requests_total{service="q2q-ai", status!~"5.."}[5m]))
+          /
+          sum(rate(http_requests_total{service="q2q-ai"}[5m]))
+        )
+
+    - record: slo:q2q_ai:availability:ratio_rate1h
+      expr: |
+        (
+          sum(rate(http_requests_total{service="q2q-ai", status!~"5.."}[1h]))
+          /
+          sum(rate(http_requests_total{service="q2q-ai"}[1h]))
+        )
+
+    - record: slo:q2q_ai:availability:ratio_rate1d
+      expr: |
+        (
+          sum(rate(http_requests_total{service="q2q-ai", status!~"5.."}[1d]))
+          /
+          sum(rate(http_requests_total{service="q2q-ai"}[1d]))
+        )
+
+    - alert: Q2QAIHighErrorBudgetBurn
+      expr: |
+        (
+          slo:q2q_ai:availability:ratio_rate1h < (1 - 14.4 * (1 - 0.999))
+          and
+          slo:q2q_ai:availability:ratio_rate5m < (1 - 14.4 * (1 - 0.999))
+        )
+      for: 2m
+      labels:
+        severity: critical
+        component: q2q-ai
+        slo: availability
+        page: true
+      annotations:
+        summary: "Q2Q AI high error budget burn"
+        description: "Availability burn rate >14.4x"
+
+    # ─────────────────────────────────────────────────────────────
+    # SLO 2: Cache Hit Rate ≥ 60%
+    # ─────────────────────────────────────────────────────────────
+    # Cost optimization target
+
+    - record: slo:q2q_ai:cache_hit_rate:ratio_5m
+      expr: |
+        sum(rate(ai_cache_hits_total{service="q2q-ai"}[5m]))
+        /
+        sum(rate(ai_cache_requests_total{service="q2q-ai"}[5m]))
+
+    - record: slo:q2q_ai:cache_hit_rate:ratio_1h
+      expr: |
+        sum(rate(ai_cache_hits_total{service="q2q-ai"}[1h]))
+        /
+        sum(rate(ai_cache_requests_total{service="q2q-ai"}[1h]))
+
+    - record: slo:q2q_ai:cache_hit_rate:ratio_1d
+      expr: |
+        sum(rate(ai_cache_hits_total{service="q2q-ai"}[1d]))
+        /
+        sum(rate(ai_cache_requests_total{service="q2q-ai"}[1d]))
+
+    - alert: Q2QAICacheHitRateLow
+      expr: |
+        slo:q2q_ai:cache_hit_rate:ratio_1h < 0.60  # 60%
+      for: 30m
+      labels:
+        severity: warning
+        component: q2q-ai
+        slo: cache-hit-rate
+      annotations:
+        summary: "Q2Q AI cache hit rate below 60%"
+        description: "Current hit rate: {{ $value | humanizePercentage }}"
+        target: "≥60%"
+        action: "Review cache TTL, increase cache size, improve prompt deduplication"
+        cost_impact: "Higher cache miss rate increases AI API costs"
+
+    # ─────────────────────────────────────────────────────────────
+    # SLO 3: AI Inference P95 ≤ 3s
+    # ─────────────────────────────────────────────────────────────
+
+    - record: slo:q2q_ai:inference_latency:p95_5m
+      expr: |
+        histogram_quantile(0.95,
+          sum(rate(ai_inference_duration_seconds_bucket{service="q2q-ai"}[5m])) by (le)
+        )
+
+    - record: slo:q2q_ai:inference_latency:p95_1h
+      expr: |
+        histogram_quantile(0.95,
+          sum(rate(ai_inference_duration_seconds_bucket{service="q2q-ai"}[1h])) by (le)
+        )
+
+    - record: slo:q2q_ai:inference_latency:p95_1d
+      expr: |
+        histogram_quantile(0.95,
+          sum(rate(ai_inference_duration_seconds_bucket{service="q2q-ai"}[1d])) by (le)
+        )
+
+    - alert: Q2QAIInferenceLatencySLOViolation
+      expr: |
+        slo:q2q_ai:inference_latency:p95_1h > 3  # 3 seconds
+      for: 15m
+      labels:
+        severity: warning
+        component: q2q-ai
+        slo: latency
+      annotations:
+        summary: "Q2Q AI inference P95 exceeds 3s"
+        description: "Current P95: {{ $value | humanizeDuration }}"
+        target: "≤3s"
+
+    # ─────────────────────────────────────────────────────────────
+    # SLO 4: Cost Per Inference ≤ $0.05
+    # ─────────────────────────────────────────────────────────────
+
+    - record: slo:q2q_ai:cost_per_inference:usd_5m
+      expr: |
+        sum(rate(ai_cost_usd_total{service="q2q-ai"}[5m]))
+        /
+        sum(rate(ai_requests_total{service="q2q-ai"}[5m]))
+
+    - record: slo:q2q_ai:cost_per_inference:usd_1h
+      expr: |
+        sum(rate(ai_cost_usd_total{service="q2q-ai"}[1h]))
+        /
+        sum(rate(ai_requests_total{service="q2q-ai"}[1h]))
+
+    - record: slo:q2q_ai:cost_per_inference:usd_1d
+      expr: |
+        sum(rate(ai_cost_usd_total{service="q2q-ai"}[1d]))
+        /
+        sum(rate(ai_requests_total{service="q2q-ai"}[1d]))
+
+    - alert: Q2QAICostPerInferenceHigh
+      expr: |
+        slo:q2q_ai:cost_per_inference:usd_1h > 0.05  # $0.05
+      for: 30m
+      labels:
+        severity: warning
+        component: q2q-ai
+        slo: cost
+      annotations:
+        summary: "Q2Q AI cost per inference exceeds $0.05"
+        description: "Current cost: ${{ $value | humanize }}"
+        target: "≤$0.05"
+        action: "Investigate expensive prompts, switch to cheaper models, increase caching"

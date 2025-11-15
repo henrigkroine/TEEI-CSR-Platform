@@ -1,0 +1,109 @@
+---
+# Chaos Experiment: NATS Network Partition
+# Tests resilience of event-driven architecture when NATS becomes unavailable
+# Expected: Services buffer events, retry with backoff, recover within RTO ≤60m
+
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: nats-partition
+  namespace: teei-prod
+  labels:
+    experiment: network-partition
+    service: nats
+    severity: high
+spec:
+  action: partition
+  mode: all
+  selector:
+    namespaces:
+      - teei-prod
+    labelSelectors:
+      app: nats
+
+  direction: both
+  duration: "10m"
+
+  # Scheduler: Run weekly gamedays
+  scheduler:
+    cron: "@weekly"
+
+  # External endpoints that should still work
+  externalTargets:
+    - nats.teei-prod.svc.cluster.local
+
+---
+# Validation Job: Verify NATS recovery
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: validate-nats-recovery
+  namespace: teei-prod
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: validator
+        image: alpine/curl:latest
+        command:
+        - /bin/sh
+        - -c
+        - |
+          set -e
+          echo "Waiting 5 minutes for partition to heal..."
+          sleep 300
+
+          echo "Testing NATS connection..."
+          # Check NATS monitoring endpoint
+          curl -f http://nats:8222/connz || {
+            echo "NATS connection failed!"
+            exit 1
+          }
+
+          echo "Testing event publishing..."
+          # Publish test event via API Gateway
+          curl -f -X POST http://api-gateway:3000/health/nats-ping || {
+            echo "Event publishing failed!"
+            exit 1
+          }
+
+          echo "NATS recovery validated ✓"
+
+---
+# Alert Rule: NATS partition detection
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nats-partition-alert
+  namespace: teei-prod
+data:
+  alert.yaml: |
+    groups:
+    - name: nats-chaos
+      interval: 30s
+      rules:
+      - alert: NATSPartitionActive
+        expr: |
+          chaos_mesh_experiments{experiment="nats-partition", phase="running"} == 1
+        for: 1m
+        labels:
+          severity: warning
+          component: nats
+          chaos: true
+        annotations:
+          summary: "NATS partition chaos experiment active"
+          description: "Network partition induced on NATS. Monitor event lag and service recovery."
+          runbook: "https://docs.teei.com/runbooks/chaos/nats-partition"
+
+      - alert: NATSConsumerLagHigh
+        expr: |
+          nats_consumer_lag > 1000
+        for: 5m
+        labels:
+          severity: critical
+          component: nats
+        annotations:
+          summary: "NATS consumer lag >1000 messages"
+          description: "Consumer lag {{ $value }} indicates event backlog during partition."
+          recovery_time: "RTO target: 60m"

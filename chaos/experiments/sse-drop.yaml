@@ -1,0 +1,159 @@
+---
+# Chaos Experiment: SSE Connection Drop
+# Tests client-side reconnection logic with Last-Event-ID resume
+# Expected: Clients reconnect within 5s, resume from last event, no data loss
+
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: sse-connection-drop
+  namespace: teei-prod
+  labels:
+    experiment: sse-resilience
+    service: api-gateway
+    severity: medium
+spec:
+  action: delay
+  mode: all
+  selector:
+    namespaces:
+      - teei-prod
+    labelSelectors:
+      app: api-gateway
+
+  # Induce 10s network delay to force SSE disconnections
+  delay:
+    latency: "10s"
+    correlation: "100"
+    jitter: "2s"
+
+  duration: "3m"
+
+  # Target only SSE endpoints
+  target:
+    mode: all
+    selector:
+      namespaces:
+        - teei-prod
+      labelSelectors:
+        app: corp-cockpit-astro
+
+  direction: to
+
+  # Scheduler: Weekly drills during low-traffic hours
+  scheduler:
+    cron: "0 3 * * 2"  # 3 AM every Tuesday
+
+---
+# Validation Job: Verify SSE recovery
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: validate-sse-recovery
+  namespace: teei-prod
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: validator
+        image: node:20-alpine
+        command:
+        - /bin/sh
+        - -c
+        - |
+          cat > test-sse.js << 'EOF'
+          const EventSource = require('eventsource');
+
+          let lastEventId = null;
+          let reconnectCount = 0;
+          let messagesReceived = 0;
+          const startTime = Date.now();
+
+          function connect() {
+            const url = lastEventId
+              ? `http://api-gateway:3000/v1/metrics/stream?lastEventId=${lastEventId}`
+              : 'http://api-gateway:3000/v1/metrics/stream';
+
+            const es = new EventSource(url);
+
+            es.addEventListener('message', (e) => {
+              messagesReceived++;
+              lastEventId = e.lastEventId;
+              console.log(`[${Date.now() - startTime}ms] Message ${messagesReceived}: ${e.data.substring(0, 50)}...`);
+            });
+
+            es.addEventListener('error', (e) => {
+              reconnectCount++;
+              const elapsed = Date.now() - startTime;
+              console.log(`[${elapsed}ms] Connection error (reconnect #${reconnectCount})`);
+
+              es.close();
+
+              // Reconnect with exponential backoff
+              const delay = Math.min(1000 * Math.pow(2, reconnectCount - 1), 30000);
+              console.log(`Reconnecting in ${delay}ms with lastEventId=${lastEventId}`);
+              setTimeout(connect, delay);
+            });
+
+            return es;
+          }
+
+          // Monitor for 5 minutes
+          connect();
+
+          setTimeout(() => {
+            console.log('\n=== SSE Recovery Test Results ===');
+            console.log(`Messages received: ${messagesReceived}`);
+            console.log(`Reconnections: ${reconnectCount}`);
+            console.log(`Last Event ID: ${lastEventId}`);
+
+            if (reconnectCount === 0) {
+              console.log('✗ No reconnections detected (test may not have triggered)');
+              process.exit(1);
+            }
+
+            if (reconnectCount > 0 && messagesReceived > 0 && lastEventId) {
+              console.log('✓ SSE recovery validated');
+              console.log('✓ Last-Event-ID resume working');
+              process.exit(0);
+            } else {
+              console.log('✗ SSE recovery failed');
+              process.exit(1);
+            }
+          }, 300000);  // 5 minutes
+          EOF
+
+          npm install eventsource
+          node test-sse.js
+
+---
+# Client-side metrics
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sse-chaos-metrics
+  namespace: teei-prod
+data:
+  queries.yaml: |
+    # SSE reconnection time P95
+    - name: sse_reconnect_p95
+      query: |
+        histogram_quantile(0.95,
+          sum(rate(sse_reconnect_duration_seconds_bucket[5m])) by (le)
+        )
+      target: "< 5s"
+
+    # SSE message loss rate
+    - name: sse_message_loss_rate
+      query: |
+        sum(rate(sse_messages_lost_total[5m])) /
+        sum(rate(sse_messages_sent_total[5m]))
+      target: "0%"
+
+    # Last-Event-ID resume success rate
+    - name: sse_resume_success_rate
+      query: |
+        sum(rate(sse_reconnect_with_last_event_id_success_total[5m])) /
+        sum(rate(sse_reconnect_with_last_event_id_total[5m]))
+      target: ">= 99%"

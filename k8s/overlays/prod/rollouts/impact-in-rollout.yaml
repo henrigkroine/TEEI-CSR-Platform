@@ -1,0 +1,204 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: impact-in
+  namespace: teei-prod
+  labels:
+    app: impact-in
+    tier: integration
+    managed-by: argo-rollouts
+spec:
+  replicas: 3
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: impact-in
+  strategy:
+    canary:
+      # Standard canary for integration service
+      steps:
+      - setWeight: 5
+      - pause: {duration: 10m}
+      - analysis:
+          templates:
+          - templateName: impact-in-quality-gate
+      - setWeight: 25
+      - pause: {duration: 15m}
+      - analysis:
+          templates:
+          - templateName: impact-in-quality-gate
+      - setWeight: 50
+      - pause: {duration: 15m}
+      - analysis:
+          templates:
+          - templateName: impact-in-quality-gate
+      - setWeight: 100
+
+      trafficRouting:
+        nginx:
+          stableIngress: impact-in-stable
+          annotationPrefix: nginx.ingress.kubernetes.io
+
+      analysis:
+        templates:
+        - templateName: impact-in-quality-gate
+        startingStep: 1
+        args:
+        - name: service-name
+          value: impact-in
+
+  template:
+    metadata:
+      labels:
+        app: impact-in
+        version: canary
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3003"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: impact-in
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+
+      containers:
+      - name: impact-in
+        image: ghcr.io/henrigkroine/teei-impact-in:latest
+        imagePullPolicy: Always
+
+        ports:
+        - name: http
+          containerPort: 3003
+          protocol: TCP
+        - name: metrics
+          containerPort: 9090
+          protocol: TCP
+
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: LOG_LEVEL
+          value: "info"
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: "http://otel-collector:4318"
+        - name: BENEVITY_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: connectors-secrets
+              key: benevity-api-key
+        - name: GOODERA_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: connectors-secrets
+              key: goodera-client-id
+        - name: WORKDAY_TENANT_ID
+          valueFrom:
+            secretKeyRef:
+              name: connectors-secrets
+              key: workday-tenant-id
+
+        resources:
+          requests:
+            cpu: 500m
+            memory: 512Mi
+          limits:
+            cpu: 2000m
+            memory: 2Gi
+
+        livenessProbe:
+          httpGet:
+            path: /health/live
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 2
+
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - impact-in
+              topologyKey: kubernetes.io/hostname
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: impact-in-quality-gate
+  namespace: teei-prod
+spec:
+  args:
+  - name: service-name
+
+  metrics:
+  # Metric 1: Delivery success rate ≥ 99%
+  - name: delivery-success-rate
+    interval: 2m
+    count: 5
+    successCondition: result[0] >= 0.99
+    failureLimit: 2
+    provider:
+      prometheus:
+        address: http://prometheus:9090
+        query: |
+          sum(rate(impact_in_deliveries_total{service="{{args.service-name}}", status="success"}[10m])) /
+          sum(rate(impact_in_deliveries_total{service="{{args.service-name}}"}[10m]))
+
+  # Metric 2: External API P95 ≤ 2s
+  - name: external-api-p95
+    interval: 1m
+    count: 5
+    successCondition: result[0] < 2
+    failureLimit: 2
+    provider:
+      prometheus:
+        address: http://prometheus:9090
+        query: |
+          histogram_quantile(0.95,
+            sum(rate(http_external_request_duration_seconds_bucket{service="{{args.service-name}}"}[5m])) by (le)
+          )
+
+  # Metric 3: Retry rate ≤ 10%
+  - name: retry-rate
+    interval: 2m
+    count: 3
+    successCondition: result[0] < 0.1
+    failureLimit: 2
+    provider:
+      prometheus:
+        address: http://prometheus:9090
+        query: |
+          sum(rate(impact_in_retries_total{service="{{args.service-name}}"}[10m])) /
+          sum(rate(impact_in_deliveries_total{service="{{args.service-name}}"}[10m]))
+
+  # Metric 4: Error rate ≤ 1%
+  - name: error-rate
+    interval: 1m
+    count: 5
+    successCondition: result[0] < 0.01
+    failureLimit: 2
+    provider:
+      prometheus:
+        address: http://prometheus:9090
+        query: |
+          sum(rate(http_requests_total{service="{{args.service-name}}", status=~"5.."}[5m])) /
+          sum(rate(http_requests_total{service="{{args.service-name}}"}[5m]))

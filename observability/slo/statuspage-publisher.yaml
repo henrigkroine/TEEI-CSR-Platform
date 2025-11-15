@@ -1,0 +1,176 @@
+---
+# Status Page Publisher - Publishes SLO metrics to public status page
+# Updates component status based on SLO violations
+
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: statuspage-publisher
+  namespace: teei-prod
+spec:
+  schedule: "*/5 * * * *"  # Every 5 minutes
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 5
+  failedJobsHistoryLimit: 3
+
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: statuspage-publisher
+            component: observability
+        spec:
+          restartPolicy: OnFailure
+          serviceAccountName: statuspage-publisher
+
+          containers:
+          - name: publisher
+            image: curlimages/curl:latest
+            env:
+            - name: STATUSPAGE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: statuspage-secret
+                  key: api-key
+            - name: STATUSPAGE_PAGE_ID
+              value: "YOUR_PAGE_ID"
+            - name: PROMETHEUS_URL
+              value: "http://prometheus:9090"
+
+            command:
+            - /bin/sh
+            - -c
+            - |
+              set -e
+
+              echo "🔍 Querying SLO metrics from Prometheus..."
+
+              # Query API Gateway availability
+              API_GW_AVAIL=$(curl -s "${PROMETHEUS_URL}/api/v1/query?query=slo:api_gateway:availability:ratio_rate1h" \
+                | jq -r '.data.result[0].value[1]')
+
+              # Query Reporting availability
+              REPORTING_AVAIL=$(curl -s "${PROMETHEUS_URL}/api/v1/query?query=slo:reporting:availability:ratio_rate1h" \
+                | jq -r '.data.result[0].value[1]')
+
+              # Query Q2Q AI availability
+              Q2Q_AVAIL=$(curl -s "${PROMETHEUS_URL}/api/v1/query?query=slo:q2q_ai:availability:ratio_rate1h" \
+                | jq -r '.data.result[0].value[1]')
+
+              echo "API Gateway: ${API_GW_AVAIL}"
+              echo "Reporting: ${REPORTING_AVAIL}"
+              echo "Q2Q AI: ${Q2Q_AVAIL}"
+
+              # Determine component statuses
+              # operational: SLO met
+              # degraded_performance: SLO violated but >95%
+              # partial_outage: <95%
+              # major_outage: <90%
+
+              get_status() {
+                AVAIL=$1
+                TARGET=$2
+                if (( $(echo "$AVAIL >= $TARGET" | bc -l) )); then
+                  echo "operational"
+                elif (( $(echo "$AVAIL >= 0.95" | bc -l) )); then
+                  echo "degraded_performance"
+                elif (( $(echo "$AVAIL >= 0.90" | bc -l) )); then
+                  echo "partial_outage"
+                else
+                  echo "major_outage"
+                fi
+              }
+
+              API_GW_STATUS=$(get_status $API_GW_AVAIL 0.999)
+              REPORTING_STATUS=$(get_status $REPORTING_AVAIL 0.995)
+              Q2Q_STATUS=$(get_status $Q2Q_AVAIL 0.999)
+
+              echo "Updating status page..."
+
+              # Update API Gateway component
+              curl -X PATCH "https://api.statuspage.io/v1/pages/${STATUSPAGE_PAGE_ID}/components/api-gateway" \
+                -H "Authorization: OAuth ${STATUSPAGE_API_KEY}" \
+                -H "Content-Type: application/json" \
+                -d @- <<EOF
+              {
+                "component": {
+                  "status": "${API_GW_STATUS}"
+                }
+              }
+              EOF
+
+              # Update Reporting component
+              curl -X PATCH "https://api.statuspage.io/v1/pages/${STATUSPAGE_PAGE_ID}/components/reporting" \
+                -H "Authorization: OAuth ${STATUSPAGE_API_KEY}" \
+                -H "Content-Type: application/json" \
+                -d @- <<EOF
+              {
+                "component": {
+                  "status": "${REPORTING_STATUS}"
+                }
+              }
+              EOF
+
+              # Update Q2Q AI component
+              curl -X PATCH "https://api.statuspage.io/v1/pages/${STATUSPAGE_PAGE_ID}/components/q2q-ai" \
+                -H "Authorization: OAuth ${STATUSPAGE_API_KEY}" \
+                -H "Content-Type: application/json" \
+                -d @- <<EOF
+              {
+                "component": {
+                  "status": "${Q2Q_STATUS}"
+                }
+              }
+              EOF
+
+              # Update metric values (for public metrics display)
+              curl -X POST "https://api.statuspage.io/v1/pages/${STATUSPAGE_PAGE_ID}/metrics/api-gateway-availability/data" \
+                -H "Authorization: OAuth ${STATUSPAGE_API_KEY}" \
+                -H "Content-Type: application/json" \
+                -d @- <<EOF
+              {
+                "data": {
+                  "timestamp": $(date +%s),
+                  "value": $(echo "$API_GW_AVAIL * 100" | bc -l)
+                }
+              }
+              EOF
+
+              echo "✓ Status page updated successfully"
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: statuspage-publisher
+  namespace: teei-prod
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: statuspage-publisher
+  namespace: teei-prod
+rules:
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get"]
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: statuspage-publisher
+  namespace: teei-prod
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: statuspage-publisher
+subjects:
+- kind: ServiceAccount
+  name: statuspage-publisher
+  namespace: teei-prod

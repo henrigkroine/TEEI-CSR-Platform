@@ -1,0 +1,242 @@
+---
+# Scheduled DSAR Export Job
+# Processes pending export requests daily
+
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: dsar-export-processor
+  namespace: teei-prod
+spec:
+  schedule: "0 1 * * *"  # Daily at 1 AM UTC
+  concurrencyPolicy: Forbid  # Don't run concurrent exports
+  successfulJobsHistoryLimit: 10
+  failedJobsHistoryLimit: 3
+
+  jobTemplate:
+    spec:
+      backoffLimit: 3
+      activeDeadlineSeconds: 7200  # 2 hours timeout
+      template:
+        metadata:
+          labels:
+            app: dsar-export-processor
+            component: privacy
+        spec:
+          restartPolicy: OnFailure
+          serviceAccountName: dsar-processor
+
+          containers:
+          - name: processor
+            image: ghcr.io/henrigkroine/teei-privacy-orchestrator:latest
+            imagePullPolicy: Always
+
+            env:
+            - name: NODE_ENV
+              value: "production"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: backend-services-secrets
+                  key: database-url
+            - name: S3_BUCKET
+              value: "teei-dsar-exports"
+            - name: AWS_REGION
+              value: "us-east-1"
+            - name: ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: dsar-secrets
+                  key: encryption-key
+            - name: NOTIFICATION_WEBHOOK
+              valueFrom:
+                secretKeyRef:
+                  name: dsar-secrets
+                  key: slack-webhook
+
+            command:
+            - node
+            - /app/dist/jobs/process-export-requests.js
+
+            resources:
+              requests:
+                cpu: 500m
+                memory: 1Gi
+              limits:
+                cpu: 2000m
+                memory: 4Gi
+
+            volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+
+          volumes:
+          - name: tmp
+            emptyDir:
+              sizeLimit: 10Gi
+
+---
+# Scheduled DSAR Deletion Job
+# Executes deletions after 30-day cancellation window
+
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: dsar-delete-processor
+  namespace: teei-prod
+spec:
+  schedule: "0 2 * * *"  # Daily at 2 AM UTC
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 10
+  failedJobsHistoryLimit: 3
+
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 3600  # 1 hour timeout
+      template:
+        metadata:
+          labels:
+            app: dsar-delete-processor
+            component: privacy
+        spec:
+          restartPolicy: OnFailure
+          serviceAccountName: dsar-processor
+
+          containers:
+          - name: processor
+            image: ghcr.io/henrigkroine/teei-privacy-orchestrator:latest
+            imagePullPolicy: Always
+
+            env:
+            - name: NODE_ENV
+              value: "production"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: backend-services-secrets
+                  key: database-url
+            - name: NATS_URL
+              value: "nats://nats.teei-prod:4222"
+            - name: BACKUP_BEFORE_DELETE
+              value: "true"
+            - name: DRY_RUN
+              value: "false"  # Set to "true" for testing
+
+            command:
+            - node
+            - /app/dist/jobs/process-delete-requests.js
+
+            resources:
+              requests:
+                cpu: 500m
+                memory: 512Mi
+              limits:
+                cpu: 1000m
+                memory: 2Gi
+
+---
+# ServiceAccount for DSAR processors
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: dsar-processor
+  namespace: teei-prod
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::ACCOUNT_ID:role/teei-dsar-processor
+
+---
+# RBAC permissions
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: dsar-processor
+  namespace: teei-prod
+rules:
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get"]
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "list"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: dsar-processor
+  namespace: teei-prod
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: dsar-processor
+subjects:
+- kind: ServiceAccount
+  name: dsar-processor
+  namespace: teei-prod
+
+---
+# Monitoring: DSAR job metrics
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dsar-job-alerts
+  namespace: teei-prod
+data:
+  alerts.yaml: |
+    groups:
+    - name: dsar-jobs
+      interval: 1h
+      rules:
+      - alert: DSARExportJobFailed
+        expr: |
+          kube_job_status_failed{job_name=~"dsar-export-processor.*"} > 0
+        for: 5m
+        labels:
+          severity: critical
+          component: privacy
+          compliance: gdpr
+        annotations:
+          summary: "DSAR export job failed"
+          description: "Export job {{ $labels.job_name }} failed"
+          action: "Check logs: kubectl logs job/{{ $labels.job_name }} -n teei-prod"
+          compliance_impact: "May violate GDPR 72-hour response requirement"
+
+      - alert: DSARDeleteJobFailed
+        expr: |
+          kube_job_status_failed{job_name=~"dsar-delete-processor.*"} > 0
+        for: 5m
+        labels:
+          severity: critical
+          component: privacy
+          compliance: gdpr
+        annotations:
+          summary: "DSAR deletion job failed"
+          description: "Deletion job {{ $labels.job_name }} failed"
+          action: "Check logs and retry manually"
+
+      - alert: DSARExportDelayed
+        expr: |
+          time() - max(dsar_request_created_at{request_type="export", status="pending"}) > 259200
+        for: 1h
+        labels:
+          severity: critical
+          component: privacy
+          compliance: gdpr
+        annotations:
+          summary: "DSAR export request exceeds 72-hour SLA"
+          description: "Export pending for {{ $value | humanizeDuration }}"
+          action: "Investigate and process manually if needed"
+          compliance_impact: "GDPR violation - 72-hour response time exceeded"
+
+---
+# Secret template (must be created separately with real values)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: dsar-secrets
+  namespace: teei-prod
+type: Opaque
+stringData:
+  encryption-key: "REPLACE_WITH_32_BYTE_KEY"
+  slack-webhook: "https://hooks.slack.com/services/REPLACE"
