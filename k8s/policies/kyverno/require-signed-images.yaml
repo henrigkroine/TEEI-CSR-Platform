@@ -1,0 +1,86 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-signed-images
+  annotations:
+    policies.kyverno.io/title: Require Signed Container Images
+    policies.kyverno.io/category: Security, Supply Chain
+    policies.kyverno.io/severity: high
+    policies.kyverno.io/description: >-
+      Ensures all container images are cryptographically signed and verified.
+      Only images signed with approved keys are allowed in production namespaces.
+spec:
+  validationFailureAction: enforce
+  background: true
+  rules:
+  - name: verify-image-signatures
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+          namespaces:
+          - teei-production
+    verifyImages:
+    - imageReferences:
+      - "ghcr.io/teei/*:*"
+      attestors:
+      - count: 1
+        entries:
+        - keys:
+            publicKeys: |-
+              -----BEGIN PUBLIC KEY-----
+              # Production image signing key (example)
+              MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...
+              -----END PUBLIC KEY-----
+  - name: require-image-digest
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+          namespaces:
+          - teei-production
+    validate:
+      message: "Images must be referenced by digest (sha256) in production"
+      pattern:
+        spec:
+          containers:
+          - image: "*@sha256:*"
+---
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-sbom-attestation
+  annotations:
+    policies.kyverno.io/title: Require SBOM Attestation
+    policies.kyverno.io/category: Security, Supply Chain
+    policies.kyverno.io/severity: medium
+    policies.kyverno.io/description: >-
+      Requires SBOM (Software Bill of Materials) attestation for all images.
+spec:
+  validationFailureAction: enforce
+  background: true
+  rules:
+  - name: verify-sbom
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+          namespaces:
+          - teei-production
+    verifyImages:
+    - imageReferences:
+      - "ghcr.io/teei/*:*"
+      attestations:
+      - predicateType: https://spdx.dev/Document
+        attestors:
+        - count: 1
+          entries:
+          - keys:
+              publicKeys: |-
+                -----BEGIN PUBLIC KEY-----
+                # SBOM signing key
+                MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...
+                -----END PUBLIC KEY-----

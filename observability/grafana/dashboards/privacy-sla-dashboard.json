@@ -1,0 +1,210 @@
+{
+  "dashboard": {
+    "title": "Privacy & Compliance SLA Dashboard",
+    "tags": ["privacy", "compliance", "sla", "gdpr"],
+    "timezone": "utc",
+    "editable": true,
+    "graphTooltip": 1,
+    "time": {
+      "from": "now-24h",
+      "to": "now"
+    },
+    "refresh": "30s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "DSAR Export SLA Compliance",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "(sum(rate(dsar_job_completed_total{type=\"export\",sla_met=\"true\"}[30d])) / sum(rate(dsar_job_completed_total{type=\"export\"}[30d]))) * 100",
+            "legendFormat": "SLA Compliance %"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 90, "color": "yellow"},
+                {"value": 95, "color": "green"}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 8, "w": 6, "x": 0, "y": 0}
+      },
+      {
+        "id": 2,
+        "title": "DSAR Delete SLA Compliance",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "(sum(rate(dsar_job_completed_total{type=\"delete\",sla_met=\"true\"}[30d])) / sum(rate(dsar_job_completed_total{type=\"delete\"}[30d]))) * 100",
+            "legendFormat": "SLA Compliance %"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 90, "color": "yellow"},
+                {"value": 95, "color": "green"}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 8, "w": 6, "x": 6, "y": 0}
+      },
+      {
+        "id": 3,
+        "title": "Privacy Orchestrator Availability",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "(sum(up{job=\"privacy-orchestrator\"} == 1) / count(up{job=\"privacy-orchestrator\"})) * 100",
+            "legendFormat": "Availability %"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 99, "color": "yellow"},
+                {"value": 99.9, "color": "green"}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 8, "w": 6, "x": 12, "y": 0}
+      },
+      {
+        "id": 4,
+        "title": "SLA Burn Rate",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "dsar_sla_burn_rate",
+            "legendFormat": "Burn Rate"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "none",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 6, "color": "yellow"},
+                {"value": 14.4, "color": "red"}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 8, "w": 6, "x": 18, "y": 0}
+      },
+      {
+        "id": 5,
+        "title": "DSAR Job Queue",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "dsar_queue_waiting",
+            "legendFormat": "Waiting"
+          },
+          {
+            "expr": "dsar_queue_active",
+            "legendFormat": "Active"
+          },
+          {
+            "expr": "dsar_queue_failed",
+            "legendFormat": "Failed"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+      },
+      {
+        "id": 6,
+        "title": "DSAR Completion Time (p95)",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(dsar_job_duration_hours_bucket{type=\"export\"}[5m])) by (le))",
+            "legendFormat": "Export p95"
+          },
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(dsar_job_duration_hours_bucket{type=\"delete\"}[5m])) by (le))",
+            "legendFormat": "Delete p95"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "h"
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
+      },
+      {
+        "id": 7,
+        "title": "Regional Distribution",
+        "type": "piechart",
+        "targets": [
+          {
+            "expr": "sum(dsar_job_completed_total) by (region)",
+            "legendFormat": "{{region}}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16}
+      },
+      {
+        "id": 8,
+        "title": "Consent Events",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "sum(rate(consent_events_total{status=\"granted\"}[5m]))",
+            "legendFormat": "Granted"
+          },
+          {
+            "expr": "sum(rate(consent_events_total{status=\"withdrawn\"}[5m]))",
+            "legendFormat": "Withdrawn"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16}
+      },
+      {
+        "id": 9,
+        "title": "Compliance Audit Events",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "topk(10, sum(audit_log_events_total) by (action, actor_role))",
+            "format": "table",
+            "instant": true
+          }
+        ],
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 24}
+      },
+      {
+        "id": 10,
+        "title": "PII Access Events",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "sum(rate(pii_access_events_total[5m])) by (action)",
+            "legendFormat": "{{action}}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 32}
+      }
+    ]
+  }
+}

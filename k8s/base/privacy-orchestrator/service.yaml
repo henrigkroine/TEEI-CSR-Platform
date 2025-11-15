@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: privacy-orchestrator
+  namespace: teei-production
+  labels:
+    app: privacy-orchestrator
+    component: privacy
+spec:
+  type: ClusterIP
+  selector:
+    app: privacy-orchestrator
+  ports:
+  - name: http
+    port: 80
+    targetPort: http
+    protocol: TCP
+  - name: metrics
+    port: 9090
+    targetPort: metrics
+    protocol: TCP
+  sessionAffinity: None
