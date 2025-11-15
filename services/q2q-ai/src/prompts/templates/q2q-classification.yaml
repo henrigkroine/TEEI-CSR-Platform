@@ -1,0 +1,226 @@
+id: q2q-classification
+activeVersion: "2.1.0"
+canaryVersion: null
+defaultLanguage: en
+
+versions:
+  - version: "1.0.0"
+    name: "Baseline Q2Q Classifier"
+    active: false
+    template: |
+      You are an AI assistant analyzing volunteer buddy feedback to assess participant outcomes.
+
+      **Feedback Text:**
+      {{feedbackText}}
+
+      **Task:** Classify this feedback across the following dimensions on a scale of 0.0 to 1.0:
+
+      1. **CONFIDENCE** - Does the participant show increased confidence or self-assurance?
+      2. **BELONGING** - Does the participant express feeling more connected or included?
+      3. **LANG_LEVEL_PROXY** - Does the feedback indicate language skill improvement?
+      4. **JOB_READINESS** - Does the participant demonstrate improved job preparation or career skills?
+      5. **WELL_BEING** - Does the feedback suggest improved emotional or mental well-being?
+
+      **Output Format (JSON):**
+      {
+        "confidence": <score 0.0-1.0>,
+        "belonging": <score 0.0-1.0>,
+        "lang_level_proxy": <score 0.0-1.0>,
+        "job_readiness": <score 0.0-1.0>,
+        "well_being": <score 0.0-1.0>,
+        "confidence_score": <0.0-1.0>,
+        "topics": ["topic1", "topic2"]
+      }
+
+    placeholders:
+      - feedbackText
+    metadata:
+      createdAt: "2024-01-15"
+      author: "AI Team"
+      description: "Initial baseline prompt for Q2Q classification"
+      language: en
+      performanceMetrics:
+        f1Score: 0.72
+        precision: 0.68
+        recall: 0.77
+        avgLatency: 1200
+
+  - version: "2.0.0"
+    name: "Enhanced with Examples"
+    active: false
+    template: |
+      You are an expert AI analyst specializing in volunteer impact assessment. Your task is to analyze feedback from volunteer mentoring sessions and quantify participant outcomes.
+
+      **Context:** This feedback comes from a volunteer buddy working with a refugee/newcomer participant in a professional development program.
+
+      **Feedback Text:**
+      {{feedbackText}}
+
+      **Analysis Task:**
+      Evaluate this feedback across 5 outcome dimensions. For each dimension, assign a score from 0.0 (no evidence) to 1.0 (strong evidence).
+
+      **Dimensions:**
+
+      1. **CONFIDENCE** (0.0-1.0)
+         - Evidence: Self-assurance, willingness to try new things, positive self-talk, reduced hesitation
+         - Example High (0.8+): "She confidently presented her portfolio and asked great questions about the role"
+         - Example Low (0.2): "He seemed unsure and needed a lot of encouragement to speak"
+
+      2. **BELONGING** (0.0-1.0)
+         - Evidence: Feeling connected, cultural integration, social network growth, sense of community
+         - Example High: "Really enjoyed meeting other participants, felt welcomed by the team"
+         - Example Low: "Still feels isolated, hasn't connected with peers yet"
+
+      3. **LANG_LEVEL_PROXY** (0.0-1.0)
+         - Evidence: Communication clarity, vocabulary expansion, grammar improvement, fluency
+         - Example High: "Her English has improved dramatically, now using professional terminology"
+         - Example Low: "Still struggling with basic conversation, relies on translation"
+
+      4. **JOB_READINESS** (0.0-1.0)
+         - Evidence: Resume quality, interview skills, job search strategy, professional networking
+         - Example High: "Updated resume with strong action verbs, practiced behavioral interview questions"
+         - Example Low: "Hasn't started job search yet, unclear about career goals"
+
+      5. **WELL_BEING** (0.0-1.0)
+         - Evidence: Emotional health, stress reduction, positive outlook, life satisfaction
+         - Example High: "Seems much happier and less stressed, sleeping better"
+         - Example Low: "Still very anxious, struggling with adaptation stress"
+
+      **Additional Analysis:**
+      - Identify 1-3 key topics discussed (e.g., "CV", "interview", "networking", "mentorship")
+      - Provide a confidence score (0.0-1.0) indicating how certain you are about your classifications
+
+      **Output Format (JSON only, no explanation):**
+      {
+        "confidence": <score>,
+        "belonging": <score>,
+        "lang_level_proxy": <score>,
+        "job_readiness": <score>,
+        "well_being": <score>,
+        "confidence_score": <overall confidence in these scores>,
+        "topics": ["topic1", "topic2", "topic3"]
+      }
+
+    placeholders:
+      - feedbackText
+    metadata:
+      createdAt: "2024-06-20"
+      author: "AI Team"
+      description: "Added few-shot examples and clearer dimension definitions"
+      language: en
+      modelTargets:
+        - claude-3-5-sonnet-20241022
+        - gpt-4-turbo
+      performanceMetrics:
+        f1Score: 0.81
+        precision: 0.79
+        recall: 0.84
+        avgLatency: 1450
+
+  - version: "2.1.0"
+    name: "Citation-Aware with Evidence Retrieval"
+    active: true
+    template: |
+      You are an expert AI analyst specializing in volunteer impact assessment with a focus on evidence-based evaluation.
+
+      **Your Task:** Analyze volunteer feedback to quantify participant outcomes across 5 dimensions. For each dimension, you must:
+      1. Assign a score (0.0-1.0)
+      2. Extract a brief evidence snippet (exact quote or paraphrase) that supports your score
+      3. Indicate confidence in your assessment
+
+      **Context:**
+      - Program: Volunteer buddy mentoring for refugees/newcomers
+      - Setting: Professional development and integration support
+      - Language: {{language}}
+
+      **Feedback Text:**
+      {{feedbackText}}
+
+      {{#if retrievedEvidence}}
+      **Historical Context (Similar Past Feedback):**
+      {{retrievedEvidence}}
+      {{/if}}
+
+      **Outcome Dimensions:**
+
+      1. **CONFIDENCE** - Self-assurance, willingness to take initiative, positive self-perception
+         High (0.7-1.0): "Confidently led the presentation, volunteered to speak first"
+         Medium (0.4-0.6): "Participated when encouraged, showed some hesitation"
+         Low (0.0-0.3): "Very hesitant, needed constant reassurance"
+
+      2. **BELONGING** - Social connection, community integration, sense of inclusion
+         High: "Feels like part of the team, built friendships with peers"
+         Medium: "Starting to connect with others, attended social events"
+         Low: "Still feels isolated, hasn't engaged with community"
+
+      3. **LANG_LEVEL_PROXY** - Communication skills, language proficiency, vocabulary
+         High: "Professional fluency, complex sentence structures, industry terminology"
+         Medium: "Conversational fluency, occasional grammar errors"
+         Low: "Basic phrases only, relies heavily on translation"
+
+      4. **JOB_READINESS** - Career preparation, job search skills, professional competencies
+         High: "Tailored resume, practiced interviews, applied to 5 relevant jobs"
+         Medium: "Updated resume, researching companies"
+         Low: "No resume yet, unclear about career path"
+
+      5. **WELL_BEING** - Mental health, stress levels, life satisfaction, emotional stability
+         High: "Reduced anxiety, sleeping well, positive outlook on future"
+         Medium: "Some stress but managing, occasional positive moments"
+         Low: "High anxiety, struggling with daily tasks"
+
+      **Critical Requirements:**
+      - Every score MUST be supported by specific evidence from the feedback
+      - If evidence is ambiguous, lower your confidence score
+      - Extract exact phrases or close paraphrases for citations
+      - Identify specific topics discussed (CV, interview, language practice, etc.)
+
+      **Output Format (JSON only):**
+      {
+        "confidence": {
+          "score": <0.0-1.0>,
+          "evidence": "<exact quote or paraphrase>",
+          "confidence": <0.0-1.0>
+        },
+        "belonging": {
+          "score": <0.0-1.0>,
+          "evidence": "<exact quote or paraphrase>",
+          "confidence": <0.0-1.0>
+        },
+        "lang_level_proxy": {
+          "score": <0.0-1.0>,
+          "evidence": "<exact quote or paraphrase>",
+          "confidence": <0.0-1.0>
+        },
+        "job_readiness": {
+          "score": <0.0-1.0>,
+          "evidence": "<exact quote or paraphrase>",
+          "confidence": <0.0-1.0>
+        },
+        "well_being": {
+          "score": <0.0-1.0>,
+          "evidence": "<exact quote or paraphrase>",
+          "confidence": <0.0-1.0>
+        },
+        "overall_confidence": <0.0-1.0>,
+        "topics": ["topic1", "topic2"],
+        "language_detected": "{{language}}"
+      }
+
+    placeholders:
+      - feedbackText
+      - language
+      - retrievedEvidence
+    metadata:
+      createdAt: "2025-01-10"
+      author: "Worker-2 Team"
+      description: "RAG-enhanced prompt with mandatory citation evidence per dimension"
+      language: en
+      modelTargets:
+        - claude-3-5-sonnet-20241022
+        - claude-3-5-sonnet-20250219
+        - gpt-4o
+      performanceMetrics:
+        f1Score: 0.87
+        precision: 0.85
+        recall: 0.89
+        avgLatency: 1650
