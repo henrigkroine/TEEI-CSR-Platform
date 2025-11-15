@@ -1,27 +1,82 @@
 /**
- * ETag Middleware for Conditional Requests
+ * ETag Middleware for Conditional Requests with Redis Caching
  *
  * Implements HTTP caching with ETag support:
- * - Generates ETags based on response content hash
+ * - Generates ETags based on response content hash (SHA-256)
  * - Returns 304 Not Modified when content unchanged
  * - Reduces bandwidth and improves performance
+ * - Redis caching for ETag mappings (TTL: 5 minutes)
+ * - Support for weak ETags (W/"...")
+ * - Cache invalidation on data updates
  *
  * @module middleware/etag
  */
 
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { createHash } from 'crypto';
+import { createClient, type RedisClientType } from 'redis';
 
 /**
- * Generate ETag from content
+ * Redis client for ETag caching
  */
-export function generateETag(content: string | Buffer): string {
-  const hash = createHash('md5').update(content).digest('hex');
-  return `"${hash}"`;
+let redisClient: RedisClientType | null = null;
+
+/**
+ * Cache statistics
+ */
+const cacheStats = {
+  hits: 0,
+  misses: 0,
+  invalidations: 0,
+};
+
+/**
+ * Initialize Redis client for ETag caching
+ */
+export async function initializeETagCache(redisUrl?: string): Promise<void> {
+  try {
+    redisClient = createClient({
+      url: redisUrl || process.env.REDIS_URL || 'redis://localhost:6379',
+    });
+
+    redisClient.on('error', (err) => {
+      console.error('[ETag Cache] Redis error:', err);
+    });
+
+    await redisClient.connect();
+    console.log('[ETag Cache] Redis connected');
+  } catch (error) {
+    console.warn('[ETag Cache] Redis initialization failed, falling back to in-memory:', error);
+    redisClient = null;
+  }
 }
 
 /**
- * Check if ETag matches
+ * Get cache statistics
+ */
+export function getETagCacheStats() {
+  const total = cacheStats.hits + cacheStats.misses;
+  const hitRate = total > 0 ? (cacheStats.hits / total) * 100 : 0;
+
+  return {
+    ...cacheStats,
+    total,
+    hitRate: `${hitRate.toFixed(2)}%`,
+  };
+}
+
+/**
+ * Generate ETag from content (SHA-256 for security)
+ * @param content - Content to hash
+ * @param weak - Generate weak ETag (W/"...")
+ */
+export function generateETag(content: string | Buffer, weak: boolean = true): string {
+  const hash = createHash('sha256').update(content).digest('hex').substring(0, 16);
+  return weak ? `W/"${hash}"` : `"${hash}"`;
+}
+
+/**
+ * Check if ETag matches (supports both weak and strong ETags)
  */
 export function isETagMatch(etag: string, ifNoneMatch?: string): boolean {
   if (!ifNoneMatch) {
@@ -30,11 +85,95 @@ export function isETagMatch(etag: string, ifNoneMatch?: string): boolean {
 
   // Handle multiple ETags in If-None-Match header
   const etags = ifNoneMatch.split(',').map((tag) => tag.trim());
-  return etags.includes(etag) || etags.includes('*');
+
+  // Exact match
+  if (etags.includes(etag) || etags.includes('*')) {
+    return true;
+  }
+
+  // Weak comparison: strip W/ prefix and compare
+  const normalizedETag = etag.replace(/^W\//, '');
+  return etags.some((tag) => tag.replace(/^W\//, '') === normalizedETag);
 }
 
 /**
- * ETag middleware hook
+ * Store ETag in Redis cache
+ */
+async function storeETagInCache(
+  key: string,
+  etag: string,
+  ttl: number = 300
+): Promise<void> {
+  if (!redisClient) {
+    return;
+  }
+
+  try {
+    await redisClient.setEx(`etag:${key}`, ttl, etag);
+  } catch (error) {
+    console.error('[ETag Cache] Failed to store ETag:', error);
+  }
+}
+
+/**
+ * Get ETag from Redis cache
+ */
+async function getETagFromCache(key: string): Promise<string | null> {
+  if (!redisClient) {
+    return null;
+  }
+
+  try {
+    const etag = await redisClient.get(`etag:${key}`);
+    if (etag) {
+      cacheStats.hits++;
+    } else {
+      cacheStats.misses++;
+    }
+    return etag;
+  } catch (error) {
+    console.error('[ETag Cache] Failed to get ETag:', error);
+    cacheStats.misses++;
+    return null;
+  }
+}
+
+/**
+ * Invalidate ETags by pattern (e.g., company ID)
+ */
+export async function invalidateETagCache(pattern: string): Promise<number> {
+  if (!redisClient) {
+    return 0;
+  }
+
+  try {
+    const keys = await redisClient.keys(`etag:*${pattern}*`);
+    if (keys.length === 0) {
+      return 0;
+    }
+
+    await redisClient.del(keys);
+    cacheStats.invalidations += keys.length;
+
+    console.log(`[ETag Cache] Invalidated ${keys.length} entries matching pattern: ${pattern}`);
+    return keys.length;
+  } catch (error) {
+    console.error('[ETag Cache] Failed to invalidate cache:', error);
+    return 0;
+  }
+}
+
+/**
+ * Generate cache key from request
+ */
+function generateCacheKey(request: FastifyRequest): string {
+  const { method, url } = request;
+  const queryString = new URLSearchParams(request.query as Record<string, string>).toString();
+  return `${method}:${url}${queryString ? '?' + queryString : ''}`;
+}
+
+/**
+ * ETag middleware hook with Redis caching
  *
  * Automatically adds ETag headers and handles 304 responses
  *
@@ -62,9 +201,25 @@ export async function etagHook(
     return payload;
   }
 
-  // Generate ETag from payload
-  const content = typeof payload === 'string' ? payload : JSON.stringify(payload);
-  const etag = generateETag(content);
+  // Generate cache key
+  const cacheKey = generateCacheKey(request);
+
+  // Try to get cached ETag
+  const cachedETag = await getETagFromCache(cacheKey);
+
+  let etag: string;
+  if (cachedETag) {
+    etag = cachedETag;
+    reply.header('X-ETag-Cache', 'HIT');
+  } else {
+    // Generate ETag from payload
+    const content = typeof payload === 'string' ? payload : JSON.stringify(payload);
+    etag = generateETag(content);
+
+    // Store in cache (5 minutes TTL)
+    await storeETagInCache(cacheKey, etag, 300);
+    reply.header('X-ETag-Cache', 'MISS');
+  }
 
   // Set ETag header
   reply.header('ETag', etag);
@@ -136,8 +291,45 @@ export function setCacheHeaders(
 }
 
 /**
+ * Invalidation hook for POST/PUT/DELETE requests
+ *
+ * Automatically invalidates ETags when data is modified
+ */
+export async function etagInvalidationHook(
+  request: FastifyRequest,
+  reply: FastifyReply
+): Promise<void> {
+  // Only apply to mutating requests
+  if (!['POST', 'PUT', 'DELETE', 'PATCH'].includes(request.method)) {
+    return;
+  }
+
+  // Extract company ID from URL (pattern: /companies/:id/...)
+  const companyIdMatch = request.url.match(/\/companies\/([^\/]+)/);
+  if (companyIdMatch) {
+    const companyId = companyIdMatch[1];
+    await invalidateETagCache(companyId);
+
+    reply.header('X-ETag-Invalidated', companyId);
+    console.log(`[ETag Cache] Invalidated cache for company: ${companyId}`);
+  }
+}
+
+/**
  * Plugin to register ETag middleware
  */
 export async function etagPlugin(fastify: any) {
+  // Initialize Redis cache
+  await initializeETagCache();
+
+  // Add ETag generation hook
   fastify.addHook('onSend', etagHook);
+
+  // Add cache invalidation hook for mutations
+  fastify.addHook('onRequest', etagInvalidationHook);
+
+  // Expose cache stats endpoint
+  fastify.get('/internal/etag-stats', async () => {
+    return getETagCacheStats();
+  });
 }

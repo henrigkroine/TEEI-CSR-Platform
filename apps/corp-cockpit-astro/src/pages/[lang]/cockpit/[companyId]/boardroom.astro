@@ -1,0 +1,388 @@
+---
+/**
+ * Boardroom Mode Route
+ *
+ * Full-screen display mode for executive presentations.
+ * Optimized for large displays (TVs, projectors, boardroom screens).
+ *
+ * Features:
+ * - Full-screen layout with auto-cycling widgets
+ * - SSE real-time updates with offline cache fallback
+ * - Keyboard shortcuts (spacebar, Esc, arrows)
+ * - No authentication required (public display mode)
+ * - Multi-locale support (en, uk, no)
+ *
+ * Route: /[lang]/cockpit/[companyId]/boardroom
+ */
+
+import BoardroomView from '../../../../components/boardroom/BoardroomView';
+
+// Extract route parameters
+const { lang, companyId } = Astro.params;
+
+// Validate lang parameter
+const validLangs = ['en', 'uk', 'no'];
+if (!lang || !validLangs.includes(lang)) {
+  return Astro.redirect('/en');
+}
+
+// Validate companyId parameter
+if (!companyId) {
+  return Astro.redirect(`/${lang}`);
+}
+
+// Get query parameters for configuration
+const url = new URL(Astro.request.url);
+const cycleInterval = parseInt(url.searchParams.get('interval') || '30000', 10);
+const autoStart = url.searchParams.get('autoStart') !== 'false';
+const sseUrl = url.searchParams.get('sseUrl') || '/api/sse/dashboard';
+
+// Note: Boardroom mode is designed as a public display mode
+// No authentication is required, but we respect tenant context if available
+const tenantContext = Astro.locals.tenantContext;
+
+// Log access for audit purposes
+console.log('[BoardroomMode] Accessed', {
+  lang,
+  companyId,
+  cycleInterval,
+  autoStart,
+  timestamp: new Date().toISOString(),
+  tenantContext: tenantContext ? 'present' : 'none',
+});
+---
+
+<!doctype html>
+<html lang={lang} class="boardroom-html">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow" />
+
+    <title>Boardroom Mode - TEEI Corporate Cockpit</title>
+
+    <!-- Preload critical resources -->
+    <link rel="preconnect" href="/api/sse" crossorigin />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+    <!-- Styles - Minimal for boardroom mode -->
+    <style>
+      /* Reset and base styles */
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue',
+          Arial, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+
+      html.boardroom-html {
+        background-color: #111827; /* gray-900 */
+      }
+
+      body {
+        position: relative;
+        color: white;
+      }
+
+      /* Loading state */
+      .boardroom-loading {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background-color: #111827;
+        color: white;
+        z-index: 9999;
+      }
+
+      .boardroom-loading-spinner {
+        width: 64px;
+        height: 64px;
+        border: 4px solid rgba(59, 130, 246, 0.3);
+        border-top-color: #3b82f6;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .boardroom-loading-text {
+        margin-top: 24px;
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #9ca3af;
+      }
+
+      /* Error state */
+      .boardroom-error {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background-color: #111827;
+        color: white;
+        padding: 32px;
+        text-align: center;
+      }
+
+      .boardroom-error-icon {
+        width: 64px;
+        height: 64px;
+        color: #ef4444;
+        margin-bottom: 24px;
+      }
+
+      .boardroom-error-title {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 16px;
+      }
+
+      .boardroom-error-message {
+        font-size: 1.25rem;
+        color: #9ca3af;
+        margin-bottom: 32px;
+      }
+
+      .boardroom-error-button {
+        padding: 12px 24px;
+        background-color: #3b82f6;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background-color 0.2s;
+      }
+
+      .boardroom-error-button:hover {
+        background-color: #2563eb;
+      }
+
+      /* Hide default scrollbars but keep functionality */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+
+      ::-webkit-scrollbar-track {
+        background: #1f2937;
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background: #4b5563;
+        border-radius: 4px;
+      }
+
+      ::-webkit-scrollbar-thumb:hover {
+        background: #6b7280;
+      }
+
+      /* Focus visible for accessibility */
+      :focus-visible {
+        outline: 2px solid #3b82f6;
+        outline-offset: 2px;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Loading state (will be replaced by React component) -->
+    <div id="boardroom-loading" class="boardroom-loading" aria-live="polite">
+      <div class="boardroom-loading-spinner" aria-hidden="true"></div>
+      <div class="boardroom-loading-text">Loading Boardroom Mode...</div>
+    </div>
+
+    <!-- Error boundary (hidden by default) -->
+    <div
+      id="boardroom-error"
+      class="boardroom-error"
+      style="display: none;"
+      role="alert"
+      aria-live="assertive"
+    >
+      <svg
+        class="boardroom-error-icon"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+        />
+      </svg>
+      <h1 class="boardroom-error-title">Failed to Load Boardroom Mode</h1>
+      <p class="boardroom-error-message" id="boardroom-error-message">
+        An error occurred while loading the boardroom display.
+      </p>
+      <button
+        class="boardroom-error-button"
+        onclick="window.location.reload()"
+        type="button"
+      >
+        Reload Page
+      </button>
+    </div>
+
+    <!-- React root -->
+    <div id="boardroom-root"></div>
+
+    <!-- React component with client:only for SSR bypass -->
+    <BoardroomView
+      companyId={companyId}
+      lang={lang}
+      cycleInterval={cycleInterval}
+      autoStart={autoStart}
+      sseUrl={sseUrl}
+      client:only="react"
+    />
+
+    <!-- Error handling script -->
+    <script is:inline>
+      // Global error handler for boardroom mode
+      window.addEventListener('error', function (event) {
+        console.error('[BoardroomMode] Global error:', event.error);
+        showError(event.error?.message || 'An unexpected error occurred');
+      });
+
+      window.addEventListener('unhandledrejection', function (event) {
+        console.error('[BoardroomMode] Unhandled rejection:', event.reason);
+        showError(event.reason?.message || 'An unexpected error occurred');
+      });
+
+      function showError(message) {
+        const loading = document.getElementById('boardroom-loading');
+        const error = document.getElementById('boardroom-error');
+        const errorMessage = document.getElementById('boardroom-error-message');
+
+        if (loading) loading.style.display = 'none';
+        if (error) error.style.display = 'flex';
+        if (errorMessage) errorMessage.textContent = message;
+      }
+
+      // Hide loading state after component mounts
+      window.addEventListener('DOMContentLoaded', function () {
+        // Give React time to render
+        setTimeout(function () {
+          const loading = document.getElementById('boardroom-loading');
+          if (loading) {
+            loading.style.display = 'none';
+          }
+        }, 1000);
+      });
+
+      // Prevent accidental navigation (back button, etc.)
+      window.addEventListener('beforeunload', function (event) {
+        // Only show warning if in fullscreen mode
+        if (document.fullscreenElement) {
+          event.preventDefault();
+          event.returnValue = '';
+          return '';
+        }
+      });
+
+      // Disable context menu in boardroom mode
+      document.addEventListener('contextmenu', function (event) {
+        event.preventDefault();
+      });
+
+      // Log performance metrics
+      window.addEventListener('load', function () {
+        if (window.performance && window.performance.timing) {
+          const timing = window.performance.timing;
+          const loadTime = timing.loadEventEnd - timing.navigationStart;
+          console.log('[BoardroomMode] Page load time:', loadTime, 'ms');
+
+          // Send to analytics if available
+          if (window.gtag) {
+            window.gtag('event', 'timing_complete', {
+              name: 'boardroom_load',
+              value: loadTime,
+              event_category: 'Performance',
+            });
+          }
+        }
+      });
+    </script>
+
+    <!-- Analytics (optional) -->
+    <script is:inline>
+      // Track boardroom mode usage
+      if (typeof window !== 'undefined') {
+        const boardroomSession = {
+          companyId: document.currentScript?.dataset?.companyId,
+          lang: document.currentScript?.dataset?.lang,
+          startTime: Date.now(),
+        };
+
+        // Log session start
+        console.log('[BoardroomMode] Session started', boardroomSession);
+
+        // Track session duration on exit
+        window.addEventListener('beforeunload', function () {
+          const duration = Date.now() - boardroomSession.startTime;
+          console.log('[BoardroomMode] Session duration:', duration, 'ms');
+
+          // Send to analytics if available
+          if (navigator.sendBeacon && window.location.origin) {
+            const data = new FormData();
+            data.append('event', 'boardroom_session');
+            data.append('duration', duration.toString());
+            data.append('companyId', boardroomSession.companyId || '');
+            navigator.sendBeacon('/api/analytics/boardroom', data);
+          }
+        });
+      }
+    </script>
+
+    <!-- Accessibility announcements -->
+    <div
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+      class="sr-only"
+      id="boardroom-announcer"
+    >
+      Boardroom mode loaded successfully
+    </div>
+
+    <!-- Screen reader only helper text -->
+    <style>
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border-width: 0;
+      }
+    </style>
+  </body>
+</html>

@@ -12,6 +12,8 @@ import {
   type ChartOptions,
 } from 'chart.js';
 import { Line, Bar, Pie, Doughnut } from 'react-chartjs-2';
+import { useEffect, useState } from 'react';
+import { applyChartThemeDefaults, generateChartColors } from '../lib/themes/chartColors';
 
 // Register Chart.js components
 ChartJS.register(
@@ -37,20 +39,76 @@ export interface ChartProps {
 }
 
 export default function Chart({ type, data, options, className = '', height = 300 }: ChartProps) {
-  const defaultOptions: ChartOptions<any> = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: 'bottom' as const,
-      },
-      tooltip: {
-        mode: 'index',
-        intersect: false,
-      },
-    },
-    ...options,
+  const [isDark, setIsDark] = useState(false);
+
+  // Detect current theme
+  useEffect(() => {
+    const checkTheme = () => {
+      const htmlElement = document.documentElement;
+      const currentTheme = htmlElement.getAttribute('data-theme') || htmlElement.classList.contains('dark');
+      setIsDark(currentTheme === 'dark' || currentTheme === true);
+    };
+
+    // Check initial theme
+    checkTheme();
+
+    // Listen for theme changes
+    const observer = new MutationObserver(checkTheme);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme', 'class'],
+    });
+
+    // Listen for custom theme change events
+    const handleThemeChange = () => checkTheme();
+    window.addEventListener('theme-changed', handleThemeChange);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('theme-changed', handleThemeChange);
+    };
+  }, []);
+
+  // Apply theme-aware colors to data if not already set
+  const themedData = {
+    ...data,
+    datasets: data.datasets?.map((dataset: any, index: number) => {
+      // If dataset already has colors, use them; otherwise apply theme colors
+      if (!dataset.backgroundColor || !dataset.borderColor) {
+        const colors = generateChartColors(
+          dataset.data?.length || 1,
+          isDark
+        );
+
+        return {
+          ...dataset,
+          backgroundColor: dataset.backgroundColor || colors,
+          borderColor: dataset.borderColor || colors,
+          borderWidth: dataset.borderWidth || 2,
+        };
+      }
+      return dataset;
+    }),
   };
+
+  // Apply theme-aware defaults to options
+  const themedOptions = applyChartThemeDefaults(
+    {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom' as const,
+        },
+        tooltip: {
+          mode: 'index',
+          intersect: false,
+        },
+      },
+      ...options,
+    },
+    isDark
+  );
 
   const chartComponents = {
     line: Line,
@@ -68,7 +126,7 @@ export default function Chart({ type, data, options, className = '', height = 30
       role="img"
       aria-label={`${type} chart visualization`}
     >
-      <ChartComponent data={data} options={defaultOptions} />
+      <ChartComponent data={themedData} options={themedOptions} />
     </div>
   );
 }

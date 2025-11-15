@@ -25,6 +25,10 @@ import {
   sanitizeFilterConfig,
   type ShareLinkPayload,
 } from '../../utils/signedLinks.js';
+import {
+  prepareDataForSharing,
+  filterConfigContainsSensitiveData,
+} from '../lib/shareRedaction.js';
 
 interface CompanyParams {
   companyId: string;
@@ -61,6 +65,7 @@ export async function shareLinksRoutes(fastify: FastifyInstance) {
           filter_config: { type: 'object' },
           ttl_days: { type: 'number', minimum: 1, maximum: 90, default: 7 },
           boardroom_mode: { type: 'boolean', default: false },
+          includes_sensitive_data: { type: 'boolean', default: false },
         },
       },
       response: {
@@ -87,7 +92,7 @@ export async function shareLinksRoutes(fastify: FastifyInstance) {
     },
     async handler(request, reply) {
       const { companyId } = request.params;
-      const { saved_view_id, filter_config, ttl_days, boardroom_mode } = request.body;
+      const { saved_view_id, filter_config, ttl_days, boardroom_mode, includes_sensitive_data } = request.body;
 
       const userId = (request as any).user?.id;
       if (!userId) {
@@ -117,6 +122,14 @@ export async function shareLinksRoutes(fastify: FastifyInstance) {
         finalFilterConfig = viewResult.rows[0].filter_config;
       }
 
+      // Check if filter config contains sensitive data
+      const hasSensitiveFilters = filterConfigContainsSensitiveData(finalFilterConfig);
+      if (hasSensitiveFilters && !includes_sensitive_data) {
+        return reply.code(400).send({
+          error: 'Filter configuration contains sensitive data. Set includes_sensitive_data=true or remove sensitive filters.',
+        });
+      }
+
       // Sanitize filter config (remove PII)
       const sanitizedConfig = sanitizeFilterConfig(finalFilterConfig);
 
@@ -130,9 +143,9 @@ export async function shareLinksRoutes(fastify: FastifyInstance) {
       // Store in database
       const result = await pool.query(
         `INSERT INTO share_links
-         (link_id, company_id, created_by, saved_view_id, filter_config, signature, expires_at, boardroom_mode)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-         RETURNING id, link_id, expires_at, boardroom_mode, access_count, created_at`,
+         (link_id, company_id, created_by, saved_view_id, filter_config, signature, expires_at, boardroom_mode, includes_sensitive_data)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+         RETURNING id, link_id, expires_at, boardroom_mode, includes_sensitive_data, access_count, created_at`,
         [
           signedLink.linkId,
           companyId,
@@ -142,6 +155,7 @@ export async function shareLinksRoutes(fastify: FastifyInstance) {
           signedLink.signature,
           signedLink.expiresAt,
           boardroom_mode || false,
+          includes_sensitive_data || false,
         ]
       );
 
@@ -156,6 +170,7 @@ export async function shareLinksRoutes(fastify: FastifyInstance) {
         url: fullURL,
         expires_at: link.expires_at.toISOString(),
         boardroom_mode: link.boardroom_mode,
+        includes_sensitive_data: link.includes_sensitive_data,
         access_count: link.access_count,
         created_at: link.created_at.toISOString(),
       });
@@ -428,7 +443,7 @@ export async function shareLinksRoutes(fastify: FastifyInstance) {
 
       // Fetch link from database
       const result = await pool.query(
-        `SELECT id, company_id, filter_config, signature, expires_at, revoked_at, boardroom_mode, created_by
+        `SELECT id, company_id, filter_config, signature, expires_at, revoked_at, boardroom_mode, includes_sensitive_data, created_by
          FROM share_links
          WHERE link_id = $1`,
         [linkId]
@@ -464,14 +479,24 @@ export async function shareLinksRoutes(fastify: FastifyInstance) {
         });
       }
 
-      // Log successful access
-      await logAccess(link.id, request, true);
+      // Prepare data with comprehensive redaction
+      const redactedData = await prepareDataForSharing(
+        {
+          company_id: link.company_id,
+          filter_config: link.filter_config,
+          boardroom_mode: link.boardroom_mode,
+        },
+        {
+          includesSensitiveData: link.includes_sensitive_data || false,
+          preserveAggregates: true,
+          logAccess: true,
+          shareLinkId: linkId,
+          accessorIp: request.ip,
+          accessorUserAgent: request.headers['user-agent'] || 'unknown',
+        }
+      );
 
-      return reply.send({
-        company_id: link.company_id,
-        filter_config: link.filter_config,
-        boardroom_mode: link.boardroom_mode,
-      });
+      return reply.send(redactedData.data);
     },
   });
 }

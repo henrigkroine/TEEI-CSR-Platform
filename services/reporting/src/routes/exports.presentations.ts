@@ -413,11 +413,13 @@ async function generatePPTXDeck(
     title: `${data.companyName} - Impact Report`,
     author: 'TEEI CSR Platform',
     company: data.companyName,
+    companyId: request.companyId,
     subject: `Impact Report for ${data.period}`,
     layout: 'LAYOUT_16x9',
     theme: 'corporate',
     includeWatermark: request.watermark.enabled,
     watermarkText: request.watermark.text,
+    approvalStatus: data.approvedBy ? 'APPROVED' : 'DRAFT',
   };
 
   // Generate PPTX (currently returns mock buffer)

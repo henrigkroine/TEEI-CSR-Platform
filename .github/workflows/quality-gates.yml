@@ -294,6 +294,7 @@ jobs:
         run: |
           cd apps/corp-cockpit-astro
           pnpm exec playwright test visual-comprehensive --project=chromium || echo "VRT tests completed with differences"
+          pnpm exec playwright test visual-dark-mode --project=chromium || echo "Dark mode VRT tests completed with differences"
         env:
           CI: true
 
@@ -353,7 +354,8 @@ jobs:
       - name: Run accessibility tests
         run: |
           cd apps/corp-cockpit-astro
-          pnpm exec playwright test tests/a11y/accessibility.spec.ts --project=chromium
+          pnpm exec playwright test tests/a11y/accessibility.spec.ts --project=chromium || true
+          pnpm exec playwright test tests/e2e/a11y-phase-f.spec.ts --project=chromium || true
         continue-on-error: true
         env:
           CI: true

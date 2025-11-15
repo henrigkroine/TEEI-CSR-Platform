@@ -7,6 +7,43 @@
  * @module utils/pptxGenerator
  */
 
+import PptxGenJS from 'pptxgenjs';
+import { renderChartToBase64 } from './chartRenderer.js';
+import { mapEvidenceToNotes } from '../lib/evidenceLineageMapper.js';
+import type { ChartConfig } from './chartRenderer.js';
+
+/**
+ * Tenant theme configuration
+ */
+export interface TenantTheme {
+  company_id: string;
+  logo_url: string | null;
+  colors: {
+    light: {
+      primary: string;
+      secondary: string;
+      accent: string;
+      textOnPrimary: string;
+      textOnSecondary: string;
+      textOnAccent: string;
+    };
+    dark?: {
+      primary: string;
+      secondary: string;
+      accent: string;
+    };
+  };
+  contrast_validation: {
+    is_compliant: boolean;
+    ratios: {
+      primaryText: number;
+      secondaryText: number;
+      accentText: number;
+    };
+    warnings: string[];
+  };
+}
+
 /**
  * PPTX slide configuration
  */
@@ -19,6 +56,7 @@ export interface PPTXSlide {
   table?: TableData;
   images?: ImageData[];
   notes?: string;
+  evidenceIds?: string[]; // Evidence IDs to include in slide notes
 }
 
 /**
@@ -64,11 +102,13 @@ export interface PPTXOptions {
   title: string;
   author: string;
   company: string;
+  companyId: string; // For fetching theme and evidence
   subject?: string;
   layout?: 'LAYOUT_4x3' | 'LAYOUT_16x9' | 'LAYOUT_WIDE';
   theme?: 'default' | 'corporate' | 'minimalist';
   includeWatermark?: boolean;
   watermarkText?: string;
+  approvalStatus?: 'DRAFT' | 'APPROVED' | 'PENDING' | 'REJECTED';
 }
 
 /**
@@ -82,47 +122,90 @@ export async function generatePPTX(
   slides: PPTXSlide[],
   options: PPTXOptions
 ): Promise<Buffer> {
+  const startTime = Date.now();
+
   try {
-    // TODO: Implement with pptxgenjs
-    // const pptx = new PptxGenJS();
-
-    // // Set properties
-    // pptx.author = options.author;
-    // pptx.company = options.company;
-    // pptx.subject = options.subject || 'Executive Report';
-    // pptx.title = options.title;
-    // pptx.layout = options.layout || 'LAYOUT_16x9';
-
-    // // Apply theme
-    // applyTheme(pptx, options.theme || 'default');
-
-    // // Generate slides
-    // for (const slideConfig of slides) {
-    //   const slide = pptx.addSlide();
-    //   await renderSlide(slide, slideConfig, options);
-    // }
-
-    // // Add watermark if enabled
-    // if (options.includeWatermark && options.watermarkText) {
-    //   addWatermarkToAllSlides(pptx, options.watermarkText);
-    // }
-
-    // // Generate and return buffer
-    // const buffer = await pptx.write('arraybuffer');
-    // return Buffer.from(buffer);
-
-    console.log('[PPTX] Generated presentation:', {
+    console.log('[PPTX] Starting generation:', {
       title: options.title,
       slides: slides.length,
       theme: options.theme,
+      companyId: options.companyId,
     });
 
-    // Mock: Return empty buffer
-    // In production, this would return the actual PPTX
-    return Buffer.from('Mock PPTX content');
+    // Initialize PptxGenJS
+    const pptx = new PptxGenJS();
+
+    // Set document properties
+    pptx.author = options.author;
+    pptx.company = options.company;
+    pptx.subject = options.subject || 'Executive Report';
+    pptx.title = options.title;
+    pptx.layout = options.layout || 'LAYOUT_16x9';
+
+    // Fetch and apply tenant theme
+    let tenantTheme: TenantTheme | null = null;
+    try {
+      tenantTheme = await fetchTenantTheme(options.companyId);
+      if (tenantTheme) {
+        await applyTenantTheme(pptx, tenantTheme);
+        console.log('[PPTX] Applied tenant theme');
+      } else {
+        applyTheme(pptx, options.theme || 'default');
+        console.log('[PPTX] Applied default theme');
+      }
+    } catch (error) {
+      console.warn('[PPTX] Failed to fetch tenant theme, using default:', error);
+      applyTheme(pptx, options.theme || 'default');
+    }
+
+    // Generate slides
+    for (let i = 0; i < slides.length; i++) {
+      const slideConfig = slides[i];
+      const slide = pptx.addSlide();
+
+      console.log(`[PPTX] Rendering slide ${i + 1}/${slides.length}: ${slideConfig.type}`);
+
+      await renderSlide(slide, slideConfig, options, tenantTheme);
+
+      // Add evidence lineage to notes if provided
+      if (slideConfig.evidenceIds && slideConfig.evidenceIds.length > 0) {
+        const evidenceNotes = await mapEvidenceToNotes(
+          slideConfig.evidenceIds,
+          options.companyId
+        );
+
+        // Append to existing notes
+        const existingNotes = slideConfig.notes || '';
+        const combinedNotes = existingNotes
+          ? `${existingNotes}\n\n${evidenceNotes}`
+          : evidenceNotes;
+
+        slide.addNotes(combinedNotes);
+      } else if (slideConfig.notes) {
+        // Add regular notes
+        slide.addNotes(slideConfig.notes);
+      }
+    }
+
+    // Add watermark based on approval status
+    const watermarkText = getWatermarkText(options);
+    if (watermarkText) {
+      addWatermarkToAllSlides(pptx, watermarkText);
+      console.log(`[PPTX] Added watermark: ${watermarkText}`);
+    }
+
+    // Generate PPTX buffer
+    console.log('[PPTX] Generating binary...');
+    const arrayBuffer = await pptx.write({ outputType: 'arraybuffer' });
+    const buffer = Buffer.from(arrayBuffer as ArrayBuffer);
+
+    const elapsed = Date.now() - startTime;
+    console.log(`[PPTX] Generation complete in ${elapsed}ms (${buffer.length} bytes)`);
+
+    return buffer;
   } catch (error) {
     console.error('[PPTX] Generation failed:', error);
-    throw new Error('Failed to generate PPTX');
+    throw new Error(`Failed to generate PPTX: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
@@ -132,41 +215,65 @@ export async function generatePPTX(
 async function renderSlide(
   slide: any,
   config: PPTXSlide,
-  options: PPTXOptions
+  options: PPTXOptions,
+  theme: TenantTheme | null
 ): Promise<void> {
   switch (config.type) {
     case 'title':
-      renderTitleSlide(slide, config, options);
+      await renderTitleSlide(slide, config, options, theme);
       break;
     case 'content':
-      renderContentSlide(slide, config);
+      renderContentSlide(slide, config, theme);
       break;
     case 'chart':
-      renderChartSlide(slide, config);
+      await renderChartSlide(slide, config, theme);
       break;
     case 'data-table':
-      renderTableSlide(slide, config);
+      renderTableSlide(slide, config, theme);
       break;
     case 'two-column':
-      renderTwoColumnSlide(slide, config);
+      renderTwoColumnSlide(slide, config, theme);
       break;
     case 'image':
-      renderImageSlide(slide, config);
+      renderImageSlide(slide, config, theme);
       break;
     default:
       throw new Error(`Unknown slide type: ${config.type}`);
   }
 
-  // Add speaker notes if provided
-  if (config.notes) {
-    slide.addNotes(config.notes);
-  }
+  // Note: Speaker notes are added in the main generatePPTX function
+  // to allow for evidence lineage appending
 }
 
 /**
  * Render title slide
  */
-function renderTitleSlide(slide: any, config: PPTXSlide, options: PPTXOptions): void {
+async function renderTitleSlide(
+  slide: any,
+  config: PPTXSlide,
+  options: PPTXOptions,
+  theme: TenantTheme | null
+): Promise<void> {
+  const primaryColor = theme?.colors.light.primary.replace('#', '') || '363636';
+  const secondaryColor = theme?.colors.light.secondary.replace('#', '') || '666666';
+  const accentColor = theme?.colors.light.accent.replace('#', '') || '999999';
+
+  // Add tenant logo if available
+  if (theme?.logo_url) {
+    try {
+      // Logo positioned at top-right
+      slide.addImage({
+        path: theme.logo_url,
+        x: 8.0,
+        y: 0.3,
+        w: 1.5,
+        h: 0.75,
+      });
+    } catch (error) {
+      console.warn('[PPTX] Failed to add logo to title slide:', error);
+    }
+  }
+
   // Add title
   slide.addText(config.title, {
     x: 0.5,
@@ -175,7 +282,7 @@ function renderTitleSlide(slide: any, config: PPTXSlide, options: PPTXOptions): 
     h: 1.5,
     fontSize: 44,
     bold: true,
-    color: '363636',
+    color: primaryColor,
     align: 'center',
     valign: 'middle',
   });
@@ -188,7 +295,7 @@ function renderTitleSlide(slide: any, config: PPTXSlide, options: PPTXOptions): 
       w: 9.0,
       h: 1.0,
       fontSize: 24,
-      color: '666666',
+      color: secondaryColor,
       align: 'center',
       valign: 'middle',
     });
@@ -201,7 +308,7 @@ function renderTitleSlide(slide: any, config: PPTXSlide, options: PPTXOptions): 
     w: 9.0,
     h: 0.5,
     fontSize: 16,
-    color: '999999',
+    color: accentColor,
     align: 'center',
   });
 
@@ -217,7 +324,7 @@ function renderTitleSlide(slide: any, config: PPTXSlide, options: PPTXOptions): 
     w: 9.0,
     h: 0.5,
     fontSize: 14,
-    color: '999999',
+    color: accentColor,
     align: 'center',
   });
 }
@@ -225,7 +332,10 @@ function renderTitleSlide(slide: any, config: PPTXSlide, options: PPTXOptions): 
 /**
  * Render content slide with bullets
  */
-function renderContentSlide(slide: any, config: PPTXSlide): void {
+function renderContentSlide(slide: any, config: PPTXSlide, theme: TenantTheme | null): void {
+  const primaryColor = theme?.colors.light.primary.replace('#', '') || '363636';
+  const secondaryColor = theme?.colors.light.secondary.replace('#', '') || '666666';
+
   // Add title
   slide.addText(config.title, {
     x: 0.5,
@@ -234,7 +344,7 @@ function renderContentSlide(slide: any, config: PPTXSlide): void {
     h: 0.75,
     fontSize: 32,
     bold: true,
-    color: '363636',
+    color: primaryColor,
   });
 
   // Add bullet points
@@ -247,7 +357,7 @@ function renderContentSlide(slide: any, config: PPTXSlide): void {
       h: 4.0,
       fontSize: 18,
       bullet: true,
-      color: '666666',
+      color: secondaryColor,
       lineSpacing: 30,
     });
   } else if (config.content) {
@@ -258,7 +368,7 @@ function renderContentSlide(slide: any, config: PPTXSlide): void {
       w: 9.0,
       h: 4.0,
       fontSize: 18,
-      color: '666666',
+      color: secondaryColor,
       lineSpacing: 24,
     });
   }
@@ -267,7 +377,9 @@ function renderContentSlide(slide: any, config: PPTXSlide): void {
 /**
  * Render chart slide
  */
-function renderChartSlide(slide: any, config: PPTXSlide): void {
+async function renderChartSlide(slide: any, config: PPTXSlide, theme: TenantTheme | null): Promise<void> {
+  const primaryColor = theme?.colors.light.primary.replace('#', '') || '363636';
+
   // Add title
   slide.addText(config.title, {
     x: 0.5,
@@ -276,29 +388,83 @@ function renderChartSlide(slide: any, config: PPTXSlide): void {
     h: 0.75,
     fontSize: 32,
     bold: true,
-    color: '363636',
+    color: primaryColor,
   });
 
   // Add chart
   if (config.chart) {
-    const chartData = convertChartData(config.chart);
-    slide.addChart(config.chart.type.toUpperCase(), chartData, {
-      x: 1.0,
-      y: 1.5,
-      w: 8.0,
-      h: 4.0,
-      showTitle: true,
-      title: config.chart.title,
-      showLegend: true,
-      legendPos: 'r',
-    });
+    try {
+      // Convert to ChartConfig for server-side rendering
+      const chartConfig: ChartConfig = {
+        type: config.chart.type,
+        data: {
+          labels: config.chart.labels,
+          datasets: config.chart.datasets.map((ds) => ({
+            label: ds.label,
+            data: ds.data,
+            backgroundColor: ds.backgroundColor,
+            borderColor: ds.borderColor,
+          })),
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            title: {
+              display: true,
+              text: config.chart.title,
+              font: { size: 16 },
+            },
+            legend: {
+              display: true,
+              position: 'bottom',
+            },
+            tooltip: {
+              enabled: true,
+            },
+          },
+        },
+      };
+
+      // Render chart to base64 image
+      const chartImage = await renderChartToBase64(chartConfig, {
+        width: 800,
+        height: 400,
+        format: 'png',
+        backgroundColor: '#ffffff',
+      });
+
+      // Add chart image to slide
+      slide.addImage({
+        data: chartImage,
+        x: 1.0,
+        y: 1.5,
+        w: 8.0,
+        h: 4.0,
+      });
+    } catch (error) {
+      console.error('[PPTX] Failed to render chart:', error);
+      // Fallback: Add error message
+      slide.addText('Chart rendering failed', {
+        x: 1.0,
+        y: 3.0,
+        w: 8.0,
+        h: 1.0,
+        fontSize: 18,
+        color: 'CC0000',
+        align: 'center',
+      });
+    }
   }
 }
 
 /**
  * Render table slide
  */
-function renderTableSlide(slide: any, config: PPTXSlide): void {
+function renderTableSlide(slide: any, config: PPTXSlide, theme: TenantTheme | null): void {
+  const primaryColor = theme?.colors.light.primary.replace('#', '') || '363636';
+  const accentColor = theme?.colors.light.accent.replace('#', '') || 'F7F7F7';
+
   // Add title
   slide.addText(config.title, {
     x: 0.5,
@@ -307,7 +473,7 @@ function renderTableSlide(slide: any, config: PPTXSlide): void {
     h: 0.75,
     fontSize: 32,
     bold: true,
-    color: '363636',
+    color: primaryColor,
   });
 
   // Add table
@@ -317,11 +483,10 @@ function renderTableSlide(slide: any, config: PPTXSlide): void {
       x: 0.5,
       y: 1.5,
       w: 9.0,
-      h: 4.0,
       fontSize: 14,
       border: { pt: 1, color: 'CCCCCC' },
-      fill: { color: 'F7F7F7' },
-      color: '363636',
+      fill: { color: accentColor },
+      color: primaryColor,
       colW: config.table.columnWidths,
       rowH: 0.4,
       valign: 'middle',
@@ -332,7 +497,10 @@ function renderTableSlide(slide: any, config: PPTXSlide): void {
 /**
  * Render two-column slide
  */
-function renderTwoColumnSlide(slide: any, config: PPTXSlide): void {
+function renderTwoColumnSlide(slide: any, config: PPTXSlide, theme: TenantTheme | null): void {
+  const primaryColor = theme?.colors.light.primary.replace('#', '') || '363636';
+  const secondaryColor = theme?.colors.light.secondary.replace('#', '') || '666666';
+
   // Add title
   slide.addText(config.title, {
     x: 0.5,
@@ -341,7 +509,7 @@ function renderTwoColumnSlide(slide: any, config: PPTXSlide): void {
     h: 0.75,
     fontSize: 32,
     bold: true,
-    color: '363636',
+    color: primaryColor,
   });
 
   // Left column (bullets)
@@ -355,7 +523,7 @@ function renderTwoColumnSlide(slide: any, config: PPTXSlide): void {
       h: 4.0,
       fontSize: 16,
       bullet: true,
-      color: '666666',
+      color: secondaryColor,
     });
 
     // Right column (remaining bullets)
@@ -368,7 +536,7 @@ function renderTwoColumnSlide(slide: any, config: PPTXSlide): void {
       h: 4.0,
       fontSize: 16,
       bullet: true,
-      color: '666666',
+      color: secondaryColor,
     });
   }
 }
@@ -376,7 +544,10 @@ function renderTwoColumnSlide(slide: any, config: PPTXSlide): void {
 /**
  * Render image slide
  */
-function renderImageSlide(slide: any, config: PPTXSlide): void {
+function renderImageSlide(slide: any, config: PPTXSlide, theme: TenantTheme | null): void {
+  const primaryColor = theme?.colors.light.primary.replace('#', '') || '363636';
+  const accentColor = theme?.colors.light.accent.replace('#', '') || '999999';
+
   // Add title
   slide.addText(config.title, {
     x: 0.5,
@@ -385,7 +556,7 @@ function renderImageSlide(slide: any, config: PPTXSlide): void {
     h: 0.75,
     fontSize: 32,
     bold: true,
-    color: '363636',
+    color: primaryColor,
   });
 
   // Add images
@@ -407,7 +578,7 @@ function renderImageSlide(slide: any, config: PPTXSlide): void {
           w: image.w,
           h: 0.3,
           fontSize: 12,
-          color: '999999',
+          color: accentColor,
           align: 'center',
         });
       }
@@ -427,7 +598,51 @@ function convertChartData(chart: ChartData): any[] {
 }
 
 /**
- * Apply theme to presentation
+ * Fetch tenant theme from API
+ */
+async function fetchTenantTheme(companyId: string): Promise<TenantTheme | null> {
+  try {
+    // In production: Make HTTP request to theme API
+    // For now, return null to use default theme
+    // const response = await fetch(`http://localhost:3001/companies/${companyId}/theme`);
+    // if (!response.ok) return null;
+    // return await response.json();
+
+    console.log(`[PPTX] Fetching theme for company ${companyId}...`);
+    return null; // Mock - use default theme
+  } catch (error) {
+    console.error('[PPTX] Failed to fetch tenant theme:', error);
+    return null;
+  }
+}
+
+/**
+ * Apply tenant theme to presentation
+ */
+async function applyTenantTheme(pptx: any, theme: TenantTheme): Promise<void> {
+  // Define master slide with tenant colors
+  pptx.defineSlideMaster({
+    title: 'TENANT_MASTER',
+    background: { color: 'FFFFFF' },
+    objects: [
+      // Header with tenant primary color
+      {
+        rect: {
+          x: 0,
+          y: 0,
+          w: '100%',
+          h: 0.5,
+          fill: { color: theme.colors.light.primary.replace('#', '') },
+        },
+      },
+    ],
+  });
+
+  console.log('[PPTX] Applied tenant theme with colors:', theme.colors.light);
+}
+
+/**
+ * Apply default theme to presentation
  */
 function applyTheme(pptx: any, theme: string): void {
   const themes: Record<string, any> = {
@@ -443,28 +658,49 @@ function applyTheme(pptx: any, theme: string): void {
   };
 
   const themeConfig = themes[theme] || themes.default;
-  // Apply theme configuration to pptx instance
-  // pptx.theme = themeConfig;
+  console.log(`[PPTX] Applied ${theme} theme`);
+}
+
+/**
+ * Get watermark text based on approval status
+ */
+function getWatermarkText(options: PPTXOptions): string | null {
+  if (options.includeWatermark && options.watermarkText) {
+    return options.watermarkText;
+  }
+
+  // Auto-apply watermark based on approval status
+  const statusWatermarks: Record<string, string> = {
+    DRAFT: 'DRAFT',
+    PENDING: 'PENDING APPROVAL',
+    REJECTED: 'REJECTED',
+  };
+
+  return options.approvalStatus ? statusWatermarks[options.approvalStatus] || null : null;
 }
 
 /**
  * Add watermark to all slides
  */
 function addWatermarkToAllSlides(pptx: any, text: string): void {
-  // This would iterate through all slides and add a watermark
-  // For each slide:
-  // slide.addText(text, {
-  //   x: 0,
-  //   y: 0,
-  //   w: '100%',
-  //   h: '100%',
-  //   fontSize: 60,
-  //   color: 'CCCCCC',
-  //   align: 'center',
-  //   valign: 'middle',
-  //   rotate: 45,
-  //   transparency: 70,
-  // });
+  // Get all slides
+  const slides = pptx.slides || [];
+
+  // Add watermark to each slide
+  slides.forEach((slide: any) => {
+    slide.addText(text, {
+      x: 0,
+      y: 0,
+      w: '100%',
+      h: '100%',
+      fontSize: 60,
+      color: 'DDDDDD',
+      align: 'center',
+      valign: 'middle',
+      rotate: 315, // -45 degrees
+      transparency: 70,
+    });
+  });
 }
 
 /**

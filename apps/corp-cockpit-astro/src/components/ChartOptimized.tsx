@@ -14,6 +14,7 @@ import {
 } from 'chart.js';
 import { Line, Bar, Pie, Doughnut } from 'react-chartjs-2';
 import { getOptimizedChartConfig } from '../utils/chartOptimizations';
+import { applyChartThemeDefaults, generateChartColors } from '../lib/themes/chartColors';
 
 // Tree-shaking: Only register components that are actually used
 // This reduces bundle size by excluding unused Chart.js features
@@ -73,7 +74,33 @@ function ChartOptimized({
 }: ChartProps) {
   const containerRef = React.useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = React.useState(!lazy);
+  const [isDark, setIsDark] = React.useState(false);
   const renderStartTime = React.useRef<number>(0);
+
+  // Detect current theme
+  React.useEffect(() => {
+    const checkTheme = () => {
+      const htmlElement = document.documentElement;
+      const currentTheme = htmlElement.getAttribute('data-theme') || htmlElement.classList.contains('dark');
+      setIsDark(currentTheme === 'dark' || currentTheme === true);
+    };
+
+    checkTheme();
+
+    const observer = new MutationObserver(checkTheme);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme', 'class'],
+    });
+
+    const handleThemeChange = () => checkTheme();
+    window.addEventListener('theme-changed', handleThemeChange);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('theme-changed', handleThemeChange);
+    };
+  }, []);
 
   // Track render start time
   React.useLayoutEffect(() => {
@@ -117,6 +144,27 @@ function ChartOptimized({
     return () => observer.disconnect();
   }, [lazy, isVisible]);
 
+  // Apply theme-aware colors to data
+  const themedData = React.useMemo(() => ({
+    ...data,
+    datasets: data.datasets?.map((dataset: any) => {
+      if (!dataset.backgroundColor || !dataset.borderColor) {
+        const colors = generateChartColors(
+          dataset.data?.length || 1,
+          isDark
+        );
+
+        return {
+          ...dataset,
+          backgroundColor: dataset.backgroundColor || colors,
+          borderColor: dataset.borderColor || colors,
+          borderWidth: dataset.borderWidth || 2,
+        };
+      }
+      return dataset;
+    }),
+  }), [data, isDark]);
+
   // Memoize chart options to prevent recalculation on every render
   const chartOptions = React.useMemo(() => {
     // Count data points for optimization decisions
@@ -129,13 +177,16 @@ function ChartOptimized({
       options
     );
 
-    // Merge with default responsive settings
-    return {
+    // Merge with default responsive settings and apply theme
+    const baseOptions = {
       responsive: true,
       maintainAspectRatio: false,
       ...optimizedConfig,
-    } as ChartOptions<any>;
-  }, [data, options, preset]);
+    };
+
+    // Apply theme-aware defaults
+    return applyChartThemeDefaults(baseOptions, isDark) as ChartOptions<any>;
+  }, [data, options, preset, isDark]);
 
   // Memoize chart component selection
   const ChartComponent = React.useMemo(() => {
@@ -155,7 +206,7 @@ function ChartOptimized({
       style={{ height }}
     >
       {isVisible ? (
-        <ChartComponent data={data} options={chartOptions} />
+        <ChartComponent data={themedData} options={chartOptions} />
       ) : (
         <div className="flex items-center justify-center h-full">
           <div className="text-gray-400">Loading chart...</div>

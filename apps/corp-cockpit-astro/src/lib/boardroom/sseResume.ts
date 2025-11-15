@@ -64,7 +64,7 @@ export function createSSEResumeClient(options: SSEResumeOptions): SSEResumeClien
   let eventSource: EventSource | null = null;
   let state: SSEConnectionState = 'disconnected';
   let retryCount = 0;
-  let retryTimeout: NodeJS.Timeout | null = null;
+  let retryTimeout: number | null = null;
   let reconnectAttempted = false;
 
   const storageKey = `${STORAGE_KEY_PREFIX}${companyId}_${channel}`;

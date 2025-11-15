@@ -71,6 +71,27 @@ const { title, description = 'TEEI Corporate Cockpit - Impact Measurement Dashbo
         });
       }
     </script>
+
+    <!-- Web Vitals Collection (Production Only) -->
+    <script>
+      // Initialize web-vitals collection
+      // Only runs in production with 10% sampling rate
+      if (import.meta.env.PROD) {
+        import('/src/lib/webVitals.js').then(({ initWebVitals }) => {
+          initWebVitals({
+            endpoint: '/api/analytics/web-vitals',
+            sampleRate: 0.1, // 10% of sessions
+            debug: false,
+            customAttributes: {
+              appVersion: '1.0.0',
+              environment: 'production',
+            },
+          });
+        }).catch((error) => {
+          console.error('[Web Vitals] Failed to initialize:', error);
+        });
+      }
+    </script>
   </head>
   <body>
     <a href="#main-content" class="skip-link">Skip to main content</a>
