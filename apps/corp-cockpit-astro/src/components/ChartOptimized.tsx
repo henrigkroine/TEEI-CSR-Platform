@@ -14,6 +14,8 @@ import {
 } from 'chart.js';
 import { Line, Bar, Pie, Doughnut } from 'react-chartjs-2';
 import { getOptimizedChartConfig } from '../utils/chartOptimizations';
+import { useTheme } from './theme/ThemeProvider';
+import { applyThemeToChartOptions } from '../utils/chartThemes';
 
 // Tree-shaking: Only register components that are actually used
 // This reduces bundle size by excluding unused Chart.js features
@@ -75,6 +77,9 @@ function ChartOptimized({
   const [isVisible, setIsVisible] = React.useState(!lazy);
   const renderStartTime = React.useRef<number>(0);
 
+  // Get theme for color palette
+  const { resolvedTheme } = useTheme();
+
   // Track render start time
   React.useLayoutEffect(() => {
     if (isVisible && onRenderComplete) {
@@ -130,12 +135,15 @@ function ChartOptimized({
     );
 
     // Merge with default responsive settings
-    return {
+    const baseOptions = {
       responsive: true,
       maintainAspectRatio: false,
       ...optimizedConfig,
     } as ChartOptions<any>;
-  }, [data, options, preset]);
+
+    // Apply theme colors
+    return applyThemeToChartOptions(resolvedTheme === 'dark', baseOptions);
+  }, [data, options, preset, resolvedTheme]);
 
   // Memoize chart component selection
   const ChartComponent = React.useMemo(() => {

@@ -3,6 +3,7 @@
  *
  * Displays time-series percentile bands showing company performance over time
  * compared to cohort distribution (25th, 50th, 75th percentiles)
+ * Supports dark mode with WCAG AA compliant color palettes
  */
 
 import { useMemo, useState } from 'react';
@@ -18,6 +19,8 @@ import {
   type ChartOptions,
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
+import { useTheme } from '../theme/ThemeProvider';
+import { getChartTheme } from '../../utils/chartThemes';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip, Legend);
 
@@ -47,6 +50,10 @@ interface Props {
 export default function PercentileChart({ data, metric, companyName }: Props) {
   const [hoveredPeriod, setHoveredPeriod] = useState<string | null>(null);
 
+  // Get theme for color palette
+  const { resolvedTheme } = useTheme();
+  const theme = useMemo(() => getChartTheme(resolvedTheme === 'dark'), [resolvedTheme]);
+
   if (!data || !data.data_points || data.data_points.length === 0) {
     return (
       <div className="percentile-chart empty">
@@ -55,9 +62,29 @@ export default function PercentileChart({ data, metric, companyName }: Props) {
     );
   }
 
-  // Prepare chart data
+  // Prepare chart data with theme colors
   const chartData = useMemo(() => {
     const labels = data.data_points.map((dp) => dp.period);
+    const isDark = resolvedTheme === 'dark';
+
+    // Define percentile band colors (green for top, blue for mid, orange for low)
+    const bandColors = {
+      top: {
+        bg: isDark ? 'rgba(16, 185, 129, 0.15)' : 'rgba(34, 197, 94, 0.1)',
+        border: isDark ? 'rgba(16, 185, 129, 0.4)' : 'rgba(34, 197, 94, 0.3)',
+      },
+      mid: {
+        bg: isDark ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.15)',
+        border: isDark ? 'rgba(59, 130, 246, 0.5)' : 'rgba(59, 130, 246, 0.4)',
+      },
+      low: {
+        bg: isDark ? 'rgba(251, 146, 60, 0.2)' : 'rgba(251, 146, 60, 0.15)',
+        border: isDark ? 'rgba(251, 146, 60, 0.5)' : 'rgba(251, 146, 60, 0.4)',
+      },
+      median: isDark ? 'rgba(148, 163, 184, 0.8)' : 'rgba(107, 114, 128, 0.8)',
+      company: theme.borderColor[0],
+      pointBorder: isDark ? '#1a1a1a' : '#fff',
+    };
 
     return {
       labels,
@@ -67,8 +94,8 @@ export default function PercentileChart({ data, metric, companyName }: Props) {
           label: '75th-100th Percentile',
           data: data.data_points.map((dp) => dp.p75),
           fill: 'origin',
-          backgroundColor: 'rgba(34, 197, 94, 0.1)',
-          borderColor: 'rgba(34, 197, 94, 0.3)',
+          backgroundColor: bandColors.top.bg,
+          borderColor: bandColors.top.border,
           borderWidth: 1,
           pointRadius: 0,
           pointHoverRadius: 0,
@@ -79,8 +106,8 @@ export default function PercentileChart({ data, metric, companyName }: Props) {
           label: '50th-75th Percentile',
           data: data.data_points.map((dp) => dp.p50),
           fill: 'origin',
-          backgroundColor: 'rgba(59, 130, 246, 0.15)',
-          borderColor: 'rgba(59, 130, 246, 0.4)',
+          backgroundColor: bandColors.mid.bg,
+          borderColor: bandColors.mid.border,
           borderWidth: 1,
           pointRadius: 0,
           pointHoverRadius: 0,
@@ -91,8 +118,8 @@ export default function PercentileChart({ data, metric, companyName }: Props) {
           label: '25th-50th Percentile',
           data: data.data_points.map((dp) => dp.p25),
           fill: 'origin',
-          backgroundColor: 'rgba(251, 146, 60, 0.15)',
-          borderColor: 'rgba(251, 146, 60, 0.4)',
+          backgroundColor: bandColors.low.bg,
+          borderColor: bandColors.low.border,
           borderWidth: 1,
           pointRadius: 0,
           pointHoverRadius: 0,
@@ -103,8 +130,8 @@ export default function PercentileChart({ data, metric, companyName }: Props) {
           label: 'Cohort Median',
           data: data.data_points.map((dp) => dp.p50),
           fill: false,
-          backgroundColor: 'rgba(107, 114, 128, 0.8)',
-          borderColor: 'rgba(107, 114, 128, 0.8)',
+          backgroundColor: bandColors.median,
+          borderColor: bandColors.median,
           borderWidth: 2,
           borderDash: [5, 5],
           pointRadius: 3,
@@ -116,21 +143,21 @@ export default function PercentileChart({ data, metric, companyName }: Props) {
           label: companyName,
           data: data.data_points.map((dp) => dp.company_value),
           fill: false,
-          backgroundColor: 'rgba(59, 130, 246, 1)',
-          borderColor: 'rgba(59, 130, 246, 1)',
+          backgroundColor: bandColors.company,
+          borderColor: bandColors.company,
           borderWidth: 3,
           pointRadius: 4,
           pointHoverRadius: 6,
-          pointBackgroundColor: 'rgba(59, 130, 246, 1)',
-          pointBorderColor: '#fff',
+          pointBackgroundColor: bandColors.company,
+          pointBorderColor: bandColors.pointBorder,
           pointBorderWidth: 2,
           tension: 0.4,
         },
       ],
     };
-  }, [data, companyName]);
+  }, [data, companyName, theme, resolvedTheme]);
 
-  // Chart options
+  // Chart options with theme colors
   const options: ChartOptions<'line'> = useMemo(
     () => ({
       responsive: true,
@@ -149,6 +176,7 @@ export default function PercentileChart({ data, metric, companyName }: Props) {
             font: {
               size: 12,
             },
+            color: theme.textColor,
             filter: (item) => {
               // Only show company and median in legend
               return item.text === companyName || item.text === 'Cohort Median';
@@ -157,11 +185,11 @@ export default function PercentileChart({ data, metric, companyName }: Props) {
         },
         tooltip: {
           enabled: true,
-          backgroundColor: 'rgba(31, 41, 55, 0.95)',
-          titleColor: '#fff',
-          bodyColor: '#fff',
+          backgroundColor: theme.tooltipBg,
+          titleColor: theme.tooltipText,
+          bodyColor: theme.tooltipText,
           padding: 12,
-          borderColor: 'rgba(107, 114, 128, 0.3)',
+          borderColor: theme.tooltipBorder,
           borderWidth: 1,
           displayColors: true,
           callbacks: {
@@ -185,23 +213,25 @@ export default function PercentileChart({ data, metric, companyName }: Props) {
             font: {
               size: 11,
             },
+            color: theme.textColor,
           },
         },
         y: {
           beginAtZero: true,
           grid: {
-            color: 'rgba(229, 231, 235, 0.5)',
+            color: theme.gridColor,
           },
           ticks: {
             font: {
               size: 11,
             },
+            color: theme.textColor,
             callback: (value) => formatValue(Number(value), data.unit),
           },
         },
       },
     }),
-    [data.unit, companyName]
+    [data.unit, companyName, theme]
   );
 
   // Find current period stats (already checked for empty array above)

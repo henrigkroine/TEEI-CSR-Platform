@@ -115,7 +115,7 @@ export default function EvidenceExplorer({ companyId, lang }: EvidenceExplorerPr
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
             />
           </div>
 
@@ -128,7 +128,7 @@ export default function EvidenceExplorer({ companyId, lang }: EvidenceExplorerPr
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
             />
           </div>
 
@@ -141,7 +141,7 @@ export default function EvidenceExplorer({ companyId, lang }: EvidenceExplorerPr
               id="program-type"
               value={programType}
               onChange={(e) => setProgramType(e.target.value)}
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
             >
               <option value="">All Programs</option>
               <option value="buddy">Buddy</option>
@@ -160,7 +160,7 @@ export default function EvidenceExplorer({ companyId, lang }: EvidenceExplorerPr
               id="dimension"
               value={dimension}
               onChange={(e) => setDimension(e.target.value as OutcomeDimension | '')}
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
             >
               <option value="">All Dimensions</option>
               <option value="confidence">Confidence</option>
@@ -184,7 +184,7 @@ export default function EvidenceExplorer({ companyId, lang }: EvidenceExplorerPr
               placeholder="Search for keywords..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="flex-1 rounded-md border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              className="flex-1 rounded-md border border-border bg-background px-3 py-2 text-sm focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
             />
             <button onClick={fetchEvidence} className="btn-primary">
               Search

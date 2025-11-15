@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -12,6 +13,8 @@ import {
   type ChartOptions,
 } from 'chart.js';
 import { Line, Bar, Pie, Doughnut } from 'react-chartjs-2';
+import { useTheme } from './theme/ThemeProvider';
+import { applyThemeToChartOptions } from '../utils/chartThemes';
 
 // Register Chart.js components
 ChartJS.register(
@@ -37,20 +40,26 @@ export interface ChartProps {
 }
 
 export default function Chart({ type, data, options, className = '', height = 300 }: ChartProps) {
-  const defaultOptions: ChartOptions<any> = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: 'bottom' as const,
+  const { resolvedTheme } = useTheme();
+
+  const defaultOptions: ChartOptions<any> = useMemo(() => {
+    const baseOptions: ChartOptions<any> = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom' as const,
+        },
+        tooltip: {
+          mode: 'index',
+          intersect: false,
+        },
       },
-      tooltip: {
-        mode: 'index',
-        intersect: false,
-      },
-    },
-    ...options,
-  };
+      ...options,
+    };
+
+    return applyThemeToChartOptions(resolvedTheme === 'dark', baseOptions);
+  }, [resolvedTheme, options]);
 
   const chartComponents = {
     line: Line,

@@ -295,7 +295,7 @@ export function ScheduleModal({
                 type="text"
                 value={scheduleName}
                 onChange={(e) => setScheduleName(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                 placeholder="e.g., Monthly Executive Report"
                 required
               />
@@ -308,7 +308,7 @@ export function ScheduleModal({
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                 rows={2}
                 placeholder="Optional description..."
               />
@@ -339,7 +339,7 @@ export function ScheduleModal({
                 <select
                   value={templateId}
                   onChange={(e) => setTemplateId(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                 >
                   {REPORT_TEMPLATES.map((template) => (
                     <option key={template.id} value={template.id}>
@@ -356,7 +356,7 @@ export function ScheduleModal({
                 <select
                   value={format}
                   onChange={(e) => setFormat(e.target.value as any)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                 >
                   {REPORT_FORMATS.map((fmt) => (
                     <option key={fmt.value} value={fmt.value}>
@@ -375,7 +375,7 @@ export function ScheduleModal({
                 type="text"
                 value={reportPeriod}
                 onChange={(e) => setReportPeriod(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                 placeholder="e.g., Q4-2024 or 2024"
               />
             </div>
@@ -423,7 +423,7 @@ export function ScheduleModal({
                 <select
                   value={cronPreset}
                   onChange={(e) => handleCronPresetChange(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                 >
                   {CRON_PRESETS.map((preset) => (
                     <option key={preset.value} value={preset.value}>
@@ -440,7 +440,7 @@ export function ScheduleModal({
                 <select
                   value={timezone}
                   onChange={(e) => setTimezone(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                 >
                   {TIMEZONES.map((tz) => (
                     <option key={tz.value} value={tz.value}>
@@ -460,7 +460,7 @@ export function ScheduleModal({
                   type="text"
                   value={cronExpression}
                   onChange={(e) => setCronExpression(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                   placeholder="0 9 * * * (minute hour day month weekday)"
                 />
                 <p className="mt-1 text-xs text-gray-500">
@@ -485,7 +485,7 @@ export function ScheduleModal({
                     type="email"
                     value={recipient}
                     onChange={(e) => handleRecipientChange(index, e.target.value)}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                     placeholder="email@example.com"
                   />
                   {recipients.length > 1 && (
@@ -516,7 +516,7 @@ export function ScheduleModal({
                 type="text"
                 value={emailSubject}
                 onChange={(e) => setEmailSubject(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                 placeholder="Scheduled Report: {reportTitle}"
               />
             </div>
@@ -528,7 +528,7 @@ export function ScheduleModal({
               <textarea
                 value={emailBody}
                 onChange={(e) => setEmailBody(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                 rows={4}
                 placeholder="Custom message to include in the email..."
               />
