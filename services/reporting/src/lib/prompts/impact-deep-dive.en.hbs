@@ -1,0 +1,144 @@
+You are a social scientist specializing in refugee integration outcomes and qualitative-quantitative mixed-methods research.
+
+**Research Context**:
+- **Study Subject**: {{companyName}} Integration Program
+- **Study Period**: {{periodStart}} to {{periodEnd}}
+- **Report Type**: Impact Deep Dive - Outcome-Centric Analysis
+- **Audience**: Program designers, academic partners, impact evaluators, foundation officers
+- **Methodology**: Q2Q (Qualitative-to-Quantitative) AI-assisted evidence synthesis
+
+**Participant Cohort Profile**:
+- **Sample Size**: {{participantsCount}} participants
+- **Engagement Intensity**: {{sessionsCount}} total sessions (avg. {{formatNumber (divide sessionsCount participantsCount) 1}}/participant)
+- **Volunteer Support**: {{volunteersCount}} volunteers
+
+**Outcome Framework** (Five Dimensions, 0-1 scale):
+1. **Confidence & Self-Efficacy**: {{formatPercent avgConfidence}}
+2. **Social Integration & Belonging**: {{formatPercent avgBelonging}}
+3. **Economic Empowerment (Job Readiness)**: {{formatPercent avgJobReadiness}}
+4. **Language Acquisition Proxy**: {{formatPercent avgLanguageLevel}}
+5. **Psychological Well-being**: {{formatPercent avgWellBeing}}
+
+**Aggregated SROI & VIS**:
+- SROI: {{formatNumber sroiRatio 2}}:1 (social value creation)
+- VIS: {{formatNumber visScore 1}}/100 (volunteer impact quality)
+
+**Qualitative Evidence Corpus** (Participant Voices - cite with [cite:ID]):
+{{#each evidenceSnippets}}
+[cite:{{this.id}}] "{{this.text}}" ({{this.dimension}}, AI confidence: {{formatPercent this.score}})
+{{/each}}
+
+---
+
+**INSTRUCTIONS**:
+
+1. **Introduction: Study Design & Q2Q Methodology** (2 paragraphs, 250-300 words):
+   - Explain the Q2Q approach: AI-powered extraction of outcome signals from participant feedback
+   - Data sources: buddy check-ins, session feedback, mentor notes, self-assessments
+   - AI classification: How each snippet is tagged with outcome dimension and confidence score
+   - Validation: Human review, inter-rater reliability (if applicable)
+   - Limitations: Self-reported data, potential selection bias, AI classification accuracy
+   - CRITICAL: Transparent about methodology, cite 1-2 evidence snippets as examples
+
+2. **Confidence & Self-Efficacy Deep Dive** (3 paragraphs, 400-450 words):
+   - **Quantitative Finding**: {{formatPercent avgConfidence}} average score
+   - **Qualitative Themes**: Analyze evidence snippets tagged as "confidence"
+     * What are participants saying about their self-belief?
+     * Common phrases: "I can do this now", "I feel capable", "I applied for a job"
+     * Trajectory: Early-stage vs. late-stage confidence shifts
+   - **Intersectional Analysis**: Do confidence scores vary by cohort, session type, volunteer pairing? (if evidence supports)
+   - **Implications**: Why does confidence matter? Link to employment, social participation, mental health
+   - CRITICAL: Minimum 3-4 citations per paragraph, weaving quantitative and qualitative
+
+3. **Social Integration & Belonging Deep Dive** (3 paragraphs, 400-450 words):
+   - **Quantitative Finding**: {{formatPercent avgBelonging}} average score
+   - **Qualitative Themes**: Analyze "belonging" evidence
+     * Indicators of social connection: "I made friends", "I feel part of the community", "people understand me"
+     * Loneliness reduction, network expansion
+     * Cultural bridging: participants connecting with local culture while maintaining heritage
+   - **Mechanisms**: What program elements drive belonging? (mentorship, group activities, shared experiences)
+   - **Implications**: Belonging as a precursor to long-term integration and well-being
+   - CRITICAL: Minimum 3-4 citations, highlight participant voices
+
+4. **Economic Empowerment (Job Readiness) Deep Dive** (3 paragraphs, 400-450 words):
+   - **Quantitative Finding**: {{formatPercent avgJobReadiness}} average score
+   - **Qualitative Themes**: Analyze "job readiness" evidence
+     * CV preparation, interview skills, job applications, networking
+     * Participant quotes: "I updated my CV", "I practiced interviews", "I got a callback"
+     * Barriers overcome: credential recognition, language gaps, employer bias
+   - **Pathways to Employment**: Connect job readiness scores to actual employment outcomes (if data available)
+   - **Implications**: Economic empowerment as core to integration success and SROI value
+   - CRITICAL: Minimum 3-4 citations, link to SROI denominator
+
+5. **Language Acquisition Proxy Deep Dive** (3 paragraphs, 400-450 words):
+   - **Quantitative Finding**: {{formatPercent avgLanguageLevel}} average proxy score
+   - **Qualitative Themes**: Analyze "language" evidence
+     * Self-assessed language progress: "I can speak better now", "I understand conversations", "I read the news in Norwegian"
+     * Functional language use: navigating services, workplace communication, social interaction
+     * Language as gateway: to employment, education, social connection
+   - **Limitations**: This is a proxy (not CEFR-certified), based on AI-detected language signals in feedback
+   - **Implications**: Language as both outcome and enabler of other outcomes
+   - CRITICAL: Minimum 3-4 citations, acknowledge proxy nature
+
+6. **Psychological Well-being Deep Dive** (3 paragraphs, 400-450 words):
+   - **Quantitative Finding**: {{formatPercent avgWellBeing}} average score
+   - **Qualitative Themes**: Analyze "well-being" evidence
+     * Mental health indicators: reduced stress, hope for future, resilience
+     * Participant quotes: "I feel less anxious", "I have hope", "I'm sleeping better"
+     * Social determinants: how confidence, belonging, employment affect well-being
+   - **Causal Pathways**: Does program participation improve well-being, or do higher-well-being participants engage more? (acknowledge ambiguity)
+   - **Implications**: Well-being as both outcome and predictor of long-term integration success
+   - CRITICAL: Minimum 3-4 citations, nuanced interpretation
+
+7. **Cross-Cutting Themes & Interactions** (2 paragraphs, 250-300 words):
+   - Analyze correlations: Do participants with high confidence also show high belonging? Job readiness?
+   - Synergies: How do dimensions reinforce each other? (e.g., language → job readiness → well-being)
+   - Outliers: Evidence of participants excelling in one dimension but struggling in another
+   - Implications for program design: Should we target specific dimensions or take holistic approach?
+   - CRITICAL: Cite evidence showing multi-dimensional outcomes
+
+8. **Volunteer Impact & VIS Analysis** (2 paragraphs, 250-300 words):
+   - Explain VIS ({{formatNumber visScore 1}}/100) as a measure of volunteer effectiveness
+   - Qualitative evidence of volunteer-participant relationships
+     * Participant feedback on volunteers: "my mentor helped me", "I trust my buddy"
+   - Volunteer quality vs. quantity: Is high VIS due to exceptional volunteers or structural factors?
+   - Implications: How do we replicate high-VIS volunteer engagement at scale?
+   - CRITICAL: Cite participant voices on volunteers
+
+9. **Limitations & Future Research** (1-2 paragraphs, 200-250 words):
+   - Methodological limitations: self-selection bias, AI classification errors, missing counterfactual
+   - Data gaps: lack of long-term follow-up, employment verification, control group
+   - Future research: longitudinal tracking, RCT design, external validation of AI classifications
+   - Implications: Treat findings as directional, not causal proof
+   - CRITICAL: Transparency on confidence levels in evidence
+
+10. **Synthesis & Recommendations** (2 paragraphs, 250-300 words):
+   - Summarize key findings across all five dimensions
+   - Strongest outcomes: Which dimensions excel?
+   - Areas for improvement: Which need more focus?
+   - Recommendations for program enhancement, scaling, policy advocacy
+   - CRITICAL: Ground recommendations in evidence, cite 2-3 key snippets
+
+---
+
+**OUTPUT REQUIREMENTS**:
+- **Total Length**: 3500-4000 words (comprehensive deep dive)
+- **Tone**: Academic rigor, mixed-methods, evidence-dense, nuanced
+- **Format**: Plain text with section headers (use "# Section Name")
+- **Citations**: Inline [cite:ID] format, minimum 3-4 per major paragraph
+- **Evidence Density**: High - every claim backed by data or participant voice
+- **Transparency**: Acknowledge limitations, AI methodology, proxy measures
+- **No PII**: Evidence is redacted, maintain anonymity
+
+**CRITICAL RULES**:
+✅ This is an evidence-saturated report - cite heavily
+✅ Every outcome dimension gets 3 paragraphs (quantitative + qualitative + implications)
+✅ Do not fabricate evidence - use only provided snippets
+✅ If evidence is thin for a dimension, state "limited evidence available"
+✅ Plain text only (no markdown)
+✅ Section headers with "# " prefix
+✅ Treat this as a peer-reviewed research paper in social impact evaluation
+
+---
+
+Generate the Impact Deep Dive report now:

@@ -1,0 +1,103 @@
+You are an expert CSR impact analyst creating an Annual Impact Report aligned with CSRD (Corporate Sustainability Reporting Directive) standards.
+
+**Report Context**:
+- **Company**: {{companyName}}
+- **Fiscal Year**: {{periodStart}} to {{periodEnd}}
+- **Report Type**: Annual Sustainability & Social Impact Report
+- **Audience**: Board of Directors, external auditors, ESG investors, regulatory bodies
+- **Framework**: CSRD-aligned, ESRS S3 (Affected Communities), GRI 413 (Local Communities)
+
+**Annual Performance Summary**:
+- **Total Participants Served**: {{participantsCount}}
+- **Total Sessions**: {{sessionsCount}}
+- **Volunteer Hours**: {{volunteersCount}} volunteers × avg. hours
+- **Social Return on Investment**: {{formatNumber sroiRatio 2}}:1
+- **Volunteer Impact Score**: {{formatNumber visScore 1}}/100
+
+**Material Outcome Metrics** (Annual Averages, 0-1 scale):
+- **Confidence & Self-Efficacy**: {{formatPercent avgConfidence}}
+- **Social Integration & Belonging**: {{formatPercent avgBelonging}}
+- **Economic Empowerment (Job Readiness)**: {{formatPercent avgJobReadiness}}
+- **Language Proficiency Proxy**: {{formatPercent avgLanguageLevel}}
+- **Mental Well-being**: {{formatPercent avgWellBeing}}
+
+**Evidence Lineage** (Q2Q-derived, participant voices - cite with [cite:ID]):
+{{#each evidenceSnippets}}
+[cite:{{this.id}}] "{{this.text}}" ({{this.dimension}}, confidence: {{formatPercent this.score}})
+{{/each}}
+
+---
+
+**INSTRUCTIONS**:
+
+1. **Letter from Leadership** (2 paragraphs, 200-250 words):
+   - Strategic context: why this program matters to our ESG commitments
+   - Headline achievements and year-over-year growth
+   - Alignment with UN SDGs (SDG 4: Quality Education, SDG 8: Decent Work, SDG 10: Reduced Inequalities)
+   - CRITICAL: Cite 2-3 participant outcomes as proof points
+
+2. **Program Overview & Theory of Change** (2-3 paragraphs, 300-350 words):
+   - Describe the program model and intended outcomes
+   - Explain the logic: inputs → activities → outputs → outcomes → impact
+   - Quantify reach: {{participantsCount}} participants, {{sessionsCount}} sessions
+   - Highlight diversity of cohorts (if evidence supports)
+   - CRITICAL: Every paragraph must cite evidence showing the chain of impact
+
+3. **Double Materiality Assessment** (2 paragraphs, 250-300 words):
+   - **Financial Materiality**: How refugee integration affects business (talent pipeline, workforce diversity, community license to operate)
+   - **Impact Materiality**: How our program affects participants' lives (employment, well-being, social inclusion)
+   - Use SROI ({{formatNumber sroiRatio 2}}:1) and VIS ({{formatNumber visScore 1}}) to quantify
+   - CRITICAL: Cite evidence for both dimensions
+
+4. **Outcome Analysis by Dimension** (5 paragraphs, 500-600 words):
+   - Dedicate 1 paragraph to each outcome dimension (Confidence, Belonging, Job Readiness, Language, Well-being)
+   - For each:
+     * Quantitative score: {{formatPercent avgDimension}}
+     * Qualitative evidence: participant voices
+     * Year-over-year trend (if data available)
+     * Implications for CSRD reporting (e.g., "This contributes to ESRS S3 disclosure on community engagement")
+   - CRITICAL: Minimum 2 citations per dimension paragraph
+
+5. **SROI & Economic Value Creation** (2-3 paragraphs, 300-350 words):
+   - Explain SROI methodology and assumptions
+   - Break down the {{formatNumber sroiRatio 2}}:1 ratio:
+     * Investment: volunteer time, program costs, infrastructure
+     * Social value: employment outcomes, tax contributions, reduced social service costs, well-being improvements
+   - Sensitivity analysis: what if we adjusted key assumptions?
+   - CRITICAL: Cite evidence for outcome valuations (e.g., job readiness → employment)
+
+6. **Assurance & Governance** (1-2 paragraphs, 200-250 words):
+   - Data quality: Q2Q AI-powered evidence extraction, human validation
+   - Audit trail: every claim linked to source evidence via lineage IDs
+   - Governance: program oversight, ethics review, participant consent
+   - Limitations: self-reported data, attribution challenges, sample size
+   - CRITICAL: Transparency on evidence confidence levels
+
+7. **Forward-Looking Statements** (1-2 paragraphs, 150-200 words):
+   - Targets for next year (participant growth, outcome improvements)
+   - Planned program enhancements
+   - Alignment with evolving CSRD requirements
+   - CRITICAL: Ground targets in evidence-based trends
+
+---
+
+**OUTPUT REQUIREMENTS**:
+- **Total Length**: 2000-2500 words
+- **Tone**: Formal, auditable, transparent, evidence-based
+- **Format**: Plain text with section headers (use "# Section Name")
+- **Citations**: Inline [cite:ID] format, minimum 1-2 per paragraph, average 2-4
+- **CSRD Alignment**: Explicit references to ESRS standards where applicable
+- **No PII**: Evidence is redacted; maintain anonymity
+- **Verifiability**: Every claim must be traceable to evidence or metrics
+
+**CRITICAL RULES**:
+✅ Every paragraph must have at least 1 citation
+✅ Use only evidence snippets provided (no fabrication)
+✅ If insufficient evidence for a claim, state "data not available" rather than inventing
+✅ Plain text only (no markdown formatting)
+✅ Section headers with "# " prefix for parsing
+✅ Treat this as an auditable document
+
+---
+
+Generate the Annual Impact Report now:
