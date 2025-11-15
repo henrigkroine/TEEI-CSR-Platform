@@ -1,0 +1,196 @@
+{
+  "title": "Prediktiv Analyse & Prognoser",
+  "subtitle": "Generer tidsserieprognoser med konfidensintervaller og scenarioanalyse for strategisk planlegging",
+  "backToDashboard": "Tilbake til Dashbord",
+
+  "forecastBuilder": {
+    "title": "Prognosebygger",
+    "metricLabel": "Måling",
+    "horizonLabel": "Prognosehorisont",
+    "monthsLabel": "måneder",
+    "modelLabel": "Modell",
+    "generateButton": "Generer Prognose",
+    "generating": "Genererer Prognose...",
+    "advancedSettings": "Avanserte Innstillinger"
+  },
+
+  "metrics": {
+    "sroiRatio": "SROI-forhold",
+    "visScore": "VIS-poengsum",
+    "volunteerHours": "Frivillige Timer"
+  },
+
+  "models": {
+    "ets": "ETS",
+    "prophet": "Prophet",
+    "ensemble": "Ensemble"
+  },
+
+  "summaryCards": {
+    "estimate": "Månedsestimat",
+    "growth": "Forventet Vekst",
+    "vsCurrent": "vs nåværende",
+    "mae": "Gjennomsnittlig Absolutt Feil",
+    "modelAccuracy": "Modellnøyaktighet"
+  },
+
+  "tabs": {
+    "forecast": "Prognose",
+    "scenarios": "Scenarioer",
+    "accuracy": "Nøyaktighet"
+  },
+
+  "confidenceBands": {
+    "title": "Prognose med Konfidensintervaller",
+    "description": "Diagrammet viser historiske data (hel linje), punktprognose (stiplet linje), og konfidensintervaller. Skyggelagte områder representerer sannsynlighetsområder for fremtidige verdier.",
+    "legend": {
+      "historical": "Historiske Data",
+      "forecast": "Punktprognose",
+      "confidence80": "80% Konfidensintervall",
+      "confidence95": "95% Konfidensintervall"
+    },
+    "understanding": {
+      "title": "Forstå Konfidensintervaller:",
+      "conf80": "80% Konfidensintervall: Det er 80% sannsynlighet for at den faktiske verdien vil falle innenfor dette området",
+      "conf95": "95% Konfidensintervall: Det er 95% sannsynlighet for at den faktiske verdien vil falle innenfor dette bredere området",
+      "point": "Punktprognose: Den mest sannsynlige forventede verdien (median av fordelingen)"
+    }
+  },
+
+  "scenarios": {
+    "title": "Scenariosammenligning",
+    "description": "Sammenlign tre prognosescenarioer basert på forskjellige antakelser om fremtidige forhold.",
+    "optimistic": "Optimistisk",
+    "realistic": "Realistisk",
+    "pessimistic": "Pessimistisk",
+    "growth": "vekst",
+    "decline": "nedgang",
+    "assumptions": {
+      "optimistic": "Øvre 80% konfidensgrense (gunstige forhold)",
+      "realistic": "Medianprognose (forventede forhold)",
+      "pessimistic": "Nedre 80% konfidensgrense (utfordrende forhold)"
+    },
+    "guidance": {
+      "title": "Scenarioplanleggingsveiledning:",
+      "description": "Disse scenarioene representerer forskjellige mulige fremtider basert på statistiske konfidensintervaller. Bruk dem til risikovurdering og strategisk planlegging, men husk at faktiske utfall kan falle utenfor disse områdene."
+    }
+  },
+
+  "backtest": {
+    "title": "Prognosenøyaktighet (Fremoverrettet Validering)",
+    "description": "Modellytelse evaluert ved bruk av tidsseriekryss-validering. Lavere feilmålinger indikerer bedre nøyaktighet.",
+    "metrics": {
+      "mae": "MAE (Gjennomsnittlig Absolutt Feil)",
+      "maeDesc": "Gjennomsnittlig absolutt differanse",
+      "rmse": "RMSE (Kvadratisk Middelfeil)",
+      "rmseDesc": "Straffer store feil",
+      "mape": "MAPE (Gjennomsnittlig Absolutt % Feil)",
+      "mapeDesc": "Prosentvis nøyaktighet",
+      "rating": "Samlet Vurdering",
+      "ratingDesc": "Basert på MAPE"
+    },
+    "ratings": {
+      "excellent": "Utmerket",
+      "good": "God",
+      "fair": "Rimelig",
+      "poor": "Dårlig"
+    },
+    "charts": {
+      "actualVsPredicted": "Faktiske vs. Predikerte Verdier",
+      "actualVsPredictedDesc": "Punkter nærmere hverandre indikerer bedre prediksjoner. Trekanter (predikert) skal stemme overens med sirkler (faktisk).",
+      "residuals": "Residualplott (Predikasjonsfeil)",
+      "residualsDesc": "Grønne søyler viser underprediksjoner, røde søyler viser overprediksjoner. Mindre søyler er bedre."
+    },
+    "foldDetails": {
+      "title": "Kryss-Validering Detaljer",
+      "fold": "Fold",
+      "trainPeriod": "Treningsperiode",
+      "testPeriod": "Testperiode",
+      "average": "Gjennomsnitt på Tvers av Alle Folder"
+    },
+    "understanding": {
+      "title": "Forstå Nøyaktighetsmålinger:",
+      "mae": "MAE: Gjennomsnittlig størrelse på feil (samme enheter som måling)",
+      "rmse": "RMSE: Som MAE men straffer store feil mer",
+      "mape": "MAPE: Feil som prosentandel av faktisk verdi (lettere å tolke)",
+      "walkForward": "Fremoverrettet: Hver fold trener på tidligere data og tester på fremtidige data (realistisk tidsserievalidering)"
+    }
+  },
+
+  "settings": {
+    "title": "Avanserte Prognoseinnstillinger",
+    "tabs": {
+      "ets": "ETS-modell",
+      "prophet": "Prophet-modell",
+      "ensemble": "Ensemble",
+      "backtest": "Validering"
+    },
+    "ets": {
+      "method": "ETS-metode",
+      "methodDesc": "Velg basert på datakarakteristikker (trend, sesongvariasjoner)",
+      "methods": {
+        "simple": "Enkel Eksponensiell Utjevning",
+        "holt": "Holts Lineære Trend",
+        "holtWinters": "Holt-Winters Sesongmessig"
+      },
+      "seasonalPeriod": "Sesongperiode",
+      "seasonalPeriodDesc": "Lengde på sesongsyklus (f.eks. 12 for årlige mønstre)",
+      "damped": "Bruk dempet trend (forhindrer overekstrapolering)"
+    },
+    "prophet": {
+      "growthType": "Veksttype",
+      "linear": "Lineær",
+      "logistic": "Logistisk (med metning)",
+      "seasonality": "Sesongkomponenter",
+      "weekly": "Ukentlig sesongvariasjon",
+      "yearly": "Årlig sesongvariasjon",
+      "holidays": "Inkluder helligdager",
+      "changepoints": "Endringspunkter",
+      "changepointsDesc": "Antall potensielle trendendringer å oppdage"
+    },
+    "ensemble": {
+      "description": "Kombiner prediksjoner fra flere modeller ved bruk av vektet gjennomsnitt. Vekter normaliseres automatisk til å summere til 1.",
+      "etsWeight": "ETS-vekt",
+      "prophetWeight": "Prophet-vekt",
+      "tip": "Tips: Like vekter (50/50) gir ofte robuste resultater. Juster basert på historisk modellytelse vist i Nøyaktighetsfanen."
+    },
+    "backtest": {
+      "trainTestSplit": "Trenings-/Testdeling",
+      "trainTestSplitDesc": "Prosentandel av data brukt til trening i hver fold",
+      "training": "trening",
+      "folds": "Antall Folder",
+      "foldsDesc": "Flere folder = mer grundig validering men tregere",
+      "stride": "Steg",
+      "strideDesc": "Tidssteg mellom valideringsvinduer",
+      "months": "måned(er)"
+    },
+    "buttons": {
+      "save": "Lagre Innstillinger",
+      "saving": "Lagrer...",
+      "reset": "Tilbakestill til Standard",
+      "cancel": "Avbryt"
+    }
+  },
+
+  "export": {
+    "pdf": "Eksporter PDF",
+    "csv": "Eksporter CSV",
+    "generating": "Genererer..."
+  },
+
+  "errors": {
+    "generationFailed": "Kunne ikke generere prognose. Vennligst prøv igjen.",
+    "exportFailed": "Eksport mislyktes. Vennligst prøv igjen."
+  },
+
+  "disclaimer": {
+    "title": "Viktig Ansvarsfraskrivelse om Prognoser",
+    "mainText": "Prognoser er statistiske estimater basert på historiske data og identifiserte mønstre. De er ikke garantier for fremtidig ytelse. Faktiske resultater kan avvike betydelig fra prognoser på grunn av uforutsette hendelser, markedsendringer eller organisatoriske skift. Bruk prognoser som ett av mange innspill i din strategiske planleggingsprosess.",
+    "limitations": "Modellbegrensninger: Alle modeller har iboende begrensninger og antakelser. Nøyaktighetsmålingene som vises representerer historisk ytelse og gjenspeiler kanskje ikke fremtidig nøyaktighet. Konfidensintervaller indikerer statistiske sannsynlighetsområder, ikke absolutt sikkerhet."
+  },
+
+  "infoNotice": {
+    "title": "Om Prognoser",
+    "description": "Våre prognosemodeller bruker statistiske metoder (ETS, Prophet) for å forutsi fremtidige verdier basert på historiske mønstre. Konfidensintervaller viser området for sannsynlige utfall. Bruk disse prognosene til planlegging, men husk at de er estimater."
+  }
+}

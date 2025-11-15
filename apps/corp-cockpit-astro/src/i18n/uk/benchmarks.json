@@ -1,0 +1,164 @@
+{
+  "title": "Benchmarking & Peer Comparison",
+  "subtitle": "Compare your CSR performance against peer companies with privacy-preserving analytics",
+  "backToDashboard": "Back to Dashboard",
+
+  "privacy": {
+    "notice": "Privacy & Aggregation",
+    "description": "All benchmark data is fully anonymised and aggregated using k-anonymity (minimum 5 companies) and differential privacy (ε=0.1). Individual company data is never disclosed.",
+    "kAnonymityTitle": "k-Anonymity Protection",
+    "kAnonymityDesc": "Cohorts must contain at least 5 companies to prevent re-identification. Smaller cohorts are automatically blocked to protect privacy.",
+    "differentialPrivacyTitle": "Differential Privacy",
+    "differentialPrivacyDesc": "Mathematical noise (ε=0.1) is added to all aggregated values to protect individual contributions whilst maintaining statistical accuracy.",
+    "percentileMethodTitle": "Percentile Methodology",
+    "percentileMethodDesc": "Percentile ranks show your position relative to peers: p50 is median, p90 is top 10%, p10 is bottom 10%. Higher is better for all metrics.",
+    "dataFreshnessTitle": "Data Freshness",
+    "dataFreshnessDesc": "Benchmark data is refreshed daily at 2:00 AM UTC. Cohort statistics are recalculated nightly to reflect the latest submissions."
+  },
+
+  "cohortBuilder": {
+    "title": "Build Your Cohort",
+    "subtitle": "Select filters to find peer companies for privacy-preserving benchmarking",
+    "saveCohort": "Save Cohort",
+    "loadCohort": "Load Saved Cohort",
+    "selectSavedCohort": "-- Select a saved cohort --",
+    "calculating": "Calculating cohort size...",
+    "selectFilters": "Select filters to preview cohort size",
+    "cohortSize": "companies in cohort",
+    "recommendedMet": "(recommended minimum met)",
+    "tooSmall": "Cohort too small",
+    "privacyThresholdNotMet": "privacy threshold not met",
+    "minimum": "minimum",
+    "filters": {
+      "industry": "Industry",
+      "region": "Region",
+      "companySize": "Company Size (Employees)",
+      "programType": "Programme Type"
+    },
+    "industries": {
+      "technology": "Technology",
+      "finance": "Financial Services",
+      "healthcare": "Healthcare",
+      "manufacturing": "Manufacturing",
+      "retail": "Retail & Consumer Goods",
+      "energy": "Energy & Utilities",
+      "education": "Education",
+      "nonprofit": "Nonprofit & NGO",
+      "consulting": "Consulting & Professional Services",
+      "other": "Other"
+    },
+    "regions": {
+      "northAmerica": "North America",
+      "southAmerica": "South America",
+      "europe": "Europe",
+      "asiaPacific": "Asia-Pacific",
+      "middleEast": "Middle East",
+      "africa": "Africa"
+    },
+    "employeeRanges": {
+      "small": "1-50",
+      "medium": "51-500",
+      "large": "501-5000",
+      "enterprise": "5000+"
+    },
+    "programTypes": {
+      "skillsDevelopment": "Skills Development",
+      "communityOutreach": "Community Outreach",
+      "environmental": "Environmental",
+      "healthWellness": "Health & Wellness",
+      "educationLiteracy": "Education & Literacy",
+      "economicEmpowerment": "Economic Empowerment"
+    },
+    "saveModal": {
+      "title": "Save Cohort",
+      "nameLabel": "Cohort Name:",
+      "placeholder": "e.g., Tech Companies in Europe",
+      "cancel": "Cancel",
+      "save": "Save",
+      "saving": "Saving..."
+    }
+  },
+
+  "consent": {
+    "title": "Data Sharing for Benchmarks",
+    "subtitle": "Control how your company's data is used in anonymised peer benchmarking",
+    "statusActive": "Active",
+    "statusInactive": "Inactive",
+    "intro": "By opting in, your company's aggregated metrics (SROI, VIS, etc.) will be included in anonymous cohort benchmarks. This helps other companies compare their performance.",
+    "whatShared": "What's Shared",
+    "whatNotShared": "What's NOT Shared",
+    "shared": {
+      "aggregated": "Aggregated metrics only (averages, percentiles)",
+      "noPii": "No personally identifiable information (PII)",
+      "kAnonymity": "k-anonymity protection (minimum 5 companies per cohort)",
+      "dpNoise": "Differential privacy noise added to all values"
+    },
+    "notShared": {
+      "employees": "Individual employee data",
+      "feedback": "Raw feedback or comments",
+      "companyName": "Company name or identifying details",
+      "proprietary": "Proprietary programme information"
+    },
+    "safeguards": {
+      "title": "Technical Privacy Safeguards",
+      "kAnonymityTitle": "k-Anonymity",
+      "kAnonymityDesc": "Cohorts must have at least 5 companies to prevent re-identification",
+      "dpTitle": "Differential Privacy",
+      "dpDesc": "Mathematical noise (ε=0.1) added to protect individual contributions",
+      "auditTitle": "Audit Trail",
+      "auditDesc": "All data access is logged and monitored for compliance"
+    },
+    "toggleLabel": "Share my company's data for benchmarks",
+    "lastUpdated": "Last updated:",
+    "never": "Never",
+    "enableConfirm": {
+      "title": "Enable Data Sharing?",
+      "description": "By enabling data sharing, your company's aggregated metrics will be included in anonymous peer benchmarks. This helps the CSR community gain better insights whilst protecting your privacy.",
+      "checklist": {
+        "aggregated": "All data is aggregated and anonymised",
+        "privacy": "k-anonymity and differential privacy applied",
+        "revoke": "You can revoke consent at any time"
+      },
+      "cancel": "Cancel",
+      "confirm": "Enable Sharing"
+    },
+    "disableConfirm": {
+      "title": "Disable Data Sharing?",
+      "description": "Your company's data will no longer be included in peer benchmarks. Existing aggregated data in cohorts will be recalculated without your contribution.",
+      "cancel": "Cancel",
+      "confirm": "Disable Sharing"
+    },
+    "updating": "Updating..."
+  },
+
+  "results": {
+    "title": "Your Performance vs. Peer Cohort",
+    "cohortLabel": "Cohort:",
+    "companiesLabel": "companies",
+    "lastUpdated": "Last updated:",
+    "noData": "No Benchmark Data Available",
+    "noDataDesc": "Select cohort criteria above to view benchmark comparisons. Make sure your cohort has at least 5 companies to meet privacy requirements.",
+    "loading": "Loading benchmark data..."
+  },
+
+  "percentileRibbon": {
+    "yourPerformance": "Your performance compared to peer cohort",
+    "privacyProtected": "Privacy-protected (ε=0.1)",
+    "yourPosition": "Your Position",
+    "yourValue": "Your Value",
+    "median": "Median (P50)",
+    "top10": "Top 10% (P90)",
+    "bottom10": "Bottom 10%",
+    "percentile": "percentile"
+  },
+
+  "metrics": {
+    "sroiRatio": "SROI Ratio",
+    "visScore": "VIS Score",
+    "volunteerHours": "Volunteer Hours",
+    "beneficiaries": "Total Beneficiaries",
+    "engagementRate": "Employee Engagement Rate",
+    "impactScore": "Overall Impact Score",
+    "q2qConfidence": "Q2Q Confidence Score"
+  }
+}
