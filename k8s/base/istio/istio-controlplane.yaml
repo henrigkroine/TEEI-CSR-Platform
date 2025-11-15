@@ -1,0 +1,198 @@
+---
+# Istio Control Plane Configuration
+# This defines the Istio installation with mTLS enabled by default
+apiVersion: install.istio.io/v1alpha1
+kind: IstioOperator
+metadata:
+  name: teei-istio-controlplane
+  namespace: istio-system
+spec:
+  profile: production  # Use production profile for multi-region setup
+
+  # Mesh-wide configuration
+  meshConfig:
+    # Trust domain for this cluster (will be different per region)
+    trustDomain: cluster.local  # Override to us.cluster.local, eu.cluster.local per region
+
+    # Enable automatic mTLS
+    enableAutoMtls: true
+
+    # Access logging for security audit
+    accessLogFile: /dev/stdout
+    accessLogEncoding: JSON
+
+    # Certificate rotation settings
+    defaultConfig:
+      proxyMetadata:
+        ISTIO_META_CERT_ROTATION_INTERVAL: "24h"  # Rotate certs every 24 hours
+
+    # Certificate provider: use cert-manager
+    certificates:
+      - secretName: dns.istio-cert
+        dnsNames:
+          - istio-pilot.istio-system.svc
+          - istio-pilot.istio-system
+
+    # mTLS settings
+    mtls:
+      # Auto-detect and upgrade plaintext to mTLS when possible
+      mode: STRICT  # Production: STRICT, Staging/Dev: PERMISSIVE
+
+    # Tracing for observability
+    enableTracing: true
+    defaultConfig:
+      tracing:
+        sampling: 10.0  # 10% sampling rate
+        zipkin:
+          address: jaeger-collector.observability:9411
+
+  # Component configuration
+  components:
+    # Pilot (control plane)
+    pilot:
+      enabled: true
+      k8s:
+        resources:
+          requests:
+            cpu: 500m
+            memory: 2Gi
+          limits:
+            cpu: 1000m
+            memory: 4Gi
+        hpaSpec:
+          minReplicas: 2
+          maxReplicas: 5
+          metrics:
+          - type: Resource
+            resource:
+              name: cpu
+              targetAverageUtilization: 80
+        env:
+          # Certificate rotation check interval
+          - name: CERT_ROTATION_CHECK_INTERVAL
+            value: "1h"
+          # Pilot discovery address for multi-cluster
+          - name: PILOT_ENABLE_CROSS_CLUSTER_WORKLOAD_ENTRY
+            value: "true"
+
+    # Ingress gateway
+    ingressGateways:
+    - name: istio-ingressgateway
+      enabled: true
+      k8s:
+        service:
+          type: LoadBalancer
+          ports:
+          - port: 15021
+            targetPort: 15021
+            name: status-port
+          - port: 80
+            targetPort: 8080
+            name: http2
+          - port: 443
+            targetPort: 8443
+            name: https
+          - port: 15443
+            targetPort: 15443
+            name: tls  # For secure cross-region traffic
+        resources:
+          requests:
+            cpu: 500m
+            memory: 1Gi
+          limits:
+            cpu: 2000m
+            memory: 2Gi
+        hpaSpec:
+          minReplicas: 2
+          maxReplicas: 10
+          metrics:
+          - type: Resource
+            resource:
+              name: cpu
+              targetAverageUtilization: 80
+
+    # Egress gateway (for controlled outbound traffic)
+    egressGateways:
+    - name: istio-egressgateway
+      enabled: true
+      k8s:
+        resources:
+          requests:
+            cpu: 200m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+        hpaSpec:
+          minReplicas: 2
+          maxReplicas: 5
+
+  # Values for Helm charts
+  values:
+    global:
+      # Multi-cluster configuration
+      multiCluster:
+        clusterName: us-primary  # Override per region: us-primary, eu-secondary
+        enabled: true
+
+      # Proxy configuration for all sidecars
+      proxy:
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+
+        # Lifecycle configuration for certificate rotation
+        lifecycle:
+          preStop:
+            exec:
+              command: ["/bin/sh", "-c", "sleep 15"]  # Wait for connections to drain
+
+        # Access logging
+        accessLogFile: /dev/stdout
+        accessLogEncoding: JSON
+
+        # Resource limits
+        concurrency: 2
+
+      # Telemetry configuration
+      tracer:
+        zipkin:
+          address: jaeger-collector.observability:9411
+
+      # Certificate configuration
+      pilotCertProvider: cert-manager  # Use cert-manager for pilot certs
+
+    # Pilot-specific values
+    pilot:
+      autoscaleEnabled: true
+      autoscaleMin: 2
+      autoscaleMax: 5
+      cpu:
+        targetAverageUtilization: 80
+
+      # Enable certificate rotation monitoring
+      env:
+        CERT_SIGNER_DOMAIN: "cluster.local"
+        CERT_SIGNER_MAX_TTL: "24h"
+        CERT_SIGNER_ROOT_CERT_TTL: "87600h"  # 10 years for root CA
+
+    # Gateway values
+    gateways:
+      istio-ingressgateway:
+        autoscaleEnabled: true
+        autoscaleMin: 2
+        autoscaleMax: 10
+
+      istio-egressgateway:
+        autoscaleEnabled: true
+        autoscaleMin: 2
+        autoscaleMax: 5
+
+    # Sidecar injector
+    sidecarInjectorWebhook:
+      enableNamespacesByDefault: false  # Require explicit istio-injection=enabled label
+      rewriteAppHTTPProbe: true  # Rewrite health checks for mTLS compatibility

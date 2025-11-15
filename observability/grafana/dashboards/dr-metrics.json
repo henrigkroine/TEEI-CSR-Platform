@@ -1,0 +1,390 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "dr-metrics",
+    "title": "Disaster Recovery Metrics (RTO/RPO)",
+    "tags": ["disaster-recovery", "soc2", "compliance", "gameday"],
+    "timezone": "UTC",
+    "schemaVersion": 38,
+    "version": 1,
+    "refresh": "10s",
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "timepicker": {
+      "refresh_intervals": ["5s", "10s", "30s", "1m", "5m"]
+    },
+    "annotations": {
+      "list": [
+        {
+          "name": "Gameday Drills",
+          "datasource": "-- Grafana --",
+          "enable": true,
+          "iconColor": "red",
+          "tags": ["gameday", "drill"]
+        },
+        {
+          "name": "Failover Events",
+          "datasource": "-- Grafana --",
+          "enable": true,
+          "iconColor": "orange",
+          "tags": ["failover"]
+        }
+      ]
+    },
+    "panels": [
+      {
+        "id": 1,
+        "type": "stat",
+        "title": "Current Postgres Replication Lag",
+        "targets": [
+          {
+            "expr": "pg_replication_lag_seconds{region=\"eu-central-1\"}",
+            "legendFormat": "EU Replica Lag",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 10, "color": "yellow"},
+                {"value": 60, "color": "red"}
+              ]
+            }
+          }
+        },
+        "options": {
+          "colorMode": "background",
+          "graphMode": "area"
+        },
+        "gridPos": {"x": 0, "y": 0, "w": 6, "h": 4}
+      },
+      {
+        "id": 2,
+        "type": "stat",
+        "title": "ClickHouse Replication Queue",
+        "targets": [
+          {
+            "expr": "clickhouse_replication_queue_size{region=\"eu-central-1\"}",
+            "legendFormat": "Pending Items",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 1000, "color": "yellow"},
+                {"value": 10000, "color": "red"}
+              ]
+            }
+          }
+        },
+        "gridPos": {"x": 6, "y": 0, "w": 6, "h": 4}
+      },
+      {
+        "id": 3,
+        "type": "stat",
+        "title": "NATS Mirror Lag",
+        "targets": [
+          {
+            "expr": "nats_stream_mirror_lag{stream=\"CSR_EVENTS_MIRROR\"}",
+            "legendFormat": "Message Lag",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 100, "color": "yellow"},
+                {"value": 1000, "color": "red"}
+              ]
+            }
+          }
+        },
+        "gridPos": {"x": 12, "y": 0, "w": 6, "h": 4}
+      },
+      {
+        "id": 4,
+        "type": "stat",
+        "title": "Last Successful Backup",
+        "targets": [
+          {
+            "expr": "(time() - backup_last_success_timestamp_seconds{service=\"postgres\"})",
+            "legendFormat": "Time Since Backup",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 86400, "color": "yellow"},
+                {"value": 172800, "color": "red"}
+              ]
+            }
+          }
+        },
+        "gridPos": {"x": 18, "y": 0, "w": 6, "h": 4}
+      },
+      {
+        "id": 5,
+        "type": "timeseries",
+        "title": "Estimated RPO (Replication Lag Over Time)",
+        "targets": [
+          {
+            "expr": "pg_replication_lag_seconds{region=\"eu-central-1\"}",
+            "legendFormat": "Postgres Lag (seconds)",
+            "refId": "A"
+          },
+          {
+            "expr": "clickhouse_replication_lag_seconds{region=\"eu-central-1\"}",
+            "legendFormat": "ClickHouse Lag (seconds)",
+            "refId": "B"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "custom": {
+              "lineWidth": 2,
+              "fillOpacity": 10
+            }
+          },
+          "overrides": [
+            {
+              "matcher": {"id": "byName", "options": "Target RPO"},
+              "properties": [
+                {"id": "color", "value": {"mode": "fixed", "fixedColor": "red"}},
+                {"id": "custom.lineStyle", "value": {"fill": "dash"}}
+              ]
+            }
+          ]
+        },
+        "options": {
+          "tooltip": {"mode": "multi"},
+          "legend": {"displayMode": "list", "placement": "bottom"}
+        },
+        "gridPos": {"x": 0, "y": 4, "w": 12, "h": 8}
+      },
+      {
+        "id": 6,
+        "type": "timeseries",
+        "title": "Backup Age (Hours)",
+        "targets": [
+          {
+            "expr": "(time() - backup_last_success_timestamp_seconds{service=\"postgres\"}) / 3600",
+            "legendFormat": "Postgres Backup",
+            "refId": "A"
+          },
+          {
+            "expr": "(time() - backup_last_success_timestamp_seconds{service=\"clickhouse\"}) / 3600",
+            "legendFormat": "ClickHouse Backup",
+            "refId": "B"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "h",
+            "custom": {"lineWidth": 2}
+          }
+        },
+        "gridPos": {"x": 12, "y": 4, "w": 12, "h": 8}
+      },
+      {
+        "id": 7,
+        "type": "gauge",
+        "title": "Current Estimated RTO",
+        "description": "Estimated time to recover based on historical drill data",
+        "targets": [
+          {
+            "expr": "avg_over_time(gameday_drill_rto_seconds[30d])",
+            "legendFormat": "Average RTO (last 30 days)",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "min": 0,
+            "max": 600,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 300, "color": "yellow"},
+                {"value": 450, "color": "red"}
+              ]
+            }
+          }
+        },
+        "gridPos": {"x": 0, "y": 12, "w": 6, "h": 6}
+      },
+      {
+        "id": 8,
+        "type": "gauge",
+        "title": "Current Estimated RPO",
+        "description": "Maximum data loss window based on current replication lag",
+        "targets": [
+          {
+            "expr": "max(pg_replication_lag_seconds{region=\"eu-central-1\"})",
+            "legendFormat": "Max Replication Lag",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "min": 0,
+            "max": 60,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 10, "color": "yellow"},
+                {"value": 30, "color": "red"}
+              ]
+            }
+          }
+        },
+        "gridPos": {"x": 6, "y": 12, "w": 6, "h": 6}
+      },
+      {
+        "id": 9,
+        "type": "table",
+        "title": "Recent Gameday Drill History",
+        "targets": [
+          {
+            "expr": "gameday_drill_rto_seconds",
+            "legendFormat": "{{drill_date}}",
+            "refId": "A",
+            "instant": true
+          },
+          {
+            "expr": "gameday_drill_rpo_seconds",
+            "refId": "B",
+            "instant": true
+          }
+        ],
+        "transformations": [
+          {
+            "id": "merge",
+            "options": {}
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {"width": 150}
+          },
+          "overrides": [
+            {
+              "matcher": {"id": "byName", "options": "RTO (seconds)"},
+              "properties": [
+                {"id": "custom.width", "value": 120},
+                {"id": "unit", "value": "s"},
+                {"id": "thresholds", "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {"value": 0, "color": "green"},
+                    {"value": 300, "color": "yellow"},
+                    {"value": 450, "color": "red"}
+                  ]
+                }}
+              ]
+            }
+          ]
+        },
+        "gridPos": {"x": 12, "y": 12, "w": 12, "h": 6}
+      },
+      {
+        "id": 10,
+        "type": "timeseries",
+        "title": "RTO Trend (Last 6 Months)",
+        "targets": [
+          {
+            "expr": "gameday_drill_rto_seconds",
+            "legendFormat": "RTO (seconds)",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "custom": {
+              "lineWidth": 2,
+              "fillOpacity": 20,
+              "drawStyle": "line",
+              "pointSize": 8,
+              "showPoints": "always"
+            }
+          }
+        },
+        "options": {
+          "tooltip": {"mode": "multi"},
+          "legend": {"displayMode": "list", "placement": "bottom"}
+        },
+        "gridPos": {"x": 0, "y": 18, "w": 12, "h": 6}
+      },
+      {
+        "id": 11,
+        "type": "timeseries",
+        "title": "RPO Trend (Last 6 Months)",
+        "targets": [
+          {
+            "expr": "gameday_drill_rpo_seconds",
+            "legendFormat": "RPO (seconds)",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "custom": {
+              "lineWidth": 2,
+              "fillOpacity": 20,
+              "drawStyle": "line",
+              "pointSize": 8,
+              "showPoints": "always"
+            }
+          }
+        },
+        "gridPos": {"x": 12, "y": 18, "w": 12, "h": 6}
+      },
+      {
+        "id": 12,
+        "type": "logs",
+        "title": "Gameday Event Log",
+        "targets": [
+          {
+            "expr": "{job=\"gameday-drill\"}",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "showTime": true,
+          "showLabels": true,
+          "wrapLogMessage": false,
+          "sortOrder": "Descending"
+        },
+        "gridPos": {"x": 0, "y": 24, "w": 24, "h": 6}
+      }
+    ]
+  },
+  "folderId": 0,
+  "overwrite": true
+}

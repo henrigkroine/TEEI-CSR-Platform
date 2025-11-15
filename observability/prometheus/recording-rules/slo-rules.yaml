@@ -1,0 +1,549 @@
+# TEEI CSR Platform - SLO Recording Rules & Alerts
+# Ref: AGENTS.md § Phase G - slo-gatekeeper
+# Google SRE Multi-Window Multi-Burn-Rate Alerting
+#
+# Recording Rules: Pre-calculate SLI metrics for faster querying
+# Burn Rate Alerts: Fast burn (1h) and slow burn (6h) detection
+#
+# Architecture:
+# 1. Recording rules calculate SLIs (service level indicators)
+# 2. Burn rate rules calculate error budget consumption rate
+# 3. Alerting rules fire on multi-window burn rate violations
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-slo-rules
+  namespace: monitoring
+  labels:
+    app: prometheus
+    component: slo-recording-rules
+data:
+  slo-recording-rules.yaml: |
+    groups:
+    # ========================================================================
+    # AVAILABILITY SLI RECORDING RULES
+    # ========================================================================
+    - name: sli_availability_recording_rules
+      interval: 30s
+      rules:
+      # API Gateway Availability SLI (99.9% SLO)
+      - record: sli:availability:api_gateway:ratio
+        expr: |
+          sum(rate(http_requests_total{service="api-gateway",status!~"5.."}[5m]))
+          /
+          sum(rate(http_requests_total{service="api-gateway"}[5m]))
+
+      # Per-region API Gateway Availability
+      - record: sli:availability:api_gateway:ratio_by_region
+        expr: |
+          sum(rate(http_requests_total{service="api-gateway",status!~"5.."}[5m])) by (region)
+          /
+          sum(rate(http_requests_total{service="api-gateway"}[5m])) by (region)
+
+      # Reporting Service Availability SLI (99.5% SLO)
+      - record: sli:availability:reporting_service:ratio
+        expr: |
+          sum(rate(http_requests_total{service="reporting-service",status!~"5.."}[5m]))
+          /
+          sum(rate(http_requests_total{service="reporting-service"}[5m]))
+
+      # Data Residency Service Availability SLI (99.99% SLO)
+      - record: sli:availability:data_residency:ratio
+        expr: |
+          sum(rate(residency_router_requests_total{status="success"}[5m]))
+          /
+          sum(rate(residency_router_requests_total[5m]))
+
+      # Web UI Availability SLI (99% SLO)
+      - record: sli:availability:web_ui:ratio
+        expr: |
+          sum(rate(http_requests_total{service="web-ui",status!~"5.."}[5m]))
+          /
+          sum(rate(http_requests_total{service="web-ui"}[5m]))
+
+    # ========================================================================
+    # LATENCY SLI RECORDING RULES
+    # ========================================================================
+    - name: sli_latency_recording_rules
+      interval: 30s
+      rules:
+      # API Gateway p95 Latency SLI (<200ms SLO)
+      - record: sli:latency:api_gateway:p95_ms
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(http_request_duration_seconds_bucket{service="api-gateway",status!~"5.."}[5m])) by (le)
+          ) * 1000
+
+      # API Gateway p99 Latency SLI (<500ms SLO)
+      - record: sli:latency:api_gateway:p99_ms
+        expr: |
+          histogram_quantile(0.99,
+            sum(rate(http_request_duration_seconds_bucket{service="api-gateway",status!~"5.."}[5m])) by (le)
+          ) * 1000
+
+      # Per-region API Gateway p95 Latency
+      - record: sli:latency:api_gateway:p95_ms_by_region
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(http_request_duration_seconds_bucket{service="api-gateway",status!~"5.."}[5m])) by (le, region)
+          ) * 1000
+
+      # GenAI Reporting p95 Latency SLI (<5s SLO)
+      - record: sli:latency:genai_reporting:p95_ms
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(genai_report_duration_seconds_bucket{service="reporting-service"}[5m])) by (le)
+          ) * 1000
+
+      # GenAI Reporting p99 Latency SLI (<10s SLO)
+      - record: sli:latency:genai_reporting:p99_ms
+        expr: |
+          histogram_quantile(0.99,
+            sum(rate(genai_report_duration_seconds_bucket{service="reporting-service"}[5m])) by (le)
+          ) * 1000
+
+      # Database Query p95 Latency SLI (<50ms SLO)
+      - record: sli:latency:postgres:p95_ms
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(pg_stat_statements_seconds_bucket[5m])) by (le)
+          ) * 1000
+
+    # ========================================================================
+    # ERROR RATE SLI RECORDING RULES
+    # ========================================================================
+    - name: sli_error_rate_recording_rules
+      interval: 30s
+      rules:
+      # 5xx Server Error Rate SLI (<0.1% SLO)
+      - record: sli:error_rate:5xx:ratio
+        expr: |
+          sum(rate(http_requests_total{status=~"5.."}[5m]))
+          /
+          sum(rate(http_requests_total[5m]))
+
+      # 4xx Client Error Rate SLI (excluding 401/403, <1% SLO)
+      - record: sli:error_rate:4xx:ratio
+        expr: |
+          sum(rate(http_requests_total{status=~"4..",status!~"401|403"}[5m]))
+          /
+          sum(rate(http_requests_total[5m]))
+
+      # GDPR Violation Count SLI (0 tolerance SLO)
+      - record: sli:gdpr_violations:count
+        expr: |
+          sum(increase(gdpr_residency_violations_total[5m]))
+
+    # ========================================================================
+    # BUSINESS SLI RECORDING RULES
+    # ========================================================================
+    - name: sli_business_recording_rules
+      interval: 30s
+      rules:
+      # Report Generation Success Rate SLI (>99% SLO)
+      - record: sli:business:report_generation_success:ratio
+        expr: |
+          sum(rate(report_generation_total{status="success"}[5m]))
+          /
+          sum(rate(report_generation_total[5m]))
+
+      # SSE Connection Stability SLI (>99.5% SLO)
+      - record: sli:business:sse_connection_stability:ratio
+        expr: |
+          sum(rate(sse_connections_total{status="stable"}[5m]))
+          /
+          sum(rate(sse_connections_total[5m]))
+
+      # Data Export Success Rate SLI (>99% SLO)
+      - record: sli:business:export_success:ratio
+        expr: |
+          sum(rate(export_requests_total{status="success"}[5m]))
+          /
+          sum(rate(export_requests_total[5m]))
+
+    # ========================================================================
+    # ERROR BUDGET RECORDING RULES
+    # ========================================================================
+    - name: error_budget_recording_rules
+      interval: 1m
+      rules:
+      # API Gateway Error Budget Remaining (99.9% SLO)
+      # Error budget = (1 - 0.999) × total requests = 0.001 × total
+      - record: error_budget:api_gateway:remaining_ratio
+        expr: |
+          (
+            0.001 * sum(increase(http_requests_total{service="api-gateway"}[30d]))
+            -
+            sum(increase(http_requests_total{service="api-gateway",status=~"5.."}[30d]))
+          )
+          /
+          (0.001 * sum(increase(http_requests_total{service="api-gateway"}[30d])))
+
+      # Reporting Service Error Budget Remaining (99.5% SLO)
+      - record: error_budget:reporting_service:remaining_ratio
+        expr: |
+          (
+            0.005 * sum(increase(http_requests_total{service="reporting-service"}[30d]))
+            -
+            sum(increase(http_requests_total{service="reporting-service",status=~"5.."}[30d]))
+          )
+          /
+          (0.005 * sum(increase(http_requests_total{service="reporting-service"}[30d])))
+
+      # Data Residency Error Budget Remaining (99.99% SLO)
+      - record: error_budget:data_residency:remaining_ratio
+        expr: |
+          (
+            0.0001 * sum(increase(residency_router_requests_total[30d]))
+            -
+            sum(increase(residency_router_requests_total{status!="success"}[30d]))
+          )
+          /
+          (0.0001 * sum(increase(residency_router_requests_total[30d])))
+
+    # ========================================================================
+    # BURN RATE RECORDING RULES (Multi-Window Multi-Burn-Rate)
+    # ========================================================================
+    # Google SRE method: https://sre.google/workbook/alerting-on-slos/
+    #
+    # Fast burn: 1h window, 14.4x burn rate, consumes 2% budget in 1h
+    # Slow burn: 6h window, 6x burn rate, consumes 5% budget in 6h
+    # ========================================================================
+
+    - name: burn_rate_recording_rules
+      interval: 30s
+      rules:
+      # API Gateway Fast Burn Rate (1h window)
+      # Burn rate = (1 - SLI) / (1 - SLO)
+      # 14.4x burn rate means consuming error budget 14.4x faster than normal
+      - record: burn_rate:api_gateway:1h
+        expr: |
+          (
+            1 - (
+              sum(rate(http_requests_total{service="api-gateway",status!~"5.."}[1h]))
+              /
+              sum(rate(http_requests_total{service="api-gateway"}[1h]))
+            )
+          )
+          /
+          (1 - 0.999)
+
+      # API Gateway Slow Burn Rate (6h window)
+      - record: burn_rate:api_gateway:6h
+        expr: |
+          (
+            1 - (
+              sum(rate(http_requests_total{service="api-gateway",status!~"5.."}[6h]))
+              /
+              sum(rate(http_requests_total{service="api-gateway"}[6h]))
+            )
+          )
+          /
+          (1 - 0.999)
+
+      # Reporting Service Fast Burn Rate (1h window)
+      - record: burn_rate:reporting_service:1h
+        expr: |
+          (
+            1 - (
+              sum(rate(http_requests_total{service="reporting-service",status!~"5.."}[1h]))
+              /
+              sum(rate(http_requests_total{service="reporting-service"}[1h]))
+            )
+          )
+          /
+          (1 - 0.995)
+
+      # Reporting Service Slow Burn Rate (6h window)
+      - record: burn_rate:reporting_service:6h
+        expr: |
+          (
+            1 - (
+              sum(rate(http_requests_total{service="reporting-service",status!~"5.."}[6h]))
+              /
+              sum(rate(http_requests_total{service="reporting-service"}[6h]))
+            )
+          )
+          /
+          (1 - 0.995)
+
+      # Data Residency Fast Burn Rate (1h window)
+      - record: burn_rate:data_residency:1h
+        expr: |
+          (
+            1 - (
+              sum(rate(residency_router_requests_total{status="success"}[1h]))
+              /
+              sum(rate(residency_router_requests_total[1h]))
+            )
+          )
+          /
+          (1 - 0.9999)
+
+      # Data Residency Slow Burn Rate (6h window)
+      - record: burn_rate:data_residency:6h
+        expr: |
+          (
+            1 - (
+              sum(rate(residency_router_requests_total{status="success"}[6h]))
+              /
+              sum(rate(residency_router_requests_total[6h]))
+            )
+          )
+          /
+          (1 - 0.9999)
+
+  # ========================================================================
+  # SLO ALERTING RULES (Multi-Window Multi-Burn-Rate)
+  # ========================================================================
+  slo-alerts.yaml: |
+    groups:
+    - name: slo_fast_burn_alerts
+      interval: 30s
+      rules:
+      # API Gateway Fast Burn Alert (1h window, 14.4x burn rate)
+      # Fires when consuming 2% of monthly error budget in 1 hour
+      # Time to exhaustion: ~36 hours at this rate
+      - alert: SLOFastBurn_APIGateway
+        expr: |
+          burn_rate:api_gateway:1h > 14.4
+          and
+          burn_rate:api_gateway:1h > (14.4 * 0.9)  # Short window validation
+        for: 2m
+        labels:
+          severity: critical
+          service: api-gateway
+          slo_type: availability
+          burn_type: fast
+          page: "true"
+        annotations:
+          summary: "CRITICAL: API Gateway SLO fast burn detected"
+          description: |
+            API Gateway is consuming error budget 14.4x faster than normal.
+            Current burn rate: {{ $value | humanizePercentage }}x
+            Time to error budget exhaustion: ~36 hours
+            Action: Investigate immediately, consider incident declaration
+          runbook: "https://runbooks.teei.io/slo-fast-burn"
+          dashboard: "https://grafana.teei.io/d/slo-overview"
+
+      # Reporting Service Fast Burn Alert
+      - alert: SLOFastBurn_ReportingService
+        expr: |
+          burn_rate:reporting_service:1h > 14.4
+          and
+          burn_rate:reporting_service:1h > (14.4 * 0.9)
+        for: 2m
+        labels:
+          severity: critical
+          service: reporting-service
+          slo_type: availability
+          burn_type: fast
+          page: "true"
+        annotations:
+          summary: "CRITICAL: Reporting Service SLO fast burn detected"
+          description: |
+            Reporting Service is consuming error budget 14.4x faster than normal.
+            Current burn rate: {{ $value | humanizePercentage }}x
+            Time to error budget exhaustion: ~36 hours
+            Action: Investigate immediately, block deployments
+          runbook: "https://runbooks.teei.io/slo-fast-burn"
+
+      # Data Residency Fast Burn Alert (GDPR-critical)
+      - alert: SLOFastBurn_DataResidency
+        expr: |
+          burn_rate:data_residency:1h > 14.4
+          and
+          burn_rate:data_residency:1h > (14.4 * 0.9)
+        for: 1m  # Shorter duration for GDPR-critical service
+        labels:
+          severity: critical
+          service: data-residency
+          slo_type: availability
+          burn_type: fast
+          page: "true"
+          compliance: gdpr
+        annotations:
+          summary: "CRITICAL: Data Residency SLO fast burn detected (GDPR)"
+          description: |
+            Data Residency service is consuming error budget 14.4x faster than normal.
+            Current burn rate: {{ $value | humanizePercentage }}x
+            Time to error budget exhaustion: ~36 hours
+            COMPLIANCE IMPACT: GDPR Article 44 violations likely
+            Action: Incident declared, escalate to DPO immediately
+          runbook: "https://runbooks.teei.io/slo-fast-burn-gdpr"
+
+    # ========================================================================
+    # SLOW BURN ALERTS (6h window, 6x burn rate)
+    # ========================================================================
+    - name: slo_slow_burn_alerts
+      interval: 1m
+      rules:
+      # API Gateway Slow Burn Alert (6h window, 6x burn rate)
+      # Fires when consuming 5% of monthly error budget in 6 hours
+      # Time to exhaustion: ~6 days at this rate
+      - alert: SLOSlowBurn_APIGateway
+        expr: |
+          burn_rate:api_gateway:6h > 6
+          and
+          burn_rate:api_gateway:6h > (6 * 0.9)  # Long window validation
+        for: 15m
+        labels:
+          severity: warning
+          service: api-gateway
+          slo_type: availability
+          burn_type: slow
+          page: "false"
+        annotations:
+          summary: "WARNING: API Gateway SLO slow burn detected"
+          description: |
+            API Gateway is consuming error budget 6x faster than normal.
+            Current burn rate: {{ $value | humanizePercentage }}x
+            Time to error budget exhaustion: ~6 days
+            Action: Investigate, consider freezing non-critical deployments
+          runbook: "https://runbooks.teei.io/slo-slow-burn"
+          dashboard: "https://grafana.teei.io/d/slo-overview"
+
+      # Reporting Service Slow Burn Alert
+      - alert: SLOSlowBurn_ReportingService
+        expr: |
+          burn_rate:reporting_service:6h > 6
+          and
+          burn_rate:reporting_service:6h > (6 * 0.9)
+        for: 15m
+        labels:
+          severity: warning
+          service: reporting-service
+          slo_type: availability
+          burn_type: slow
+          page: "false"
+        annotations:
+          summary: "WARNING: Reporting Service SLO slow burn detected"
+          description: |
+            Reporting Service is consuming error budget 6x faster than normal.
+            Current burn rate: {{ $value | humanizePercentage }}x
+            Time to error budget exhaustion: ~6 days
+            Action: Review recent changes, increase monitoring
+          runbook: "https://runbooks.teei.io/slo-slow-burn"
+
+      # Data Residency Slow Burn Alert
+      - alert: SLOSlowBurn_DataResidency
+        expr: |
+          burn_rate:data_residency:6h > 6
+          and
+          burn_rate:data_residency:6h > (6 * 0.9)
+        for: 10m  # Shorter for GDPR-critical
+        labels:
+          severity: warning
+          service: data-residency
+          slo_type: availability
+          burn_type: slow
+          page: "false"
+          compliance: gdpr
+        annotations:
+          summary: "WARNING: Data Residency SLO slow burn detected (GDPR)"
+          description: |
+            Data Residency service is consuming error budget 6x faster than normal.
+            Current burn rate: {{ $value | humanizePercentage }}x
+            Time to error budget exhaustion: ~6 days
+            Action: Review residency routing logic, check compliance
+          runbook: "https://runbooks.teei.io/slo-slow-burn-gdpr"
+
+    # ========================================================================
+    # ERROR BUDGET EXHAUSTION ALERTS
+    # ========================================================================
+    - name: error_budget_exhaustion_alerts
+      interval: 5m
+      rules:
+      # API Gateway Error Budget <20% (Yellow threshold)
+      - alert: ErrorBudgetLow_APIGateway
+        expr: |
+          error_budget:api_gateway:remaining_ratio < 0.20
+        for: 5m
+        labels:
+          severity: warning
+          service: api-gateway
+          budget_level: yellow
+        annotations:
+          summary: "WARNING: API Gateway error budget <20%"
+          description: |
+            API Gateway has consumed 80% of monthly error budget.
+            Remaining budget: {{ $value | humanizePercentage }}%
+            Action: Require approval for all deployments
+          runbook: "https://runbooks.teei.io/error-budget-low"
+
+      # API Gateway Error Budget Exhausted (Red threshold)
+      - alert: ErrorBudgetExhausted_APIGateway
+        expr: |
+          error_budget:api_gateway:remaining_ratio <= 0
+        for: 1m
+        labels:
+          severity: critical
+          service: api-gateway
+          budget_level: red
+          page: "true"
+        annotations:
+          summary: "CRITICAL: API Gateway error budget exhausted"
+          description: |
+            API Gateway has exhausted monthly error budget.
+            Action: FREEZE all deployments, incident response mode
+          runbook: "https://runbooks.teei.io/error-budget-exhausted"
+
+    # ========================================================================
+    # GDPR ZERO-TOLERANCE ALERT
+    # ========================================================================
+    - name: gdpr_violation_alerts
+      interval: 30s
+      rules:
+      # GDPR Residency Violation - Zero Tolerance
+      - alert: GDPRResidencyViolation
+        expr: |
+          sli:gdpr_violations:count > 0
+        for: 30s
+        labels:
+          severity: critical
+          compliance: gdpr
+          page: "true"
+          escalate: dpo
+        annotations:
+          summary: "CRITICAL: GDPR data residency violation detected"
+          description: |
+            GDPR Article 44 violation: Data transferred outside allowed regions.
+            Violation count: {{ $value }}
+            Action: Incident declared, escalate to DPO immediately
+            Compliance impact: Potential GDPR fine up to 4% of global revenue
+          runbook: "https://runbooks.teei.io/gdpr-violation"
+          dpo_contact: "dpo@teei.io"
+          legal_contact: "legal@teei.io"
+
+    # ========================================================================
+    # DEPLOYMENT GATE ALERTS (Block deployments during SLO breaches)
+    # ========================================================================
+    - name: deployment_gate_alerts
+      interval: 1m
+      rules:
+      # Block Deployment: Any SLO Breaching
+      - alert: DeploymentBlocked_SLOBreach
+        expr: |
+          (
+            sli:availability:api_gateway:ratio < 0.999
+            or sli:availability:reporting_service:ratio < 0.995
+            or sli:availability:data_residency:ratio < 0.9999
+            or burn_rate:api_gateway:1h > 14.4
+            or burn_rate:reporting_service:1h > 14.4
+            or burn_rate:data_residency:1h > 14.4
+          )
+        for: 5m
+        labels:
+          severity: warning
+          deployment_gate: blocked
+        annotations:
+          summary: "Deployment gate BLOCKED: SLO breach detected"
+          description: |
+            One or more SLOs are breaching. Deployments blocked.
+            Current SLO status:
+            - API Gateway: {{ with query "sli:availability:api_gateway:ratio" }}{{ . | first | value | humanizePercentage }}{{ end }}%
+            - Reporting: {{ with query "sli:availability:reporting_service:ratio" }}{{ . | first | value | humanizePercentage }}{{ end }}%
+            - Data Residency: {{ with query "sli:availability:data_residency:ratio" }}{{ . | first | value | humanizePercentage }}{{ end }}%
+            Action: Fix SLO breach before deploying
+          runbook: "https://runbooks.teei.io/deployment-gate-blocked"

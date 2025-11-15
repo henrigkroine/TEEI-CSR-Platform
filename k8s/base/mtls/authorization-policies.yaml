@@ -1,0 +1,240 @@
+---
+# Authorization Policies - Zero-Trust Service-to-Service RBAC
+# Based on ServiceAccount identity, not network location
+
+# Default DENY ALL policy - nothing allowed unless explicitly permitted
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: deny-all-default
+  namespace: default
+  labels:
+    part-of: teei-csr-platform
+    security-tier: zero-trust
+spec:
+  {}  # Empty spec = deny all traffic
+---
+# Allow API Gateway to call all backend services
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-api-gateway-to-backends
+  namespace: default
+  labels:
+    part-of: teei-csr-platform
+    security-tier: service-mesh
+spec:
+  selector:
+    matchLabels:
+      component: backend  # Applied to all backend services
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        principals:
+        - "cluster.local/ns/default/sa/teei-api-gateway"  # ServiceAccount identity
+    to:
+    - operation:
+        methods: ["GET", "POST", "PUT", "PATCH", "DELETE"]
+        paths: ["/*"]
+---
+# Allow Reporting service to call Q2Q AI and Analytics
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-reporting-to-ai-analytics
+  namespace: default
+  labels:
+    part-of: teei-csr-platform
+spec:
+  selector:
+    matchLabels:
+      app: teei-q2q-ai
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        principals:
+        - "cluster.local/ns/default/sa/teei-reporting"
+    to:
+    - operation:
+        methods: ["POST", "GET"]
+        paths: ["/api/v1/q2q/*", "/api/v1/insights/*"]
+---
+# Allow Reporting service to call Analytics
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-reporting-to-analytics
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: teei-analytics
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        principals:
+        - "cluster.local/ns/default/sa/teei-reporting"
+        - "cluster.local/ns/default/sa/teei-api-gateway"
+    to:
+    - operation:
+        methods: ["GET", "POST"]
+        paths: ["/api/v1/analytics/*", "/api/v1/metrics/*"]
+---
+# Allow Corporate Cockpit to call API Gateway only
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-cockpit-to-gateway
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: teei-api-gateway
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        principals:
+        - "cluster.local/ns/default/sa/teei-corp-cockpit"
+    to:
+    - operation:
+        methods: ["GET", "POST", "PUT", "PATCH", "DELETE"]
+        paths: ["/api/*"]
+---
+# Allow Backend services to call PostgreSQL
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-backends-to-postgres
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: postgresql
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        principals:
+        - "cluster.local/ns/default/sa/teei-reporting"
+        - "cluster.local/ns/default/sa/teei-unified-profile"
+        - "cluster.local/ns/default/sa/teei-q2q-ai"
+        - "cluster.local/ns/default/sa/teei-api-gateway"
+        - "cluster.local/ns/default/sa/teei-kintell-connector"
+        - "cluster.local/ns/default/sa/teei-buddy-connector"
+        - "cluster.local/ns/default/sa/teei-upskilling-connector"
+    to:
+    - operation:
+        ports: ["5432"]
+---
+# Allow Analytics and Reporting to call ClickHouse
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-analytics-reporting-to-clickhouse
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: clickhouse
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        principals:
+        - "cluster.local/ns/default/sa/teei-analytics"
+        - "cluster.local/ns/default/sa/teei-reporting"
+    to:
+    - operation:
+        ports: ["8123", "9000"]  # HTTP and native interfaces
+---
+# Allow all services to call NATS (message bus)
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-all-to-nats
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: nats
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        namespaces: ["default"]  # Any service in default namespace
+    to:
+    - operation:
+        ports: ["4222", "6222", "8222"]
+---
+# Allow Data Residency service to access Postgres and Vault
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-data-residency-infra
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: postgresql
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        principals:
+        - "cluster.local/ns/default/sa/teei-data-residency"
+---
+# Allow Health Checks from Istio (without authentication)
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-health-checks
+  namespace: default
+spec:
+  action: ALLOW
+  rules:
+  - to:
+    - operation:
+        paths: ["/health", "/healthz", "/ready", "/readyz", "/live", "/livez"]
+        methods: ["GET"]
+---
+# Allow Prometheus to scrape metrics (without authentication)
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-prometheus-scraping
+  namespace: default
+spec:
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        namespaces: ["observability", "istio-system"]
+    to:
+    - operation:
+        paths: ["/metrics", "/stats/prometheus"]
+        methods: ["GET"]
+---
+# Cross-region authorization (for multi-region deployments)
+# Allow services from EU region to call US region
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-cross-region-eu-to-us
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      cross-region-enabled: "true"  # Only services with this label
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        principals:
+        - "eu.cluster.local/ns/default/sa/*"  # Any service from EU region
+    to:
+    - operation:
+        methods: ["GET", "POST"]

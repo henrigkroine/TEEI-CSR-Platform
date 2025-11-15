@@ -1,0 +1,170 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: clickhouse-cluster-config
+  namespace: teei-platform
+  labels:
+    app: clickhouse
+data:
+  clusters.xml: |
+    <clickhouse>
+      <!-- Remote servers configuration -->
+      <remote_servers>
+        <!-- US Cluster: 3 shards, 2 replicas each -->
+        <teei_us_cluster>
+          <shard>
+            <internal_replication>true</internal_replication>
+            <replica>
+              <host>clickhouse-us-0.clickhouse-us.teei-platform.svc.cluster.local</host>
+              <port>9000</port>
+            </replica>
+            <replica>
+              <host>clickhouse-us-1.clickhouse-us.teei-platform.svc.cluster.local</host>
+              <port>9000</port>
+            </replica>
+          </shard>
+          <shard>
+            <internal_replication>true</internal_replication>
+            <replica>
+              <host>clickhouse-us-2.clickhouse-us.teei-platform.svc.cluster.local</host>
+              <port>9000</port>
+            </replica>
+            <replica>
+              <host>clickhouse-us-3.clickhouse-us.teei-platform.svc.cluster.local</host>
+              <port>9000</port>
+            </replica>
+          </shard>
+          <shard>
+            <internal_replication>true</internal_replication>
+            <replica>
+              <host>clickhouse-us-4.clickhouse-us.teei-platform.svc.cluster.local</host>
+              <port>9000</port>
+            </replica>
+            <replica>
+              <host>clickhouse-us-5.clickhouse-us.teei-platform.svc.cluster.local</host>
+              <port>9000</port>
+            </replica>
+          </shard>
+        </teei_us_cluster>
+
+        <!-- EU Cluster: 2 shards, 2 replicas each -->
+        <teei_eu_cluster>
+          <shard>
+            <internal_replication>true</internal_replication>
+            <replica>
+              <host>clickhouse-eu-0.clickhouse-eu.teei-platform.svc.cluster.local</host>
+              <port>9000</port>
+            </replica>
+            <replica>
+              <host>clickhouse-eu-1.clickhouse-eu.teei-platform.svc.cluster.local</host>
+              <port>9000</port>
+            </replica>
+          </shard>
+          <shard>
+            <internal_replication>true</internal_replication>
+            <replica>
+              <host>clickhouse-eu-2.clickhouse-eu.teei-platform.svc.cluster.local</host>
+              <port>9000</port>
+            </replica>
+            <replica>
+              <host>clickhouse-eu-3.clickhouse-eu.teei-platform.svc.cluster.local</host>
+              <port>9000</port>
+            </replica>
+          </shard>
+        </teei_eu_cluster>
+
+        <!-- Global Cluster: Union of US + EU for cross-region queries -->
+        <teei_global_cluster>
+          <!-- US Shards -->
+          <shard>
+            <internal_replication>true</internal_replication>
+            <replica>
+              <host>clickhouse-us-0.clickhouse-us.teei-platform.svc.cluster.local</host>
+              <port>9000</port>
+            </replica>
+            <replica>
+              <host>clickhouse-us-1.clickhouse-us.teei-platform.svc.cluster.local</host>
+              <port>9000</port>
+            </replica>
+          </shard>
+          <shard>
+            <internal_replication>true</internal_replication>
+            <replica>
+              <host>clickhouse-us-2.clickhouse-us.teei-platform.svc.cluster.local</host>
+              <port>9000</port>
+            </replica>
+            <replica>
+              <host>clickhouse-us-3.clickhouse-us.teei-platform.svc.cluster.local</host>
+              <port>9000</port>
+            </replica>
+          </shard>
+          <shard>
+            <internal_replication>true</internal_replication>
+            <replica>
+              <host>clickhouse-us-4.clickhouse-us.teei-platform.svc.cluster.local</host>
+              <port>9000</port>
+            </replica>
+            <replica>
+              <host>clickhouse-us-5.clickhouse-us.teei-platform.svc.cluster.local</host>
+              <port>9000</port>
+            </replica>
+          </shard>
+          <!-- EU Shards -->
+          <shard>
+            <internal_replication>true</internal_replication>
+            <replica>
+              <host>clickhouse-eu-0.clickhouse-eu.teei-platform.svc.cluster.local</host>
+              <port>9000</port>
+            </replica>
+            <replica>
+              <host>clickhouse-eu-1.clickhouse-eu.teei-platform.svc.cluster.local</host>
+              <port>9000</port>
+            </replica>
+          </shard>
+          <shard>
+            <internal_replication>true</internal_replication>
+            <replica>
+              <host>clickhouse-eu-2.clickhouse-eu.teei-platform.svc.cluster.local</host>
+              <port>9000</port>
+            </replica>
+            <replica>
+              <host>clickhouse-eu-3.clickhouse-eu.teei-platform.svc.cluster.local</host>
+              <port>9000</port>
+            </replica>
+          </shard>
+        </teei_global_cluster>
+      </remote_servers>
+
+      <!-- ZooKeeper configuration for replication coordination -->
+      <zookeeper>
+        <node>
+          <host>zookeeper-0.zookeeper.teei-platform.svc.cluster.local</host>
+          <port>2181</port>
+        </node>
+        <node>
+          <host>zookeeper-1.zookeeper.teei-platform.svc.cluster.local</host>
+          <port>2181</port>
+        </node>
+        <node>
+          <host>zookeeper-2.zookeeper.teei-platform.svc.cluster.local</host>
+          <port>2181</port>
+        </node>
+      </zookeeper>
+
+      <!-- Distributed DDL configuration -->
+      <distributed_ddl>
+        <path>/clickhouse/task_queue/ddl</path>
+      </distributed_ddl>
+
+      <!-- Compression settings -->
+      <compression>
+        <case>
+          <min_part_size>10000000</min_part_size>
+          <min_part_size_ratio>0.01</min_part_size_ratio>
+          <method>lz4</method>
+        </case>
+      </compression>
+
+      <!-- Interserver HTTP port for replication -->
+      <interserver_http_port>9009</interserver_http_port>
+    </clickhouse>

@@ -1,25 +1,25 @@
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: teei-q2q-ai
+  name: teei-data-residency-hpa
   labels:
-    app: teei-q2q-ai
+    app: teei-data-residency
     component: backend
     part-of: teei-csr-platform
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: teei-q2q-ai
+    name: teei-data-residency
   minReplicas: 2
-  maxReplicas: 15  # FinOps: Increased for AI processing bursts
+  maxReplicas: 10
   metrics:
   - type: Resource
     resource:
       name: cpu
       target:
         type: Utilization
-        averageUtilization: 65  # FinOps: Balanced for AI workload efficiency
+        averageUtilization: 70
   - type: Resource
     resource:
       name: memory
@@ -33,12 +33,8 @@ spec:
       - type: Percent
         value: 50
         periodSeconds: 60
-      - type: Pods
-        value: 1
-        periodSeconds: 60
-      selectPolicy: Min
     scaleUp:
-      stabilizationWindowSeconds: 0
+      stabilizationWindowSeconds: 60
       policies:
       - type: Percent
         value: 100

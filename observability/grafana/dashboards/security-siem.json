@@ -1,0 +1,802 @@
+{
+  "dashboard": {
+    "title": "Security SIEM Overview",
+    "tags": ["security", "siem", "monitoring"],
+    "timezone": "utc",
+    "editable": true,
+    "graphTooltip": 1,
+    "time": {
+      "from": "now-24h",
+      "to": "now"
+    },
+    "refresh": "1m",
+    "schemaVersion": 38,
+    "version": 1,
+    "panels": [
+      {
+        "id": 1,
+        "type": "stat",
+        "title": "Active Security Alerts",
+        "gridPos": {"h": 6, "w": 4, "x": 0, "y": 0},
+        "targets": [
+          {
+            "datasource": "Prometheus",
+            "expr": "sum(siem_security_anomalies_total{severity=~\"critical|high\"})",
+            "refId": "A",
+            "legendFormat": "Active Alerts"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 5, "color": "yellow"},
+                {"value": 10, "color": "red"}
+              ]
+            },
+            "unit": "short",
+            "decimals": 0
+          }
+        },
+        "options": {
+          "graphMode": "area",
+          "colorMode": "background",
+          "textMode": "value_and_name"
+        }
+      },
+      {
+        "id": 2,
+        "type": "gauge",
+        "title": "Threat Score (0-100)",
+        "gridPos": {"h": 6, "w": 4, "x": 4, "y": 0},
+        "targets": [
+          {
+            "datasource": "Prometheus",
+            "expr": "(\n  sum(siem_security_anomalies_total{severity=\"critical\"}) * 10 +\n  sum(siem_security_anomalies_total{severity=\"high\"}) * 5 +\n  sum(siem_security_anomalies_total{severity=\"medium\"}) * 2\n) / 100 * 100",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 30, "color": "yellow"},
+                {"value": 60, "color": "orange"},
+                {"value": 80, "color": "red"}
+              ]
+            },
+            "unit": "percent",
+            "min": 0,
+            "max": 100
+          }
+        },
+        "options": {
+          "showThresholdLabels": true,
+          "showThresholdMarkers": true
+        }
+      },
+      {
+        "id": 3,
+        "type": "stat",
+        "title": "Blocked IPs (Last 24h)",
+        "gridPos": {"h": 6, "w": 4, "x": 8, "y": 0},
+        "targets": [
+          {
+            "datasource": "Prometheus",
+            "expr": "count(count by (source_ip) (siem_security_anomalies_total{anomaly_type=\"brute_force\"}))",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 10, "color": "yellow"},
+                {"value": 50, "color": "red"}
+              ]
+            },
+            "unit": "short"
+          }
+        }
+      },
+      {
+        "id": 4,
+        "type": "stat",
+        "title": "Failed Logins (Last Hour)",
+        "gridPos": {"h": 6, "w": 4, "x": 12, "y": 0},
+        "targets": [
+          {
+            "datasource": "Prometheus",
+            "expr": "sum(increase(siem_auth_events_total{success=\"false\"}[1h]))",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 100, "color": "yellow"},
+                {"value": 500, "color": "red"}
+              ]
+            },
+            "unit": "short"
+          }
+        }
+      },
+      {
+        "id": 5,
+        "type": "stat",
+        "title": "SIEM Pipeline Health",
+        "gridPos": {"h": 6, "w": 4, "x": 16, "y": 0},
+        "targets": [
+          {
+            "datasource": "Prometheus",
+            "expr": "up{job=\"vector-aggregator\"}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 1, "color": "green"}
+              ]
+            },
+            "mappings": [
+              {"type": "value", "options": {"0": {"text": "DOWN", "color": "red"}}},
+              {"type": "value", "options": {"1": {"text": "UP", "color": "green"}}}
+            ]
+          }
+        }
+      },
+      {
+        "id": 6,
+        "type": "stat",
+        "title": "Log Coverage",
+        "gridPos": {"h": 6, "w": 4, "x": 20, "y": 0},
+        "description": "Percentage of services shipping logs to SIEM",
+        "targets": [
+          {
+            "datasource": "Prometheus",
+            "expr": "(count(count by (service) (siem_auth_events_total)) / 15) * 100",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 70, "color": "yellow"},
+                {"value": 95, "color": "green"}
+              ]
+            },
+            "unit": "percent"
+          }
+        }
+      },
+      {
+        "id": 7,
+        "type": "timeseries",
+        "title": "Authentication Events",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 6},
+        "targets": [
+          {
+            "datasource": "Prometheus",
+            "expr": "sum by (success) (rate(siem_auth_events_total[5m]))",
+            "refId": "A",
+            "legendFormat": "{{success}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 20,
+              "showPoints": "never"
+            },
+            "unit": "reqps"
+          },
+          "overrides": [
+            {
+              "matcher": {"id": "byName", "options": "false"},
+              "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "red"}}]
+            },
+            {
+              "matcher": {"id": "byName", "options": "true"},
+              "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "green"}}]
+            }
+          ]
+        },
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom"
+          }
+        }
+      },
+      {
+        "id": 8,
+        "type": "barchart",
+        "title": "Failed Login Attempts by IP",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 6},
+        "targets": [
+          {
+            "datasource": "OpenSearch",
+            "query": "event_type:authentication AND success:false",
+            "aggregation": {
+              "type": "terms",
+              "field": "source_ip",
+              "size": 10
+            },
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 10, "color": "yellow"},
+                {"value": 50, "color": "red"}
+              ]
+            }
+          }
+        },
+        "options": {
+          "orientation": "horizontal",
+          "xField": "source_ip",
+          "showValue": "always"
+        }
+      },
+      {
+        "id": 9,
+        "type": "piechart",
+        "title": "Security Alerts by Severity",
+        "gridPos": {"h": 8, "w": 6, "x": 0, "y": 14},
+        "targets": [
+          {
+            "datasource": "Prometheus",
+            "expr": "sum by (severity) (siem_security_anomalies_total)",
+            "refId": "A",
+            "legendFormat": "{{severity}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short"
+          },
+          "overrides": [
+            {
+              "matcher": {"id": "byName", "options": "critical"},
+              "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "dark-red"}}]
+            },
+            {
+              "matcher": {"id": "byName", "options": "high"},
+              "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "red"}}]
+            },
+            {
+              "matcher": {"id": "byName", "options": "medium"},
+              "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "orange"}}]
+            },
+            {
+              "matcher": {"id": "byName", "options": "low"},
+              "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "yellow"}}]
+            }
+          ]
+        },
+        "options": {
+          "legend": {
+            "displayMode": "table",
+            "placement": "right",
+            "values": ["value", "percent"]
+          },
+          "pieType": "donut"
+        }
+      },
+      {
+        "id": 10,
+        "type": "piechart",
+        "title": "Security Alerts by Type",
+        "gridPos": {"h": 8, "w": 6, "x": 6, "y": 14},
+        "targets": [
+          {
+            "datasource": "Prometheus",
+            "expr": "sum by (anomaly_type) (siem_security_anomalies_total)",
+            "refId": "A",
+            "legendFormat": "{{anomaly_type}}"
+          }
+        ],
+        "options": {
+          "legend": {
+            "displayMode": "table",
+            "placement": "right",
+            "values": ["value", "percent"]
+          },
+          "pieType": "pie"
+        }
+      },
+      {
+        "id": 11,
+        "type": "stat",
+        "title": "MFA Adoption Rate",
+        "gridPos": {"h": 4, "w": 3, "x": 12, "y": 14},
+        "targets": [
+          {
+            "datasource": "OpenSearch",
+            "query": "event_type:authentication AND success:true",
+            "aggregation": {
+              "type": "filters",
+              "filters": [
+                {"label": "with_mfa", "query": "mfa_used:true"},
+                {"label": "without_mfa", "query": "mfa_used:false"}
+              ]
+            },
+            "refId": "A",
+            "calculation": "(with_mfa / (with_mfa + without_mfa)) * 100"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 70, "color": "yellow"},
+                {"value": 95, "color": "green"}
+              ]
+            },
+            "unit": "percent"
+          }
+        },
+        "options": {
+          "colorMode": "background"
+        }
+      },
+      {
+        "id": 12,
+        "type": "timeseries",
+        "title": "Authorization Denials by Service",
+        "gridPos": {"h": 8, "w": 9, "x": 15, "y": 14},
+        "targets": [
+          {
+            "datasource": "OpenSearch",
+            "query": "event_type:authorization AND status_code:(403 OR 401)",
+            "aggregation": {
+              "type": "date_histogram",
+              "field": "@timestamp",
+              "interval": "5m",
+              "terms": {
+                "field": "service",
+                "size": 5
+              }
+            },
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 10,
+              "stacking": {"mode": "normal"}
+            },
+            "unit": "short"
+          }
+        },
+        "options": {
+          "legend": {
+            "displayMode": "table",
+            "placement": "right",
+            "values": ["value", "max"]
+          }
+        }
+      },
+      {
+        "id": 13,
+        "type": "table",
+        "title": "Top Denied Users (RBAC)",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 22},
+        "targets": [
+          {
+            "datasource": "OpenSearch",
+            "query": "event_type:authorization AND status_code:(403 OR 401)",
+            "aggregation": {
+              "type": "terms",
+              "field": "user",
+              "size": 10,
+              "metrics": [
+                {"type": "count", "field": "_id", "alias": "Denials"},
+                {"type": "cardinality", "field": "resource", "alias": "Resources"}
+              ]
+            },
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "align": "left",
+              "filterable": true
+            }
+          },
+          "overrides": [
+            {
+              "matcher": {"id": "byName", "options": "Denials"},
+              "properties": [
+                {
+                  "id": "custom.cellOptions",
+                  "value": {"type": "color-background", "mode": "gradient"}
+                },
+                {
+                  "id": "thresholds",
+                  "value": {
+                    "mode": "absolute",
+                    "steps": [
+                      {"value": 0, "color": "green"},
+                      {"value": 10, "color": "yellow"},
+                      {"value": 50, "color": "red"}
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "options": {
+          "showHeader": true,
+          "sortBy": [{"displayName": "Denials", "desc": true}]
+        }
+      },
+      {
+        "id": 14,
+        "type": "timeseries",
+        "title": "Data Access Events",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 22},
+        "targets": [
+          {
+            "datasource": "Prometheus",
+            "expr": "sum by (pii_accessed, region) (rate(siem_data_access_total[5m]))",
+            "refId": "A",
+            "legendFormat": "{{region}} - PII:{{pii_accessed}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 20
+            },
+            "unit": "reqps"
+          }
+        },
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom"
+          }
+        }
+      },
+      {
+        "id": 15,
+        "type": "heatmap",
+        "title": "Failed Login Heatmap (by Hour)",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 30},
+        "targets": [
+          {
+            "datasource": "OpenSearch",
+            "query": "event_type:authentication AND success:false",
+            "aggregation": {
+              "type": "date_histogram",
+              "field": "@timestamp",
+              "interval": "1h",
+              "heatmap": {
+                "buckets": 24
+              }
+            },
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "calculate": true,
+          "cellGap": 2,
+          "color": {
+            "mode": "scheme",
+            "scheme": "Spectral",
+            "reverse": true
+          },
+          "yAxis": {
+            "unit": "short"
+          }
+        }
+      },
+      {
+        "id": 16,
+        "type": "stat",
+        "title": "PII Query Rate",
+        "gridPos": {"h": 4, "w": 3, "x": 12, "y": 30},
+        "targets": [
+          {
+            "datasource": "Prometheus",
+            "expr": "sum(rate(siem_data_access_total{pii_accessed=\"true\"}[5m]))",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 10, "color": "yellow"},
+                {"value": 50, "color": "red"}
+              ]
+            },
+            "unit": "reqps"
+          }
+        }
+      },
+      {
+        "id": 17,
+        "type": "bargauge",
+        "title": "Data Exports by Region",
+        "gridPos": {"h": 8, "w": 9, "x": 15, "y": 30},
+        "targets": [
+          {
+            "datasource": "Prometheus",
+            "expr": "sum by (region) (siem_data_export_size_bytes_sum)",
+            "refId": "A",
+            "legendFormat": "{{region}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 1073741824, "color": "yellow"},
+                {"value": 10737418240, "color": "red"}
+              ]
+            },
+            "unit": "bytes"
+          }
+        },
+        "options": {
+          "orientation": "horizontal",
+          "displayMode": "gradient",
+          "showUnfilled": true
+        }
+      },
+      {
+        "id": 18,
+        "type": "table",
+        "title": "Recent Security Alerts",
+        "gridPos": {"h": 10, "w": 24, "x": 0, "y": 38},
+        "targets": [
+          {
+            "datasource": "OpenSearch",
+            "query": "EXISTS(anomaly_type)",
+            "aggregation": {
+              "type": "top_hits",
+              "size": 20,
+              "sort": [{"@timestamp": {"order": "desc"}}],
+              "fields": ["@timestamp", "anomaly_type", "severity", "service", "region", "message"]
+            },
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "align": "left",
+              "filterable": true
+            }
+          },
+          "overrides": [
+            {
+              "matcher": {"id": "byName", "options": "severity"},
+              "properties": [
+                {
+                  "id": "custom.cellOptions",
+                  "value": {"type": "color-text"}
+                },
+                {
+                  "id": "thresholds",
+                  "value": {
+                    "mode": "absolute",
+                    "steps": [
+                      {"value": null, "color": "text"},
+                      {"value": "low", "color": "yellow"},
+                      {"value": "medium", "color": "orange"},
+                      {"value": "high", "color": "red"},
+                      {"value": "critical", "color": "dark-red"}
+                    ]
+                  }
+                },
+                {
+                  "id": "mappings",
+                  "value": [
+                    {"type": "value", "options": {"low": {"color": "yellow"}}},
+                    {"type": "value", "options": {"medium": {"color": "orange"}}},
+                    {"type": "value", "options": {"high": {"color": "red"}}},
+                    {"type": "value", "options": {"critical": {"color": "dark-red"}}}
+                  ]
+                }
+              ]
+            },
+            {
+              "matcher": {"id": "byName", "options": "@timestamp"},
+              "properties": [
+                {
+                  "id": "custom.width",
+                  "value": 180
+                }
+              ]
+            }
+          ]
+        },
+        "options": {
+          "showHeader": true,
+          "sortBy": [{"displayName": "@timestamp", "desc": true}]
+        }
+      },
+      {
+        "id": 19,
+        "type": "timeseries",
+        "title": "Change Management Activity",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 48},
+        "targets": [
+          {
+            "datasource": "OpenSearch",
+            "query": "event_type:change_management",
+            "aggregation": {
+              "type": "date_histogram",
+              "field": "@timestamp",
+              "interval": "1h",
+              "terms": {
+                "field": "environment",
+                "size": 3
+              }
+            },
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "drawStyle": "bars",
+              "barAlignment": 0,
+              "fillOpacity": 80
+            },
+            "unit": "short"
+          }
+        },
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom"
+          }
+        }
+      },
+      {
+        "id": 20,
+        "type": "table",
+        "title": "Known Bad IPs (WAF Blocks)",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 48},
+        "targets": [
+          {
+            "datasource": "OpenSearch",
+            "query": "event_type:security_alert AND alert_type:waf_block",
+            "aggregation": {
+              "type": "terms",
+              "field": "source_ip",
+              "size": 15,
+              "metrics": [
+                {"type": "count", "field": "_id", "alias": "Blocks"},
+                {"type": "max", "field": "@timestamp", "alias": "Last Seen"},
+                {"type": "terms", "field": "block_reason", "size": 1, "alias": "Reason"}
+              ]
+            },
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "align": "left"
+            }
+          },
+          "overrides": [
+            {
+              "matcher": {"id": "byName", "options": "Blocks"},
+              "properties": [
+                {
+                  "id": "custom.cellOptions",
+                  "value": {"type": "color-background", "mode": "gradient"}
+                }
+              ]
+            }
+          ]
+        },
+        "options": {
+          "showHeader": true,
+          "sortBy": [{"displayName": "Blocks", "desc": true}]
+        }
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "region",
+          "type": "query",
+          "datasource": "Prometheus",
+          "query": "label_values(siem_auth_events_total, region)",
+          "multi": true,
+          "includeAll": true,
+          "allValue": ".*"
+        },
+        {
+          "name": "service",
+          "type": "query",
+          "datasource": "Prometheus",
+          "query": "label_values(siem_auth_events_total, service)",
+          "multi": true,
+          "includeAll": true,
+          "allValue": ".*"
+        },
+        {
+          "name": "severity",
+          "type": "custom",
+          "options": [
+            {"text": "All", "value": ".*"},
+            {"text": "Critical", "value": "critical"},
+            {"text": "High", "value": "high"},
+            {"text": "Medium", "value": "medium"},
+            {"text": "Low", "value": "low"}
+          ],
+          "multi": true,
+          "includeAll": true,
+          "allValue": ".*"
+        }
+      ]
+    },
+    "annotations": {
+      "list": [
+        {
+          "name": "Security Incidents",
+          "datasource": "OpenSearch",
+          "enable": true,
+          "iconColor": "red",
+          "query": "severity:critical",
+          "textField": "message",
+          "tagsField": "anomaly_type"
+        },
+        {
+          "name": "Deployments",
+          "datasource": "OpenSearch",
+          "enable": true,
+          "iconColor": "blue",
+          "query": "event_type:change_management AND environment:production",
+          "textField": "service"
+        }
+      ]
+    }
+  }
+}

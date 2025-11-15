@@ -1,0 +1,44 @@
+# Note: PersistentVolumeClaims are managed by StatefulSet volumeClaimTemplates
+# This file documents the PVC configuration and provides manual PVC examples if needed
+
+# The StatefulSets automatically create PVCs with the following configuration:
+# - Name pattern: data-clickhouse-{us|eu}-{ordinal}
+# - StorageClass: fast-ssd
+# - Size: 200Gi per shard
+# - AccessMode: ReadWriteOnce
+
+# Manual PVC example (for testing or special cases):
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: clickhouse-backup-us
+  namespace: teei-platform
+  labels:
+    app: clickhouse
+    region: us-east-1
+    purpose: backup
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: standard
+  resources:
+    requests:
+      storage: 500Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: clickhouse-backup-eu
+  namespace: teei-platform
+  labels:
+    app: clickhouse
+    region: eu-central-1
+    purpose: backup
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: standard
+  resources:
+    requests:
+      storage: 500Gi

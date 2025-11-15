@@ -11,16 +11,16 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: teei-api-gateway
-  minReplicas: 2
+  minReplicas: 3  # FinOps: Increased for availability
   maxReplicas: 10
   metrics:
-  # CPU-based scaling
+  # CPU-based scaling (FinOps optimized)
   - type: Resource
     resource:
       name: cpu
       target:
         type: Utilization
-        averageUtilization: 70
+        averageUtilization: 70  # Target maintained for cost/performance balance
   # Memory-based scaling
   - type: Resource
     resource:

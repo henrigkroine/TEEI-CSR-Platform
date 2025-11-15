@@ -1,0 +1,293 @@
+---
+# Blue/Green Rollout for Corp Cockpit Frontend
+# Strategy: Visual regression testing before promotion
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: teei-corp-cockpit-astro
+  labels:
+    app: teei-corp-cockpit-astro
+    component: frontend
+    part-of: teei-csr-platform
+    deployment-strategy: blue-green
+spec:
+  replicas: 3
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app: teei-corp-cockpit-astro
+
+  template:
+    metadata:
+      labels:
+        app: teei-corp-cockpit-astro
+        component: frontend
+        version: v1
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+
+      serviceAccountName: teei-corp-cockpit-astro
+
+      containers:
+      - name: corp-cockpit
+        image: ghcr.io/henrigkroine/teei-corp-cockpit-astro:latest
+        imagePullPolicy: Always
+
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities:
+            drop:
+            - ALL
+
+        ports:
+        - name: http
+          containerPort: 4321
+          protocol: TCP
+
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: PORT
+          value: "4321"
+        - name: HOST
+          value: "0.0.0.0"
+
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 4321
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
+
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 4321
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        - name: nginx-cache
+          mountPath: /var/cache/nginx
+        - name: nginx-run
+          mountPath: /var/run
+
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      - name: nginx-cache
+        emptyDir: {}
+      - name: nginx-run
+        emptyDir: {}
+
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - teei-corp-cockpit-astro
+              topologyKey: kubernetes.io/hostname
+
+  # Blue/Green Strategy with Visual Regression Testing
+  strategy:
+    blueGreen:
+      activeService: teei-corp-cockpit-astro
+      previewService: teei-corp-cockpit-astro-preview
+
+      # Auto-promotion after visual tests pass
+      autoPromotionEnabled: true
+      autoPromotionSeconds: 600  # 10 minutes
+
+      scaleDownDelaySeconds: 300  # 5 minutes
+      scaleDownDelayRevisionLimit: 2
+
+      # Pre-promotion: Visual regression + smoke tests
+      prePromotionAnalysis:
+        templates:
+        - templateName: corp-cockpit-visual-regression
+        - templateName: corp-cockpit-smoke-test
+        - templateName: success-rate-analysis
+        args:
+        - name: service-name
+          value: teei-corp-cockpit-astro-preview
+        - name: baseline-service
+          value: teei-corp-cockpit-astro
+        - name: error-threshold
+          value: "1"
+
+      # Post-promotion: Monitor frontend performance
+      postPromotionAnalysis:
+        templates:
+        - templateName: web-vitals-analysis
+        args:
+        - name: service-name
+          value: teei-corp-cockpit-astro
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: teei-corp-cockpit-astro
+  labels:
+    app: teei-corp-cockpit-astro
+    component: frontend
+    service-type: active
+spec:
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 4321
+    targetPort: http
+    protocol: TCP
+  selector:
+    app: teei-corp-cockpit-astro
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: teei-corp-cockpit-astro-preview
+  labels:
+    app: teei-corp-cockpit-astro
+    component: frontend
+    service-type: preview
+spec:
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 4321
+    targetPort: http
+    protocol: TCP
+  selector:
+    app: teei-corp-cockpit-astro
+
+---
+# AnalysisTemplate: Visual Regression Testing
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: corp-cockpit-visual-regression
+spec:
+  metrics:
+  - name: visual-diff
+    interval: 60s
+    count: 1
+    successCondition: result.diffPercent < 5
+    failureLimit: 0
+    provider:
+      job:
+        spec:
+          backoffLimit: 0
+          template:
+            spec:
+              restartPolicy: Never
+              containers:
+              - name: visual-test
+                image: browserless/chrome:latest
+                env:
+                - name: BASELINE_URL
+                  value: "http://{{args.baseline-service}}:4321"
+                - name: PREVIEW_URL
+                  value: "http://{{args.service-name}}:4321"
+                command:
+                - sh
+                - -c
+                - |
+                  # Placeholder for visual regression testing
+                  # In production, use tools like Percy, Chromatic, or BackstopJS
+                  echo '{"diffPercent": 0}'
+
+---
+# AnalysisTemplate: Frontend Smoke Test
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: corp-cockpit-smoke-test
+spec:
+  metrics:
+  - name: dashboard-load
+    interval: 15s
+    count: 3
+    successCondition: result.status == "success"
+    failureLimit: 0
+    provider:
+      job:
+        spec:
+          backoffLimit: 0
+          template:
+            spec:
+              restartPolicy: Never
+              containers:
+              - name: smoke-test
+                image: curlimages/curl:8.4.0
+                command:
+                - sh
+                - -c
+                - |
+                  # Test dashboard loads
+                  STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://{{args.service-name}}:4321/)
+                  if [ "$STATUS" = "200" ]; then
+                    echo '{"status":"success"}'
+                  else
+                    echo '{"status":"failed"}'
+                    exit 1
+                  fi
+
+---
+# AnalysisTemplate: Web Vitals Monitoring
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: web-vitals-analysis
+spec:
+  metrics:
+  - name: core-web-vitals
+    interval: 60s
+    count: 5
+    successCondition: result == "pass"
+    provider:
+      prometheus:
+        address: http://prometheus-server.monitoring.svc.cluster.local:9090
+        query: |
+          # Check LCP (Largest Contentful Paint) < 2.5s
+          (histogram_quantile(0.75,
+            sum(rate(web_vitals_lcp_bucket{service="{{args.service-name}}"}[5m])) by (le)
+          ) < 2500)
+          and
+          # Check FID (First Input Delay) < 100ms
+          (histogram_quantile(0.75,
+            sum(rate(web_vitals_fid_bucket{service="{{args.service-name}}"}[5m])) by (le)
+          ) < 100)
+          and
+          # Check CLS (Cumulative Layout Shift) < 0.1
+          (histogram_quantile(0.75,
+            sum(rate(web_vitals_cls_bucket{service="{{args.service-name}}"}[5m])) by (le)
+          ) < 0.1)

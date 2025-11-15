@@ -1,0 +1,15 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: default
+
+resources:
+- success-rate-analysis.yaml
+- latency-analysis.yaml
+- genai-token-analysis.yaml
+- gdpr-compliance-analysis.yaml
+
+commonLabels:
+  component: analysis-templates
+  part-of: teei-csr-platform
+  managed-by: kustomize

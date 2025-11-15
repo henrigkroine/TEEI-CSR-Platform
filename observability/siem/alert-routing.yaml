@@ -1,0 +1,575 @@
+# SIEM Alert Routing Configuration
+# Defines how security alerts are routed to different channels based on severity and type
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alert-routing-config
+  namespace: siem
+  labels:
+    app: siem
+    component: alert-router
+data:
+  routing-rules.yaml: |
+    # Global settings
+    global:
+      resolve_timeout: 5m
+      pagerduty_url: https://events.pagerduty.com/v2/enqueue
+      slack_api_url: https://slack.com/api/chat.postMessage
+      jira_url: https://teei.atlassian.net
+      email_from: siem-alerts@teei-csr.com
+      smtp_smarthost: smtp.sendgrid.net:587
+
+    # Severity routing matrix
+    routes:
+      # Critical alerts (P1) - Immediate paging
+      - name: critical-alerts
+        match:
+          severity: critical
+        receivers:
+          - pagerduty-security-oncall
+          - slack-security-incidents
+          - email-leadership
+          - jira-security-incidents
+        group_by: ['alert_name', 'severity']
+        group_wait: 10s
+        group_interval: 5m
+        repeat_interval: 4h
+        continue: false
+
+      # High severity (P2) - Page security team within 15min
+      - name: high-severity-alerts
+        match:
+          severity: high
+        receivers:
+          - pagerduty-security-oncall
+          - slack-security-alerts
+          - jira-security-issues
+        group_by: ['alert_name', 'service']
+        group_wait: 30s
+        group_interval: 10m
+        repeat_interval: 8h
+        continue: false
+
+      # Medium severity (P3) - Slack notification, next business day
+      - name: medium-severity-alerts
+        match:
+          severity: medium
+        receivers:
+          - slack-security-alerts
+          - email-security-team
+        group_by: ['alert_name']
+        group_wait: 5m
+        group_interval: 30m
+        repeat_interval: 24h
+        continue: false
+
+      # Low severity (P4) - Batch and email daily digest
+      - name: low-severity-alerts
+        match:
+          severity: low
+        receivers:
+          - email-daily-digest
+        group_by: ['day']
+        group_wait: 1h
+        group_interval: 24h
+        repeat_interval: 7d
+        continue: false
+
+      # GDPR-related alerts - Special routing to DPO and legal
+      - name: gdpr-compliance-alerts
+        match:
+          compliance_tags: gdpr
+        receivers:
+          - pagerduty-compliance-team
+          - slack-compliance-alerts
+          - email-dpo
+          - email-legal
+          - jira-compliance
+        group_by: ['alert_name']
+        group_wait: 10s
+        group_interval: 5m
+        repeat_interval: 1h
+        continue: true  # Also route via severity
+
+      # SOC2-related alerts - Route to compliance team
+      - name: soc2-compliance-alerts
+        match:
+          compliance_tags: soc2
+        receivers:
+          - slack-compliance-alerts
+          - email-compliance-team
+          - jira-compliance
+        group_by: ['alert_name', 'control']
+        group_wait: 5m
+        group_interval: 15m
+        repeat_interval: 12h
+        continue: true
+
+      # Data exfiltration - Special escalation path
+      - name: data-exfiltration-alerts
+        match:
+          alert_name: "Large Data Export Outside Business Hours"
+        receivers:
+          - pagerduty-security-oncall
+          - slack-security-incidents
+          - email-dpo
+          - email-ciso
+          - jira-security-incidents
+        group_by: ['user', 'table']
+        group_wait: 10s
+        group_interval: 5m
+        repeat_interval: 2h
+        continue: false
+
+      # Privilege escalation - Immediate response
+      - name: privilege-escalation-alerts
+        match:
+          alert_name: "Privilege Escalation Detection"
+        receivers:
+          - pagerduty-security-oncall
+          - slack-security-incidents
+          - email-sre-leads
+        group_by: ['service_account', 'pod_name']
+        group_wait: 10s
+        group_interval: 5m
+        repeat_interval: 1h
+        auto_remediation:
+          enabled: true
+          action: revoke_access
+        continue: false
+
+      # Certificate rotation failures - SRE team
+      - name: cert-rotation-failures
+        match:
+          alert_name: "Certificate Rotation Failure"
+        receivers:
+          - pagerduty-sre-oncall
+          - slack-sre-incidents
+          - jira-ops-incidents
+        group_by: ['cert_name', 'service']
+        group_wait: 10s
+        group_interval: 5m
+        repeat_interval: 30m
+        auto_remediation:
+          enabled: true
+          playbook: cert-emergency-rotation
+        continue: false
+
+    # Receiver definitions
+    receivers:
+      # PagerDuty integrations
+      - name: pagerduty-security-oncall
+        pagerduty:
+          service_key: ${PAGERDUTY_SECURITY_KEY}
+          severity: critical
+          url: https://teei-csr.pagerduty.com
+          client: SIEM Alert Router
+          client_url: https://siem.teei-csr.com
+          description: "{{ .GroupLabels.alert_name }}: {{ .CommonAnnotations.message }}"
+          details:
+            severity: "{{ .CommonLabels.severity }}"
+            service: "{{ .CommonLabels.service }}"
+            namespace: "{{ .CommonLabels.namespace }}"
+            region: "{{ .CommonLabels.region }}"
+            timestamp: "{{ .CommonLabels.timestamp }}"
+
+      - name: pagerduty-sre-oncall
+        pagerduty:
+          service_key: ${PAGERDUTY_SRE_KEY}
+          severity: high
+          url: https://teei-csr.pagerduty.com
+          client: SIEM Alert Router
+          description: "{{ .GroupLabels.alert_name }}"
+
+      - name: pagerduty-compliance-team
+        pagerduty:
+          service_key: ${PAGERDUTY_COMPLIANCE_KEY}
+          severity: high
+          url: https://teei-csr.pagerduty.com
+          client: SIEM Alert Router
+          description: "Compliance Alert: {{ .GroupLabels.alert_name }}"
+
+      # Slack integrations
+      - name: slack-security-incidents
+        slack:
+          api_url: ${SLACK_WEBHOOK_SECURITY_INCIDENTS}
+          channel: '#security-incidents'
+          username: SIEM Alert Bot
+          icon_emoji: ':rotating_light:'
+          title: '{{ .GroupLabels.severity | toUpper }} - {{ .GroupLabels.alert_name }}'
+          text: |
+            *Alert*: {{ .GroupLabels.alert_name }}
+            *Severity*: {{ .GroupLabels.severity }}
+            *Service*: {{ .CommonLabels.service }}
+            *Region*: {{ .CommonLabels.region }}
+            *Message*: {{ .CommonAnnotations.message }}
+            *Timestamp*: {{ .CommonLabels.timestamp }}
+
+            <https://siem.teei-csr.com/app/discover#/?_g=(filters:!(),refreshInterval:(pause:!t,value:0),time:(from:now-1h,to:now))&_a=(columns:!(_source),filters:!(),index:'security-events-*',interval:auto,query:(language:kuery,query:'alert_name:"{{ .GroupLabels.alert_name }}"'),sort:!(!('@timestamp',desc)))|View in OpenSearch>
+          color: danger
+          send_resolved: true
+
+      - name: slack-security-alerts
+        slack:
+          api_url: ${SLACK_WEBHOOK_SECURITY_ALERTS}
+          channel: '#security-alerts'
+          username: SIEM Alert Bot
+          icon_emoji: ':warning:'
+          title: '{{ .GroupLabels.alert_name }}'
+          text: '{{ .CommonAnnotations.message }}'
+          color: warning
+          send_resolved: true
+
+      - name: slack-compliance-alerts
+        slack:
+          api_url: ${SLACK_WEBHOOK_COMPLIANCE}
+          channel: '#compliance-alerts'
+          username: Compliance Bot
+          icon_emoji: ':clipboard:'
+          title: 'Compliance Alert: {{ .GroupLabels.alert_name }}'
+          text: |
+            *Control*: {{ .CommonLabels.control }}
+            *Tags*: {{ .CommonLabels.compliance_tags }}
+            *Message*: {{ .CommonAnnotations.message }}
+          color: '#FF9900'
+
+      - name: slack-sre-incidents
+        slack:
+          api_url: ${SLACK_WEBHOOK_SRE}
+          channel: '#sre-incidents'
+          username: SRE Alert Bot
+          icon_emoji: ':fire:'
+          title: 'SRE Incident: {{ .GroupLabels.alert_name }}'
+          text: '{{ .CommonAnnotations.message }}'
+          color: danger
+
+      # Email integrations
+      - name: email-leadership
+        email:
+          to: 'ciso@teei-csr.com,cto@teei-csr.com'
+          from: 'siem-alerts@teei-csr.com'
+          smarthost: smtp.sendgrid.net:587
+          auth_username: ${SENDGRID_USERNAME}
+          auth_password: ${SENDGRID_PASSWORD}
+          require_tls: true
+          subject: 'CRITICAL SECURITY ALERT: {{ .GroupLabels.alert_name }}'
+          body: |
+            A critical security alert has been triggered:
+
+            Alert: {{ .GroupLabels.alert_name }}
+            Severity: {{ .GroupLabels.severity }}
+            Service: {{ .CommonLabels.service }}
+            Region: {{ .CommonLabels.region }}
+            Timestamp: {{ .CommonLabels.timestamp }}
+
+            Details:
+            {{ .CommonAnnotations.message }}
+
+            View in SIEM: https://siem.teei-csr.com
+
+            This is an automated alert from the TEEI SIEM system.
+
+      - name: email-dpo
+        email:
+          to: 'dpo@teei-csr.com'
+          from: 'siem-alerts@teei-csr.com'
+          smarthost: smtp.sendgrid.net:587
+          auth_username: ${SENDGRID_USERNAME}
+          auth_password: ${SENDGRID_PASSWORD}
+          require_tls: true
+          subject: 'Data Protection Alert: {{ .GroupLabels.alert_name }}'
+          body: |
+            A data protection alert has been triggered:
+
+            {{ .CommonAnnotations.message }}
+
+            Compliance Tags: {{ .CommonLabels.compliance_tags }}
+            Region: {{ .CommonLabels.region }}
+            User: {{ .CommonLabels.user }}
+
+            Immediate review required.
+
+      - name: email-legal
+        email:
+          to: 'legal@teei-csr.com'
+          from: 'siem-alerts@teei-csr.com'
+          smarthost: smtp.sendgrid.net:587
+          auth_username: ${SENDGRID_USERNAME}
+          auth_password: ${SENDGRID_PASSWORD}
+          require_tls: true
+          subject: 'Legal Review Required: {{ .GroupLabels.alert_name }}'
+
+      - name: email-security-team
+        email:
+          to: 'security-team@teei-csr.com'
+          from: 'siem-alerts@teei-csr.com'
+          smarthost: smtp.sendgrid.net:587
+          auth_username: ${SENDGRID_USERNAME}
+          auth_password: ${SENDGRID_PASSWORD}
+          require_tls: true
+          subject: 'Security Alert: {{ .GroupLabels.alert_name }}'
+
+      - name: email-compliance-team
+        email:
+          to: 'compliance-team@teei-csr.com'
+          from: 'siem-alerts@teei-csr.com'
+          smarthost: smtp.sendgrid.net:587
+          auth_username: ${SENDGRID_USERNAME}
+          auth_password: ${SENDGRID_PASSWORD}
+          require_tls: true
+          subject: 'Compliance Alert: {{ .GroupLabels.alert_name }}'
+
+      - name: email-sre-leads
+        email:
+          to: 'sre-leads@teei-csr.com'
+          from: 'siem-alerts@teei-csr.com'
+          smarthost: smtp.sendgrid.net:587
+          auth_username: ${SENDGRID_USERNAME}
+          auth_password: ${SENDGRID_PASSWORD}
+          require_tls: true
+          subject: 'SRE Alert: {{ .GroupLabels.alert_name }}'
+
+      - name: email-ciso
+        email:
+          to: 'ciso@teei-csr.com'
+          from: 'siem-alerts@teei-csr.com'
+          smarthost: smtp.sendgrid.net:587
+          auth_username: ${SENDGRID_USERNAME}
+          auth_password: ${SENDGRID_PASSWORD}
+          require_tls: true
+          subject: 'CISO NOTIFICATION: {{ .GroupLabels.alert_name }}'
+
+      - name: email-daily-digest
+        email:
+          to: 'security-team@teei-csr.com'
+          from: 'siem-alerts@teei-csr.com'
+          smarthost: smtp.sendgrid.net:587
+          auth_username: ${SENDGRID_USERNAME}
+          auth_password: ${SENDGRID_PASSWORD}
+          require_tls: true
+          subject: 'Daily Security Alert Digest - {{ now | date "2006-01-02" }}'
+          body: |
+            Daily Security Alert Summary
+
+            Total Alerts: {{ .Alerts | len }}
+
+            {{ range .Alerts }}
+            - {{ .Labels.alert_name }}: {{ .Annotations.message }}
+            {{ end }}
+
+      # Jira integrations
+      - name: jira-security-incidents
+        jira:
+          url: ${JIRA_URL}
+          username: ${JIRA_USERNAME}
+          password: ${JIRA_API_TOKEN}
+          project: SEC
+          issue_type: Security Incident
+          priority: Highest
+          labels:
+            - siem-automated
+            - '{{ .CommonLabels.severity }}'
+            - '{{ .CommonLabels.region }}'
+          summary: '{{ .GroupLabels.alert_name }}'
+          description: |
+            h2. Security Incident Alert
+
+            *Alert Name*: {{ .GroupLabels.alert_name }}
+            *Severity*: {{ .CommonLabels.severity }}
+            *Service*: {{ .CommonLabels.service }}
+            *Region*: {{ .CommonLabels.region }}
+            *Timestamp*: {{ .CommonLabels.timestamp }}
+
+            h3. Details
+            {{ .CommonAnnotations.message }}
+
+            h3. SIEM Link
+            [View in OpenSearch|https://siem.teei-csr.com]
+
+            This ticket was automatically created by the SIEM alert router.
+          assignee: security-oncall
+
+      - name: jira-security-issues
+        jira:
+          url: ${JIRA_URL}
+          username: ${JIRA_USERNAME}
+          password: ${JIRA_API_TOKEN}
+          project: SEC
+          issue_type: Security Issue
+          priority: High
+          labels: ['siem-automated']
+          summary: '{{ .GroupLabels.alert_name }}'
+
+      - name: jira-compliance
+        jira:
+          url: ${JIRA_URL}
+          username: ${JIRA_USERNAME}
+          password: ${JIRA_API_TOKEN}
+          project: COMPLIANCE
+          issue_type: Compliance Issue
+          priority: High
+          labels:
+            - siem-automated
+            - '{{ .CommonLabels.compliance_tags }}'
+          summary: 'Compliance Alert: {{ .GroupLabels.alert_name }}'
+          assignee: dpo
+
+      - name: jira-ops-incidents
+        jira:
+          url: ${JIRA_URL}
+          username: ${JIRA_USERNAME}
+          password: ${JIRA_API_TOKEN}
+          project: OPS
+          issue_type: Incident
+          priority: High
+          labels: ['siem-automated', 'ops']
+          summary: '{{ .GroupLabels.alert_name }}'
+
+    # Inhibition rules - prevent alert storms
+    inhibit_rules:
+      # If critical alert is firing, suppress medium/low from same source
+      - source_match:
+          severity: critical
+        target_match_re:
+          severity: medium|low
+        equal: ['service', 'namespace']
+
+      # If GDPR violation alert is firing, suppress general data access alerts
+      - source_match:
+          alert_name: "EU PII Accessed from US Region"
+        target_match:
+          event_type: data_access
+        equal: ['user', 'table']
+
+      # If brute force detected, suppress individual failed login alerts
+      - source_match:
+          alert_name: "Brute Force Attack Detection"
+        target_match:
+          event_type: authentication
+        equal: ['source_ip']
+
+---
+# Alert Router Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alert-router
+  namespace: siem
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: alert-router
+  template:
+    metadata:
+      labels:
+        app: alert-router
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9093"
+    spec:
+      containers:
+        - name: alertmanager
+          image: prom/alertmanager:v0.26.0
+          args:
+            - '--config.file=/etc/alertmanager/routing-rules.yaml'
+            - '--storage.path=/alertmanager'
+            - '--web.external-url=https://alerts.teei-csr.com'
+            - '--cluster.listen-address=0.0.0.0:9094'
+          env:
+            - name: PAGERDUTY_SECURITY_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: pagerduty-keys
+                  key: security-key
+            - name: PAGERDUTY_SRE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: pagerduty-keys
+                  key: sre-key
+            - name: PAGERDUTY_COMPLIANCE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: pagerduty-keys
+                  key: compliance-key
+            - name: SLACK_WEBHOOK_SECURITY_INCIDENTS
+              valueFrom:
+                secretKeyRef:
+                  name: slack-webhooks
+                  key: security-incidents
+            - name: SLACK_WEBHOOK_SECURITY_ALERTS
+              valueFrom:
+                secretKeyRef:
+                  name: slack-webhooks
+                  key: security-alerts
+            - name: SLACK_WEBHOOK_COMPLIANCE
+              valueFrom:
+                secretKeyRef:
+                  name: slack-webhooks
+                  key: compliance
+            - name: SLACK_WEBHOOK_SRE
+              valueFrom:
+                secretKeyRef:
+                  name: slack-webhooks
+                  key: sre
+            - name: SENDGRID_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: sendgrid-credentials
+                  key: username
+            - name: SENDGRID_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: sendgrid-credentials
+                  key: password
+            - name: JIRA_URL
+              value: "https://teei.atlassian.net"
+            - name: JIRA_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: jira-credentials
+                  key: username
+            - name: JIRA_API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: jira-credentials
+                  key: api-token
+          ports:
+            - containerPort: 9093
+              name: web
+            - containerPort: 9094
+              name: cluster
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          volumeMounts:
+            - name: config
+              mountPath: /etc/alertmanager
+            - name: storage
+              mountPath: /alertmanager
+      volumes:
+        - name: config
+          configMap:
+            name: alert-routing-config
+        - name: storage
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: alert-router
+  namespace: siem
+spec:
+  type: ClusterIP
+  ports:
+    - port: 9093
+      name: web
+    - port: 9094
+      name: cluster
+  selector:
+    app: alert-router

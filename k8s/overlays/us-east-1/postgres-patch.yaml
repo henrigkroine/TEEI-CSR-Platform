@@ -1,0 +1,101 @@
+---
+# US East 1 - Primary Database Configuration
+# This overlay configures PostgreSQL as the PRIMARY instance
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  labels:
+    region: us-east-1
+    role: primary
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        region: us-east-1
+        role: primary
+      annotations:
+        replication.postgres/role: primary
+        replication.postgres/region: us-east-1
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: topology.kubernetes.io/region
+                    operator: In
+                    values:
+                      - us-east-1
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - postgres
+                topologyKey: kubernetes.io/hostname
+      containers:
+        - name: postgres
+          env:
+            - name: POSTGRES_ROLE
+              value: "primary"
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+            - name: REPLICATION_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: REPLICATION_USER
+            - name: REPLICATION_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: REPLICATION_PASSWORD
+          # Additional primary-specific configuration
+          command:
+            - sh
+            - -c
+            - |
+              # Set cluster region for tracking
+              export PGDATA=/var/lib/postgresql/data/pgdata
+
+              # Start PostgreSQL
+              docker-entrypoint.sh postgres \
+                -c config_file=/etc/postgresql/postgresql.conf \
+                -c hba_file=/etc/postgresql/pg_hba.conf
+  volumeClaimTemplates:
+    - metadata:
+        name: postgres-data
+        labels:
+          region: us-east-1
+      spec:
+        storageClassName: gp3
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 200Gi  # Larger for primary
+---
+# Service patch for US East 1
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-primary
+  labels:
+    region: us-east-1
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    service.beta.kubernetes.io/aws-load-balancer-internal: "true"
+    service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+    external-dns.alpha.kubernetes.io/hostname: postgres-primary-us.teei.internal
+spec:
+  selector:
+    app: postgres
+    role: primary
+    region: us-east-1

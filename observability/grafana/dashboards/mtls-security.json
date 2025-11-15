@@ -1,0 +1,361 @@
+{
+  "dashboard": {
+    "title": "mTLS Security & Service Mesh",
+    "tags": ["istio", "mtls", "security", "service-mesh"],
+    "timezone": "utc",
+    "schemaVersion": 38,
+    "version": 1,
+    "refresh": "30s",
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "mTLS Connection Success Rate",
+        "type": "stat",
+        "gridPos": {"x": 0, "y": 0, "w": 6, "h": 4},
+        "targets": [
+          {
+            "expr": "sum(rate(istio_requests_total{response_code=\"200\",security_policy=\"mutual_tls\"}[5m])) / sum(rate(istio_requests_total[5m])) * 100",
+            "legendFormat": "Success Rate %",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 95, "color": "yellow"},
+                {"value": 99, "color": "green"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "Certificate Expiry Timeline",
+        "type": "table",
+        "gridPos": {"x": 6, "y": 0, "w": 10, "h": 4},
+        "targets": [
+          {
+            "expr": "(certmanager_certificate_expiration_timestamp_seconds - time()) / 3600",
+            "legendFormat": "{{name}} - {{namespace}}",
+            "refId": "A",
+            "format": "table"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "h",
+            "custom": {
+              "displayMode": "color-background"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 6, "color": "orange"},
+                {"value": 24, "color": "yellow"},
+                {"value": 168, "color": "green"}
+              ]
+            }
+          }
+        },
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "renameByName": {
+                "name": "Certificate",
+                "namespace": "Namespace",
+                "Value": "Hours Until Expiry"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "mTLS Failures Over Time",
+        "type": "graph",
+        "gridPos": {"x": 16, "y": 0, "w": 8, "h": 4},
+        "targets": [
+          {
+            "expr": "sum(rate(istio_requests_total{response_code=~\"4..\",security_policy=\"mutual_tls\"}[5m])) by (response_code)",
+            "legendFormat": "{{response_code}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"format": "reqps", "label": "Requests/sec"},
+          {"format": "short"}
+        ],
+        "alert": {
+          "name": "High mTLS Failure Rate",
+          "conditions": [
+            {
+              "evaluator": {"type": "gt", "params": [0.05]},
+              "query": {"params": ["A", "5m", "now"]},
+              "reducer": {"type": "avg"}
+            }
+          ],
+          "frequency": "1m",
+          "for": "5m",
+          "message": "mTLS failure rate exceeds 5%"
+        }
+      },
+      {
+        "id": 4,
+        "title": "Service-to-Service mTLS Traffic",
+        "type": "graph",
+        "gridPos": {"x": 0, "y": 4, "w": 12, "h": 6},
+        "targets": [
+          {
+            "expr": "sum(rate(istio_tcp_connections_opened_total{security_policy=\"mutual_tls\"}[5m])) by (source_app, destination_app)",
+            "legendFormat": "{{source_app}} -> {{destination_app}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"format": "cps", "label": "Connections/sec"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Authorization Policy Denials",
+        "type": "graph",
+        "gridPos": {"x": 12, "y": 4, "w": 12, "h": 6},
+        "targets": [
+          {
+            "expr": "sum(rate(istio_requests_total{response_code=\"403\"}[5m])) by (source_app, destination_app)",
+            "legendFormat": "{{source_app}} -> {{destination_app}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"format": "reqps", "label": "Denials/sec"},
+          {"format": "short"}
+        ],
+        "alert": {
+          "name": "High Authorization Denials",
+          "conditions": [
+            {
+              "evaluator": {"type": "gt", "params": [10]},
+              "query": {"params": ["A", "5m", "now"]},
+              "reducer": {"type": "avg"}
+            }
+          ],
+          "frequency": "1m",
+          "for": "5m",
+          "message": "Authorization denials exceed threshold"
+        }
+      },
+      {
+        "id": 6,
+        "title": "Istio Control Plane Health",
+        "type": "stat",
+        "gridPos": {"x": 0, "y": 10, "w": 4, "h": 3},
+        "targets": [
+          {
+            "expr": "sum(up{job=\"istio-pilot\"})",
+            "legendFormat": "Pilot Instances",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 1, "color": "yellow"},
+                {"value": 2, "color": "green"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 7,
+        "title": "Certificate Rotation Events",
+        "type": "stat",
+        "gridPos": {"x": 4, "y": 10, "w": 4, "h": 3},
+        "targets": [
+          {
+            "expr": "sum(increase(certmanager_certificate_ready_status{condition=\"True\"}[24h]))",
+            "legendFormat": "Rotations (24h)",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "mTLS Handshake Latency (p95)",
+        "type": "stat",
+        "gridPos": {"x": 8, "y": 10, "w": 4, "h": 3},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(istio_request_duration_milliseconds_bucket{security_policy=\"mutual_tls\"}[5m])) by (le))",
+            "legendFormat": "p95 Latency",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ms",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 5, "color": "yellow"},
+                {"value": 10, "color": "red"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 9,
+        "title": "Cross-Region mTLS Latency",
+        "type": "graph",
+        "gridPos": {"x": 12, "y": 10, "w": 12, "h": 6},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(istio_request_duration_milliseconds_bucket{destination_service_namespace=~\".*eu.cluster.local|.*us.cluster.local\"}[5m])) by (le, destination_service_namespace))",
+            "legendFormat": "{{destination_service_namespace}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"format": "ms", "label": "Latency (p95)"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 10,
+        "title": "Sidecar Proxy Resource Usage",
+        "type": "graph",
+        "gridPos": {"x": 0, "y": 16, "w": 12, "h": 6},
+        "targets": [
+          {
+            "expr": "sum(container_memory_usage_bytes{container=\"istio-proxy\"}) by (pod)",
+            "legendFormat": "{{pod}} - Memory",
+            "refId": "A"
+          },
+          {
+            "expr": "sum(rate(container_cpu_usage_seconds_total{container=\"istio-proxy\"}[5m])) by (pod) * 1000",
+            "legendFormat": "{{pod}} - CPU",
+            "refId": "B"
+          }
+        ],
+        "yaxes": [
+          {"format": "bytes", "label": "Memory"},
+          {"format": "millicores", "label": "CPU"}
+        ]
+      },
+      {
+        "id": 11,
+        "title": "Certificate Errors",
+        "type": "logs",
+        "gridPos": {"x": 12, "y": 16, "w": 12, "h": 6},
+        "targets": [
+          {
+            "expr": "{job=\"istio-pilot\"} |~ \"certificate|cert|tls\" |~ \"error|failed|invalid\"",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 12,
+        "title": "mTLS Mode by Namespace",
+        "type": "table",
+        "gridPos": {"x": 0, "y": 22, "w": 12, "h": 6},
+        "targets": [
+          {
+            "expr": "istio_build{component=\"pilot\"} * on(namespace) group_left(mtls_mode) kube_namespace_labels",
+            "refId": "A",
+            "format": "table"
+          }
+        ],
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "renameByName": {
+                "namespace": "Namespace",
+                "mtls_mode": "mTLS Mode"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": 13,
+        "title": "Top Services by mTLS Traffic Volume",
+        "type": "table",
+        "gridPos": {"x": 12, "y": 22, "w": 12, "h": 6},
+        "targets": [
+          {
+            "expr": "topk(10, sum(rate(istio_requests_total{security_policy=\"mutual_tls\"}[5m])) by (destination_service))",
+            "refId": "A",
+            "format": "table"
+          }
+        ],
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "renameByName": {
+                "destination_service": "Service",
+                "Value": "Requests/sec"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "namespace",
+          "type": "query",
+          "query": "label_values(istio_requests_total, destination_service_namespace)",
+          "multi": true,
+          "includeAll": true
+        },
+        {
+          "name": "service",
+          "type": "query",
+          "query": "label_values(istio_requests_total{destination_service_namespace=~\"$namespace\"}, destination_service)",
+          "multi": true,
+          "includeAll": true
+        }
+      ]
+    },
+    "annotations": {
+      "list": [
+        {
+          "name": "Certificate Rotations",
+          "datasource": "Prometheus",
+          "expr": "changes(certmanager_certificate_ready_status[5m]) > 0",
+          "iconColor": "blue",
+          "tagKeys": "name,namespace"
+        },
+        {
+          "name": "mTLS Failures",
+          "datasource": "Prometheus",
+          "expr": "rate(istio_requests_total{response_code=\"403\"}[5m]) > 1",
+          "iconColor": "red",
+          "tagKeys": "source_app,destination_app"
+        }
+      ]
+    }
+  }
+}

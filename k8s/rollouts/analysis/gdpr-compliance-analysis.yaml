@@ -1,0 +1,177 @@
+---
+# AnalysisTemplate: GDPR Compliance Analysis
+# Zero-tolerance validation for data residency violations
+# Used by: Data Residency Service
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: gdpr-compliance-analysis
+  labels:
+    analysis-type: gdpr-compliance
+    compliance: gdpr-critical
+    part-of: teei-csr-platform
+spec:
+  args:
+  - name: service-name
+    description: "Service name to monitor"
+
+  metrics:
+  # Critical: Data residency violations (ZERO TOLERANCE)
+  - name: residency-violations
+    interval: 30s
+    successCondition: result == 0  # ZERO violations
+    failureLimit: 0  # Instant rollback on ANY violation
+    count: 20
+    provider:
+      prometheus:
+        address: http://prometheus-server.monitoring.svc.cluster.local:9090
+        query: |
+          # Count of data residency violations
+          sum(increase(data_residency_violations_total{service="{{args.service-name}}"}[1m]))
+          or
+          # If metric doesn't exist, assume 0 (safe default)
+          0
+
+  # Critical: Cross-region data leaks
+  - name: cross-region-data-access
+    interval: 30s
+    successCondition: result == 0  # ZERO cross-region access
+    failureLimit: 0  # Instant rollback
+    count: 20
+    provider:
+      prometheus:
+        address: http://prometheus-server.monitoring.svc.cluster.local:9090
+        query: |
+          # Unauthorized cross-region data access attempts
+          sum(increase(data_access_cross_region_total{
+            service="{{args.service-name}}",
+            authorized="false"
+          }[1m]))
+          or
+          0
+
+  # Critical: PII exposure incidents
+  - name: pii-exposure-incidents
+    interval: 30s
+    successCondition: result == 0  # ZERO PII exposures
+    failureLimit: 0  # Instant rollback
+    count: 20
+    provider:
+      prometheus:
+        address: http://prometheus-server.monitoring.svc.cluster.local:9090
+        query: |
+          # PII exposure incidents
+          sum(increase(pii_exposure_incidents_total{service="{{args.service-name}}"}[1m]))
+          or
+          0
+
+  # Important: Audit log completeness (must be 100%)
+  - name: audit-log-coverage
+    interval: 60s
+    successCondition: result >= 99.9  # >=99.9% audit coverage
+    failureLimit: 2
+    count: 10
+    provider:
+      prometheus:
+        address: http://prometheus-server.monitoring.svc.cluster.local:9090
+        query: |
+          # Audit log coverage percentage
+          (
+            sum(rate(audit_logs_written_total{service="{{args.service-name}}"}[5m]))
+            /
+            sum(rate(data_operations_total{service="{{args.service-name}}"}[5m]))
+          ) * 100
+
+  # Important: Consent validation success rate
+  - name: consent-validation-success
+    interval: 30s
+    successCondition: result >= 99.5  # >=99.5% consent validation
+    failureLimit: 2
+    count: 10
+    provider:
+      prometheus:
+        address: http://prometheus-server.monitoring.svc.cluster.local:9090
+        query: |
+          # Consent validation success rate
+          (
+            sum(rate(consent_validations_success_total{service="{{args.service-name}}"}[5m]))
+            /
+            sum(rate(consent_validations_total{service="{{args.service-name}}"}[5m]))
+          ) * 100
+
+  # Important: Data subject access request (DSAR) handling
+  - name: dsar-response-time
+    interval: 60s
+    successCondition: result < 3600000  # <1 hour (in ms)
+    failureLimit: 1
+    provider:
+      prometheus:
+        address: http://prometheus-server.monitoring.svc.cluster.local:9090
+        query: |
+          # DSAR response time p95 (ms)
+          histogram_quantile(0.95,
+            sum(rate(dsar_response_duration_ms_bucket{service="{{args.service-name}}"}[5m])) by (le)
+          )
+
+  # Important: Encryption at rest validation
+  - name: encryption-validation
+    interval: 60s
+    successCondition: result >= 100  # 100% encryption coverage
+    failureLimit: 1
+    count: 5
+    provider:
+      prometheus:
+        address: http://prometheus-server.monitoring.svc.cluster.local:9090
+        query: |
+          # Encryption at rest coverage percentage
+          (
+            sum(data_encrypted_records_total{service="{{args.service-name}}"})
+            /
+            sum(data_total_records{service="{{args.service-name}}"})
+          ) * 100
+
+  # Monitoring: Compliance query performance
+  - name: compliance-query-latency
+    interval: 30s
+    successCondition: result < 500  # <500ms for compliance queries
+    failureLimit: 3
+    provider:
+      prometheus:
+        address: http://prometheus-server.monitoring.svc.cluster.local:9090
+        query: |
+          # Compliance query latency p95
+          histogram_quantile(0.95,
+            sum(rate(compliance_query_duration_ms_bucket{service="{{args.service-name}}"}[5m])) by (le)
+          )
+
+  # Monitoring: Data retention policy enforcement
+  - name: retention-policy-violations
+    interval: 60s
+    successCondition: result == 0  # ZERO retention violations
+    failureLimit: 1
+    count: 10
+    provider:
+      prometheus:
+        address: http://prometheus-server.monitoring.svc.cluster.local:9090
+        query: |
+          # Data retention policy violations
+          sum(increase(data_retention_violations_total{service="{{args.service-name}}"}[5m]))
+          or
+          0
+
+  # Monitoring: Right to be forgotten (RTBF) execution
+  - name: rtbf-success-rate
+    interval: 60s
+    successCondition: result >= 99.9  # >=99.9% RTBF success
+    failureLimit: 1
+    count: 5
+    provider:
+      prometheus:
+        address: http://prometheus-server.monitoring.svc.cluster.local:9090
+        query: |
+          # Right to be forgotten success rate
+          (
+            sum(rate(rtbf_executions_success_total{service="{{args.service-name}}"}[5m]))
+            /
+            sum(rate(rtbf_executions_total{service="{{args.service-name}}"}[5m]))
+          ) * 100

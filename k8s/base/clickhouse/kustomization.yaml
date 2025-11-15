@@ -1,0 +1,42 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: teei-platform
+
+commonLabels:
+  platform: teei
+  component: clickhouse
+  managed-by: kustomize
+
+resources:
+  - statefulset-us.yaml
+  - statefulset-eu.yaml
+  - service.yaml
+  - configmap.yaml
+  - secret.yaml
+  - pvc.yaml
+
+configMapGenerator:
+  - name: clickhouse-cluster-config
+    files:
+      - config.d/clusters.xml
+
+generatorOptions:
+  disableNameSuffixHash: true
+
+# Configure resource limits per environment
+patches:
+  - target:
+      kind: StatefulSet
+      name: clickhouse-us
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/cpu
+        value: "2"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/memory
+        value: 8Gi
+
+images:
+  - name: clickhouse/clickhouse-server
+    newTag: "23.8"

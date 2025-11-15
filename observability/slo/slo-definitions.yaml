@@ -1,0 +1,443 @@
+# TEEI CSR Platform - SLO Definitions
+# Ref: AGENTS.md § Phase G - slo-gatekeeper
+# Google SRE SLO Methodology: https://sre.google/workbook/implementing-slos/
+#
+# SLO Structure:
+# - Service Level Indicator (SLI): The metric being measured
+# - Service Level Objective (SLO): The target value for the SLI
+# - Error Budget: (1 - SLO) × total events in measurement window
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: slo-definitions
+  namespace: monitoring
+  labels:
+    app: prometheus
+    component: slo
+data:
+  slo-definitions.yaml: |
+    # ============================================================================
+    # AVAILABILITY SLOs
+    # ============================================================================
+
+    availability_slos:
+      # Critical: API Gateway (public-facing, all client traffic)
+      - service: api-gateway
+        slo_target: 0.999  # 99.9% uptime
+        description: "API Gateway availability"
+        error_budget_minutes_per_month: 43  # 43.2 minutes downtime/month
+        measurement_window: 30d
+        sli_definition: |
+          Ratio of successful HTTP requests (non-5xx) to total requests
+        prometheus_query: |
+          sum(rate(http_requests_total{service="api-gateway",status!~"5.."}[5m]))
+          /
+          sum(rate(http_requests_total{service="api-gateway"}[5m]))
+        regions:
+          - us-east-1
+          - eu-west-1
+          - ap-southeast-1
+        compliance_note: "ISO 27001, SOC 2 Type II"
+
+      # High: Reporting Service (core business function)
+      - service: reporting-service
+        slo_target: 0.995  # 99.5% uptime
+        description: "Reporting service availability"
+        error_budget_minutes_per_month: 216  # 3.6 hours downtime/month
+        measurement_window: 30d
+        sli_definition: |
+          Ratio of successful report generation requests to total requests
+        prometheus_query: |
+          sum(rate(http_requests_total{service="reporting-service",status!~"5.."}[5m]))
+          /
+          sum(rate(http_requests_total{service="reporting-service"}[5m]))
+        regions:
+          - us-east-1
+          - eu-west-1
+        compliance_note: "Data processing must be available for monthly/quarterly reporting"
+
+      # Critical: Data Residency Service (GDPR compliance)
+      - service: data-residency
+        slo_target: 0.9999  # 99.99% uptime
+        description: "Data residency router availability"
+        error_budget_minutes_per_month: 4.32  # 4.32 minutes downtime/month
+        measurement_window: 30d
+        sli_definition: |
+          Ratio of successful residency routing decisions to total requests
+        prometheus_query: |
+          sum(rate(residency_router_requests_total{status="success"}[5m]))
+          /
+          sum(rate(residency_router_requests_total[5m]))
+        regions:
+          - eu-west-1  # GDPR
+          - us-east-1  # CCPA
+        compliance_note: "GDPR Article 44 - zero tolerance for residency violations"
+
+      # Standard: Web UI (user-facing dashboard)
+      - service: web-ui
+        slo_target: 0.99  # 99% uptime
+        description: "Web UI availability"
+        error_budget_minutes_per_month: 432  # 7.2 hours downtime/month
+        measurement_window: 30d
+        sli_definition: |
+          Ratio of successful page loads to total page loads
+        prometheus_query: |
+          sum(rate(http_requests_total{service="web-ui",status!~"5.."}[5m]))
+          /
+          sum(rate(http_requests_total{service="web-ui"}[5m]))
+        regions:
+          - us-east-1
+          - eu-west-1
+        compliance_note: "Lower SLO acceptable as static assets are cacheable"
+
+    # ============================================================================
+    # LATENCY SLOs
+    # ============================================================================
+
+    latency_slos:
+      # API Gateway - p95 and p99 latency
+      - service: api-gateway
+        percentile: p95
+        slo_target_ms: 200
+        description: "API Gateway p95 latency <200ms"
+        measurement_window: 30d
+        sli_definition: |
+          95th percentile of request duration for successful requests
+        prometheus_query: |
+          histogram_quantile(0.95,
+            sum(rate(http_request_duration_seconds_bucket{service="api-gateway",status!~"5.."}[5m])) by (le)
+          ) * 1000
+        regions:
+          - us-east-1
+          - eu-west-1
+          - ap-southeast-1
+
+      - service: api-gateway
+        percentile: p99
+        slo_target_ms: 500
+        description: "API Gateway p99 latency <500ms"
+        measurement_window: 30d
+        sli_definition: |
+          99th percentile of request duration for successful requests
+        prometheus_query: |
+          histogram_quantile(0.99,
+            sum(rate(http_request_duration_seconds_bucket{service="api-gateway",status!~"5.."}[5m])) by (le)
+          ) * 1000
+        regions:
+          - us-east-1
+          - eu-west-1
+          - ap-southeast-1
+
+      # GenAI Reporting - slower SLO due to LLM processing
+      - service: reporting-service
+        endpoint: /api/gen-reports
+        percentile: p95
+        slo_target_ms: 5000  # 5 seconds
+        description: "GenAI report generation p95 latency <5s"
+        measurement_window: 30d
+        sli_definition: |
+          95th percentile of GenAI report generation duration
+        prometheus_query: |
+          histogram_quantile(0.95,
+            sum(rate(genai_report_duration_seconds_bucket{service="reporting-service"}[5m])) by (le)
+          ) * 1000
+        regions:
+          - us-east-1
+          - eu-west-1
+        compliance_note: "User expectation: AI reports take longer than static reports"
+
+      - service: reporting-service
+        endpoint: /api/gen-reports
+        percentile: p99
+        slo_target_ms: 10000  # 10 seconds
+        description: "GenAI report generation p99 latency <10s"
+        measurement_window: 30d
+        sli_definition: |
+          99th percentile of GenAI report generation duration
+        prometheus_query: |
+          histogram_quantile(0.99,
+            sum(rate(genai_report_duration_seconds_bucket{service="reporting-service"}[5m])) by (le)
+          ) * 1000
+        regions:
+          - us-east-1
+          - eu-west-1
+
+      # Database Queries - critical for performance
+      - service: postgres
+        percentile: p95
+        slo_target_ms: 50
+        description: "Database query p95 latency <50ms"
+        measurement_window: 30d
+        sli_definition: |
+          95th percentile of SQL query execution time
+        prometheus_query: |
+          histogram_quantile(0.95,
+            sum(rate(pg_stat_statements_seconds_bucket[5m])) by (le)
+          ) * 1000
+        regions:
+          - us-east-1
+          - eu-west-1
+        compliance_note: "Slow queries impact all downstream services"
+
+    # ============================================================================
+    # ERROR RATE SLOs
+    # ============================================================================
+
+    error_rate_slos:
+      # 5xx Server Errors - critical failures
+      - service: all
+        error_type: 5xx
+        slo_target: 0.001  # <0.1% of requests
+        description: "Server errors <0.1% of all requests"
+        measurement_window: 30d
+        sli_definition: |
+          Ratio of 5xx errors to total requests
+        prometheus_query: |
+          sum(rate(http_requests_total{status=~"5.."}[5m]))
+          /
+          sum(rate(http_requests_total[5m]))
+        regions:
+          - us-east-1
+          - eu-west-1
+          - ap-southeast-1
+        severity: critical
+
+      # 4xx Client Errors (excluding auth failures)
+      - service: all
+        error_type: 4xx
+        slo_target: 0.01  # <1% of requests
+        description: "Client errors (non-auth) <1% of requests"
+        measurement_window: 30d
+        sli_definition: |
+          Ratio of 4xx errors (excluding 401/403) to total requests
+        prometheus_query: |
+          sum(rate(http_requests_total{status=~"4..",status!~"401|403"}[5m]))
+          /
+          sum(rate(http_requests_total[5m]))
+        regions:
+          - us-east-1
+          - eu-west-1
+        severity: warning
+        compliance_note: "401/403 excluded as they are expected for auth failures"
+
+      # GDPR Compliance Violations - zero tolerance
+      - service: data-residency
+        error_type: gdpr_violation
+        slo_target: 0.0  # Zero tolerance
+        description: "GDPR data residency violations: ZERO tolerance"
+        measurement_window: 30d
+        sli_definition: |
+          Count of GDPR residency violations (any non-zero value is SLO breach)
+        prometheus_query: |
+          sum(increase(gdpr_residency_violations_total[5m]))
+        regions:
+          - eu-west-1
+        severity: critical
+        compliance_note: "GDPR Article 44 - Transfer limitation. Any violation triggers incident."
+        escalation: "Immediate escalation to DPO (Data Protection Officer)"
+
+    # ============================================================================
+    # BUSINESS SLOs (Domain-Specific)
+    # ============================================================================
+
+    business_slos:
+      # Report Generation Success Rate
+      - service: reporting-service
+        metric_name: report_generation_success
+        slo_target: 0.99  # >99% success rate
+        description: "Report generation success rate >99%"
+        measurement_window: 30d
+        sli_definition: |
+          Ratio of successfully generated reports to total report requests
+        prometheus_query: |
+          sum(rate(report_generation_total{status="success"}[5m]))
+          /
+          sum(rate(report_generation_total[5m]))
+        regions:
+          - us-east-1
+          - eu-west-1
+        business_impact: "Failed reports impact executive decision-making"
+
+      # SSE Connection Stability
+      - service: web-ui
+        metric_name: sse_connection_stability
+        slo_target: 0.995  # >99.5% uptime
+        description: "SSE connection stability >99.5%"
+        measurement_window: 30d
+        sli_definition: |
+          Ratio of stable SSE connections to total SSE connections
+        prometheus_query: |
+          sum(rate(sse_connections_total{status="stable"}[5m]))
+          /
+          sum(rate(sse_connections_total[5m]))
+        regions:
+          - us-east-1
+          - eu-west-1
+        business_impact: "SSE failures cause real-time dashboard updates to fail"
+
+      # Data Export Success Rate
+      - service: reporting-service
+        metric_name: export_success
+        slo_target: 0.99  # >99% success rate
+        description: "Data export (CSV/PDF/PPTX) success rate >99%"
+        measurement_window: 30d
+        sli_definition: |
+          Ratio of successful exports to total export requests
+        prometheus_query: |
+          sum(rate(export_requests_total{status="success"}[5m]))
+          /
+          sum(rate(export_requests_total[5m]))
+        regions:
+          - us-east-1
+          - eu-west-1
+        business_impact: "Failed exports block quarterly board presentations"
+
+    # ============================================================================
+    # MULTI-REGION AGGREGATION
+    # ============================================================================
+
+    regional_aggregation:
+      # Global SLO: Aggregate across all regions
+      - aggregation_type: global
+        description: "Global SLO across all regions (weighted average)"
+        calculation: |
+          Weighted average of regional SLOs, weighted by traffic volume
+        prometheus_query_template: |
+          sum(rate({metric}_total{status="success"}[5m]))
+          /
+          sum(rate({metric}_total[5m]))
+
+      # Regional SLO: Per-region tracking
+      - aggregation_type: regional
+        description: "Regional SLO per region"
+        calculation: |
+          Per-region SLO calculation
+        prometheus_query_template: |
+          sum(rate({metric}_total{status="success",region="{region}"}[5m])) by (region)
+          /
+          sum(rate({metric}_total{region="{region}"}[5m])) by (region)
+
+    # ============================================================================
+    # ERROR BUDGET CALCULATION
+    # ============================================================================
+
+    error_budget_config:
+      # Monthly error budget reset
+      reset_period: monthly  # Reset on 1st of each month
+      reset_day: 1
+
+      # Error budget thresholds
+      thresholds:
+        - level: green
+          budget_remaining_percent: 50
+          policy: "Normal deployments allowed"
+          action: "No restrictions"
+
+        - level: yellow
+          budget_remaining_percent: 20
+          policy: "Require approval for non-critical changes"
+          action: "Escalate to engineering lead before deployment"
+
+        - level: orange
+          budget_remaining_percent: 10
+          policy: "Freeze deployments, focus on reliability"
+          action: "Block all non-hotfix deployments"
+
+        - level: red
+          budget_remaining_percent: 0
+          policy: "Incident response mode, only hotfixes"
+          action: "Incident declared, all hands on reliability"
+
+      # Error budget calculation formula
+      calculation: |
+        error_budget = (1 - SLO) × total_events_in_window
+        error_budget_remaining = error_budget - errors_consumed
+        budget_remaining_percent = (error_budget_remaining / error_budget) × 100
+
+    # ============================================================================
+    # BURN RATE ALERTING (Google SRE Multi-Window Multi-Burn-Rate)
+    # ============================================================================
+
+    burn_rate_alerts:
+      # Fast burn: 1-hour window, 14.4x burn rate
+      # Consumes 2% of monthly budget in 1 hour → 36 hours to exhaustion
+      - name: slo_fast_burn
+        description: "Fast burn: Consuming error budget 14.4x faster than normal"
+        short_window: 1h
+        long_window: 5m
+        burn_rate: 14.4
+        error_budget_consumed_percent: 2
+        severity: critical
+        notification_severity: page
+        runbook: "https://runbooks.teei.io/slo-fast-burn"
+
+      # Slow burn: 6-hour window, 6x burn rate
+      # Consumes 5% of monthly budget in 6 hours → 6 days to exhaustion
+      - name: slo_slow_burn
+        description: "Slow burn: Consuming error budget 6x faster than normal"
+        short_window: 6h
+        long_window: 30m
+        burn_rate: 6
+        error_budget_consumed_percent: 5
+        severity: warning
+        notification_severity: ticket
+        runbook: "https://runbooks.teei.io/slo-slow-burn"
+
+      # Calculation:
+      # burn_rate = (error_rate_short_window / (1 - SLO)) / (short_window / measurement_window)
+      # Example: 99.9% SLO, 1h window, 30d measurement window
+      # Normal burn rate: 0.1% errors over 30d = 0.001 / 720 hours = 0.00000139 per hour
+      # Fast burn (14.4x): 0.00000139 * 14.4 = 0.00002 per hour
+
+    # ============================================================================
+    # SLO EXEMPTIONS (Emergency Overrides)
+    # ============================================================================
+
+    exemption_policy:
+      # Emergency exemptions for critical hotfixes
+      allowed_reasons:
+        - security_vulnerability
+        - data_loss_prevention
+        - gdpr_compliance_fix
+        - production_outage_fix
+
+      # Exemption approval process
+      approval_required: true
+      approvers:
+        - role: cto
+          name: "Chief Technology Officer"
+        - role: vp_engineering
+          name: "VP of Engineering"
+        - role: on_call_sre
+          name: "On-call SRE Lead"
+
+      # Audit trail requirements
+      audit_log:
+        required: true
+        fields:
+          - exemption_reason
+          - approver_name
+          - timestamp
+          - deployment_id
+          - rollback_plan
+        retention_days: 365  # Keep for 1 year
+
+      # Post-exemption review
+      post_mortem_required: true
+      post_mortem_deadline_hours: 48
+
+    # ============================================================================
+    # METADATA
+    # ============================================================================
+
+    metadata:
+      version: "1.0.0"
+      last_updated: "2025-11-15"
+      owner: "SRE Team"
+      contact: "sre@teei.io"
+      documentation: "https://docs.teei.io/slo-gates"
+      methodology: "Google SRE SLO Implementation"
+      references:
+        - "https://sre.google/workbook/implementing-slos/"
+        - "https://sre.google/workbook/alerting-on-slos/"

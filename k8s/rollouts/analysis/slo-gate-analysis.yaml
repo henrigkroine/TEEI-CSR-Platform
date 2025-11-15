@@ -1,0 +1,472 @@
+# TEEI CSR Platform - Argo Rollouts SLO Gate Analysis Templates
+# Ref: AGENTS.md § Phase G - slo-gatekeeper
+#
+# Purpose: Block deployments when SLOs are breaching
+# Architecture:
+# 1. Pre-deployment gate: Check SLO status before rollout starts
+# 2. During-canary gate: Monitor SLOs during canary rollout
+# 3. Post-deployment gate: Verify SLOs after rollout completes
+#
+# Integration: Uses Prometheus metrics from SLO recording rules
+# Failure Action: Rollback or abort deployment if SLOs breach
+
+---
+# ============================================================================
+# PRE-DEPLOYMENT GATE: Check SLO status before starting rollout
+# ============================================================================
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: slo-pre-deployment-gate
+  namespace: teei-production
+  labels:
+    app: argo-rollouts
+    gate-type: pre-deployment
+    component: slo-gate
+spec:
+  metrics:
+  # Check API Gateway Availability SLO (99.9%)
+  - name: api-gateway-availability-slo
+    interval: 1m
+    count: 3
+    successCondition: result >= 0.999
+    failureLimit: 1
+    provider:
+      prometheus:
+        address: http://prometheus.monitoring.svc.cluster.local:9090
+        query: |
+          sli:availability:api_gateway:ratio
+    metadata:
+      description: "API Gateway must have >=99.9% availability before deployment"
+      slo_target: "99.9%"
+      service: "api-gateway"
+
+  # Check Reporting Service Availability SLO (99.5%)
+  - name: reporting-service-availability-slo
+    interval: 1m
+    count: 3
+    successCondition: result >= 0.995
+    failureLimit: 1
+    provider:
+      prometheus:
+        address: http://prometheus.monitoring.svc.cluster.local:9090
+        query: |
+          sli:availability:reporting_service:ratio
+    metadata:
+      description: "Reporting Service must have >=99.5% availability before deployment"
+      slo_target: "99.5%"
+      service: "reporting-service"
+
+  # Check Data Residency Availability SLO (99.99%)
+  - name: data-residency-availability-slo
+    interval: 1m
+    count: 3
+    successCondition: result >= 0.9999
+    failureLimit: 1
+    provider:
+      prometheus:
+        address: http://prometheus.monitoring.svc.cluster.local:9090
+        query: |
+          sli:availability:data_residency:ratio
+    metadata:
+      description: "Data Residency must have >=99.99% availability (GDPR critical)"
+      slo_target: "99.99%"
+      service: "data-residency"
+      compliance: "gdpr"
+
+  # Check for Fast Burn Rate (1h window, 14.4x)
+  - name: no-fast-burn-detected
+    interval: 1m
+    count: 3
+    successCondition: result < 14.4
+    failureLimit: 1
+    provider:
+      prometheus:
+        address: http://prometheus.monitoring.svc.cluster.local:9090
+        query: |
+          max(
+            burn_rate:api_gateway:1h,
+            burn_rate:reporting_service:1h,
+            burn_rate:data_residency:1h
+          )
+    metadata:
+      description: "Block deployment if any service has fast burn rate >14.4x"
+      burn_rate_threshold: "14.4x"
+
+  # Check Error Budget Remaining (>10%)
+  - name: error-budget-sufficient
+    interval: 1m
+    count: 3
+    successCondition: result > 0.10
+    failureLimit: 1
+    provider:
+      prometheus:
+        address: http://prometheus.monitoring.svc.cluster.local:9090
+        query: |
+          min(
+            error_budget:api_gateway:remaining_ratio,
+            error_budget:reporting_service:remaining_ratio,
+            error_budget:data_residency:remaining_ratio
+          )
+    metadata:
+      description: "Block deployment if error budget <10%"
+      error_budget_threshold: "10%"
+
+  # Check for GDPR Violations (Zero Tolerance)
+  - name: no-gdpr-violations
+    interval: 30s
+    count: 4
+    successCondition: result == 0
+    failureLimit: 1
+    provider:
+      prometheus:
+        address: http://prometheus.monitoring.svc.cluster.local:9090
+        query: |
+          sli:gdpr_violations:count
+    metadata:
+      description: "Block deployment if any GDPR violations detected"
+      compliance: "gdpr"
+      zero_tolerance: "true"
+
+  # Check 5xx Error Rate (<0.1%)
+  - name: 5xx-error-rate-acceptable
+    interval: 1m
+    count: 3
+    successCondition: result < 0.001
+    failureLimit: 1
+    provider:
+      prometheus:
+        address: http://prometheus.monitoring.svc.cluster.local:9090
+        query: |
+          sli:error_rate:5xx:ratio
+    metadata:
+      description: "Block deployment if 5xx error rate >=0.1%"
+      slo_target: "<0.1%"
+
+  # Summary: Fail deployment if ANY metric fails
+  args:
+  - name: deployment-decision
+    value: "BLOCK if any SLO is breaching, ALLOW otherwise"
+
+---
+# ============================================================================
+# DURING-CANARY GATE: Monitor SLOs during canary rollout
+# ============================================================================
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: slo-canary-gate
+  namespace: teei-production
+  labels:
+    app: argo-rollouts
+    gate-type: canary
+    component: slo-gate
+spec:
+  # Arguments passed from Rollout
+  args:
+  - name: service-name
+    value: "{{ .Service }}"
+  - name: canary-hash
+    value: "{{ .CanaryHash }}"
+  - name: stable-hash
+    value: "{{ .StableHash }}"
+
+  metrics:
+  # Compare Canary vs Stable Error Rate
+  - name: canary-error-rate-comparison
+    interval: 1m
+    count: 10
+    # Fail if canary error rate is 2x higher than stable
+    successCondition: result < 2.0
+    failureLimit: 3
+    provider:
+      prometheus:
+        address: http://prometheus.monitoring.svc.cluster.local:9090
+        query: |
+          (
+            sum(rate(http_requests_total{service="{{ args.service-name }}",pod_hash="{{ args.canary-hash }}",status=~"5.."}[5m]))
+            /
+            sum(rate(http_requests_total{service="{{ args.service-name }}",pod_hash="{{ args.canary-hash }}"}[5m]))
+          )
+          /
+          (
+            sum(rate(http_requests_total{service="{{ args.service-name }}",pod_hash="{{ args.stable-hash }}",status=~"5.."}[5m]))
+            /
+            sum(rate(http_requests_total{service="{{ args.service-name }}",pod_hash="{{ args.stable-hash }}"}[5m]))
+          )
+    metadata:
+      description: "Rollback if canary error rate is 2x higher than stable"
+      threshold: "2.0x"
+
+  # Compare Canary vs Stable Latency (p95)
+  - name: canary-latency-comparison-p95
+    interval: 1m
+    count: 10
+    # Fail if canary p95 latency is 1.5x higher than stable
+    successCondition: result < 1.5
+    failureLimit: 3
+    provider:
+      prometheus:
+        address: http://prometheus.monitoring.svc.cluster.local:9090
+        query: |
+          histogram_quantile(0.95,
+            sum(rate(http_request_duration_seconds_bucket{service="{{ args.service-name }}",pod_hash="{{ args.canary-hash }}"}[5m])) by (le)
+          )
+          /
+          histogram_quantile(0.95,
+            sum(rate(http_request_duration_seconds_bucket{service="{{ args.service-name }}",pod_hash="{{ args.stable-hash }}"}[5m])) by (le)
+          )
+    metadata:
+      description: "Rollback if canary p95 latency is 1.5x higher than stable"
+      threshold: "1.5x"
+
+  # Monitor Overall SLO During Canary (ensure no degradation)
+  - name: overall-slo-health
+    interval: 1m
+    count: 10
+    successCondition: result >= 0.999
+    failureLimit: 2
+    provider:
+      prometheus:
+        address: http://prometheus.monitoring.svc.cluster.local:9090
+        query: |
+          sli:availability:{{ args.service-name }}:ratio
+    metadata:
+      description: "Rollback if overall service SLO degrades during canary"
+
+  # Check for Burn Rate Spike During Canary
+  - name: no-burn-rate-spike
+    interval: 1m
+    count: 10
+    successCondition: result < 10.0
+    failureLimit: 2
+    provider:
+      prometheus:
+        address: http://prometheus.monitoring.svc.cluster.local:9090
+        query: |
+          burn_rate:{{ args.service-name }}:1h
+    metadata:
+      description: "Rollback if burn rate spikes above 10x during canary"
+      threshold: "10x"
+
+---
+# ============================================================================
+# POST-DEPLOYMENT GATE: Verify SLOs after rollout completes
+# ============================================================================
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: slo-post-deployment-gate
+  namespace: teei-production
+  labels:
+    app: argo-rollouts
+    gate-type: post-deployment
+    component: slo-gate
+spec:
+  args:
+  - name: service-name
+    value: "{{ .Service }}"
+
+  metrics:
+  # Verify SLO is maintained after deployment
+  - name: post-deployment-slo-health
+    interval: 2m
+    count: 5
+    successCondition: result >= 0.999
+    failureLimit: 2
+    provider:
+      prometheus:
+        address: http://prometheus.monitoring.svc.cluster.local:9090
+        query: |
+          sli:availability:{{ args.service-name }}:ratio
+    metadata:
+      description: "Verify SLO is maintained after full rollout"
+
+  # Verify no error rate spike
+  - name: post-deployment-error-rate
+    interval: 2m
+    count: 5
+    successCondition: result < 0.001
+    failureLimit: 2
+    provider:
+      prometheus:
+        address: http://prometheus.monitoring.svc.cluster.local:9090
+        query: |
+          sum(rate(http_requests_total{service="{{ args.service-name }}",status=~"5.."}[5m]))
+          /
+          sum(rate(http_requests_total{service="{{ args.service-name }}"}[5m]))
+    metadata:
+      description: "Verify 5xx error rate <0.1% after rollout"
+
+  # Verify latency SLO maintained
+  - name: post-deployment-latency-p95
+    interval: 2m
+    count: 5
+    successCondition: result < 200
+    failureLimit: 2
+    provider:
+      prometheus:
+        address: http://prometheus.monitoring.svc.cluster.local:9090
+        query: |
+          histogram_quantile(0.95,
+            sum(rate(http_request_duration_seconds_bucket{service="{{ args.service-name }}"}[5m])) by (le)
+          ) * 1000
+    metadata:
+      description: "Verify p95 latency <200ms after rollout"
+      unit: "milliseconds"
+
+  # Verify no GDPR violations introduced
+  - name: post-deployment-gdpr-check
+    interval: 1m
+    count: 5
+    successCondition: result == 0
+    failureLimit: 1
+    provider:
+      prometheus:
+        address: http://prometheus.monitoring.svc.cluster.local:9090
+        query: |
+          sum(increase(gdpr_residency_violations_total[5m]))
+    metadata:
+      description: "Verify no GDPR violations after rollout"
+      compliance: "gdpr"
+
+---
+# ============================================================================
+# EMERGENCY OVERRIDE TEMPLATE (Requires manual approval)
+# ============================================================================
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: slo-gate-override
+  namespace: teei-production
+  labels:
+    app: argo-rollouts
+    gate-type: override
+    component: slo-gate
+    security: audit-required
+spec:
+  args:
+  - name: override-reason
+    value: "{{ .OverrideReason }}"
+  - name: approver
+    value: "{{ .Approver }}"
+  - name: incident-id
+    value: "{{ .IncidentID }}"
+
+  metrics:
+  # Manual approval required (Argo Rollouts Pause step)
+  # This template is used when SLO gate is manually overridden
+  - name: manual-approval-required
+    interval: 5m
+    count: 1
+    successCondition: result == 1
+    provider:
+      job:
+        metadata:
+          labels:
+            override: "true"
+            requires-approval: "true"
+        spec:
+          template:
+            spec:
+              containers:
+              - name: override-audit-log
+                image: curlimages/curl:latest
+                command:
+                - /bin/sh
+                - -c
+                - |
+                  echo "SLO Gate Override Audit Log"
+                  echo "Reason: {{ args.override-reason }}"
+                  echo "Approver: {{ args.approver }}"
+                  echo "Incident ID: {{ args.incident-id }}"
+                  echo "Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+                  # Send audit log to monitoring system
+                  curl -X POST http://audit-logger.monitoring.svc.cluster.local/api/v1/audit \
+                    -H "Content-Type: application/json" \
+                    -d "{
+                      \"event_type\": \"slo_gate_override\",
+                      \"reason\": \"{{ args.override-reason }}\",
+                      \"approver\": \"{{ args.approver }}\",
+                      \"incident_id\": \"{{ args.incident-id }}\",
+                      \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"
+                    }"
+
+                  echo "1"  # Return success
+              restartPolicy: Never
+
+  metadata:
+    override_reasons_allowed:
+      - security_vulnerability
+      - data_loss_prevention
+      - gdpr_compliance_fix
+      - production_outage_fix
+    approvers_allowed:
+      - cto
+      - vp_engineering
+      - on_call_sre
+    post_mortem_required: true
+    audit_retention_days: 365
+
+---
+# ============================================================================
+# EXAMPLE ROLLOUT USING SLO GATES
+# ============================================================================
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: api-gateway-rollout
+  namespace: teei-production
+spec:
+  replicas: 10
+  strategy:
+    canary:
+      # Pre-deployment gate: Check SLOs before starting
+      analysis:
+        templates:
+        - templateName: slo-pre-deployment-gate
+        startingStep: 0  # Run before canary starts
+
+      steps:
+      # Step 1: 10% canary traffic
+      - setWeight: 10
+      - pause: {duration: 5m}
+
+      # Step 2: Canary analysis (monitor SLOs during canary)
+      - analysis:
+          templates:
+          - templateName: slo-canary-gate
+          args:
+          - name: service-name
+            value: api-gateway
+
+      # Step 3: 50% canary traffic
+      - setWeight: 50
+      - pause: {duration: 10m}
+
+      # Step 4: Full rollout
+      - setWeight: 100
+
+      # Step 5: Post-deployment verification
+      - analysis:
+          templates:
+          - templateName: slo-post-deployment-gate
+          args:
+          - name: service-name
+            value: api-gateway
+
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app: api-gateway
+  template:
+    metadata:
+      labels:
+        app: api-gateway
+    spec:
+      containers:
+      - name: api-gateway
+        image: teei/api-gateway:latest
+        ports:
+        - containerPort: 8080

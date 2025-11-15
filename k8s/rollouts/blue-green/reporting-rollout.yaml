@@ -1,0 +1,245 @@
+---
+# Blue/Green Rollout for Reporting Service (GenAI Critical)
+# Strategy: Safe deployment with GenAI validation before promotion
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: teei-reporting
+  labels:
+    app: teei-reporting
+    component: backend
+    part-of: teei-csr-platform
+    deployment-strategy: blue-green
+spec:
+  replicas: 3
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app: teei-reporting
+
+  template:
+    metadata:
+      labels:
+        app: teei-reporting
+        component: backend
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3014"
+        prometheus.io/path: "/metrics"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+
+      serviceAccountName: teei-reporting
+
+      containers:
+      - name: reporting
+        image: ghcr.io/henrigkroine/teei-reporting:latest
+        imagePullPolicy: Always
+
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities:
+            drop:
+            - ALL
+
+        ports:
+        - name: http
+          containerPort: 3014
+          protocol: TCP
+
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: PORT
+          value: "3014"
+        - name: HOST
+          value: "0.0.0.0"
+
+        resources:
+          requests:
+            cpu: 200m
+            memory: 256Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3014
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3014
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+
+        startupProbe:
+          httpGet:
+            path: /health
+            port: 3014
+          initialDelaySeconds: 0
+          periodSeconds: 3
+          timeoutSeconds: 3
+          failureThreshold: 30
+
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        - name: cache
+          mountPath: /app/.cache
+
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      - name: cache
+        emptyDir: {}
+
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - teei-reporting
+              topologyKey: kubernetes.io/hostname
+
+  # Blue/Green Strategy with GenAI Validation
+  strategy:
+    blueGreen:
+      activeService: teei-reporting
+      previewService: teei-reporting-preview
+
+      # Manual approval for GenAI service (critical)
+      autoPromotionEnabled: false
+      autoPromotionSeconds: 900  # 15 minutes if auto-enabled
+
+      scaleDownDelaySeconds: 600  # 10 minutes (preserve for rollback)
+      scaleDownDelayRevisionLimit: 2
+
+      # Pre-promotion: GenAI smoke tests
+      prePromotionAnalysis:
+        templates:
+        - templateName: reporting-genai-smoke-test
+        - templateName: success-rate-analysis
+        - templateName: genai-token-analysis
+        args:
+        - name: service-name
+          value: teei-reporting-preview
+        - name: error-threshold
+          value: "2"  # <2% errors allowed in preview
+        - name: token-increase-threshold
+          value: "30"  # <30% token increase
+
+      # Post-promotion: Monitor GenAI performance
+      postPromotionAnalysis:
+        templates:
+        - templateName: genai-token-analysis
+        - templateName: success-rate-analysis
+        args:
+        - name: service-name
+          value: teei-reporting
+        - name: error-threshold
+          value: "1"  # <1% errors in production
+        - name: token-increase-threshold
+          value: "20"  # <20% token increase in production
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: teei-reporting
+  labels:
+    app: teei-reporting
+    component: backend
+    service-type: active
+spec:
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 3014
+    targetPort: http
+    protocol: TCP
+  selector:
+    app: teei-reporting
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: teei-reporting-preview
+  labels:
+    app: teei-reporting
+    component: backend
+    service-type: preview
+spec:
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 3014
+    targetPort: http
+    protocol: TCP
+  selector:
+    app: teei-reporting
+
+---
+# AnalysisTemplate: GenAI Reporting Smoke Test
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: reporting-genai-smoke-test
+spec:
+  metrics:
+  - name: genai-report-generation
+    interval: 30s
+    count: 3
+    successCondition: result.status == "success"
+    failureLimit: 1
+    provider:
+      job:
+        spec:
+          backoffLimit: 1
+          template:
+            spec:
+              restartPolicy: Never
+              containers:
+              - name: genai-test
+                image: curlimages/curl:8.4.0
+                command:
+                - sh
+                - -c
+                - |
+                  # Test GenAI report generation endpoint
+                  RESPONSE=$(curl -s -X POST \
+                    -H "Content-Type: application/json" \
+                    -d '{"reportType":"quarterly","locale":"en","orgId":"test-org"}' \
+                    http://{{args.service-name}}:3014/api/gen-reports/preview)
+
+                  # Check if response contains expected fields
+                  if echo "$RESPONSE" | grep -q "narrative"; then
+                    echo '{"status":"success"}'
+                  else
+                    echo '{"status":"failed"}'
+                    exit 1
+                  fi

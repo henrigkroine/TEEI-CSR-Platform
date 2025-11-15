@@ -1,0 +1,123 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: teei-ai-budget
+  labels:
+    app: teei-ai-budget
+    component: finops
+    part-of: teei-csr-platform
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: teei-ai-budget
+  template:
+    metadata:
+      labels:
+        app: teei-ai-budget
+        component: finops
+        part-of: teei-csr-platform
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3010"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: teei-ai-budget
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        fsGroup: 1001
+      containers:
+      - name: ai-budget
+        image: teei/ai-budget:latest
+        imagePullPolicy: Always
+        ports:
+        - name: http
+          containerPort: 3010
+          protocol: TCP
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: PORT
+          value: "3010"
+        - name: LOG_LEVEL
+          value: "info"
+        - name: POSTGRES_HOST
+          valueFrom:
+            secretKeyRef:
+              name: postgres-credentials
+              key: host
+        - name: POSTGRES_PORT
+          value: "5432"
+        - name: POSTGRES_DB
+          value: "teei_csr"
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: postgres-credentials
+              key: username
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-credentials
+              key: password
+        - name: REDIS_HOST
+          value: "redis-master"
+        - name: REDIS_PORT
+          value: "6379"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /api/ai-budget/health
+            port: 3010
+          initialDelaySeconds: 10
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /api/ai-budget/health
+            port: 3010
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 2
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1001
+          capabilities:
+            drop:
+            - ALL
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: teei-ai-budget
+  labels:
+    app: teei-ai-budget
+    component: finops
+spec:
+  type: ClusterIP
+  ports:
+  - port: 3010
+    targetPort: 3010
+    protocol: TCP
+    name: http
+  selector:
+    app: teei-ai-budget
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: teei-ai-budget
+  labels:
+    app: teei-ai-budget
+    component: finops

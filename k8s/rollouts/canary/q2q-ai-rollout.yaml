@@ -1,0 +1,337 @@
+---
+# Canary Rollout for Q2Q AI Service
+# Strategy: Progressive traffic shifting with automated analysis
+# Traffic pattern: 0% → 10% → 25% → 50% → 100%
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: teei-q2q-ai
+  labels:
+    app: teei-q2q-ai
+    component: backend
+    part-of: teei-csr-platform
+    deployment-strategy: canary
+spec:
+  replicas: 4
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app: teei-q2q-ai
+
+  template:
+    metadata:
+      labels:
+        app: teei-q2q-ai
+        component: backend
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3005"
+        prometheus.io/path: "/metrics"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+
+      serviceAccountName: teei-q2q-ai
+
+      containers:
+      - name: q2q-ai
+        image: ghcr.io/henrigkroine/teei-q2q-ai:latest
+        imagePullPolicy: Always
+
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities:
+            drop:
+            - ALL
+
+        ports:
+        - name: http
+          containerPort: 3005
+          protocol: TCP
+
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: PORT
+          value: "3005"
+        - name: HOST
+          value: "0.0.0.0"
+
+        resources:
+          requests:
+            cpu: 200m
+            memory: 256Mi
+          limits:
+            cpu: 2000m
+            memory: 2Gi
+
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3005
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3005
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+
+        startupProbe:
+          httpGet:
+            path: /health
+            port: 3005
+          initialDelaySeconds: 0
+          periodSeconds: 3
+          timeoutSeconds: 3
+          failureThreshold: 30
+
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        - name: cache
+          mountPath: /app/.cache
+
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      - name: cache
+        emptyDir: {}
+
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - teei-q2q-ai
+              topologyKey: kubernetes.io/hostname
+
+  # Canary Strategy: Progressive rollout with automated analysis
+  strategy:
+    canary:
+      # Canary service (receives % of traffic during rollout)
+      canaryService: teei-q2q-ai-canary
+
+      # Stable service (receives remaining traffic)
+      stableService: teei-q2q-ai
+
+      # Traffic routing (using Istio VirtualService or NGINX)
+      trafficRouting:
+        nginx:
+          stableIngress: teei-q2q-ai-ingress
+          additionalIngressAnnotations:
+            canary-by-header: X-Canary
+            canary-by-header-value: "always"
+
+      # Progressive traffic steps
+      steps:
+      # Step 1: 10% traffic to canary
+      - setWeight: 10
+      - pause:
+          duration: 5m
+      - analysis:
+          templates:
+          - templateName: success-rate-analysis
+          - templateName: latency-analysis
+          - templateName: q2q-ai-quality-analysis
+          args:
+          - name: service-name
+            value: teei-q2q-ai-canary
+          - name: error-threshold
+            value: "1"  # <1% errors
+          - name: latency-threshold
+            value: "800"  # <800ms p95 for AI service
+          - name: quality-threshold
+            value: "0.7"  # >70% quality score
+
+      # Step 2: 25% traffic to canary
+      - setWeight: 25
+      - pause:
+          duration: 5m
+      - analysis:
+          templates:
+          - templateName: success-rate-analysis
+          - templateName: latency-analysis
+          - templateName: q2q-ai-quality-analysis
+          args:
+          - name: service-name
+            value: teei-q2q-ai-canary
+          - name: error-threshold
+            value: "1"
+          - name: latency-threshold
+            value: "800"
+          - name: quality-threshold
+            value: "0.7"
+
+      # Step 3: 50% traffic to canary
+      - setWeight: 50
+      - pause:
+          duration: 10m
+      - analysis:
+          templates:
+          - templateName: success-rate-analysis
+          - templateName: latency-analysis
+          - templateName: q2q-ai-quality-analysis
+          args:
+          - name: service-name
+            value: teei-q2q-ai-canary
+          - name: error-threshold
+            value: "0.5"  # Stricter at 50%
+          - name: latency-threshold
+            value: "750"
+          - name: quality-threshold
+            value: "0.75"  # Higher quality at 50%
+
+      # Step 4: 100% traffic to canary (full promotion)
+      - setWeight: 100
+      - pause:
+          duration: 5m
+
+      # Analysis runs continuously during rollout
+      analysis:
+        templates:
+        - templateName: success-rate-analysis
+        - templateName: latency-analysis
+        startingStep: 1  # Start after first traffic shift
+        args:
+        - name: service-name
+          value: teei-q2q-ai-canary
+        - name: error-threshold
+          value: "1"
+        - name: latency-threshold
+          value: "800"
+
+      # Anti-affinity between canary and stable
+      antiAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+          canary:
+            weight: 100
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: teei-q2q-ai
+  labels:
+    app: teei-q2q-ai
+    component: backend
+    service-type: stable
+spec:
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 3005
+    targetPort: http
+    protocol: TCP
+  selector:
+    app: teei-q2q-ai
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: teei-q2q-ai-canary
+  labels:
+    app: teei-q2q-ai
+    component: backend
+    service-type: canary
+spec:
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 3005
+    targetPort: http
+    protocol: TCP
+  selector:
+    app: teei-q2q-ai
+
+---
+# Ingress for canary routing (NGINX Ingress Controller)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: teei-q2q-ai-ingress
+  labels:
+    app: teei-q2q-ai
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: q2q-ai.teei-csr.internal
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: teei-q2q-ai
+            port:
+              number: 3005
+
+---
+# AnalysisTemplate: Q2Q AI Quality Analysis
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: q2q-ai-quality-analysis
+spec:
+  metrics:
+  - name: ai-quality-score
+    interval: 60s
+    successCondition: result >= {{args.quality-threshold}}
+    failureLimit: 2
+    count: 5
+    provider:
+      prometheus:
+        address: http://prometheus-server.monitoring.svc.cluster.local:9090
+        query: |
+          # AI quality score from feedback metrics
+          avg(q2q_ai_quality_score{service="{{args.service-name}}"})
+
+  - name: transformation-success-rate
+    interval: 30s
+    successCondition: result >= 0.95
+    failureLimit: 2
+    count: 5
+    provider:
+      prometheus:
+        address: http://prometheus-server.monitoring.svc.cluster.local:9090
+        query: |
+          # Q2Q transformation success rate
+          sum(rate(q2q_transformations_success_total{service="{{args.service-name}}"}[5m]))
+          /
+          sum(rate(q2q_transformations_total{service="{{args.service-name}}"}[5m]))
+
+  - name: model-inference-time
+    interval: 30s
+    successCondition: result < 5000  # <5 seconds
+    failureLimit: 2
+    provider:
+      prometheus:
+        address: http://prometheus-server.monitoring.svc.cluster.local:9090
+        query: |
+          # Model inference time p95
+          histogram_quantile(0.95,
+            sum(rate(q2q_model_inference_duration_ms_bucket{service="{{args.service-name}}"}[5m])) by (le)
+          )

@@ -1,0 +1,29 @@
+{
+  "name": "@teei/data-residency",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "test": "vitest",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@teei/shared-schema": "workspace:*",
+    "@teei/shared-utils": "workspace:*",
+    "fastify": "^4.25.2",
+    "zod": "^3.22.4",
+    "drizzle-orm": "^0.29.3",
+    "postgres": "^3.4.3",
+    "redis": "^4.6.11",
+    "node-vault": "^0.10.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.5",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3",
+    "vitest": "^1.2.1"
+  }
+}

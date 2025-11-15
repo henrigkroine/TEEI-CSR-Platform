@@ -1,0 +1,152 @@
+---
+# US East 1 Region: Resource limits optimized for North American traffic patterns
+# US region handles ~60% of global traffic as primary region
+
+# API Gateway - highest resources for primary region
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: teei-api-gateway
+spec:
+  template:
+    spec:
+      containers:
+      - name: api-gateway
+        resources:
+          requests:
+            cpu: 300m
+            memory: 512Mi
+          limits:
+            cpu: 2000m
+            memory: 2Gi
+        env:
+        - name: REGION
+          value: us-east-1
+        - name: PRIMARY_REGION
+          value: "true"
+        - name: MAX_CONNECTIONS
+          value: "1500"
+
+---
+# Corporate Cockpit - highest resources for executive dashboards (primary region)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: teei-corp-cockpit
+spec:
+  template:
+    spec:
+      containers:
+      - name: corp-cockpit
+        resources:
+          requests:
+            cpu: 500m
+            memory: 1Gi
+          limits:
+            cpu: 3000m
+            memory: 4Gi
+        env:
+        - name: REGION
+          value: us-east-1
+        - name: PRIMARY_REGION
+          value: "true"
+        - name: NODE_OPTIONS
+          value: "--max-old-space-size=3072"
+
+---
+# Reporting Service - highest resources for GenAI workloads (primary region)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: teei-reporting
+spec:
+  template:
+    spec:
+      containers:
+      - name: reporting
+        resources:
+          requests:
+            cpu: 700m
+            memory: 1.5Gi
+          limits:
+            cpu: 4000m
+            memory: 6Gi
+        env:
+        - name: REGION
+          value: us-east-1
+        - name: PRIMARY_REGION
+          value: "true"
+        - name: ANTHROPIC_REGION_ENDPOINT
+          value: "https://api.anthropic.com"
+
+---
+# Q2Q AI Service - highest resources for AI processing (primary region)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: teei-q2q-ai
+spec:
+  template:
+    spec:
+      containers:
+      - name: q2q-ai
+        resources:
+          requests:
+            cpu: 800m
+            memory: 2Gi
+          limits:
+            cpu: 5000m
+            memory: 8Gi
+        env:
+        - name: REGION
+          value: us-east-1
+        - name: PRIMARY_REGION
+          value: "true"
+
+---
+# Analytics Service - optimized for ClickHouse queries (primary region)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: teei-analytics
+spec:
+  template:
+    spec:
+      containers:
+      - name: analytics
+        resources:
+          requests:
+            cpu: 400m
+            memory: 768Mi
+          limits:
+            cpu: 2500m
+            memory: 3Gi
+        env:
+        - name: REGION
+          value: us-east-1
+        - name: PRIMARY_REGION
+          value: "true"
+
+---
+# Unified Profile Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: teei-unified-profile
+spec:
+  template:
+    spec:
+      containers:
+      - name: unified-profile
+        resources:
+          requests:
+            cpu: 250m
+            memory: 384Mi
+          limits:
+            cpu: 1500m
+            memory: 1.5Gi
+        env:
+        - name: REGION
+          value: us-east-1
+        - name: PRIMARY_REGION
+          value: "true"

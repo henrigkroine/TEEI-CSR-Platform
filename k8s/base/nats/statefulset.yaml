@@ -1,0 +1,178 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: nats
+  labels:
+    app: nats
+    component: messaging
+spec:
+  serviceName: nats-headless
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nats
+  template:
+    metadata:
+      labels:
+        app: nats
+        component: messaging
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "7777"
+        prometheus.io/path: "/metrics"
+    spec:
+      terminationGracePeriodSeconds: 60
+      shareProcessNamespace: true
+
+      # Anti-affinity to spread pods across nodes
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: app
+                    operator: In
+                    values:
+                      - nats
+              topologyKey: kubernetes.io/hostname
+
+      containers:
+      - name: nats
+        image: nats:2.10.7-alpine
+        ports:
+        - name: client
+          containerPort: 4222
+          protocol: TCP
+        - name: cluster
+          containerPort: 6222
+          protocol: TCP
+        - name: monitor
+          containerPort: 8222
+          protocol: TCP
+        - name: metrics
+          containerPort: 7777
+          protocol: TCP
+        - name: leafnodes
+          containerPort: 7422
+          protocol: TCP
+
+        command:
+        - nats-server
+        - --config
+        - /etc/nats-config/nats.conf
+
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: CLUSTER_ADVERTISE
+          value: $(POD_NAME).nats-headless.$(POD_NAMESPACE).svc.cluster.local
+
+        volumeMounts:
+        - name: config-volume
+          mountPath: /etc/nats-config
+        - name: jetstream-storage
+          mountPath: /data/jetstream
+        - name: nats-secret
+          mountPath: /etc/nats-secret
+          readOnly: true
+
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8222
+          initialDelaySeconds: 10
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 3
+
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8222
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 2
+
+        resources:
+          requests:
+            cpu: "1000m"
+            memory: "4Gi"
+          limits:
+            cpu: "2000m"
+            memory: "8Gi"
+
+        lifecycle:
+          preStop:
+            exec:
+              # Graceful shutdown: wait for client connections to drain
+              command:
+              - /bin/sh
+              - -c
+              - /nats-server -sl=ldm=/data/jetstream/lame_duck && sleep 10
+
+      # Prometheus exporter sidecar
+      - name: prometheus-nats-exporter
+        image: natsio/prometheus-nats-exporter:0.12.0
+        args:
+        - -connz
+        - -routez
+        - -subz
+        - -varz
+        - -jsz=all
+        - -channelz
+        - -serverz
+        - http://localhost:8222/
+        ports:
+        - name: metrics
+          containerPort: 7777
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+          limits:
+            cpu: "200m"
+            memory: "256Mi"
+
+      # nats-box for debugging
+      - name: nats-box
+        image: natsio/nats-box:0.14.1
+        command:
+        - /bin/sh
+        - -c
+        - trap 'exit 0' TERM; sleep infinity & wait
+        volumeMounts:
+        - name: config-volume
+          mountPath: /etc/nats-config
+        resources:
+          requests:
+            cpu: "50m"
+            memory: "64Mi"
+          limits:
+            cpu: "100m"
+            memory: "128Mi"
+
+      volumes:
+      - name: config-volume
+        configMap:
+          name: nats-config
+      - name: nats-secret
+        secret:
+          secretName: nats-cluster-secret
+
+  volumeClaimTemplates:
+  - metadata:
+      name: jetstream-storage
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 100Gi
+      storageClassName: fast-ssd  # Adjust to your cluster's storage class

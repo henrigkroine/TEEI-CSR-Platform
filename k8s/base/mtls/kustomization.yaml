@@ -1,0 +1,17 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - namespace-labels.yaml
+  - peer-authentication.yaml
+  - authorization-policies.yaml
+  - destination-rules.yaml
+  - cert-manager.yaml
+  - certificates.yaml
+  - cross-region-tls.yaml
+
+labels:
+  - pairs:
+      part-of: teei-csr-platform
+      component: mtls-security

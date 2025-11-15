@@ -1,0 +1,121 @@
+---
+# AnalysisTemplate: GenAI Token Consumption Analysis
+# Monitors LLM token usage and cost during rollout
+# Used by: Reporting service, Q2Q AI service
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: genai-token-analysis
+  labels:
+    analysis-type: genai-cost
+    part-of: teei-csr-platform
+spec:
+  args:
+  - name: service-name
+    description: "Service name to monitor"
+  - name: token-increase-threshold
+    description: "Maximum token consumption increase percentage (e.g., '20' for +20%)"
+    value: "20"
+  - name: baseline-service
+    description: "Baseline service for token comparison (optional)"
+    value: ""
+
+  metrics:
+  - name: token-consumption-rate
+    interval: 60s
+    successCondition: result > 0  # Positive consumption
+    failureLimit: 1
+    count: 10
+    provider:
+      prometheus:
+        address: http://prometheus-server.monitoring.svc.cluster.local:9090
+        query: |
+          # Total tokens consumed per second
+          sum(rate(genai_tokens_consumed_total{service="{{args.service-name}}"}[5m]))
+
+  - name: token-increase-vs-baseline
+    interval: 60s
+    successCondition: result < {{args.token-increase-threshold}}
+    failureLimit: 3
+    count: 10
+    provider:
+      prometheus:
+        address: http://prometheus-server.monitoring.svc.cluster.local:9090
+        query: |
+          # Token increase percentage vs baseline
+          (
+            (
+              sum(rate(genai_tokens_consumed_total{service="{{args.service-name}}"}[5m]))
+              -
+              sum(rate(genai_tokens_consumed_total{service="{{args.baseline-service}}"}[5m]))
+            )
+            /
+            sum(rate(genai_tokens_consumed_total{service="{{args.baseline-service}}"}[5m]))
+          ) * 100
+          or
+          # If baseline not provided, return 0 (no increase)
+          0
+
+  - name: cost-per-request
+    interval: 60s
+    successCondition: result < 0.10  # <$0.10 per request
+    failureLimit: 2
+    count: 10
+    provider:
+      prometheus:
+        address: http://prometheus-server.monitoring.svc.cluster.local:9090
+        query: |
+          # Average cost per request (USD)
+          sum(rate(genai_cost_usd_total{service="{{args.service-name}}"}[5m]))
+          /
+          sum(rate(http_requests_total{service="{{args.service-name}}"}[5m]))
+
+  - name: token-budget-compliance
+    interval: 60s
+    successCondition: result < 1.0  # Within budget (<100% usage)
+    failureLimit: 2
+    count: 10
+    provider:
+      prometheus:
+        address: http://prometheus-server.monitoring.svc.cluster.local:9090
+        query: |
+          # Token budget utilization (0.0-1.0)
+          sum(genai_tokens_consumed_total{service="{{args.service-name}}"})
+          /
+          sum(genai_token_budget_total{service="{{args.service-name}}"})
+
+  - name: prompt-length-avg
+    interval: 60s
+    successCondition: result < 8000  # <8k tokens average prompt
+    failureLimit: 1
+    provider:
+      prometheus:
+        address: http://prometheus-server.monitoring.svc.cluster.local:9090
+        query: |
+          # Average prompt length in tokens
+          avg(genai_prompt_length_tokens{service="{{args.service-name}}"})
+
+  - name: completion-length-avg
+    interval: 60s
+    successCondition: result < 4000  # <4k tokens average completion
+    failureLimit: 1
+    provider:
+      prometheus:
+        address: http://prometheus-server.monitoring.svc.cluster.local:9090
+        query: |
+          # Average completion length in tokens
+          avg(genai_completion_length_tokens{service="{{args.service-name}}"})
+
+  - name: model-error-rate
+    interval: 30s
+    successCondition: result < 0.02  # <2% model errors
+    failureLimit: 2
+    count: 10
+    provider:
+      prometheus:
+        address: http://prometheus-server.monitoring.svc.cluster.local:9090
+        query: |
+          # GenAI model error rate
+          sum(rate(genai_model_errors_total{service="{{args.service-name}}"}[5m]))
+          /
+          sum(rate(genai_model_requests_total{service="{{args.service-name}}"}[5m]))

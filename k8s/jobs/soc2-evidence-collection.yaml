@@ -1,0 +1,273 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: soc2-evidence-scripts
+  namespace: siem
+data:
+  collect-quarterly-evidence.sh: |
+    #!/bin/bash
+    # This is a placeholder - actual script should be mounted from ConfigMap or git-sync
+    echo "SOC2 Evidence Collection Job"
+    echo "This would run the full collection process"
+    exit 0
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: soc2-quarterly-evidence
+  namespace: siem
+  labels:
+    app: soc2-evidence-collector
+    component: compliance
+spec:
+  # Run on the first day of each quarter at 00:00 UTC
+  # January 1st, April 1st, July 1st, October 1st
+  schedule: "0 0 1 1,4,7,10 *"
+  timeZone: "UTC"
+  concurrencyPolicy: Forbid  # Don't run multiple collections simultaneously
+  successfulJobsHistoryLimit: 4  # Keep one per quarter
+  failedJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      backoffLimit: 3
+      activeDeadlineSeconds: 7200  # 2 hour timeout
+      template:
+        metadata:
+          labels:
+            app: soc2-evidence-collector
+            compliance: soc2
+          annotations:
+            prometheus.io/scrape: "true"
+            prometheus.io/port: "9091"
+        spec:
+          restartPolicy: OnFailure
+          serviceAccountName: soc2-collector
+          securityContext:
+            fsGroup: 1000
+            runAsUser: 1000
+            runAsNonRoot: true
+
+          # Use init container to clone scripts from git
+          initContainers:
+            - name: git-sync
+              image: registry.k8s.io/git-sync/git-sync:v4.0.0
+              args:
+                - --repo=https://github.com/teei/TEEI-CSR-Platform.git
+                - --branch=main
+                - --root=/git
+                - --one-time
+              volumeMounts:
+                - name: git-repo
+                  mountPath: /git
+              env:
+                - name: GIT_SYNC_USERNAME
+                  valueFrom:
+                    secretKeyRef:
+                      name: git-credentials
+                      key: username
+                      optional: true
+                - name: GIT_SYNC_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: git-credentials
+                      key: password
+                      optional: true
+
+          containers:
+            - name: evidence-collector
+              image: bitnami/kubectl:1.28
+              command:
+                - /bin/bash
+                - -c
+                - |
+                  set -euo pipefail
+
+                  echo "=== SOC2 Quarterly Evidence Collection ==="
+                  date
+
+                  # Install dependencies
+                  apt-get update -qq
+                  apt-get install -y -qq curl jq git gnupg bc
+
+                  # Set environment
+                  export QUARTER=$(date +%Y-Q$(($(date +%-m)/3+1)))
+                  export OUTPUT_DIR=/evidence-output
+                  export REPO_DIR=/git/repo
+
+                  # Run collection
+                  cd $REPO_DIR/scripts/soc2
+                  chmod +x *.sh
+
+                  # Execute main collection script
+                  if ./collect-quarterly-evidence.sh; then
+                    echo "✓ Evidence collection successful"
+                    EXIT_CODE=0
+                  else
+                    echo "✗ Evidence collection failed"
+                    EXIT_CODE=1
+                  fi
+
+                  # Upload to auditor portal
+                  if [ $EXIT_CODE -eq 0 ]; then
+                    ./upload-to-audit-portal.sh || echo "Upload failed (non-fatal)"
+                  fi
+
+                  # Push metrics
+                  cat <<METRICS | curl --data-binary @- ${PUSHGATEWAY_URL}/metrics/job/soc2/instance/cronjob
+                  soc2_collection_last_run_timestamp $(date +%s)
+                  soc2_collection_last_run_success{quarter="$QUARTER"} $EXIT_CODE
+                  METRICS
+
+                  exit $EXIT_CODE
+
+              env:
+                - name: OPENSEARCH_USER
+                  valueFrom:
+                    secretKeyRef:
+                      name: opensearch-credentials
+                      key: username
+                - name: OPENSEARCH_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: opensearch-credentials
+                      key: password
+                - name: PUSHGATEWAY_URL
+                  value: "http://prometheus-pushgateway.observability.svc.cluster.local:9091"
+                - name: UPLOAD_METHOD
+                  value: "s3"
+                - name: S3_BUCKET
+                  value: "teei-soc2-evidence-auditor"
+                - name: AWS_REGION
+                  value: "us-east-1"
+
+              resources:
+                requests:
+                  cpu: "500m"
+                  memory: "1Gi"
+                limits:
+                  cpu: "2"
+                  memory: "2Gi"
+
+              volumeMounts:
+                - name: git-repo
+                  mountPath: /git
+                - name: evidence-output
+                  mountPath: /evidence-output
+                - name: aws-credentials
+                  mountPath: /root/.aws
+                  readOnly: true
+
+          volumes:
+            - name: git-repo
+              emptyDir: {}
+            - name: evidence-output
+              persistentVolumeClaim:
+                claimName: soc2-evidence-storage
+            - name: aws-credentials
+              secret:
+                secretName: aws-s3-credentials
+                optional: true
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: soc2-evidence-storage
+  namespace: siem
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: fast-ssd
+  resources:
+    requests:
+      storage: 50Gi
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: soc2-collector
+  namespace: siem
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: soc2-evidence-collector
+rules:
+  # Read access to all namespaces for inventory
+  - apiGroups: [""]
+    resources: ["namespaces", "pods", "services", "serviceaccounts", "secrets"]
+    verbs: ["get", "list"]
+
+  # Read RBAC for access reviews
+  - apiGroups: ["rbac.authorization.k8s.io"]
+    resources: ["roles", "rolebindings", "clusterroles", "clusterrolebindings"]
+    verbs: ["get", "list"]
+
+  # Read certificates for rotation tracking
+  - apiGroups: ["cert-manager.io"]
+    resources: ["certificates"]
+    verbs: ["get", "list"]
+
+  # Read Argo Rollouts for deployment tracking
+  - apiGroups: ["argoproj.io"]
+    resources: ["rollouts"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: soc2-evidence-collector
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: soc2-evidence-collector
+subjects:
+  - kind: ServiceAccount
+    name: soc2-collector
+    namespace: siem
+---
+# Alert when evidence collection fails
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: soc2-evidence-alerts
+  namespace: siem
+  labels:
+    prometheus: kube-prometheus
+spec:
+  groups:
+    - name: soc2-evidence-collection
+      interval: 30s
+      rules:
+        - alert: SOC2EvidenceCollectionFailed
+          expr: soc2_collection_last_run_success == 0
+          for: 5m
+          labels:
+            severity: critical
+            component: compliance
+            control: soc2
+          annotations:
+            summary: "SOC2 quarterly evidence collection failed"
+            description: "The automated SOC2 evidence collection job failed for quarter {{ $labels.quarter }}. Immediate action required."
+            runbook_url: "https://docs.teei-csr.com/runbooks/soc2-collection-failure"
+
+        - alert: SOC2EvidenceCollectionOverdue
+          expr: (time() - soc2_collection_last_run_timestamp) > 7862400  # 91 days
+          for: 1h
+          labels:
+            severity: critical
+            component: compliance
+            control: soc2
+          annotations:
+            summary: "SOC2 evidence collection overdue"
+            description: "No SOC2 evidence has been collected in the last 91 days. Quarterly requirement not met."
+
+        - alert: SOC2GDPRViolationDetected
+          expr: soc2_gdpr_violations > 0
+          for: 1m
+          labels:
+            severity: critical
+            component: compliance
+            control: gdpr
+          annotations:
+            summary: "GDPR data residency violation detected"
+            description: "{{ $value }} GDPR data residency violations detected in quarter {{ $labels.quarter }}. Immediate DPO notification required."

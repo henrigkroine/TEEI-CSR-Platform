@@ -1,0 +1,57 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: teei-reporting-nats-scaler
+  labels:
+    app: teei-reporting
+    component: backend
+    part-of: teei-csr-platform
+spec:
+  scaleTargetRef:
+    name: teei-reporting
+  pollingInterval: 15  # Check every 15 seconds
+  cooldownPeriod: 300  # 5 min cooldown to prevent flapping
+  minReplicaCount: 2
+  maxReplicaCount: 20
+  triggers:
+  # Scale based on NATS JetStream queue depth
+  - type: nats-jetstream
+    metadata:
+      natsServerMonitoringEndpoint: "nats://nats:8222"
+      stream: "reporting-requests"
+      consumer: "reporting-service"
+      lagThreshold: "100"  # Scale up if >100 messages pending
+      activationLagThreshold: "10"  # Activate scaling at 10 messages
+  # Scale based on CPU (fallback)
+  - type: cpu
+    metricType: Utilization
+    metadata:
+      value: "60"
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: teei-q2q-ai-nats-scaler
+  labels:
+    app: teei-q2q-ai
+    component: backend
+    part-of: teei-csr-platform
+spec:
+  scaleTargetRef:
+    name: teei-q2q-ai
+  pollingInterval: 15
+  cooldownPeriod: 300
+  minReplicaCount: 2
+  maxReplicaCount: 15
+  triggers:
+  - type: nats-jetstream
+    metadata:
+      natsServerMonitoringEndpoint: "nats://nats:8222"
+      stream: "q2q-pipeline"
+      consumer: "q2q-service"
+      lagThreshold: "50"
+      activationLagThreshold: "5"
+  - type: cpu
+    metricType: Utilization
+    metadata:
+      value: "65"

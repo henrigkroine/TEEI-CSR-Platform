@@ -1,0 +1,76 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: teei-platform
+
+resources:
+  - ../../../base/nats
+
+# Region-specific labels
+commonLabels:
+  region: eu-central-1
+  cluster: teei-nats-eu
+
+# Patches for region-specific configuration
+patches:
+  # Set NATS domain for JetStream
+  - patch: |-
+      - op: add
+        path: /spec/template/spec/containers/0/env/-
+        value:
+          name: NATS_DOMAIN
+          value: eu-central-1
+    target:
+      kind: StatefulSet
+      name: nats
+
+  # Set region label for service discovery
+  - patch: |-
+      - op: add
+        path: /metadata/annotations/region
+        value: eu-central-1
+    target:
+      kind: Service
+      name: nats
+
+# ConfigMap overlay for leafnode remotes (connect to US)
+configMapGenerator:
+  - name: nats-leafnode-config
+    behavior: merge
+    literals:
+      - |
+        leafnodes.conf=
+        # Leafnode configuration for EU region
+        # Connect to US cluster as leafnode remote
+
+        remotes = [
+          {
+            # US cluster endpoint
+            url: "nats-leaf://nats-lb.us-east-1.teei-platform.com:7422"
+
+            # Application account
+            account: "APP"
+
+            # Authentication via credentials file
+            credentials: "/etc/nats-secret/leafnode.creds"
+
+            # TLS configuration (uncomment for production)
+            # tls {
+            #   cert_file: "/etc/nats-tls/leafnode-cert.pem"
+            #   key_file: "/etc/nats-tls/leafnode-key.pem"
+            #   ca_file: "/etc/nats-tls/ca.pem"
+            # }
+
+            # Reconnect settings
+            reconnect_wait: 5s
+            max_reconnect_attempts: -1
+          }
+        ]
+
+# Name prefix for region-specific resources
+namePrefix: eu-
+
+# Replica count (can override if needed)
+# replicas:
+#   - name: nats
+#     count: 3

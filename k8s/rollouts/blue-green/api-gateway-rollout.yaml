@@ -1,0 +1,266 @@
+---
+# Blue/Green Rollout for API Gateway (Critical Service)
+# Strategy: Zero-downtime deployment with instant rollback capability
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: teei-api-gateway
+  labels:
+    app: teei-api-gateway
+    component: gateway
+    part-of: teei-csr-platform
+    deployment-strategy: blue-green
+spec:
+  replicas: 3
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app: teei-api-gateway
+
+  template:
+    metadata:
+      labels:
+        app: teei-api-gateway
+        component: gateway
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3000"
+        prometheus.io/path: "/metrics"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+
+      serviceAccountName: teei-api-gateway
+
+      containers:
+      - name: api-gateway
+        image: ghcr.io/henrigkroine/teei-api-gateway:latest
+        imagePullPolicy: Always
+
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities:
+            drop:
+            - ALL
+
+        ports:
+        - name: http
+          containerPort: 3000
+          protocol: TCP
+
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: PORT_API_GATEWAY
+          value: "3000"
+        - name: HOST
+          value: "0.0.0.0"
+
+        envFrom:
+        - configMapRef:
+            name: teei-api-gateway-config
+        - secretRef:
+            name: teei-api-gateway-secrets
+
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+
+        livenessProbe:
+          httpGet:
+            path: /health/live
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
+
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+
+        startupProbe:
+          httpGet:
+            path: /health/startup
+            port: 3000
+          initialDelaySeconds: 0
+          periodSeconds: 2
+          timeoutSeconds: 3
+          failureThreshold: 30
+
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        - name: cache
+          mountPath: /app/.cache
+
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      - name: cache
+        emptyDir: {}
+
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - teei-api-gateway
+              topologyKey: kubernetes.io/hostname
+
+  # Blue/Green Strategy
+  strategy:
+    blueGreen:
+      # Active service (production traffic)
+      activeService: teei-api-gateway
+
+      # Preview service (green version - no traffic)
+      previewService: teei-api-gateway-preview
+
+      # Auto-promotion after successful analysis (10 minutes)
+      autoPromotionEnabled: false  # Manual approval for production
+      autoPromotionSeconds: 600
+
+      # Scale down old version after promotion
+      scaleDownDelaySeconds: 300  # 5 minutes
+      scaleDownDelayRevisionLimit: 2
+
+      # Anti-affinity to avoid blue/green on same node
+      antiAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+          rollingUpdate:
+            maxSurge: 1
+
+      # Pre-promotion analysis
+      prePromotionAnalysis:
+        templates:
+        - templateName: api-gateway-smoke-test
+        - templateName: success-rate-analysis
+        args:
+        - name: service-name
+          value: teei-api-gateway-preview
+        - name: error-threshold
+          value: "1"  # <1% errors
+
+      # Post-promotion analysis (background check)
+      postPromotionAnalysis:
+        templates:
+        - templateName: success-rate-analysis
+        - templateName: latency-analysis
+        args:
+        - name: service-name
+          value: teei-api-gateway
+        - name: error-threshold
+          value: "0.5"  # <0.5% errors in production
+        - name: latency-threshold
+          value: "500"  # <500ms p95
+
+      # Preview metadata for tracking
+      previewMetadata:
+        labels:
+          role: preview
+        annotations:
+          environment: staging
+
+---
+# Active Service (Blue - Production Traffic)
+apiVersion: v1
+kind: Service
+metadata:
+  name: teei-api-gateway
+  labels:
+    app: teei-api-gateway
+    component: gateway
+    service-type: active
+spec:
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 3000
+    targetPort: http
+    protocol: TCP
+  selector:
+    app: teei-api-gateway
+    # Rollout controller will manage this selector
+
+---
+# Preview Service (Green - Testing Only)
+apiVersion: v1
+kind: Service
+metadata:
+  name: teei-api-gateway-preview
+  labels:
+    app: teei-api-gateway
+    component: gateway
+    service-type: preview
+  annotations:
+    description: "Preview service for blue/green deployments - testing only"
+spec:
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 3000
+    targetPort: http
+    protocol: TCP
+  selector:
+    app: teei-api-gateway
+    # Rollout controller will manage this selector
+
+---
+# AnalysisTemplate: API Gateway Smoke Test
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: api-gateway-smoke-test
+spec:
+  metrics:
+  - name: health-check
+    interval: 10s
+    count: 3
+    successCondition: result == "Healthy"
+    failureLimit: 0
+    provider:
+      job:
+        spec:
+          backoffLimit: 0
+          template:
+            spec:
+              restartPolicy: Never
+              containers:
+              - name: smoke-test
+                image: curlimages/curl:8.4.0
+                command:
+                - sh
+                - -c
+                - |
+                  # Health check
+                  HEALTH=$(curl -s -o /dev/null -w "%{http_code}" http://{{args.service-name}}:3000/health/ready)
+                  if [ "$HEALTH" = "200" ]; then
+                    echo "Healthy"
+                  else
+                    echo "Unhealthy"
+                    exit 1
+                  fi

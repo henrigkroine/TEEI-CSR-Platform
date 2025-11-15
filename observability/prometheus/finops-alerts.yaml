@@ -1,0 +1,308 @@
+# TEEI CSR Platform - FinOps Alerting Rules
+# Phase G: Cloud Cost & AI Budget Monitoring
+# Part of: Multi-Agent Worker 3 - FinOps Team
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-finops-rules
+  namespace: monitoring
+  labels:
+    app: prometheus
+    component: rules
+    category: finops
+data:
+  finops-alerts.yaml: |
+    groups:
+    # ==========================================
+    # Cloud Cost Budget Alerts
+    # ==========================================
+    - name: finops_cloud_budget
+      interval: 1h  # Check hourly
+      rules:
+      # Monthly budget 80% warning
+      - alert: BudgetExceeded80Percent
+        expr: |
+          (sum(aws_cost_monthly_usd{month="current"}) / sum(aws_budget_monthly_limit_usd)) * 100 > 80
+        for: 1h
+        labels:
+          severity: warning
+          category: finops
+          team: engineering-lead
+        annotations:
+          summary: "Cloud budget at 80%"
+          description: "Monthly cloud spend is at {{ $value | humanizePercentage }} of budget. Current: ${{ printf \"%.2f\" (index (query \"sum(aws_cost_monthly_usd{month='current'})\") 0).Value | humanize }}. Limit: ${{ printf \"%.2f\" (index (query \"sum(aws_budget_monthly_limit_usd)\") 0).Value | humanize }}."
+          runbook: "https://docs.teei.io/finops/budget-exceeded"
+          action: "Review current spend and forecast. Consider cost optimization recommendations."
+
+      # Monthly budget 100% critical
+      - alert: BudgetExceededCritical
+        expr: |
+          (sum(aws_cost_monthly_usd{month="current"}) / sum(aws_budget_monthly_limit_usd)) * 100 > 100
+        for: 30m
+        labels:
+          severity: critical
+          category: finops
+          team: cfo
+          escalate: "true"
+        annotations:
+          summary: "CRITICAL: Monthly cloud budget exceeded"
+          description: "Monthly cloud spend has exceeded budget! Current: ${{ printf \"%.2f\" (index (query \"sum(aws_cost_monthly_usd{month='current'})\") 0).Value | humanize }}. Budget: ${{ printf \"%.2f\" (index (query \"sum(aws_budget_monthly_limit_usd)\") 0).Value | humanize }}."
+          runbook: "https://docs.teei.io/finops/budget-exceeded-critical"
+          action: "IMMEDIATE ACTION REQUIRED. Escalate to CFO. Review all services for immediate cost reduction."
+
+      # Day-over-day spend spike (>20%)
+      - alert: CloudCostSpike
+        expr: |
+          (
+            sum(increase(aws_cost_daily_usd[1d]))
+            /
+            sum(increase(aws_cost_daily_usd[1d] offset 1d))
+          ) > 1.20
+        for: 2h
+        labels:
+          severity: warning
+          category: finops
+        annotations:
+          summary: "Unusual cloud cost spike detected"
+          description: "Daily cloud spend increased by {{ $value | humanizePercentage }} compared to yesterday. Investigate for anomalies."
+          runbook: "https://docs.teei.io/finops/cost-spike"
+
+      # Forecast exceeds budget
+      - alert: ForecastExceedsBudget
+        expr: |
+          sum(aws_cost_forecast_usd) > sum(aws_budget_monthly_limit_usd)
+        for: 6h
+        labels:
+          severity: warning
+          category: finops
+        annotations:
+          summary: "Forecasted spend will exceed monthly budget"
+          description: "Based on current trend, end-of-month spend is forecasted at ${{ printf \"%.2f\" (index (query \"sum(aws_cost_forecast_usd)\") 0).Value | humanize }}, exceeding budget of ${{ printf \"%.2f\" (index (query \"sum(aws_budget_monthly_limit_usd)\") 0).Value | humanize }}."
+          action: "Review spending patterns and implement cost controls."
+
+    # ==========================================
+    # AI Token Budget Alerts
+    # ==========================================
+    - name: finops_ai_budget
+      interval: 5m
+      rules:
+      # Tenant at 80% of AI budget
+      - alert: AIBudgetWarning
+        expr: |
+          (ai_budget_current_usage_usd / ai_budget_monthly_limit_usd) * 100 > 80
+        for: 10m
+        labels:
+          severity: warning
+          category: finops
+          tenant: "{{ $labels.tenant_id }}"
+        annotations:
+          summary: "AI budget warning for tenant {{ $labels.tenant_id }}"
+          description: "Tenant {{ $labels.tenant_id }} has used {{ $value | humanizePercentage }} of their monthly AI token budget ({{ $labels.model }})."
+          action: "Notify tenant admin. Soft limit notification sent."
+
+      # Tenant exceeded AI budget (hard limit)
+      - alert: AIBudgetExceeded
+        expr: |
+          ai_budget_hard_limit_reached == 1
+        for: 5m
+        labels:
+          severity: critical
+          category: finops
+          tenant: "{{ $labels.tenant_id }}"
+        annotations:
+          summary: "CRITICAL: AI budget exceeded for tenant {{ $labels.tenant_id }}"
+          description: "Tenant {{ $labels.tenant_id }} has exceeded their monthly AI budget. AI features are now disabled."
+          action: "Contact account manager to upgrade plan or increase budget."
+
+      # Total AI spend exceeds $10k/month
+      - alert: TotalAISpendHigh
+        expr: |
+          sum(increase(ai_token_usage_cost_usd[30d])) > 10000
+        for: 1h
+        labels:
+          severity: warning
+          category: finops
+          team: engineering-lead
+        annotations:
+          summary: "Total AI spend exceeds $10k/month"
+          description: "Total AI token spend for the past 30 days is ${{ printf \"%.2f\" $value }}. Review usage patterns and tenant budgets."
+          runbook: "https://docs.teei.io/finops/ai-spend-high"
+
+      # Unusual AI token consumption spike (>3x average)
+      - alert: AITokenAnomaly
+        expr: |
+          (
+            sum(rate(ai_token_usage_total[1h])) by (tenant_id)
+            /
+            avg_over_time(sum(rate(ai_token_usage_total[1h])) by (tenant_id)[7d])
+          ) > 3
+        for: 30m
+        labels:
+          severity: warning
+          category: finops
+          tenant: "{{ $labels.tenant_id }}"
+        annotations:
+          summary: "Unusual AI token usage spike for tenant {{ $labels.tenant_id }}"
+          description: "Tenant {{ $labels.tenant_id }} token usage is {{ $value }}x higher than 7-day average. Possible runaway job or abuse."
+          action: "Investigate tenant usage logs. Contact tenant if necessary."
+
+      # AI cost per report too high (>$2)
+      - alert: AIReportCostHigh
+        expr: |
+          avg(ai_token_usage_cost_usd{report_type!=""}) by (report_type) > 2.0
+        for: 1h
+        labels:
+          severity: warning
+          category: finops
+        annotations:
+          summary: "High AI cost per report for {{ $labels.report_type }}"
+          description: "Average cost per {{ $labels.report_type }} report is ${{ printf \"%.2f\" $value }}. Consider prompt optimization."
+          action: "Review prompt templates and token usage for this report type."
+
+    # ==========================================
+    # Storage Cost Alerts
+    # ==========================================
+    - name: finops_storage
+      interval: 6h
+      rules:
+      # S3 bucket >1TB
+      - alert: S3BucketLarge
+        expr: |
+          aws_s3_bucket_size_bytes > 1099511627776  # 1TB
+        for: 24h
+        labels:
+          severity: warning
+          category: finops
+          bucket: "{{ $labels.bucket }}"
+        annotations:
+          summary: "S3 bucket {{ $labels.bucket }} exceeds 1TB"
+          description: "Bucket {{ $labels.bucket }} is {{ $value | humanize1024 }}. Review retention policies and lifecycle rules."
+          action: "Run storage retention cleanup script."
+
+      # ClickHouse disk >80%
+      - alert: ClickHouseDiskHigh
+        expr: |
+          (
+            clickhouse_disk_used_bytes
+            /
+            clickhouse_disk_total_bytes
+          ) > 0.80
+        for: 1h
+        labels:
+          severity: warning
+          category: finops
+        annotations:
+          summary: "ClickHouse disk usage >80%"
+          description: "ClickHouse disk is {{ $value | humanizePercentage }} full. Trigger TTL cleanup."
+          action: "Run: OPTIMIZE TABLE analytics.events FINAL; to apply TTL."
+
+      # Postgres WAL archive growing too fast
+      - alert: PostgresWALGrowth
+        expr: |
+          rate(pg_wal_archive_bytes_total[1h]) > 10737418240  # 10GB/hour
+        for: 2h
+        labels:
+          severity: warning
+          category: finops
+        annotations:
+          summary: "Postgres WAL growing rapidly"
+          description: "WAL archive is growing at {{ $value | humanize1024 }}/hour. Check for long-running transactions."
+          action: "Review active transactions and archive settings."
+
+    # ==========================================
+    # Resource Waste Alerts
+    # ==========================================
+    - name: finops_waste
+      interval: 1h
+      rules:
+      # Overprovisioned pods (CPU <40% for 6h)
+      - alert: OverprovisionedPod
+        expr: |
+          (
+            avg_over_time(container_cpu_usage_seconds_total[6h])
+            /
+            container_spec_cpu_quota
+          ) < 0.40
+        for: 6h
+        labels:
+          severity: info
+          category: finops
+          pod: "{{ $labels.pod }}"
+        annotations:
+          summary: "Pod {{ $labels.pod }} is overprovisioned"
+          description: "Pod {{ $labels.pod }} CPU utilization is {{ $value | humanizePercentage }} over 6 hours. Consider right-sizing."
+          action: "Review resource requests and run cost-recommendations.sh script."
+
+      # Idle load balancer (no traffic for 24h)
+      - alert: IdleLoadBalancer
+        expr: |
+          sum(rate(http_requests_total{service_type="LoadBalancer"}[24h])) by (service) == 0
+        for: 24h
+        labels:
+          severity: info
+          category: finops
+        annotations:
+          summary: "Load balancer {{ $labels.service }} has no traffic"
+          description: "Load balancer {{ $labels.service }} has not received any traffic in 24 hours. Costing ~$18/month."
+          action: "Consider deleting if unused."
+
+      # Unused PVC (not mounted for 7 days)
+      - alert: UnusedPVC
+        expr: |
+          kube_persistentvolumeclaim_info unless on(persistentvolumeclaim) kube_pod_spec_volumes_persistentvolumeclaims_info
+        for: 168h  # 7 days
+        labels:
+          severity: info
+          category: finops
+        annotations:
+          summary: "PVC {{ $labels.persistentvolumeclaim }} is unused"
+          description: "PVC {{ $labels.persistentvolumeclaim }} has not been mounted for 7 days."
+          action: "Verify if PVC can be safely deleted."
+
+    # ==========================================
+    # Cost Forecasting & Trends
+    # ==========================================
+    - name: finops_trends
+      interval: 12h
+      rules:
+      # Month-over-month growth >20%
+      - alert: CostGrowthHigh
+        expr: |
+          (
+            (sum(aws_cost_monthly_usd{month="current"}) - sum(aws_cost_monthly_usd{month="previous"}))
+            /
+            sum(aws_cost_monthly_usd{month="previous"})
+          ) * 100 > 20
+        for: 24h
+        labels:
+          severity: warning
+          category: finops
+          team: engineering-lead
+        annotations:
+          summary: "Cloud cost growth exceeds 20% month-over-month"
+          description: "Monthly spend increased by {{ $value | humanizePercentage }} compared to last month."
+          action: "Review new services, traffic growth, and run cost optimization analysis."
+
+      # Cost per customer trending up
+      - alert: UnitEconomicsWorsening
+        expr: |
+          (
+            sum(aws_cost_monthly_usd{month="current"})
+            /
+            count(count by (tenant_id) (http_requests_total))
+          )
+          /
+          (
+            sum(aws_cost_monthly_usd{month="previous"})
+            /
+            count(count by (tenant_id) (http_requests_total) offset 30d)
+          ) > 1.15
+        for: 7d
+        labels:
+          severity: warning
+          category: finops
+        annotations:
+          summary: "Cost per customer increasing"
+          description: "Unit economics are worsening. Cost per customer increased by {{ $value | humanizePercentage }}."
+          action: "Investigate infrastructure efficiency and scale optimization."

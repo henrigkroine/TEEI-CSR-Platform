@@ -1,0 +1,709 @@
+# AWS WAF Configuration for TEEI Platform
+# OWASP Top 10 Protection, Rate Limiting, Bot Management, Geo-Blocking
+
+---
+# Terraform configuration for AWS WAF v2
+terraform:
+  required_providers:
+    aws:
+      source: hashicorp/aws
+      version: ~> 5.0
+
+# WAF Web ACL - Global (CloudFront)
+web_acls:
+  - name: teei-platform-global-waf
+    scope: CLOUDFRONT  # For CloudFront distributions
+    description: "Global WAF for TEEI Platform - OWASP Top 10, Rate Limiting, Bot Protection"
+    default_action:
+      type: allow  # Allow by default, block specific threats
+
+    # Custom response for blocked requests
+    custom_response_bodies:
+      - key: blocked_response
+        content_type: APPLICATION_JSON
+        content: |
+          {
+            "error": "Request blocked by WAF",
+            "code": "WAF_BLOCKED",
+            "message": "Your request was blocked due to security policies. If you believe this is an error, please contact support.",
+            "support": "security@teei-platform.com"
+          }
+
+    rules:
+      # ========================================================================
+      # Rule 1: AWS Managed Rule - Core Rule Set (CRS)
+      # Protects against OWASP Top 10 vulnerabilities
+      # ========================================================================
+      - name: AWS-AWSManagedRulesCommonRuleSet
+        priority: 10
+        override_action: none  # Use rule group's actions
+        statement:
+          managed_rule_group:
+            vendor_name: AWS
+            name: AWSManagedRulesCommonRuleSet
+            version: null  # Latest version
+            excluded_rules: []  # No exclusions
+        visibility_config:
+          sampled_requests_enabled: true
+          cloudwatch_metrics_enabled: true
+          metric_name: AWSManagedRulesCommonRuleSetMetric
+
+      # ========================================================================
+      # Rule 2: AWS Managed Rule - Known Bad Inputs
+      # Blocks requests with patterns known to be malicious
+      # ========================================================================
+      - name: AWS-AWSManagedRulesKnownBadInputsRuleSet
+        priority: 20
+        override_action: none
+        statement:
+          managed_rule_group:
+            vendor_name: AWS
+            name: AWSManagedRulesKnownBadInputsRuleSet
+        visibility_config:
+          sampled_requests_enabled: true
+          cloudwatch_metrics_enabled: true
+          metric_name: AWSManagedRulesKnownBadInputsMetric
+
+      # ========================================================================
+      # Rule 3: AWS Managed Rule - SQL Injection Protection
+      # ========================================================================
+      - name: AWS-AWSManagedRulesSQLiRuleSet
+        priority: 30
+        override_action: none
+        statement:
+          managed_rule_group:
+            vendor_name: AWS
+            name: AWSManagedRulesSQLiRuleSet
+        visibility_config:
+          sampled_requests_enabled: true
+          cloudwatch_metrics_enabled: true
+          metric_name: AWSManagedRulesSQLiMetric
+
+      # ========================================================================
+      # Rule 4: AWS Managed Rule - Linux Operating System
+      # Protects against Linux-specific exploits (path traversal, RCE)
+      # ========================================================================
+      - name: AWS-AWSManagedRulesLinuxRuleSet
+        priority: 40
+        override_action: none
+        statement:
+          managed_rule_group:
+            vendor_name: AWS
+            name: AWSManagedRulesLinuxRuleSet
+        visibility_config:
+          sampled_requests_enabled: true
+          cloudwatch_metrics_enabled: true
+          metric_name: AWSManagedRulesLinuxMetric
+
+      # ========================================================================
+      # Rule 5: AWS Managed Rule - Anonymous IP List
+      # Blocks requests from VPNs, proxies, Tor exit nodes
+      # ========================================================================
+      - name: AWS-AWSManagedRulesAnonymousIpList
+        priority: 50
+        override_action: none
+        statement:
+          managed_rule_group:
+            vendor_name: AWS
+            name: AWSManagedRulesAnonymousIpList
+            excluded_rules:
+              - AnonymousIPList  # Exclude if legitimate VPN users exist
+        visibility_config:
+          sampled_requests_enabled: true
+          cloudwatch_metrics_enabled: true
+          metric_name: AWSManagedRulesAnonymousIpMetric
+
+      # ========================================================================
+      # Rule 6: AWS Managed Rule - IP Reputation List
+      # Blocks requests from known malicious IPs
+      # ========================================================================
+      - name: AWS-AWSManagedRulesAmazonIpReputationList
+        priority: 60
+        override_action: none
+        statement:
+          managed_rule_group:
+            vendor_name: AWS
+            name: AWSManagedRulesAmazonIpReputationList
+        visibility_config:
+          sampled_requests_enabled: true
+          cloudwatch_metrics_enabled: true
+          metric_name: AWSManagedRulesIPReputationMetric
+
+      # ========================================================================
+      # Rule 7: AWS Managed Rule - Bot Control
+      # Blocks automated bots while allowing verified search engines
+      # ========================================================================
+      - name: AWS-AWSManagedRulesBotControlRuleSet
+        priority: 70
+        override_action: none
+        statement:
+          managed_rule_group:
+            vendor_name: AWS
+            name: AWSManagedRulesBotControlRuleSet
+            excluded_rules:
+              - CategoryHttpLibrary  # Allow HTTP libraries for API clients
+        visibility_config:
+          sampled_requests_enabled: true
+          cloudwatch_metrics_enabled: true
+          metric_name: AWSManagedRulesBotControlMetric
+
+      # ========================================================================
+      # Rule 8: Global Rate Limiting - 1000 requests per 5 minutes per IP
+      # ========================================================================
+      - name: GlobalRateLimit
+        priority: 100
+        action:
+          block:
+            custom_response:
+              response_code: 429
+              custom_response_body_key: blocked_response
+        statement:
+          rate_based:
+            limit: 1000
+            aggregate_key_type: IP
+            evaluation_window_sec: 300  # 5 minutes
+        visibility_config:
+          sampled_requests_enabled: true
+          cloudwatch_metrics_enabled: true
+          metric_name: GlobalRateLimitMetric
+
+      # ========================================================================
+      # Rule 9: API Rate Limiting - 300 requests per minute per user
+      # ========================================================================
+      - name: APIRateLimit
+        priority: 110
+        action:
+          block:
+            custom_response:
+              response_code: 429
+              custom_response_body_key: blocked_response
+        statement:
+          rate_based:
+            limit: 300
+            aggregate_key_type: CUSTOM_KEYS
+            custom_keys:
+              - header:
+                  name: Authorization
+                  text_transformations:
+                    - priority: 0
+                      type: NONE
+            evaluation_window_sec: 60  # 1 minute
+            scope_down_statement:
+              byte_match:
+                search_string: /api/
+                field_to_match:
+                  uri_path: {}
+                text_transformations:
+                  - priority: 0
+                    type: LOWERCASE
+                positional_constraint: STARTS_WITH
+        visibility_config:
+          sampled_requests_enabled: true
+          cloudwatch_metrics_enabled: true
+          metric_name: APIRateLimitMetric
+
+      # ========================================================================
+      # Rule 10: GenAI Endpoint Rate Limiting - 50 requests per minute per user
+      # Protects against token budget exhaustion
+      # ========================================================================
+      - name: GenAIRateLimit
+        priority: 120
+        action:
+          block:
+            custom_response:
+              response_code: 429
+              custom_response_body_key: blocked_response
+        statement:
+          rate_based:
+            limit: 50
+            aggregate_key_type: CUSTOM_KEYS
+            custom_keys:
+              - header:
+                  name: Authorization
+                  text_transformations:
+                    - priority: 0
+                      type: NONE
+            evaluation_window_sec: 60  # 1 minute
+            scope_down_statement:
+              or_statement:
+                statements:
+                  - byte_match:
+                      search_string: /api/v1/gen-reports
+                      field_to_match:
+                        uri_path: {}
+                      text_transformations:
+                        - priority: 0
+                          type: LOWERCASE
+                      positional_constraint: STARTS_WITH
+                  - byte_match:
+                      search_string: /api/v1/narratives
+                      field_to_match:
+                        uri_path: {}
+                      text_transformations:
+                        - priority: 0
+                          type: LOWERCASE
+                      positional_constraint: STARTS_WITH
+        visibility_config:
+          sampled_requests_enabled: true
+          cloudwatch_metrics_enabled: true
+          metric_name: GenAIRateLimitMetric
+
+      # ========================================================================
+      # Rule 11: Login Brute Force Protection - 10 attempts per 5 minutes per IP
+      # ========================================================================
+      - name: LoginBruteForceProtection
+        priority: 130
+        action:
+          block:
+            custom_response:
+              response_code: 403
+              custom_response_body_key: blocked_response
+        statement:
+          rate_based:
+            limit: 10
+            aggregate_key_type: IP
+            evaluation_window_sec: 300  # 5 minutes
+            scope_down_statement:
+              and_statement:
+                statements:
+                  - byte_match:
+                      search_string: /api/auth/login
+                      field_to_match:
+                        uri_path: {}
+                      text_transformations:
+                        - priority: 0
+                          type: LOWERCASE
+                      positional_constraint: EXACTLY
+                  - byte_match:
+                      search_string: POST
+                      field_to_match:
+                        method: {}
+                      text_transformations:
+                        - priority: 0
+                          type: NONE
+                      positional_constraint: EXACTLY
+        visibility_config:
+          sampled_requests_enabled: true
+          cloudwatch_metrics_enabled: true
+          metric_name: LoginBruteForceMetric
+
+      # ========================================================================
+      # Rule 12: CSRF Token Validation - Block mutations without X-CSRF-Token
+      # ========================================================================
+      - name: CSRFTokenValidation
+        priority: 140
+        action:
+          block:
+            custom_response:
+              response_code: 403
+              custom_response_body_key: blocked_response
+        statement:
+          and_statement:
+            statements:
+              # Match mutation methods
+              - or_statement:
+                  statements:
+                    - byte_match:
+                        search_string: POST
+                        field_to_match:
+                          method: {}
+                        text_transformations:
+                          - priority: 0
+                            type: NONE
+                        positional_constraint: EXACTLY
+                    - byte_match:
+                        search_string: PUT
+                        field_to_match:
+                          method: {}
+                        text_transformations:
+                          - priority: 0
+                            type: NONE
+                        positional_constraint: EXACTLY
+                    - byte_match:
+                        search_string: DELETE
+                        field_to_match:
+                          method: {}
+                        text_transformations:
+                          - priority: 0
+                            type: NONE
+                        positional_constraint: EXACTLY
+                    - byte_match:
+                        search_string: PATCH
+                        field_to_match:
+                          method: {}
+                        text_transformations:
+                          - priority: 0
+                            type: NONE
+                        positional_constraint: EXACTLY
+              # Missing X-CSRF-Token header
+              - not_statement:
+                  statement:
+                    size_constraint:
+                      field_to_match:
+                        single_header:
+                          name: x-csrf-token
+                      comparison_operator: GE
+                      size: 1
+                      text_transformations:
+                        - priority: 0
+                          type: NONE
+        visibility_config:
+          sampled_requests_enabled: true
+          cloudwatch_metrics_enabled: true
+          metric_name: CSRFTokenValidationMetric
+
+      # ========================================================================
+      # Rule 13: User-Agent Validation - Block requests without User-Agent
+      # ========================================================================
+      - name: UserAgentValidation
+        priority: 150
+        action:
+          block:
+            custom_response:
+              response_code: 403
+              custom_response_body_key: blocked_response
+        statement:
+          not_statement:
+            statement:
+              size_constraint:
+                field_to_match:
+                  single_header:
+                    name: user-agent
+                comparison_operator: GE
+                size: 1
+                text_transformations:
+                  - priority: 0
+                    type: NONE
+        visibility_config:
+          sampled_requests_enabled: true
+          cloudwatch_metrics_enabled: true
+          metric_name: UserAgentValidationMetric
+
+      # ========================================================================
+      # Rule 14: Oversized Payload Protection - Block requests > 10 MB
+      # ========================================================================
+      - name: OversizedPayloadProtection
+        priority: 160
+        action:
+          block:
+            custom_response:
+              response_code: 413
+              custom_response_body_key: blocked_response
+        statement:
+          size_constraint:
+            field_to_match:
+              body:
+                oversize_handling: CONTINUE  # Check size even if oversized
+            comparison_operator: GT
+            size: 10485760  # 10 MB in bytes
+            text_transformations:
+              - priority: 0
+                type: NONE
+        visibility_config:
+          sampled_requests_enabled: true
+          cloudwatch_metrics_enabled: true
+          metric_name: OversizedPayloadMetric
+
+      # ========================================================================
+      # Rule 15: Geo-Blocking - Block high-risk countries
+      # ========================================================================
+      - name: GeoBlocking
+        priority: 170
+        action:
+          block:
+            custom_response:
+              response_code: 403
+              custom_response_body_key: blocked_response
+        statement:
+          geo_match:
+            country_codes:
+              - KP  # North Korea
+              - IR  # Iran
+              - SY  # Syria
+              - CU  # Cuba
+              # Add more high-risk countries as needed
+            forwarded_ip_config:
+              header_name: X-Forwarded-For
+              fallback_behavior: MATCH
+        visibility_config:
+          sampled_requests_enabled: true
+          cloudwatch_metrics_enabled: true
+          metric_name: GeoBlockingMetric
+
+      # ========================================================================
+      # Rule 16: Path Traversal Protection - Block ../ patterns
+      # ========================================================================
+      - name: PathTraversalProtection
+        priority: 180
+        action:
+          block:
+            custom_response:
+              response_code: 403
+              custom_response_body_key: blocked_response
+        statement:
+          or_statement:
+            statements:
+              - byte_match:
+                  search_string: ../
+                  field_to_match:
+                    uri_path: {}
+                  text_transformations:
+                    - priority: 0
+                      type: URL_DECODE
+                  positional_constraint: CONTAINS
+              - byte_match:
+                  search_string: ..\\
+                  field_to_match:
+                    uri_path: {}
+                  text_transformations:
+                    - priority: 0
+                      type: URL_DECODE
+                  positional_constraint: CONTAINS
+        visibility_config:
+          sampled_requests_enabled: true
+          cloudwatch_metrics_enabled: true
+          metric_name: PathTraversalMetric
+
+      # ========================================================================
+      # Rule 17: XSS Protection - Block common XSS patterns
+      # ========================================================================
+      - name: XSSProtection
+        priority: 190
+        action:
+          block:
+            custom_response:
+              response_code: 403
+              custom_response_body_key: blocked_response
+        statement:
+          or_statement:
+            statements:
+              - byte_match:
+                  search_string: <script
+                  field_to_match:
+                    all_query_arguments: {}
+                  text_transformations:
+                    - priority: 0
+                      type: LOWERCASE
+                    - priority: 1
+                      type: HTML_ENTITY_DECODE
+                  positional_constraint: CONTAINS
+              - byte_match:
+                  search_string: javascript:
+                  field_to_match:
+                    all_query_arguments: {}
+                  text_transformations:
+                    - priority: 0
+                      type: LOWERCASE
+                    - priority: 1
+                      type: URL_DECODE
+                  positional_constraint: CONTAINS
+              - byte_match:
+                  search_string: onerror=
+                  field_to_match:
+                    all_query_arguments: {}
+                  text_transformations:
+                    - priority: 0
+                      type: LOWERCASE
+                  positional_constraint: CONTAINS
+        visibility_config:
+          sampled_requests_enabled: true
+          cloudwatch_metrics_enabled: true
+          metric_name: XSSProtectionMetric
+
+    # CloudWatch logging configuration
+    logging:
+      log_destination_configs:
+        - arn:aws:s3:::teei-waf-logs-us-east-1/global-waf/
+      redacted_fields:
+        - single_header:
+            name: authorization
+        - single_header:
+            name: cookie
+      logging_filter:
+        default_behavior: KEEP
+        filters:
+          - behavior: KEEP
+            requirement: MEETS_ANY
+            conditions:
+              - action_condition:
+                  action: BLOCK
+              - action_condition:
+                  action: COUNT
+
+    tags:
+      Environment: production
+      ManagedBy: terraform
+      Team: security
+      Scope: global
+
+  # ========================================================================
+  # Regional WAF Web ACL - US East 1 (ALB)
+  # ========================================================================
+  - name: teei-platform-us-east-1-waf
+    scope: REGIONAL  # For ALB, API Gateway
+    description: "Regional WAF for US East 1 - Application Load Balancers"
+    default_action:
+      type: allow
+
+    rules:
+      # Include all rules from global WAF
+      # ... (same rules as above with adjusted priorities)
+
+    association_config:
+      request_body:
+        regional_resource_arns:
+          - arn:aws:elasticloadbalancing:us-east-1:ACCOUNT_ID:loadbalancer/app/teei-api-us-alb/1234567890
+          - arn:aws:elasticloadbalancing:us-east-1:ACCOUNT_ID:loadbalancer/app/teei-reports-us-alb/1234567890
+
+    tags:
+      Environment: production
+      Region: us-east-1
+      ManagedBy: terraform
+
+  # ========================================================================
+  # Regional WAF Web ACL - EU Central 1 (ALB)
+  # ========================================================================
+  - name: teei-platform-eu-central-1-waf
+    scope: REGIONAL
+    description: "Regional WAF for EU Central 1 - GDPR Compliant"
+    default_action:
+      type: allow
+
+    rules:
+      # Include all rules from global WAF
+      # ... (same rules as above)
+
+    association_config:
+      request_body:
+        regional_resource_arns:
+          - arn:aws:elasticloadbalancing:eu-central-1:ACCOUNT_ID:loadbalancer/app/teei-api-eu-alb/0987654321
+          - arn:aws:elasticloadbalancing:eu-central-1:ACCOUNT_ID:loadbalancer/app/teei-reports-eu-alb/0987654321
+
+    tags:
+      Environment: production
+      Region: eu-central-1
+      ManagedBy: terraform
+      GDPRCompliant: "true"
+
+# IP Sets - Allowlist/Blocklist
+ip_sets:
+  - name: teei-internal-ips
+    scope: CLOUDFRONT
+    ip_address_version: IPV4
+    addresses:
+      - 10.0.0.0/8      # Internal VPC
+      - 172.16.0.0/12   # Internal VPC
+      - 192.168.0.0/16  # Internal VPC
+    description: "Internal IP ranges for TEEI Platform"
+
+  - name: teei-partner-ips
+    scope: CLOUDFRONT
+    ip_address_version: IPV4
+    addresses:
+      - 203.0.113.0/24  # Example partner IP range
+    description: "Trusted partner IP ranges"
+
+  - name: teei-blocked-ips
+    scope: CLOUDFRONT
+    ip_address_version: IPV4
+    addresses:
+      # Populated dynamically via automation
+    description: "Blocked IP addresses (malicious actors)"
+
+# Regex Pattern Sets - Custom pattern matching
+regex_pattern_sets:
+  - name: teei-sensitive-paths
+    scope: CLOUDFRONT
+    description: "Sensitive paths requiring extra protection"
+    regular_expressions:
+      - /api/admin/.*
+      - /api/internal/.*
+      - /api/v1/export/.*
+      - /\.git/.*
+      - /\.env.*
+
+# Rate-Based Rules (standalone)
+rate_based_rules:
+  - name: AggregateGlobalRateLimit
+    metric_name: AggregateGlobalRateLimit
+    rate_key: IP
+    rate_limit: 2000  # 2000 requests per 5 minutes
+    rule_action: BLOCK
+
+# Monitoring & Alerts
+monitoring:
+  cloudwatch_metrics:
+    enabled: true
+    namespace: AWS/WAFV2
+    metrics:
+      - AllowedRequests
+      - BlockedRequests
+      - CountedRequests
+      - PassedRequests
+
+  cloudwatch_alarms:
+    - name: WAFBlockRateHigh
+      metric: BlockedRequests
+      threshold: 100  # Block rate > 100 per minute
+      comparison: GreaterThanThreshold
+      evaluation_periods: 2
+      period: 60
+      statistic: Sum
+      actions:
+        - arn:aws:sns:us-east-1:ACCOUNT_ID:waf-alerts
+
+    - name: WAFRateLimitTriggered
+      metric: CountedRequests
+      threshold: 50
+      comparison: GreaterThanThreshold
+      evaluation_periods: 1
+      period: 60
+      statistic: Sum
+      actions:
+        - arn:aws:sns:us-east-1:ACCOUNT_ID:waf-alerts
+
+# Testing & Validation
+testing:
+  count_mode:
+    enabled: false  # Set to true to test rules without blocking
+  sample_requests:
+    enabled: true
+    max_items: 500
+
+# Compliance & Auditing
+compliance:
+  pci_dss:
+    enabled: false  # Set to true if handling payment card data
+  hipaa:
+    enabled: false  # Set to true if handling healthcare data
+  gdpr:
+    enabled: true
+    log_ip_addresses: false  # Don't log full IPs for GDPR compliance
+    data_retention_days: 90
+
+# Cost Optimization
+cost_optimization:
+  # Use AWS Managed Rules instead of custom rules where possible
+  prefer_managed_rules: true
+  # Enable sampling for logging to reduce costs
+  logging_sampling_rate: 10  # Log 10% of allowed requests
+
+# Automation
+automation:
+  # Automatically update IP reputation lists
+  ip_reputation_updates:
+    enabled: true
+    schedule: "0 */6 * * *"  # Every 6 hours
+    source: aws-guardduty
+
+  # Automatically block IPs with high attack scores
+  auto_blocking:
+    enabled: true
+    threshold: 100  # Attack score threshold
+    duration: 3600  # Block for 1 hour
+
+# Documentation
+documentation:
+  runbook: /docs/WAF_Runbook.md
+  false_positive_handling: /docs/WAF_False_Positives.md
+  incident_response: /docs/WAF_Incident_Response.md

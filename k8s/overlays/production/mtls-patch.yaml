@@ -1,0 +1,55 @@
+---
+# Production-specific mTLS configuration
+# Applies STRICT mode for all production workloads
+
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: production-mtls-strict
+  namespace: default
+spec:
+  mtls:
+    mode: STRICT  # Production: reject all plaintext connections
+---
+# Update Istio control plane for US region
+apiVersion: install.istio.io/v1alpha1
+kind: IstioOperator
+metadata:
+  name: teei-istio-controlplane
+  namespace: istio-system
+spec:
+  meshConfig:
+    trustDomain: us.cluster.local  # US region trust domain
+    mtls:
+      mode: STRICT
+
+  values:
+    global:
+      multiCluster:
+        clusterName: us-primary
+        enabled: true
+---
+# Production gateway with enhanced security
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: teei-gateway
+  namespace: istio-system
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - port:
+      number: 443
+      name: https
+      protocol: HTTPS
+    hosts:
+    - "teei.production.example.com"
+    - "*.teei.production.example.com"
+    tls:
+      mode: SIMPLE
+      credentialName: teei-platform-tls-prod
+      minProtocolVersion: TLSV1_3  # Production: only TLS 1.3
+      cipherSuites:
+        - ECDHE-ECDSA-AES256-GCM-SHA384
+        - ECDHE-RSA-AES256-GCM-SHA384

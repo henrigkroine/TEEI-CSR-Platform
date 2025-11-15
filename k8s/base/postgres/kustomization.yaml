@@ -1,0 +1,42 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: default
+
+commonLabels:
+  app: postgres
+  component: database
+  managed-by: kustomize
+
+resources:
+  - configmap.yaml
+  - secret.yaml
+  - service.yaml
+  - statefulset.yaml
+  - exporter-queries.yaml
+
+configMapGenerator:
+  - name: postgres-init-scripts
+    files:
+      - init-replication.sh
+    options:
+      disableNameSuffixHash: true
+
+# Images
+images:
+  - name: postgres
+    newName: postgres
+    newTag: "15-alpine"
+  - name: postgres-exporter
+    newName: prometheuscommunity/postgres-exporter
+    newTag: v0.15.0
+
+# Configuration patches can be applied in overlays
+patches:
+  - target:
+      kind: StatefulSet
+      name: postgres
+    patch: |-
+      - op: add
+        path: /spec/template/metadata/annotations/kubectl.kubernetes.io~1default-container
+        value: postgres

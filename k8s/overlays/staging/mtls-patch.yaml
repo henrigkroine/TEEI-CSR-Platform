@@ -1,0 +1,52 @@
+---
+# Staging-specific mTLS configuration
+# Uses PERMISSIVE mode to allow debugging
+
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: staging-mtls-permissive
+  namespace: staging
+spec:
+  mtls:
+    mode: PERMISSIVE  # Staging: allow plaintext for debugging
+---
+# Update Istio control plane for staging
+apiVersion: install.istio.io/v1alpha1
+kind: IstioOperator
+metadata:
+  name: teei-istio-controlplane
+  namespace: istio-system
+spec:
+  meshConfig:
+    trustDomain: staging.cluster.local  # Staging trust domain
+    mtls:
+      mode: PERMISSIVE
+
+  values:
+    global:
+      multiCluster:
+        clusterName: staging
+        enabled: false  # No multi-cluster in staging
+---
+# Staging gateway
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: teei-gateway
+  namespace: istio-system
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - port:
+      number: 443
+      name: https
+      protocol: HTTPS
+    hosts:
+    - "teei.staging.example.com"
+    - "*.teei.staging.example.com"
+    tls:
+      mode: SIMPLE
+      credentialName: teei-platform-tls-staging
+      minProtocolVersion: TLSV1_2  # Staging: allow TLS 1.2 for compatibility

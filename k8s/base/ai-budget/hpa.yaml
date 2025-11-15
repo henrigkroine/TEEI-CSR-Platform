@@ -1,25 +1,27 @@
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: teei-q2q-ai
+  name: teei-ai-budget
   labels:
-    app: teei-q2q-ai
-    component: backend
+    app: teei-ai-budget
+    component: finops
     part-of: teei-csr-platform
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: teei-q2q-ai
+    name: teei-ai-budget
   minReplicas: 2
-  maxReplicas: 15  # FinOps: Increased for AI processing bursts
+  maxReplicas: 6
   metrics:
+  # CPU-based scaling
   - type: Resource
     resource:
       name: cpu
       target:
         type: Utilization
-        averageUtilization: 65  # FinOps: Balanced for AI workload efficiency
+        averageUtilization: 70
+  # Memory-based scaling
   - type: Resource
     resource:
       name: memory
@@ -33,17 +35,11 @@ spec:
       - type: Percent
         value: 50
         periodSeconds: 60
-      - type: Pods
-        value: 1
-        periodSeconds: 60
       selectPolicy: Min
     scaleUp:
       stabilizationWindowSeconds: 0
       policies:
       - type: Percent
         value: 100
-        periodSeconds: 30
-      - type: Pods
-        value: 2
         periodSeconds: 30
       selectPolicy: Max

@@ -1,0 +1,91 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: clickhouse-backup-config
+  namespace: teei-platform
+  labels:
+    app: clickhouse
+    component: backup
+data:
+  config.yml: |
+    general:
+      remote_storage: s3
+      max_file_size: 1073741824  # 1 GiB
+      backups_to_keep_local: 1
+      backups_to_keep_remote: 30
+      log_level: info
+      allow_empty_backups: false
+      download_concurrency: 4
+      upload_concurrency: 4
+
+    clickhouse:
+      username: default
+      password: ${CLICKHOUSE_PASSWORD}
+      host: localhost
+      port: 9000
+      data_path: /var/lib/clickhouse
+      skip_tables:
+        - system.*
+        - INFORMATION_SCHEMA.*
+        - information_schema.*
+      timeout: 5m
+      freeze_by_part: false
+      secure: false
+      skip_verify: false
+
+    s3:
+      access_key: ${AWS_ACCESS_KEY_ID}
+      secret_key: ${AWS_SECRET_ACCESS_KEY}
+      bucket: ${S3_BACKUP_BUCKET}
+      endpoint: https://s3.amazonaws.com
+      region: ${AWS_REGION}
+      acl: private
+      assume_role_arn: ""
+      force_path_style: false
+      path: /clickhouse-backups
+      disable_ssl: false
+      part_size: 104857600  # 100 MiB
+      compression_level: 1
+      compression_format: gzip
+      sse: AES256
+      disable_progress_bar: false
+      overwrite_strategy: skip  # skip, rename, overwrite
+
+    gcs:
+      credentials_file: ""
+      credentials_json: ""
+      bucket: ""
+      path: ""
+      compression_level: 1
+      compression_format: gzip
+
+    cos:
+      url: ""
+      timeout: 2m
+      secret_id: ""
+      secret_key: ""
+      path: ""
+      compression_format: gzip
+      compression_level: 1
+
+    api:
+      listen: localhost:7171
+      enable_metrics: true
+      enable_pprof: false
+      username: ""
+      password: ""
+      secure: false
+      certificate_file: ""
+      private_key_file: ""
+      create_integration_tables: false
+
+    azblob:
+      endpoint_suffix: core.windows.net
+      account_name: ""
+      account_key: ""
+      sas: ""
+      use_managed_identity: false
+      container: ""
+      path: ""
+      compression_level: 1
+      compression_format: gzip
