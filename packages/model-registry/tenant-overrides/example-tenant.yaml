@@ -1,0 +1,71 @@
+# Example Tenant Override
+# Tenant: example-tenant
+# Version: 1.0.0
+# Purpose: Demonstrate tenant-specific model calibration for high-quality Q2Q inference
+
+# Metadata
+tenantId: example-tenant
+version: 1.0.0
+createdAt: '2025-11-15T00:00:00Z'
+createdBy: modelops-team
+description: |
+  Custom calibration for example-tenant based on 500 ground-truth labels.
+  Increased job_readiness weight due to tenant focus on employment outcomes.
+  Using GPT-4o for higher accuracy on complex feedback.
+
+# Q2Q Model Configuration
+q2q:
+  model: gpt-4o  # Upgraded from gpt-4o-mini for better accuracy
+  temperature: 0.2  # Lower temperature for more deterministic outputs
+  maxTokens: 2500
+
+  # Outcome dimension weights (must sum to 1.0)
+  weights:
+    confidence: 0.15
+    belonging: 0.15
+    language_proficiency: 0.2
+    job_readiness: 0.35  # Emphasized for this tenant
+    wellbeing: 0.15
+
+  # Confidence thresholds per dimension
+  thresholds:
+    confidence: 0.75  # Slightly higher threshold
+    belonging: 0.7
+    language_proficiency: 0.8  # Higher threshold for language
+    job_readiness: 0.75
+    wellbeing: 0.7
+
+# SROI Calculator Configuration
+sroi:
+  deadweightFactor: 0.08  # Lower deadweight based on tenant data
+  attributionFactor: 0.9  # Higher attribution to program
+  dropOffRate: 0.2  # Slower impact decline
+  discountRate: 0.03
+
+  # Custom financial proxies (USD)
+  financialProxies:
+    job_placement: 25000
+    language_certification: 3000
+    confidence_boost: 5000
+
+# VIS Calculator Configuration
+vis:
+  weights:
+    frequency: 0.3  # Emphasize frequency for this tenant
+    duration: 0.25
+    skills_applied: 0.25
+    beneficiary_reach: 0.2
+
+# Guardrails (cannot weaken global minimums)
+guardrails:
+  minFairnessThreshold: 0.92  # Stricter than global 0.9
+  minPrivacyRedaction: true  # Cannot be disabled
+  maxCostPerRequest: 0.3  # Lower budget than global 0.5
+
+# Rollback Configuration
+rollback:
+  previousVersion: 0.9.0
+  autoRollbackTriggers:
+    - accuracy_drop
+    - fairness_violation
+  canaryPercentage: 10
