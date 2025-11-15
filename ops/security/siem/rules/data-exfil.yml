@@ -1,0 +1,192 @@
+# SIEM Rules: Data Exfiltration Detection
+# Identifies suspicious data export and transfer patterns
+
+rules:
+  - id: exfil-001
+    name: "Mass Data Export"
+    description: "Large volume of data exported in short timeframe"
+    severity: critical
+    category: data_exfiltration
+    ecs_mapping:
+      event.category: file
+      event.type: access
+      event.action: download
+    conditions:
+      - field: file.size
+        operator: greater_than
+        value: 10485760  # 10 MB
+    aggregation:
+      field: user.id
+      sum_field: file.size
+      threshold: 104857600  # 100 MB total
+      window: 10m
+    actions:
+      - type: alert
+        severity: critical
+      - type: suspend_api_key
+      - type: trigger_incident
+      - type: preserve_evidence
+
+  - id: exfil-002
+    name: "Unusual Database Query Volume"
+    description: "Excessive database queries indicating potential data scraping"
+    severity: high
+    category: data_exfiltration
+    ecs_mapping:
+      event.category: database
+      event.type: access
+    conditions:
+      - field: event.action
+        operator: equals
+        value: query
+    aggregation:
+      field: user.id
+      threshold: 1000
+      window: 5m
+    actions:
+      - type: alert
+        severity: high
+      - type: throttle_requests
+      - type: audit_log
+
+  - id: exfil-003
+    name: "Sensitive Data Access Pattern"
+    description: "Access to multiple sensitive data categories rapidly"
+    severity: critical
+    category: data_exfiltration
+    ecs_mapping:
+      event.category: file
+      event.type: access
+    conditions:
+      - field: file.classification
+        operator: in
+        value: ["pii", "financial", "health", "confidential"]
+    aggregation:
+      field: user.id
+      distinct_field: file.classification
+      threshold: 3  # Accessing 3+ different sensitive categories
+      window: 10m
+    actions:
+      - type: alert
+        severity: critical
+      - type: suspend_session
+      - type: trigger_incident
+
+  - id: exfil-004
+    name: "Uncommon Export Format"
+    description: "Export to unusual format (tar.gz, zip, 7z) not typical for user"
+    severity: medium
+    category: data_exfiltration
+    ecs_mapping:
+      event.category: file
+      event.type: creation
+    conditions:
+      - field: file.extension
+        operator: in
+        value: ["tar.gz", "zip", "7z", "rar"]
+      - field: file.extension
+        operator: not_in_baseline
+        baseline_window: 90d
+    actions:
+      - type: alert
+        severity: medium
+      - type: audit_log
+      - type: require_justification
+
+  - id: exfil-005
+    name: "External Transfer to Unverified Domain"
+    description: "Data transfer to external domain not on allowlist"
+    severity: high
+    category: data_exfiltration
+    ecs_mapping:
+      event.category: network
+      event.type: connection
+    conditions:
+      - field: destination.domain
+        operator: not_in
+        allowlist:
+          - "*.amazonaws.com"
+          - "*.googlecloud.com"
+          - "*.azure.com"
+          - "storage.googleapis.com"
+      - field: network.bytes_sent
+        operator: greater_than
+        value: 1048576  # 1 MB
+    actions:
+      - type: alert
+        severity: high
+      - type: block_connection
+      - type: trigger_incident
+
+  - id: exfil-006
+    name: "PII Bulk Access"
+    description: "Access to PII records of 100+ individuals"
+    severity: critical
+    category: privacy_violation
+    ecs_mapping:
+      event.category: database
+      event.type: access
+    conditions:
+      - field: db.query.pii_records
+        operator: greater_than
+        value: 100
+    actions:
+      - type: alert
+        severity: critical
+      - type: suspend_session
+      - type: trigger_incident
+      - type: notify_dpo  # Data Protection Officer
+
+  - id: exfil-007
+    name: "CSV Export Spike"
+    description: "Unusual number of CSV exports suggesting data theft"
+    severity: high
+    category: data_exfiltration
+    ecs_mapping:
+      event.category: file
+      event.type: creation
+    conditions:
+      - field: file.mime_type
+        operator: equals
+        value: "text/csv"
+    aggregation:
+      field: user.id
+      threshold: 20
+      window: 10m
+    actions:
+      - type: alert
+        severity: high
+      - type: audit_log
+      - type: notify_admin
+
+  - id: exfil-008
+    name: "Off-Hours Data Download"
+    description: "Large downloads outside business hours"
+    severity: medium
+    category: data_exfiltration
+    ecs_mapping:
+      event.category: file
+      event.type: access
+      event.action: download
+    conditions:
+      - field: "@timestamp"
+        operator: outside_business_hours
+        timezone: UTC
+        business_hours: "Mon-Fri 07:00-19:00"
+      - field: file.size
+        operator: greater_than
+        value: 10485760  # 10 MB
+    actions:
+      - type: alert
+        severity: medium
+      - type: audit_log
+      - type: require_justification
+
+metadata:
+  version: "1.0.0"
+  updated: "2025-11-15"
+  author: "Worker 4 Phase H2 - Data Exfil Detector"
+  compliance:
+    - SOC2-CC6.7  # Data loss prevention
+    - GDPR-Art32  # Security of processing
+    - ISO27001-A.13.1  # Network security management

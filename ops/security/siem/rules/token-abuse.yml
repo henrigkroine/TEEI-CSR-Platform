@@ -1,0 +1,165 @@
+# SIEM Rules: AI Token Abuse & Cost Anomalies
+# Detects unusual AI API usage patterns that may indicate abuse or compromise
+
+rules:
+  - id: token-001
+    name: "Excessive AI Token Consumption"
+    description: "Tenant exceeds normal token usage by 3x within 1 hour"
+    severity: high
+    category: cost_abuse
+    ecs_mapping:
+      event.category: usage
+      event.type: info
+    conditions:
+      - field: ai.tokens.total
+        operator: exceeds_baseline
+        threshold_multiplier: 3.0
+        baseline_window: 7d
+        detection_window: 1h
+    actions:
+      - type: alert
+        severity: high
+      - type: throttle_requests
+        rate_limit: "1000/hour"
+      - type: notify_admin
+
+  - id: token-002
+    name: "Suspicious Model Switching"
+    description: "Rapid switching between expensive models (Opus, GPT-4)"
+    severity: medium
+    category: cost_abuse
+    ecs_mapping:
+      event.category: usage
+      event.type: info
+    conditions:
+      - field: ai.model
+        operator: in
+        value: ["claude-3-opus", "gpt-4", "gpt-4-turbo"]
+    aggregation:
+      field: user.id
+      distinct_field: ai.model
+      threshold: 5
+      window: 5m
+    actions:
+      - type: alert
+        severity: medium
+      - type: audit_log
+
+  - id: token-003
+    name: "Large Batch Request Spike"
+    description: "Unusual batch processing indicating potential data exfiltration"
+    severity: critical
+    category: data_exfiltration
+    ecs_mapping:
+      event.category: usage
+      event.type: info
+    conditions:
+      - field: ai.request.batch_size
+        operator: greater_than
+        value: 100
+    aggregation:
+      field: user.id
+      sum_field: ai.request.batch_size
+      threshold: 1000
+      window: 10m
+    actions:
+      - type: alert
+        severity: critical
+      - type: suspend_api_key
+      - type: trigger_incident
+
+  - id: token-004
+    name: "Off-Hours AI Usage Spike"
+    description: "High AI usage outside normal business hours"
+    severity: medium
+    category: usage_anomaly
+    ecs_mapping:
+      event.category: usage
+      event.type: info
+    conditions:
+      - field: "@timestamp"
+        operator: outside_business_hours
+        timezone: UTC
+        business_hours: "Mon-Fri 06:00-22:00"
+      - field: ai.tokens.total
+        operator: greater_than
+        value: 10000
+    aggregation:
+      field: tenant.id
+      sum_field: ai.tokens.total
+      threshold: 50000
+      window: 1h
+    actions:
+      - type: alert
+        severity: medium
+      - type: notify_tenant
+
+  - id: token-005
+    name: "Unusual Prompt Pattern"
+    description: "Repetitive or templated prompts indicating automation"
+    severity: low
+    category: usage_anomaly
+    ecs_mapping:
+      event.category: usage
+      event.type: info
+    conditions:
+      - field: ai.prompt.similarity_score
+        operator: greater_than
+        value: 0.95  # 95% similarity to previous prompts
+    aggregation:
+      field: user.id
+      threshold: 50
+      window: 5m
+    actions:
+      - type: alert
+        severity: low
+      - type: audit_log
+
+  - id: token-006
+    name: "Budget Exceeded - Hard Stop"
+    description: "Tenant has exceeded 105% of monthly budget"
+    severity: critical
+    category: cost_control
+    ecs_mapping:
+      event.category: billing
+      event.type: info
+    conditions:
+      - field: billing.utilization_percent
+        operator: greater_than
+        value: 105
+    actions:
+      - type: alert
+        severity: critical
+      - type: suspend_tenant
+      - type: notify_admin
+      - type: notify_tenant
+
+  - id: token-007
+    name: "Anomalous Error Rate"
+    description: "High rate of AI API errors may indicate attack or misconfiguration"
+    severity: medium
+    category: reliability
+    ecs_mapping:
+      event.category: usage
+      event.type: error
+    conditions:
+      - field: event.outcome
+        operator: equals
+        value: failure
+    aggregation:
+      field: tenant.id
+      threshold: 100
+      window: 5m
+    actions:
+      - type: alert
+        severity: medium
+      - type: notify_tenant
+      - type: create_support_ticket
+
+metadata:
+  version: "1.0.0"
+  updated: "2025-11-15"
+  author: "Worker 4 Phase H2 - Token Abuse Detector"
+  compliance:
+    - SOC2-CC7.2  # System monitoring
+    - ISO27001-A.12.4  # Logging and monitoring
