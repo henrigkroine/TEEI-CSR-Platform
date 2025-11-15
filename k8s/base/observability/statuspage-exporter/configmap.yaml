@@ -1,0 +1,137 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: statuspage-exporter-config
+  namespace: teei-csr
+  labels:
+    app: statuspage-exporter
+data:
+  # Statuspage.io component IDs
+  COMPONENT_API_GATEWAY: "cmp_api_gateway"
+  COMPONENT_COCKPIT_UI: "cmp_cockpit_ui"
+  COMPONENT_REPORTING: "cmp_reporting"
+  COMPONENT_IMPACT_CALC: "cmp_impact_calc"
+  COMPONENT_Q2Q_AI: "cmp_q2q_ai"
+  COMPONENT_ANALYTICS: "cmp_analytics"
+  COMPONENT_JOURNEY: "cmp_journey"
+  COMPONENT_NOTIFICATIONS: "cmp_notifications"
+  COMPONENT_SSO_AUTH: "cmp_sso_auth"
+  COMPONENT_DATABASE: "cmp_database"
+
+  # Metric IDs for each component
+  # API Gateway metrics
+  METRIC_API_GATEWAY_UPTIME: "metric_api_gateway_uptime"
+  METRIC_API_GATEWAY_LATENCY: "metric_api_gateway_latency_p95"
+  METRIC_API_GATEWAY_ERROR_RATE: "metric_api_gateway_error_rate"
+
+  # Cockpit UI metrics
+  METRIC_COCKPIT_UPTIME: "metric_cockpit_ui_uptime"
+  METRIC_COCKPIT_LATENCY: "metric_cockpit_ui_latency_p95"
+  METRIC_COCKPIT_ERROR_RATE: "metric_cockpit_ui_error_rate"
+
+  # Reporting Service metrics
+  METRIC_REPORTING_UPTIME: "metric_reporting_uptime"
+  METRIC_REPORTING_LATENCY: "metric_reporting_latency_p95"
+  METRIC_REPORTING_ERROR_RATE: "metric_reporting_error_rate"
+
+  # Impact Calculator metrics
+  METRIC_IMPACT_UPTIME: "metric_impact_calc_uptime"
+  METRIC_IMPACT_LATENCY: "metric_impact_calc_latency_p95"
+  METRIC_IMPACT_ERROR_RATE: "metric_impact_calc_error_rate"
+
+  # Q2Q AI metrics
+  METRIC_Q2Q_UPTIME: "metric_q2q_ai_uptime"
+  METRIC_Q2Q_LATENCY: "metric_q2q_ai_latency_p95"
+  METRIC_Q2Q_ERROR_RATE: "metric_q2q_ai_error_rate"
+
+  # Analytics Service metrics
+  METRIC_ANALYTICS_UPTIME: "metric_analytics_uptime"
+  METRIC_ANALYTICS_LATENCY: "metric_analytics_latency_p95"
+  METRIC_ANALYTICS_ERROR_RATE: "metric_analytics_error_rate"
+
+  # Journey Engine metrics
+  METRIC_JOURNEY_UPTIME: "metric_journey_uptime"
+  METRIC_JOURNEY_LATENCY: "metric_journey_latency_p95"
+  METRIC_JOURNEY_ERROR_RATE: "metric_journey_error_rate"
+
+  # Notifications Service metrics
+  METRIC_NOTIFICATIONS_UPTIME: "metric_notifications_uptime"
+  METRIC_NOTIFICATIONS_LATENCY: "metric_notifications_latency_p95"
+  METRIC_NOTIFICATIONS_ERROR_RATE: "metric_notifications_error_rate"
+
+  # SSO/Auth metrics
+  METRIC_SSO_UPTIME: "metric_sso_auth_uptime"
+  METRIC_SSO_LATENCY: "metric_sso_auth_latency_p95"
+  METRIC_SSO_ERROR_RATE: "metric_sso_auth_error_rate"
+
+  # Database metrics
+  METRIC_DATABASE_UPTIME: "metric_database_uptime"
+  METRIC_DATABASE_LATENCY: "metric_database_latency_p95"
+  METRIC_DATABASE_ERROR_RATE: "metric_database_error_rate"
+
+  # Prometheus queries for each metric
+  # Uptime queries (90-day average)
+  QUERY_API_GATEWAY_UPTIME: 'avg_over_time(up{job="api-gateway"}[90d]) * 100'
+  QUERY_COCKPIT_UPTIME: 'avg_over_time(up{job="corp-cockpit-astro"}[90d]) * 100'
+  QUERY_REPORTING_UPTIME: 'avg_over_time(up{job="reporting"}[90d]) * 100'
+  QUERY_IMPACT_UPTIME: 'avg_over_time(up{job="impact-calculator"}[90d]) * 100'
+  QUERY_Q2Q_UPTIME: 'avg_over_time(up{job="q2q-ai"}[90d]) * 100'
+  QUERY_ANALYTICS_UPTIME: 'avg_over_time(up{job="analytics"}[90d]) * 100'
+  QUERY_JOURNEY_UPTIME: 'avg_over_time(up{job="journey-engine"}[90d]) * 100'
+  QUERY_NOTIFICATIONS_UPTIME: 'avg_over_time(up{job="notifications"}[90d]) * 100'
+  QUERY_SSO_UPTIME: 'avg_over_time(up{job="api-gateway",path=~"/auth.*"}[90d]) * 100'
+  QUERY_DATABASE_UPTIME: 'avg_over_time(up{job="postgresql"}[90d]) * 100'
+
+  # Latency queries (P95, 5-minute window)
+  QUERY_API_GATEWAY_LATENCY: 'histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job="api-gateway"}[5m])) * 1000'
+  QUERY_COCKPIT_LATENCY: 'histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job="corp-cockpit-astro"}[5m])) * 1000'
+  QUERY_REPORTING_LATENCY: 'histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job="reporting"}[5m])) * 1000'
+  QUERY_IMPACT_LATENCY: 'histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job="impact-calculator"}[5m])) * 1000'
+  QUERY_Q2Q_LATENCY: 'histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job="q2q-ai"}[5m])) * 1000'
+  QUERY_ANALYTICS_LATENCY: 'histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job="analytics"}[5m])) * 1000'
+  QUERY_JOURNEY_LATENCY: 'histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job="journey-engine"}[5m])) * 1000'
+  QUERY_NOTIFICATIONS_LATENCY: 'histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job="notifications"}[5m])) * 1000'
+  QUERY_SSO_LATENCY: 'histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job="api-gateway",path=~"/auth.*"}[5m])) * 1000'
+  QUERY_DATABASE_LATENCY: 'histogram_quantile(0.95, rate(pg_stat_database_blks_read_seconds[5m])) * 1000'
+
+  # Error rate queries (5xx errors, 5-minute window)
+  QUERY_API_GATEWAY_ERROR_RATE: 'rate(http_requests_total{job="api-gateway",status=~"5.."}[5m]) / rate(http_requests_total{job="api-gateway"}[5m]) * 100'
+  QUERY_COCKPIT_ERROR_RATE: 'rate(http_requests_total{job="corp-cockpit-astro",status=~"5.."}[5m]) / rate(http_requests_total{job="corp-cockpit-astro"}[5m]) * 100'
+  QUERY_REPORTING_ERROR_RATE: 'rate(http_requests_total{job="reporting",status=~"5.."}[5m]) / rate(http_requests_total{job="reporting"}[5m]) * 100'
+  QUERY_IMPACT_ERROR_RATE: 'rate(http_requests_total{job="impact-calculator",status=~"5.."}[5m]) / rate(http_requests_total{job="impact-calculator"}[5m]) * 100'
+  QUERY_Q2Q_ERROR_RATE: 'rate(http_requests_total{job="q2q-ai",status=~"5.."}[5m]) / rate(http_requests_total{job="q2q-ai"}[5m]) * 100'
+  QUERY_ANALYTICS_ERROR_RATE: 'rate(http_requests_total{job="analytics",status=~"5.."}[5m]) / rate(http_requests_total{job="analytics"}[5m]) * 100'
+  QUERY_JOURNEY_ERROR_RATE: 'rate(http_requests_total{job="journey-engine",status=~"5.."}[5m]) / rate(http_requests_total{job="journey-engine"}[5m]) * 100'
+  QUERY_NOTIFICATIONS_ERROR_RATE: 'rate(http_requests_total{job="notifications",status=~"5.."}[5m]) / rate(http_requests_total{job="notifications"}[5m]) * 100'
+  QUERY_SSO_ERROR_RATE: 'rate(http_requests_total{job="api-gateway",path=~"/auth.*",status=~"5.."}[5m]) / rate(http_requests_total{job="api-gateway",path=~"/auth.*"}[5m]) * 100'
+  QUERY_DATABASE_ERROR_RATE: 'rate(pg_stat_database_deadlocks[5m]) * 100'
+
+  # Status thresholds (determines component status)
+  # Uptime thresholds
+  THRESHOLD_UPTIME_OPERATIONAL: "99.5"
+  THRESHOLD_UPTIME_DEGRADED: "95.0"
+  THRESHOLD_UPTIME_PARTIAL: "90.0"
+
+  # Latency thresholds (milliseconds)
+  THRESHOLD_LATENCY_OPERATIONAL: "500"
+  THRESHOLD_LATENCY_DEGRADED: "2000"
+  THRESHOLD_LATENCY_PARTIAL: "5000"
+
+  # Error rate thresholds (percentage)
+  THRESHOLD_ERROR_OPERATIONAL: "0.5"
+  THRESHOLD_ERROR_DEGRADED: "2.0"
+  THRESHOLD_ERROR_PARTIAL: "5.0"
+
+  # Incident auto-creation settings
+  AUTO_CREATE_INCIDENTS: "true"
+  INCIDENT_MIN_DURATION_SECONDS: "120" # Only create incident if issue persists >2 minutes
+  INCIDENT_AUTO_RESOLVE: "true"
+  INCIDENT_AUTO_RESOLVE_DELAY_SECONDS: "300" # Auto-resolve 5 minutes after metrics normalize
+
+  # Rate limiting
+  API_RATE_LIMIT_PER_MINUTE: "500"
+  API_BURST_LIMIT: "100"
+
+  # Retry configuration
+  RETRY_MAX_ATTEMPTS: "3"
+  RETRY_BACKOFF_MS: "1000"

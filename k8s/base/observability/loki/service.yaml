@@ -1,0 +1,40 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: teei-loki
+  labels:
+    app: teei-loki
+    component: logging
+    part-of: teei-observability
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+  - port: 3100
+    protocol: TCP
+    targetPort: 3100
+    name: http
+  - port: 9096
+    protocol: TCP
+    targetPort: 9096
+    name: grpc
+  selector:
+    app: teei-loki
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: teei-loki-headless
+  labels:
+    app: teei-loki
+    component: logging
+    part-of: teei-observability
+spec:
+  type: ClusterIP
+  ports:
+  - port: 3100
+    protocol: TCP
+    targetPort: 3100
+    name: http
+  selector:
+    app: teei-loki

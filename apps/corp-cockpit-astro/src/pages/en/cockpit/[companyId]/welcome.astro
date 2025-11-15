@@ -1,0 +1,206 @@
+---
+/**
+ * Welcome Page (English)
+ *
+ * First-login onboarding page for new pilot companies.
+ * Displays welcome flow and getting started checklist.
+ */
+
+import BaseLayout from '../../../../layouts/BaseLayout.astro';
+import WelcomeFlow from '../../../../components/onboarding/WelcomeFlow';
+import GettingStartedChecklist from '../../../../components/onboarding/GettingStartedChecklist';
+
+const { companyId } = Astro.params;
+
+if (!companyId) {
+  return Astro.redirect('/404');
+}
+
+// TODO: Fetch from auth context or API
+const mockUser = {
+  id: 'pilot001-user-0001-0001-000000000001',
+  name: 'Sarah Mitchell',
+  email: 'sarah.admin@acmecorp.example.com',
+  role: 'company_admin',
+};
+
+const mockCompany = {
+  id: companyId,
+  name: 'Acme Corp',
+  industry: 'technology',
+};
+
+// Check if user has completed welcome flow
+const hasCompletedWelcome = false; // TODO: Check localStorage or backend
+
+const pageTitle = `Welcome to ${mockCompany.name} - TEEI CSR Platform`;
+const pageDescription = 'Get started with your corporate social responsibility dashboard and impact tracking.';
+---
+
+<BaseLayout title={pageTitle} description={pageDescription} lang="en">
+  <main class="welcome-page min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-4">
+    <div class="max-w-7xl mx-auto">
+      <!-- Page Header -->
+      <div class="text-center mb-8">
+        <h1 class="text-4xl font-bold text-gray-900 mb-2">
+          Welcome to Your CSR Cockpit
+        </h1>
+        <p class="text-lg text-gray-600">
+          Let's get you set up and ready to track your social impact
+        </p>
+      </div>
+
+      <!-- Welcome Flow (shown on first visit) -->
+      {!hasCompletedWelcome && (
+        <div id="welcome-flow-container">
+          <WelcomeFlow
+            client:load
+            companyId={companyId}
+            companyName={mockCompany.name}
+            userName={mockUser.name}
+            userRole={mockUser.role}
+            onComplete={() => {
+              // Hide welcome flow and show checklist
+              const flowEl = document.getElementById('welcome-flow-container');
+              if (flowEl) flowEl.style.display = 'none';
+              const checklistEl = document.getElementById('checklist-container');
+              if (checklistEl) checklistEl.classList.remove('hidden');
+            }}
+            onSkip={() => {
+              // Redirect to dashboard
+              window.location.href = `/en/cockpit/${companyId}`;
+            }}
+          />
+        </div>
+      )}
+
+      <!-- Getting Started Checklist -->
+      <div id="checklist-container" class={hasCompletedWelcome ? '' : 'hidden'}>
+        <div class="max-w-2xl mx-auto">
+          <GettingStartedChecklist
+            client:load
+            companyId={companyId}
+            userRole={mockUser.role}
+          />
+
+          <!-- Quick Links -->
+          <div class="mt-8 bg-white border border-gray-200 rounded-lg shadow-sm p-6">
+            <h2 class="text-xl font-semibold mb-4">Quick Links</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <a
+                href={`/en/cockpit/${companyId}`}
+                class="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all"
+              >
+                <div class="bg-blue-100 text-blue-600 rounded-full w-12 h-12 flex items-center justify-center">
+                  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
+                    ></path>
+                  </svg>
+                </div>
+                <div>
+                  <strong class="block text-gray-900">Dashboard</strong>
+                  <span class="text-sm text-gray-600">View your impact metrics</span>
+                </div>
+              </a>
+
+              <a
+                href={`/en/cockpit/${companyId}/admin`}
+                class="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all"
+              >
+                <div class="bg-purple-100 text-purple-600 rounded-full w-12 h-12 flex items-center justify-center">
+                  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                    ></path>
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                    ></path>
+                  </svg>
+                </div>
+                <div>
+                  <strong class="block text-gray-900">Admin Settings</strong>
+                  <span class="text-sm text-gray-600">Configure your workspace</span>
+                </div>
+              </a>
+
+              <a
+                href={`/en/cockpit/${companyId}/reports`}
+                class="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all"
+              >
+                <div class="bg-green-100 text-green-600 rounded-full w-12 h-12 flex items-center justify-center">
+                  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                    ></path>
+                  </svg>
+                </div>
+                <div>
+                  <strong class="block text-gray-900">Reports</strong>
+                  <span class="text-sm text-gray-600">Generate impact reports</span>
+                </div>
+              </a>
+
+              <a
+                href="/docs/pilot/onboarding.md"
+                target="_blank"
+                class="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all"
+              >
+                <div class="bg-orange-100 text-orange-600 rounded-full w-12 h-12 flex items-center justify-center">
+                  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+                    ></path>
+                  </svg>
+                </div>
+                <div>
+                  <strong class="block text-gray-900">Documentation</strong>
+                  <span class="text-sm text-gray-600">Learn more about features</span>
+                </div>
+              </a>
+            </div>
+          </div>
+
+          <!-- Support Contact -->
+          <div class="mt-6 text-center">
+            <p class="text-sm text-gray-600">
+              Need help? Contact our support team at
+              <a href="mailto:support@teei.platform" class="text-blue-600 hover:text-blue-700 underline">
+                support@teei.platform
+              </a>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <style>
+    .welcome-page {
+      min-height: calc(100vh - 4rem);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</BaseLayout>

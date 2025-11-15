@@ -1,0 +1,243 @@
+{
+  "dashboard": {
+    "title": "TEEI Platform - Logs (Loki)",
+    "tags": ["teei", "loki", "logs", "observability"],
+    "timezone": "utc",
+    "schemaVersion": 16,
+    "version": 1,
+    "refresh": "30s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Log Volume by Service",
+        "type": "graph",
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 0
+        },
+        "targets": [
+          {
+            "datasource": "Loki",
+            "expr": "sum(rate({namespace=\"teei-platform\", app=~\"$service\"}[1m])) by (app)",
+            "legendFormat": "{{ app }}",
+            "refId": "A"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Logs/sec",
+            "format": "logs"
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Error Log Rate",
+        "type": "graph",
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 0
+        },
+        "targets": [
+          {
+            "datasource": "Loki",
+            "expr": "sum(rate({namespace=\"teei-platform\", app=~\"$service\", level=~\"error|fatal|ERROR|FATAL\"}[1m])) by (app)",
+            "legendFormat": "{{ app }}",
+            "refId": "A"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Error Logs/sec",
+            "format": "logs"
+          }
+        ],
+        "thresholds": [
+          {
+            "value": 1,
+            "colorMode": "warning"
+          },
+          {
+            "value": 10,
+            "colorMode": "critical"
+          }
+        ],
+        "alert": {
+          "conditions": [
+            {
+              "evaluator": {
+                "params": [5],
+                "type": "gt"
+              },
+              "operator": {
+                "type": "and"
+              },
+              "query": {
+                "params": ["A", "5m", "now"]
+              },
+              "reducer": {
+                "params": [],
+                "type": "avg"
+              },
+              "type": "query"
+            }
+          ],
+          "executionErrorState": "alerting",
+          "name": "High Error Log Rate",
+          "noDataState": "no_data"
+        }
+      },
+      {
+        "id": 3,
+        "title": "Log Levels Distribution",
+        "type": "piechart",
+        "gridPos": {
+          "h": 8,
+          "w": 8,
+          "x": 0,
+          "y": 8
+        },
+        "targets": [
+          {
+            "datasource": "Loki",
+            "expr": "sum(count_over_time({namespace=\"teei-platform\", app=~\"$service\"}[$__interval])) by (level)",
+            "legendFormat": "{{ level }}",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Recent Error Logs",
+        "type": "logs",
+        "gridPos": {
+          "h": 8,
+          "w": 16,
+          "x": 8,
+          "y": 8
+        },
+        "targets": [
+          {
+            "datasource": "Loki",
+            "expr": "{namespace=\"teei-platform\", app=~\"$service\", level=~\"error|fatal|ERROR|FATAL\"}",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "showTime": true,
+          "showLabels": true,
+          "sortOrder": "Descending"
+        }
+      },
+      {
+        "id": 5,
+        "title": "All Logs Stream",
+        "type": "logs",
+        "gridPos": {
+          "h": 12,
+          "w": 24,
+          "x": 0,
+          "y": 16
+        },
+        "targets": [
+          {
+            "datasource": "Loki",
+            "expr": "{namespace=\"teei-platform\", app=~\"$service\"}",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "showTime": true,
+          "showLabels": true,
+          "sortOrder": "Descending",
+          "wrapLogMessage": true,
+          "prettifyLogMessage": true
+        }
+      },
+      {
+        "id": 6,
+        "title": "Trace-Correlated Logs",
+        "type": "logs",
+        "gridPos": {
+          "h": 10,
+          "w": 24,
+          "x": 0,
+          "y": 28
+        },
+        "targets": [
+          {
+            "datasource": "Loki",
+            "expr": "{namespace=\"teei-platform\", app=~\"$service\", trace_id=~\".+\"}",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "showTime": true,
+          "showLabels": true,
+          "sortOrder": "Descending",
+          "enableLogDetails": true
+        },
+        "fieldConfig": {
+          "defaults": {
+            "links": [
+              {
+                "title": "View Trace in Jaeger",
+                "url": "http://jaeger:16686/trace/${__field.labels.trace_id}"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": 7,
+        "title": "Top Log Patterns",
+        "type": "table",
+        "gridPos": {
+          "h": 8,
+          "w": 24,
+          "x": 0,
+          "y": 38
+        },
+        "targets": [
+          {
+            "datasource": "Loki",
+            "expr": "topk(20, sum(count_over_time({namespace=\"teei-platform\", app=~\"$service\"} | logfmt | line_format \"{{.msg}}\" [$__interval])) by (msg))",
+            "format": "table",
+            "instant": true,
+            "refId": "A"
+          }
+        ]
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "service",
+          "type": "query",
+          "datasource": "Loki",
+          "query": "label_values(app)",
+          "multi": true,
+          "includeAll": true,
+          "refresh": 1
+        },
+        {
+          "name": "level",
+          "type": "query",
+          "datasource": "Loki",
+          "query": "label_values(level)",
+          "multi": true,
+          "includeAll": true,
+          "refresh": 1
+        }
+      ]
+    },
+    "time": {
+      "from": "now-15m",
+      "to": "now"
+    }
+  }
+}

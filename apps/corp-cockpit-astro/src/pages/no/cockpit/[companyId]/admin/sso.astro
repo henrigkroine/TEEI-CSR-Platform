@@ -1,0 +1,355 @@
+---
+import BaseLayout from '../../../../../layouts/BaseLayout.astro';
+import { hasPermission } from '../../../../../utils/rbac';
+import SSOSettings from '../../../../../components/identity/SSOSettings.tsx';
+import RoleMappingTable from '../../../../../components/identity/RoleMappingTable.tsx';
+import SCIMRoleMappingEditor from '../../../../../components/identity/SCIMRoleMappingEditor.tsx';
+import SCIMStatus from '../../../../../components/identity/SCIMStatus.tsx';
+import SyncTestButton from '../../../../../components/identity/SyncTestButton.tsx';
+
+// Extract route parameters
+const { companyId } = Astro.params;
+const lang = 'no';
+const user = Astro.locals.user;
+const tenantContext = Astro.locals.tenantContext;
+
+// Middleware handles auth/tenant validation
+if (!user || !tenantContext) {
+  return Astro.redirect('/login');
+}
+
+// Verify tenant context matches route
+if (tenantContext.companyId !== companyId) {
+  return Astro.redirect(`/${lang}/cockpit/401`);
+}
+
+// Only ADMIN and SUPER_ADMIN can view SSO settings
+const canViewSSO = hasPermission(user.role, 'ADMIN_CONSOLE');
+if (!canViewSSO) {
+  return Astro.redirect(`/${lang}/cockpit/${companyId}/401`);
+}
+---
+
+<BaseLayout title="SSO og identitetsinnstillinger - TEEI Corporate Cockpit" lang={lang}>
+  <div class="sso-settings-page">
+    <div class="page-header">
+      <div>
+        <a href={`/${lang}/cockpit/${companyId}/admin`} class="back-link">
+          ← Tilbake til Admin-konsoll
+        </a>
+        <h1>SSO og identitetsstyring</h1>
+        <p class="subtitle">Single Sign-On, SCIM-provisjonering og rolletilordningskonfigurasjon</p>
+      </div>
+    </div>
+
+    <div class="alert-info">
+      <strong>Skrivebeskyttet konfigurasjon</strong>
+      <p>
+        SSO- og SCIM-innstillinger administreres av IT-administratoren din via plattformens API.
+        Denne siden viser gjeldende konfigurasjon som referanse. For å gjøre endringer, vennligst
+        kontakt systemadministratoren eller bruk plattformens konfigurasjon-API.
+      </p>
+    </div>
+
+    {/* SSO Configuration */}
+    <section class="settings-section">
+      <h2>Single Sign-On (SSO) konfigurasjon</h2>
+      <p class="section-description">
+        Se SAML- og OIDC-konfigurasjonsdetaljer. Disse innstillingene lar brukere autentisere
+        ved hjelp av organisasjonens identitetsleverandør.
+      </p>
+      <SSOSettings companyId={companyId} client:load />
+    </section>
+
+    {/* Role Mapping */}
+    <section class="settings-section">
+      <h2>Rolletilordning</h2>
+      <p class="section-description">
+        Identitetsleverandør (IdP)-krav tilordnes automatisk til TEEI-roller. Brukere mottar
+        tillatelser basert på deres IdP-gruppemedlemskap eller attributter.
+      </p>
+      {hasPermission(user.role, 'SUPER_ADMIN') ? (
+        <SCIMRoleMappingEditor companyId={companyId} client:load />
+      ) : (
+        <RoleMappingTable companyId={companyId} client:load />
+      )}
+    </section>
+
+    {/* SCIM Provisioning */}
+    <section class="settings-section">
+      <div class="section-header">
+        <div>
+          <h2>SCIM-provisjonering</h2>
+          <p class="section-description">
+            SCIM (System for Cross-domain Identity Management) automatiserer bruker- og gruppe-
+            synkronisering fra identitetsleverandøren din. Se siste synkroniseringsstatus og eventuelle feil.
+          </p>
+        </div>
+        <div class="section-actions">
+          <SyncTestButton companyId={companyId} client:load />
+        </div>
+      </div>
+      <SCIMStatus companyId={companyId} client:load />
+    </section>
+
+    {/* Help Section */}
+    <section class="help-section">
+      <h3>Konfigurasjonsguide</h3>
+
+      <div class="help-grid">
+        <div class="help-card">
+          <h4>SAML-konfigurasjon</h4>
+          <ul>
+            <li><strong>Entity ID:</strong> Unik identifikator for organisasjonen din</li>
+            <li><strong>ACS URL:</strong> Assertion Consumer Service-endepunkt</li>
+            <li><strong>Metadata URL:</strong> SAML-metadata for IdP-konfigurasjon</li>
+            <li><strong>Certificate:</strong> X.509-sertifikat for signaturvalidering</li>
+          </ul>
+        </div>
+
+        <div class="help-card">
+          <h4>OIDC-konfigurasjon</h4>
+          <ul>
+            <li><strong>Issuer:</strong> OAuth 2.0 autorisasjonsserver</li>
+            <li><strong>Client ID:</strong> Applikasjonsidentifikator</li>
+            <li><strong>Redirect URI:</strong> Callback-endepunkt etter autentisering</li>
+            <li><strong>Scopes:</strong> Forespurt brukerinformasjon (openid, profile, email)</li>
+          </ul>
+        </div>
+
+        <div class="help-card">
+          <h4>Rolletilordning</h4>
+          <ul>
+            <li><strong>IdP Claim:</strong> Attributt fra identitetsleverandør (f.eks. "groups")</li>
+            <li><strong>Claim Value:</strong> Spesifikk verdi å matche (f.eks. "teei-admins")</li>
+            <li><strong>TEEI Role:</strong> Tildelt rolle (VIEWER, MANAGER, ADMIN, SUPER_ADMIN)</li>
+            <li><strong>Priority:</strong> Høyere prioritet tilordninger har forrang</li>
+          </ul>
+        </div>
+
+        <div class="help-card">
+          <h4>SCIM-provisjonering</h4>
+          <ul>
+            <li><strong>SCIM Endpoint:</strong> API-endepunkt for bruker-/gruppesynkronisering</li>
+            <li><strong>Bearer Token:</strong> Autentisering for SCIM-forespørsler</li>
+            <li><strong>Sync Frequency:</strong> Hvor ofte brukere/grupper synkroniseres</li>
+            <li><strong>Supported Ops:</strong> Opprett, oppdater, slett operasjoner</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="api-reference">
+        <h4>API-konfigurasjonsendepunkter</h4>
+        <p>For å endre SSO/SCIM-innstillinger, bruk følgende plattform-API-endepunkter:</p>
+        <ul>
+          <li><code>PUT /api/platform/companies/{companyId}/sso/saml</code> - Oppdater SAML-konfigurasjon</li>
+          <li><code>PUT /api/platform/companies/{companyId}/sso/oidc</code> - Oppdater OIDC-konfigurasjon</li>
+          <li><code>POST /api/platform/companies/{companyId}/role-mappings</code> - Legg til rolletilordning</li>
+          <li><code>PUT /api/platform/companies/{companyId}/scim</code> - Oppdater SCIM-konfigurasjon</li>
+        </ul>
+        <p class="api-note">
+          <strong>Merk:</strong> Disse endepunktene krever <code>SUPER_ADMIN</code>-rolle og
+          administreres vanligvis kun av plattformadministratorer.
+        </p>
+      </div>
+    </section>
+  </div>
+</BaseLayout>
+
+<style>
+  .sso-settings-page {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: calc(var(--spacing-unit) * 4);
+  }
+
+  .page-header {
+    margin-bottom: calc(var(--spacing-unit) * 4);
+  }
+
+  .back-link {
+    color: var(--color-primary);
+    text-decoration: none;
+    font-size: 0.9375rem;
+    margin-bottom: calc(var(--spacing-unit) * 2);
+    display: inline-block;
+  }
+
+  .back-link:hover {
+    text-decoration: underline;
+  }
+
+  h1 {
+    font-size: 2rem;
+    margin: calc(var(--spacing-unit) * 2) 0 calc(var(--spacing-unit) * 1);
+  }
+
+  .subtitle {
+    color: var(--color-text-secondary);
+    font-size: 1.125rem;
+    margin: 0;
+  }
+
+  .alert-info {
+    background: #dbeafe;
+    border: 1px solid #3b82f6;
+    border-left: 4px solid #3b82f6;
+    padding: calc(var(--spacing-unit) * 3);
+    border-radius: var(--border-radius);
+    margin-bottom: calc(var(--spacing-unit) * 4);
+  }
+
+  .alert-info strong {
+    display: block;
+    margin-bottom: calc(var(--spacing-unit) * 1);
+    color: #1e40af;
+  }
+
+  .alert-info p {
+    margin: 0;
+    color: #1e3a8a;
+  }
+
+  .settings-section {
+    background: white;
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius);
+    padding: calc(var(--spacing-unit) * 4);
+    margin-bottom: calc(var(--spacing-unit) * 4);
+  }
+
+  .settings-section h2 {
+    margin-top: 0;
+    margin-bottom: calc(var(--spacing-unit) * 2);
+  }
+
+  .section-description {
+    color: var(--color-text-secondary);
+    margin-bottom: calc(var(--spacing-unit) * 3);
+    line-height: 1.6;
+  }
+
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: calc(var(--spacing-unit) * 3);
+    margin-bottom: calc(var(--spacing-unit) * 3);
+  }
+
+  .section-header .section-description {
+    margin-bottom: 0;
+  }
+
+  .section-actions {
+    flex-shrink: 0;
+  }
+
+  .help-section {
+    background: var(--color-bg-secondary);
+    padding: calc(var(--spacing-unit) * 4);
+    border-radius: var(--border-radius);
+    margin-top: calc(var(--spacing-unit) * 6);
+  }
+
+  .help-section h3 {
+    margin-top: 0;
+    margin-bottom: calc(var(--spacing-unit) * 3);
+  }
+
+  .help-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: calc(var(--spacing-unit) * 3);
+    margin-bottom: calc(var(--spacing-unit) * 4);
+  }
+
+  .help-card {
+    background: white;
+    padding: calc(var(--spacing-unit) * 3);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--color-border);
+  }
+
+  .help-card h4 {
+    margin-top: 0;
+    margin-bottom: calc(var(--spacing-unit) * 2);
+    color: var(--color-primary);
+  }
+
+  .help-card ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .help-card li {
+    padding: calc(var(--spacing-unit) * 1) 0;
+    border-bottom: 1px solid var(--color-bg-secondary);
+  }
+
+  .help-card li:last-child {
+    border-bottom: none;
+  }
+
+  .help-card strong {
+    color: var(--color-text);
+    font-weight: 600;
+  }
+
+  .api-reference {
+    background: white;
+    padding: calc(var(--spacing-unit) * 3);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--color-border);
+  }
+
+  .api-reference h4 {
+    margin-top: 0;
+    margin-bottom: calc(var(--spacing-unit) * 2);
+  }
+
+  .api-reference ul {
+    list-style: none;
+    padding: 0;
+    margin: calc(var(--spacing-unit) * 2) 0;
+  }
+
+  .api-reference li {
+    padding: calc(var(--spacing-unit) * 1.5);
+    background: var(--color-bg-secondary);
+    margin-bottom: calc(var(--spacing-unit) * 1);
+    border-radius: calc(var(--border-radius) / 2);
+    font-family: 'Courier New', monospace;
+    font-size: 0.875rem;
+  }
+
+  .api-reference code {
+    background: none;
+    padding: 0;
+    color: var(--color-primary);
+    font-weight: 600;
+  }
+
+  .api-note {
+    background: #fef3c7;
+    border: 1px solid #fcd34d;
+    padding: calc(var(--spacing-unit) * 2);
+    border-radius: calc(var(--border-radius) / 2);
+    margin-top: calc(var(--spacing-unit) * 2);
+  }
+
+  .api-note strong {
+    color: #92400e;
+  }
+
+  @media (max-width: 768px) {
+    .help-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .section-header {
+      flex-direction: column;
+    }
+  }
+</style>

@@ -1,0 +1,365 @@
+---
+import BaseLayout from '../../../../../layouts/BaseLayout.astro';
+import { hasPermission } from '../../../../../utils/rbac';
+import RoleMappingTable from '../../../../../components/identity/RoleMappingTable.tsx';
+import SCIMRoleMappingEditor from '../../../../../components/identity/SCIMRoleMappingEditor.tsx';
+
+// Extract route parameters
+const { companyId } = Astro.params;
+const lang = 'no';
+const user = Astro.locals.user;
+const tenantContext = Astro.locals.tenantContext;
+
+// Middleware handles auth/tenant validation
+if (!user || !tenantContext) {
+  return Astro.redirect('/login');
+}
+
+// Verify tenant context matches route
+if (tenantContext.companyId !== companyId) {
+  return Astro.redirect(`/${lang}/cockpit/401`);
+}
+
+// Only ADMIN and SUPER_ADMIN can view role mapping
+const canViewRoles = hasPermission(user.role, 'ADMIN_CONSOLE');
+if (!canViewRoles) {
+  return Astro.redirect(`/${lang}/cockpit/${companyId}/401`);
+}
+
+const isSuperAdmin = hasPermission(user.role, 'SUPER_ADMIN');
+---
+
+<BaseLayout title="Rolletilordning - TEEI Corporate Cockpit" lang={lang}>
+  <div class="roles-page">
+    <div class="page-header">
+      <div>
+        <a href={`/${lang}/cockpit/${companyId}/admin`} class="back-link">
+          ← Tilbake til Admin-konsoll
+        </a>
+        <h1>Rolletilordning</h1>
+        <p class="subtitle">
+          Tilordne identitetsleverandør-krav til TEEI-plattformroller for automatisk brukerprovisjonering
+        </p>
+      </div>
+    </div>
+
+    <div class="alert-info">
+      <strong>Automatisk rolletildeling</strong>
+      <p>
+        Når brukere autentiserer via SSO, sender identitetsleverandøren krav (attributter) om brukeren.
+        Disse tilordningene tilordner automatisk TEEI-roller basert på matchende kravverdier. Høyere prioritet
+        tilordninger har forrang når flere regler matcher.
+      </p>
+    </div>
+
+    {/* Role Mapping Table/Editor */}
+    <section class="settings-section">
+      {isSuperAdmin ? (
+        <SCIMRoleMappingEditor companyId={companyId} client:load />
+      ) : (
+        <RoleMappingTable companyId={companyId} client:load />
+      )}
+    </section>
+
+    {/* Help Section */}
+    <section class="help-section">
+      <h3>Forstå rolletilordninger</h3>
+
+      <div class="help-grid">
+        <div class="help-card">
+          <h4>Plattformroller</h4>
+          <div class="role-list">
+            <div class="role-item">
+              <span class="role-badge viewer">VIEWER</span>
+              <p>Kun lesetilgang til dashbord, rapporter og bevis. Kan ikke opprette eller endre innhold.</p>
+            </div>
+            <div class="role-item">
+              <span class="role-badge manager">MANAGER</span>
+              <p>Opprett utkast, send inn rapporter for godkjenning, administrer teamdata. Kan ikke godkjenne endelige rapporter.</p>
+            </div>
+            <div class="role-item">
+              <span class="role-badge admin">ADMIN</span>
+              <p>Gjennomgå og godkjenn rapporter, administrer brukere, tilgang til administrasjonskonsoll. Kan ikke endre plattforminnstillinger.</p>
+            </div>
+            <div class="role-item">
+              <span class="role-badge super-admin">SUPER_ADMIN</span>
+              <p>Full systemtilgang inkludert endelige godkjenninger og plattformkonfigurasjon. Høyeste tilgangsnivå.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="help-card">
+          <h4>Vanlige tilordningseksempler</h4>
+          <ul>
+            <li>
+              <strong>Gruppebasert:</strong>
+              <code>groups = "teei-admins"</code> → <code>ADMIN</code>
+            </li>
+            <li>
+              <strong>Avdelingsbasert:</strong>
+              <code>department = "CSR"</code> → <code>MANAGER</code>
+            </li>
+            <li>
+              <strong>E-postdomene:</strong>
+              <code>email = "*@executive.company.com"</code> → <code>ADMIN</code>
+            </li>
+            <li>
+              <strong>Standard fallback:</strong>
+              <code>groups = "teei-users"</code> → <code>VIEWER</code> (prioritet: 10)
+            </li>
+          </ul>
+        </div>
+
+        <div class="help-card">
+          <h4>Prioritetssystem</h4>
+          <p>
+            Prioritet bestemmer hvilken tilordning som skal brukes når en bruker matcher flere regler.
+            Høyere tall har forrang.
+          </p>
+          <ul>
+            <li><strong>100:</strong> Super Admin overstyringer (høyeste prioritet)</li>
+            <li><strong>90:</strong> Admin-tildelinger</li>
+            <li><strong>80:</strong> Manager-tildelinger</li>
+            <li><strong>10-50:</strong> Viewer- og standardtildelinger</li>
+          </ul>
+          <p class="tip">
+            <strong>Tips:</strong> La det være mellomrom mellom prioritetsnumre for å tillate fremtidige innsettinger.
+          </p>
+        </div>
+
+        <div class="help-card">
+          <h4>Best practices</h4>
+          <ul>
+            <li>Inkluder alltid en lavprioritets fallback-regel for alle autentiserte brukere</li>
+            <li>Bruk gruppebaserte tilordninger når det er mulig (mer vedlikeholdbare)</li>
+            <li>Test nye tilordninger i et ikke-produksjonsmiljø først</li>
+            <li>Dokumenter hver tilordning med en klar beskrivelse</li>
+            <li>Deaktiver tilordninger i stedet for å slette dem for revisjonsspor</li>
+            <li>Gjennomgå tilordninger regelmessig når organisasjonsstrukturen endres</li>
+          </ul>
+        </div>
+      </div>
+
+      {!isSuperAdmin && (
+        <div class="permission-notice">
+          <strong>Skrivebeskyttet tilgang</strong>
+          <p>
+            Du viser rolletilordninger i skrivebeskyttet modus. For å opprette, redigere eller slette tilordninger,
+            trenger du SUPER_ADMIN-rolle. Kontakt plattformadministratoren din for hjelp.
+          </p>
+        </div>
+      )}
+    </section>
+  </div>
+</BaseLayout>
+
+<style>
+  .roles-page {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: calc(var(--spacing-unit) * 4);
+  }
+
+  .page-header {
+    margin-bottom: calc(var(--spacing-unit) * 4);
+  }
+
+  .back-link {
+    color: var(--color-primary);
+    text-decoration: none;
+    font-size: 0.9375rem;
+    margin-bottom: calc(var(--spacing-unit) * 2);
+    display: inline-block;
+  }
+
+  .back-link:hover {
+    text-decoration: underline;
+  }
+
+  h1 {
+    font-size: 2rem;
+    margin: calc(var(--spacing-unit) * 2) 0 calc(var(--spacing-unit) * 1);
+  }
+
+  .subtitle {
+    color: var(--color-text-secondary);
+    font-size: 1.125rem;
+    margin: 0;
+  }
+
+  .alert-info {
+    background: #dbeafe;
+    border: 1px solid #3b82f6;
+    border-left: 4px solid #3b82f6;
+    padding: calc(var(--spacing-unit) * 3);
+    border-radius: var(--border-radius);
+    margin-bottom: calc(var(--spacing-unit) * 4);
+  }
+
+  .alert-info strong {
+    display: block;
+    margin-bottom: calc(var(--spacing-unit) * 1);
+    color: #1e40af;
+  }
+
+  .alert-info p {
+    margin: 0;
+    color: #1e3a8a;
+    line-height: 1.6;
+  }
+
+  .settings-section {
+    background: white;
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius);
+    padding: calc(var(--spacing-unit) * 4);
+    margin-bottom: calc(var(--spacing-unit) * 4);
+  }
+
+  .help-section {
+    background: var(--color-bg-secondary);
+    padding: calc(var(--spacing-unit) * 4);
+    border-radius: var(--border-radius);
+  }
+
+  .help-section h3 {
+    margin-top: 0;
+    margin-bottom: calc(var(--spacing-unit) * 3);
+  }
+
+  .help-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: calc(var(--spacing-unit) * 3);
+    margin-bottom: calc(var(--spacing-unit) * 3);
+  }
+
+  .help-card {
+    background: white;
+    padding: calc(var(--spacing-unit) * 3);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--color-border);
+  }
+
+  .help-card h4 {
+    margin-top: 0;
+    margin-bottom: calc(var(--spacing-unit) * 2);
+    color: var(--color-primary);
+  }
+
+  .help-card ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .help-card li {
+    padding: calc(var(--spacing-unit) * 1.5) 0;
+    border-bottom: 1px solid var(--color-bg-secondary);
+    line-height: 1.6;
+  }
+
+  .help-card li:last-child {
+    border-bottom: none;
+  }
+
+  .help-card strong {
+    color: var(--color-text);
+    font-weight: 600;
+  }
+
+  .help-card code {
+    background: #f3f4f6;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.875rem;
+    color: var(--color-primary);
+  }
+
+  .help-card .tip {
+    background: #fef3c7;
+    padding: calc(var(--spacing-unit) * 2);
+    border-radius: 6px;
+    margin-top: calc(var(--spacing-unit) * 2);
+    font-size: 0.9375rem;
+  }
+
+  .help-card .tip strong {
+    color: #92400e;
+  }
+
+  .role-list {
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--spacing-unit) * 2);
+  }
+
+  .role-item {
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--spacing-unit) * 1);
+  }
+
+  .role-item p {
+    margin: 0;
+    color: var(--color-text-secondary);
+    font-size: 0.9375rem;
+    line-height: 1.5;
+  }
+
+  .role-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+  }
+
+  .role-badge.viewer {
+    background: #e5e7eb;
+    color: #374151;
+  }
+
+  .role-badge.manager {
+    background: #dbeafe;
+    color: #1e40af;
+  }
+
+  .role-badge.admin {
+    background: #fef3c7;
+    color: #92400e;
+  }
+
+  .role-badge.super-admin {
+    background: #fce7f3;
+    color: #831843;
+  }
+
+  .permission-notice {
+    background: #fef3c7;
+    border: 1px solid #fcd34d;
+    padding: calc(var(--spacing-unit) * 3);
+    border-radius: var(--border-radius);
+  }
+
+  .permission-notice strong {
+    display: block;
+    margin-bottom: calc(var(--spacing-unit) * 1);
+    color: #92400e;
+  }
+
+  .permission-notice p {
+    margin: 0;
+    color: #78350f;
+    line-height: 1.6;
+  }
+
+  @media (max-width: 768px) {
+    .help-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

@@ -8,3 +8,9 @@ metadata:
     part-of: teei-csr-platform
 data:
   LOG_LEVEL: "info"
+
+  # OpenTelemetry configuration
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://teei-jaeger:4318"
+  OTEL_SERVICE_NAME: "teei-reporting"
+  OTEL_TRACES_SAMPLER: "parentbased_traceidratio"
+  OTEL_TRACES_SAMPLER_ARG: "0.1"

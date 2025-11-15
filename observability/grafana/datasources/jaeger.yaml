@@ -1,0 +1,27 @@
+apiVersion: 1
+
+datasources:
+  - name: Jaeger
+    type: jaeger
+    uid: jaeger-ds
+    access: proxy
+    url: http://teei-jaeger:16686
+    editable: false
+    jsonData:
+      tracesToLogs:
+        # Link traces to logs in Loki
+        datasourceUid: 'loki-ds'
+        tags: ['trace_id']
+        mappedTags: [{ key: 'service.name', value: 'app' }]
+        spanStartTimeShift: '-1m'
+        spanEndTimeShift: '1m'
+        filterByTraceID: true
+        filterBySpanID: false
+      tracesToMetrics:
+        # Link traces to metrics in Prometheus
+        datasourceUid: 'prometheus-ds'
+        tags: [{ key: 'service.name', value: 'service' }]
+        spanStartTimeShift: '-1m'
+        spanEndTimeShift: '1m'
+      nodeGraph:
+        enabled: true

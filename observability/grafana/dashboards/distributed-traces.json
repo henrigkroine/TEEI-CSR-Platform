@@ -1,0 +1,216 @@
+{
+  "dashboard": {
+    "title": "TEEI Platform - Distributed Traces",
+    "tags": ["teei", "jaeger", "tracing", "observability"],
+    "timezone": "utc",
+    "schemaVersion": 16,
+    "version": 1,
+    "refresh": "30s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Trace Count by Service",
+        "type": "graph",
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 0
+        },
+        "targets": [
+          {
+            "datasource": "Jaeger",
+            "queryType": "search",
+            "service": "$service",
+            "refId": "A"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Traces",
+            "format": "short"
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "P95 Latency by Service",
+        "type": "graph",
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 0
+        },
+        "targets": [
+          {
+            "datasource": "Prometheus",
+            "expr": "histogram_quantile(0.95, sum(rate(duration_milliseconds_bucket{service=~\"$service\"}[5m])) by (le, service))",
+            "legendFormat": "{{ service }}",
+            "refId": "A"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Latency (ms)",
+            "format": "ms"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Error Rate by Service",
+        "type": "graph",
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 8
+        },
+        "targets": [
+          {
+            "datasource": "Prometheus",
+            "expr": "sum(rate(traces_spanmetrics_calls_total{status=\"STATUS_CODE_ERROR\",service=~\"$service\"}[5m])) by (service) / sum(rate(traces_spanmetrics_calls_total{service=~\"$service\"}[5m])) by (service) * 100",
+            "legendFormat": "{{ service }}",
+            "refId": "A"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Error Rate (%)",
+            "format": "percent",
+            "max": 100
+          }
+        ],
+        "thresholds": [
+          {
+            "value": 1,
+            "colorMode": "warning"
+          },
+          {
+            "value": 5,
+            "colorMode": "critical"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Span Operations by Service",
+        "type": "table",
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 8
+        },
+        "targets": [
+          {
+            "datasource": "Prometheus",
+            "expr": "sum(rate(traces_spanmetrics_calls_total{service=~\"$service\"}[5m])) by (service, span_name)",
+            "format": "table",
+            "instant": true,
+            "refId": "A"
+          }
+        ],
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {},
+              "renameByName": {
+                "service": "Service",
+                "span_name": "Operation",
+                "Value": "Rate (ops/s)"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Trace Search & Details",
+        "type": "traces",
+        "gridPos": {
+          "h": 12,
+          "w": 24,
+          "x": 0,
+          "y": 16
+        },
+        "targets": [
+          {
+            "datasource": "Jaeger",
+            "queryType": "search",
+            "service": "$service",
+            "limit": 20,
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Trace Dependency Graph",
+        "type": "nodeGraph",
+        "gridPos": {
+          "h": 10,
+          "w": 24,
+          "x": 0,
+          "y": 28
+        },
+        "targets": [
+          {
+            "datasource": "Prometheus",
+            "expr": "sum(rate(traces_service_graph_request_total[5m])) by (client, server)",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Slowest Traces",
+        "type": "table",
+        "gridPos": {
+          "h": 8,
+          "w": 24,
+          "x": 0,
+          "y": 38
+        },
+        "targets": [
+          {
+            "datasource": "Prometheus",
+            "expr": "topk(10, max_over_time(duration_milliseconds{service=~\"$service\"}[5m]))",
+            "format": "table",
+            "instant": true,
+            "refId": "A"
+          }
+        ]
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "service",
+          "type": "query",
+          "datasource": "Prometheus",
+          "query": "label_values(traces_spanmetrics_calls_total, service)",
+          "multi": true,
+          "includeAll": true,
+          "refresh": 1
+        },
+        {
+          "name": "operation",
+          "type": "query",
+          "datasource": "Prometheus",
+          "query": "label_values(traces_spanmetrics_calls_total{service=~\"$service\"}, span_name)",
+          "multi": true,
+          "includeAll": true,
+          "refresh": 1
+        }
+      ]
+    },
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    }
+  }
+}

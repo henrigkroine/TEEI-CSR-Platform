@@ -1,0 +1,207 @@
+name: Load Tests
+
+on:
+  schedule:
+    # Run weekly on Sundays at 2 AM UTC (low traffic time)
+    - cron: '0 2 * * 0'
+  workflow_dispatch:
+    inputs:
+      target_env:
+        description: 'Target environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+      test_suite:
+        description: 'Test suite to run'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - dashboard
+          - reporting
+          - ingestion
+      duration:
+        description: 'Test duration (e.g., 5m, 10m)'
+        required: false
+        default: '5m'
+      vus:
+        description: 'Max virtual users'
+        required: false
+        default: '100'
+
+env:
+  K6_VERSION: '0.47.0'
+
+jobs:
+  load-test:
+    name: Run k6 Load Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup k6
+        run: |
+          wget https://github.com/grafana/k6/releases/download/v${{ env.K6_VERSION }}/k6-v${{ env.K6_VERSION }}-linux-amd64.tar.gz
+          tar -xzf k6-v${{ env.K6_VERSION }}-linux-amd64.tar.gz
+          sudo mv k6-v${{ env.K6_VERSION }}-linux-amd64/k6 /usr/local/bin/
+          k6 version
+
+      - name: Set environment variables
+        run: |
+          if [[ "${{ inputs.target_env || 'staging' }}" == "production" ]]; then
+            echo "BASE_URL=${{ secrets.PRODUCTION_URL }}" >> $GITHUB_ENV
+            echo "API_TOKEN=${{ secrets.PRODUCTION_API_TOKEN }}" >> $GITHUB_ENV
+          else
+            echo "BASE_URL=${{ secrets.STAGING_URL }}" >> $GITHUB_ENV
+            echo "API_TOKEN=${{ secrets.STAGING_API_TOKEN }}" >> $GITHUB_ENV
+          fi
+
+          echo "TEST_DURATION=${{ inputs.duration || '5m' }}" >> $GITHUB_ENV
+          echo "MAX_VUS=${{ inputs.vus || '100' }}" >> $GITHUB_ENV
+
+      - name: Run dashboard load test
+        if: ${{ inputs.test_suite == 'all' || inputs.test_suite == 'dashboard' }}
+        run: |
+          k6 run tests/load/dashboard-load.js \
+            --out json=results/dashboard-load.json \
+            --summary-export=results/dashboard-summary.json
+        env:
+          BASE_URL: ${{ env.BASE_URL }}
+          TEST_DURATION: ${{ env.TEST_DURATION }}
+          MAX_VUS: ${{ env.MAX_VUS }}
+
+      - name: Run reporting load test
+        if: ${{ inputs.test_suite == 'all' || inputs.test_suite == 'reporting' }}
+        run: |
+          k6 run tests/load/reporting-load.js \
+            --out json=results/reporting-load.json \
+            --summary-export=results/reporting-summary.json
+        env:
+          BASE_URL: ${{ env.BASE_URL }}
+          API_TOKEN: ${{ env.API_TOKEN }}
+          TEST_DURATION: ${{ env.TEST_DURATION }}
+          MAX_VUS: ${{ env.MAX_VUS }}
+
+      - name: Run ingestion load test
+        if: ${{ inputs.test_suite == 'all' || inputs.test_suite == 'ingestion' }}
+        run: |
+          k6 run tests/load/ingestion-load.js \
+            --out json=results/ingestion-load.json \
+            --summary-export=results/ingestion-summary.json
+        env:
+          BASE_URL: ${{ env.BASE_URL }}
+          API_TOKEN: ${{ env.API_TOKEN }}
+          TEST_DURATION: ${{ env.TEST_DURATION }}
+          MAX_VUS: ${{ env.MAX_VUS }}
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: load-test-results-${{ inputs.target_env || 'staging' }}-${{ github.run_number }}
+          path: results/
+          retention-days: 30
+
+      - name: Check thresholds
+        run: |
+          # Parse summary and check if any thresholds failed
+          for file in results/*-summary.json; do
+            if [ -f "$file" ]; then
+              echo "Checking thresholds in $file..."
+              failed=$(jq -r '.metrics | to_entries[] | select(.value.thresholds) | select(any(.value.thresholds[]; .ok == false)) | .key' "$file")
+              if [ -n "$failed" ]; then
+                echo "❌ Threshold failures detected in $(basename $file):"
+                echo "$failed"
+                exit 1
+              fi
+            fi
+          done
+          echo "✅ All thresholds passed"
+
+      - name: Generate HTML report
+        if: always()
+        run: |
+          # Simple HTML report generation
+          cat > results/report.html <<EOF
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>Load Test Report - ${{ inputs.target_env || 'staging' }}</title>
+            <style>
+              body { font-family: Arial, sans-serif; margin: 20px; }
+              h1 { color: #333; }
+              .metric { margin: 10px 0; padding: 10px; background: #f5f5f5; border-radius: 5px; }
+              .pass { color: green; }
+              .fail { color: red; }
+            </style>
+          </head>
+          <body>
+            <h1>Load Test Report</h1>
+            <p><strong>Environment:</strong> ${{ inputs.target_env || 'staging' }}</p>
+            <p><strong>Date:</strong> $(date -u +%Y-%m-%dT%H:%M:%SZ)</p>
+            <p><strong>Duration:</strong> ${{ inputs.duration || '5m' }}</p>
+            <p><strong>Max VUs:</strong> ${{ inputs.vus || '100' }}</p>
+            <hr>
+            <h2>Results</h2>
+            <p>See attached JSON files for detailed results.</p>
+          </body>
+          </html>
+          EOF
+
+      - name: Comment PR with results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const summaries = fs.readdirSync('results').filter(f => f.endsWith('-summary.json'));
+
+            let comment = '## 📊 Load Test Results\n\n';
+            comment += `**Environment**: ${{ inputs.target_env || 'staging' }}\n`;
+            comment += `**Duration**: ${{ inputs.duration || '5m' }}\n`;
+            comment += `**Max VUs**: ${{ inputs.vus || '100' }}\n\n`;
+
+            for (const file of summaries) {
+              const data = JSON.parse(fs.readFileSync(`results/${file}`, 'utf8'));
+              const testName = file.replace('-summary.json', '');
+
+              comment += `### ${testName}\n\n`;
+              comment += '| Metric | Value | Threshold | Status |\n';
+              comment += '|--------|-------|-----------|--------|\n';
+
+              for (const [key, value] of Object.entries(data.metrics || {})) {
+                if (value.thresholds) {
+                  for (const threshold of Object.values(value.thresholds)) {
+                    const status = threshold.ok ? '✅' : '❌';
+                    comment += `| ${key} | ${value.value?.toFixed(2)} | ${threshold.threshold} | ${status} |\n`;
+                  }
+                }
+              }
+
+              comment += '\n';
+            }
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+      - name: Notify on failure
+        if: failure()
+        uses: sarisia/actions-status-discord@v1
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK_ALERTS }}
+          status: failure
+          title: "Load Tests Failed"
+          description: "Load tests failed on ${{ inputs.target_env || 'staging' }} environment"
+          color: 0xFF0000
+          url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
