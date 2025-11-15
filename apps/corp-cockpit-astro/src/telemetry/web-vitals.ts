@@ -64,6 +64,8 @@ export interface WebVitalsData {
   id: string;
   navigationType: string;
   route: string;
+  routeGroup: string; // NEW: 'analytics' | 'admin' | 'core'
+  featureFlags?: Record<string, boolean>; // NEW: Active feature flags
   timestamp: number;
 }
 
@@ -86,6 +88,26 @@ const DEFAULT_OTEL_CONFIG: OTelConfig = {
   environment: process.env.NODE_ENV || 'development',
   enabled: process.env.ENABLE_OTEL === 'true' || process.env.NODE_ENV === 'production',
 };
+
+/**
+ * Get route group from path
+ */
+export function getRouteGroup(path: string): string {
+  if (path.startsWith('/analytics')) return 'analytics';
+  if (path.startsWith('/admin')) return 'admin';
+  if (path.startsWith('/analytics-ops')) return 'analytics';
+  return 'core';
+}
+
+/**
+ * Get active feature flags
+ */
+export function getActiveFeatureFlags(): Record<string, boolean> {
+  return {
+    analytics_trends: import.meta.env.VITE_FEATURE_ANALYTICS_TRENDS === 'true',
+    analytics_engagement: import.meta.env.VITE_FEATURE_ANALYTICS_ENGAGEMENT === 'true',
+  };
+}
 
 /**
  * Web Vitals Collector
@@ -137,6 +159,7 @@ export class WebVitalsCollector {
    * Handle metric
    */
   handleMetric(metric: Metric): void {
+    const route = this.getCurrentRoute();
     const data: WebVitalsData = {
       name: metric.name,
       value: metric.value,
@@ -144,7 +167,9 @@ export class WebVitalsCollector {
       delta: metric.delta,
       id: metric.id,
       navigationType: this.getNavigationType(),
-      route: this.getCurrentRoute(),
+      route,
+      routeGroup: getRouteGroup(route), // NEW: Add route grouping
+      featureFlags: getActiveFeatureFlags(), // NEW: Add feature flag context
       timestamp: Date.now(),
     };
 
@@ -238,8 +263,14 @@ export class WebVitalsCollector {
                 attributes: [
                   { key: 'rating', value: { stringValue: metric.rating } },
                   { key: 'route', value: { stringValue: metric.route } },
+                  { key: 'route_group', value: { stringValue: metric.routeGroup } }, // NEW
                   { key: 'navigation_type', value: { stringValue: metric.navigationType } },
                   { key: 'metric_id', value: { stringValue: metric.id } },
+                  // Add feature flag attributes
+                  ...(metric.featureFlags ? Object.entries(metric.featureFlags).map(([key, val]) => ({
+                    key: `feature.${key}.enabled`,
+                    value: { boolValue: val },
+                  })) : []),
                 ],
               }],
             },
