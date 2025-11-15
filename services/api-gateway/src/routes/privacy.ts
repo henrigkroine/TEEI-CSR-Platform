@@ -11,7 +11,9 @@
  */
 
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import type { Pool } from 'pg';
 import { z } from 'zod';
+import { createDsrOrchestrator, DsrRequestType } from '@teei/compliance';
 
 /**
  * Request schemas
@@ -34,7 +36,9 @@ const CancelDeletionSchema = z.object({
 /**
  * Register GDPR privacy routes
  */
-export async function registerPrivacyRoutes(fastify: FastifyInstance) {
+export async function registerPrivacyRoutes(fastify: FastifyInstance, dbPool: Pool) {
+  // Create DSR orchestrator instance
+  const dsr = createDsrOrchestrator(dbPool as any);
   /**
    * GET /v1/privacy/export
    *
@@ -59,35 +63,11 @@ export async function registerPrivacyRoutes(fastify: FastifyInstance) {
       // Log the export request
       request.log.info({ userId }, 'GDPR data export requested');
 
-      // TODO: Integrate with DsrOrchestrator to export all user data
-      // const dsr = createDsrOrchestrator(db);
-      // const exportData = await dsr.exportUserData(userId, userId);
+      // Export all user data using DSR orchestrator
+      const exportData = await dsr.exportUserData(userId, userId);
 
-      // Stub response
-      const exportData = {
-        userId,
-        exportDate: new Date().toISOString(),
-        data: {
-          profile: {
-            id: userId,
-            email: user.email,
-            firstName: 'John',
-            lastName: 'Doe',
-            role: user.role,
-          },
-          pii: {
-            _note: 'PII data would be decrypted and included here',
-          },
-          externalIds: [],
-          programs: [],
-          activities: [],
-        },
-        metadata: {
-          sources: ['users'],
-          recordCount: 1,
-          gdprArticle: 'Article 15 - Right to Access',
-        },
-      };
+      // Add GDPR article reference
+      (exportData.metadata as any).gdprArticle = 'Article 15 - Right to Access';
 
       return reply.status(200).send({
         success: true,
@@ -138,17 +118,14 @@ export async function registerPrivacyRoutes(fastify: FastifyInstance) {
 
       request.log.warn({ userId: body.userId, reason: body.reason }, 'GDPR deletion requested');
 
-      // TODO: Integrate with DsrOrchestrator to schedule deletion
-      // const dsr = createDsrOrchestrator(db);
-      // const deletionId = await dsr.requestDeletion({
-      //   requestType: DsrRequestType.ERASURE,
-      //   userId: body.userId,
-      //   requestedBy: user.userId,
-      //   reason: body.reason || 'User requested account deletion',
-      // });
+      // Schedule deletion using DSR orchestrator
+      const deletionId = await dsr.requestDeletion({
+        requestType: DsrRequestType.ERASURE,
+        userId: body.userId,
+        requestedBy: user.userId,
+        reason: body.reason || 'User requested account deletion',
+      });
 
-      // Stub response
-      const deletionId = 'stub-deletion-id-' + Date.now();
       const scheduledFor = new Date();
       scheduledFor.setDate(scheduledFor.getDate() + 30); // 30-day grace period
 
@@ -209,9 +186,8 @@ export async function registerPrivacyRoutes(fastify: FastifyInstance) {
 
         request.log.info({ deletionId, userId: user.userId }, 'Deletion cancellation requested');
 
-        // TODO: Integrate with DsrOrchestrator to cancel deletion
-        // const dsr = createDsrOrchestrator(db);
-        // await dsr.cancelDeletion(deletionId, user.userId);
+        // Cancel deletion using DSR orchestrator
+        await dsr.cancelDeletion(deletionId, user.userId);
 
         return reply.status(200).send({
           success: true,
@@ -256,18 +232,25 @@ export async function registerPrivacyRoutes(fastify: FastifyInstance) {
 
         request.log.info({ deletionId, userId: user.userId }, 'Deletion status requested');
 
-        // TODO: Integrate with DsrOrchestrator to get status
-        // const dsr = createDsrOrchestrator(db);
-        // const status = await dsr.getDeletionStatus(deletionId);
+        // Get deletion status from DSR orchestrator
+        const status = await dsr.getDeletionStatus(deletionId);
 
-        // Stub response
+        if (!status) {
+          return reply.status(404).send({
+            success: false,
+            error: 'NotFound',
+            message: 'Deletion request not found',
+          });
+        }
+
         return reply.status(200).send({
           success: true,
           data: {
             deletionId,
-            status: 'PENDING',
-            scheduledFor: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-            requestedAt: new Date().toISOString(),
+            status: status.status,
+            scheduledFor: status.scheduledFor,
+            requestedAt: status.createdAt,
+            completedAt: status.completedAt,
           },
         });
       } catch (error) {
