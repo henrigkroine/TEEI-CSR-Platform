@@ -20,12 +20,24 @@ export default defineConfig({
         '**/*.config.ts',
         'scripts/**'
       ],
+      // Production-level coverage thresholds (80%)
+      // These are strictly enforced in CI via quality-gates.yml
+      // DO NOT lower these thresholds without team approval
       thresholds: {
         lines: 80,
         functions: 80,
         branches: 80,
-        statements: 80
-      }
+        statements: 80,
+        autoUpdate: false // Prevent automatic threshold updates
+      },
+      // Enable all coverage checks
+      all: true,
+      // Include source files for coverage
+      include: [
+        'packages/*/src/**/*.{ts,tsx}',
+        'services/*/src/**/*.{ts,tsx}',
+        'apps/*/src/**/*.{ts,tsx}'
+      ]
     },
     testTimeout: 30000,
     hookTimeout: 30000,
