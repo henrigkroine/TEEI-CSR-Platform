@@ -24,9 +24,8 @@ import type {
   GenerateReportRequest as APIReportRequest,
   GenerateReportResponse,
   CostSummaryResponse,
-  Citation as APICitation,
-  ReportSection as APIReportSection,
   LineageMetadata,
+  APISection,
 } from '@teei/shared-types';
 
 // ==================== CONFIGURATION ====================
@@ -262,6 +261,7 @@ export class ReportingClient {
     // Map narrative settings to API parameters
     const temperature = this.mapToneToTemperature(request.options?.tone);
     const maxTokens = this.mapLengthToTokens(request.options?.length);
+    const language = this.mapLocale(request.options?.tone);
 
     return {
       companyId,
@@ -269,11 +269,12 @@ export class ReportingClient {
         start: request.period.from,
         end: request.period.to,
       },
-      locale: this.mapLocale(request.options?.tone),
-      sections: this.mapReportTypeToSections(request.reportType),
-      deterministic: request.options?.deterministic || false,
-      temperature,
-      maxTokens,
+      options: {
+        temperature,
+        maxTokens,
+        language,
+        seed: request.options?.deterministic ? 42 : undefined,
+      },
     };
   }
 
@@ -285,11 +286,11 @@ export class ReportingClient {
     originalRequest: FrontendReportRequest
   ): GeneratedReport {
     // Build citation index for replacement
-    const citationMap = new Map<number, APICitation>();
+    const citationMap = new Map<number, any>();
     let citationCounter = 0;
 
-    response.sections.forEach((section) => {
-      section.citations.forEach((citation) => {
+    response.sections.forEach((section: APISection) => {
+      section.citations.forEach((citation: any) => {
         citationCounter++;
         citationMap.set(citationCounter, citation);
       });
@@ -299,12 +300,13 @@ export class ReportingClient {
       reportId: response.reportId,
       reportType: originalRequest.reportType,
       status: 'draft',
-      sections: response.sections.map((section, index) => {
+      sections: response.sections.map((section: APISection, index: number) => {
         // Transform citation markers from [1], [2], [3] to [citation:snippetId]
         let transformedContent = section.content;
-        section.citations.forEach((citation, citationIndex) => {
+        section.citations.forEach((citation: any, citationIndex: number) => {
           const marker = `[${citationIndex + 1}]`;
-          const replacement = `[citation:${citation.snippetId}]`;
+          const snippetId = citation.snippetId || citation.evidenceId || 'unknown';
+          const replacement = `[citation:${snippetId}]`;
           transformedContent = transformedContent.replace(new RegExp(`\\${marker}`, 'g'), replacement);
         });
 
@@ -314,8 +316,8 @@ export class ReportingClient {
           order: index + 1,
         };
       }),
-      citations: response.sections.flatMap((section) =>
-        section.citations.map((citation) => this.mapCitation(citation))
+      citations: response.sections.flatMap((section: APISection) =>
+        section.citations.map((citation: any) => this.mapCitation(citation))
       ),
       metadata: this.mapLineageToMetadata(response.lineage),
       period: {
@@ -330,13 +332,13 @@ export class ReportingClient {
   /**
    * Map citation from API to frontend format
    */
-  private mapCitation(citation: APICitation): Citation {
+  private mapCitation(citation: any): Citation {
     return {
-      id: citation.id,
-      evidenceId: citation.snippetId,
-      snippetText: citation.text,
-      source: `Evidence ${citation.snippetId.slice(0, 8)}`,
-      confidence: citation.relevanceScore || 0.85,
+      id: citation.id || citation.snippetId || 'unknown',
+      evidenceId: citation.evidenceId || citation.snippetId || 'unknown',
+      snippetText: citation.snippetText || citation.text || '',
+      source: citation.source || `Evidence ${(citation.snippetId || citation.evidenceId || '').slice(0, 8)}`,
+      confidence: citation.confidence ?? citation.relevanceScore ?? 0.85,
     };
   }
 
@@ -388,31 +390,12 @@ export class ReportingClient {
   }
 
   /**
-   * Map locale (currently only en supported by API)
+   * Map locale to API language
    */
-  private mapLocale(tone?: string): 'en' | 'es' | 'fr' {
-    // API only supports en, es, fr
-    // Frontend uses en, uk, no
+  private mapLocale(_tone?: string): 'en' | 'no' | 'uk' {
+    // API supports en, no, uk
+    // Default to en for all tones
     return 'en';
-  }
-
-  /**
-   * Map report type to sections
-   */
-  private mapReportTypeToSections(
-    reportType: string
-  ): ('impact-summary' | 'sroi-narrative' | 'outcome-trends')[] {
-    switch (reportType) {
-      case 'quarterly':
-      case 'annual':
-        return ['impact-summary', 'sroi-narrative', 'outcome-trends'];
-      case 'board_presentation':
-        return ['impact-summary', 'sroi-narrative'];
-      case 'csrd':
-        return ['impact-summary', 'outcome-trends'];
-      default:
-        return ['impact-summary', 'sroi-narrative'];
-    }
   }
 
   /**

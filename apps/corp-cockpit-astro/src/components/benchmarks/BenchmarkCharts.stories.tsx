@@ -11,58 +11,67 @@ const meta: Meta<typeof BenchmarkCharts> = {
 export default meta;
 type Story = StoryObj<typeof BenchmarkCharts>;
 
-const mockData = {
-  company: { sroi: 3.2, volunteers: 1234, hours: 8456, impact: 2400000 },
-  cohortAverage: { sroi: 2.8, volunteers: 980, hours: 7200, impact: 2100000 },
-  cohortMedian: { sroi: 2.5, volunteers: 850, hours: 6500, impact: 1900000 },
-};
+const mockBenchmarks = [
+  { metric: 'SROI', value: 3.2, cohortAverage: 2.8, cohortMedian: 2.5, percentile: 75 },
+  { metric: 'Volunteers', value: 1234, cohortAverage: 980, cohortMedian: 850, percentile: 80 },
+  { metric: 'Hours', value: 8456, cohortAverage: 7200, cohortMedian: 6500, percentile: 70 },
+  { metric: 'Impact', value: 2400000, cohortAverage: 2100000, cohortMedian: 1900000, percentile: 65 },
+];
 
 export const Default: Story = {
   args: {
-    data: mockData,
-    chartType: 'bar',
+    benchmarks: mockBenchmarks,
+    companyName: 'Acme Corp',
+    cohortName: 'Technology Sector',
   },
 };
 
 export const RadarChart: Story = {
   args: {
-    data: mockData,
-    chartType: 'radar',
+    benchmarks: mockBenchmarks,
+    companyName: 'Acme Corp',
+    cohortName: 'Technology Sector',
   },
 };
 
 export const LineChart: Story = {
   args: {
-    data: mockData,
-    chartType: 'line',
+    benchmarks: mockBenchmarks,
+    companyName: 'Acme Corp',
+    cohortName: 'Technology Sector',
   },
 };
 
 export const Loading: Story = {
   args: {
-    data: null,
-    loading: true,
+    benchmarks: [],
+    companyName: 'Loading...',
+    cohortName: 'Loading...',
   },
 };
 
 export const TopPerformer: Story = {
   args: {
-    data: {
-      company: { sroi: 4.5, volunteers: 2000, hours: 12000, impact: 3500000 },
-      cohortAverage: { sroi: 2.8, volunteers: 980, hours: 7200, impact: 2100000 },
-      cohortMedian: { sroi: 2.5, volunteers: 850, hours: 6500, impact: 1900000 },
-    },
-    chartType: 'bar',
+    benchmarks: [
+      { metric: 'SROI', value: 4.5, cohortAverage: 2.8, cohortMedian: 2.5, percentile: 95 },
+      { metric: 'Volunteers', value: 2000, cohortAverage: 980, cohortMedian: 850, percentile: 90 },
+      { metric: 'Hours', value: 12000, cohortAverage: 7200, cohortMedian: 6500, percentile: 92 },
+      { metric: 'Impact', value: 3500000, cohortAverage: 2100000, cohortMedian: 1900000, percentile: 88 },
+    ],
+    companyName: 'Top Performer Inc',
+    cohortName: 'Technology Sector',
   },
 };
 
 export const BelowAverage: Story = {
   args: {
-    data: {
-      company: { sroi: 1.8, volunteers: 650, hours: 4200, impact: 1200000 },
-      cohortAverage: { sroi: 2.8, volunteers: 980, hours: 7200, impact: 2100000 },
-      cohortMedian: { sroi: 2.5, volunteers: 850, hours: 6500, impact: 1900000 },
-    },
-    chartType: 'bar',
+    benchmarks: [
+      { metric: 'SROI', value: 1.8, cohortAverage: 2.8, cohortMedian: 2.5, percentile: 35 },
+      { metric: 'Volunteers', value: 650, cohortAverage: 980, cohortMedian: 850, percentile: 40 },
+      { metric: 'Hours', value: 4200, cohortAverage: 7200, cohortMedian: 6500, percentile: 38 },
+      { metric: 'Impact', value: 1200000, cohortAverage: 2100000, cohortMedian: 1900000, percentile: 42 },
+    ],
+    companyName: 'Growing Company LLC',
+    cohortName: 'Technology Sector',
   },
 };

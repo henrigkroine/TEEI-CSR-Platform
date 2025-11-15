@@ -11,7 +11,6 @@
  * @module components/reports/WatermarkOverlay
  */
 
-import React from 'react';
 import type { ApprovalStatus } from '../../../../../services/reporting/src/types/approvals.js';
 
 interface WatermarkOverlayProps {

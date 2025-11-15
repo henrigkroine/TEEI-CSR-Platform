@@ -10,7 +10,7 @@
  * @module ConnectionStatus
  */
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import type { ConnectionState, SSEError } from '../utils/sseClient';
 import type { UseSSEConnectionReturn } from '../hooks/useSSEConnection';
 
@@ -134,7 +134,7 @@ export default function ConnectionStatus({
 function getStatusConfig(
   state: ConnectionState,
   isPolling: boolean,
-  error: SSEError | null
+  _error: SSEError | null
 ) {
   if (state === 'connected') {
     return {

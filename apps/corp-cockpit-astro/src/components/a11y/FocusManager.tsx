@@ -10,7 +10,6 @@ import {
   restoreFocus,
   getFocusableElements,
   trapFocus,
-  createSkipLink,
 } from '../../utils/a11y';
 
 /**
@@ -78,7 +77,7 @@ export function FocusTrap({
         const focusableElements = getFocusableElements(containerRef.current);
         if (focusableElements.length > 0) {
           requestAnimationFrame(() => {
-            focusableElements[0].focus();
+            focusableElements[0]?.focus();
           });
         }
       }

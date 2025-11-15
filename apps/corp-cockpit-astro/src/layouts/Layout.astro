@@ -30,6 +30,41 @@ const currentPath = new URL(Astro.request.url).pathname;
       rel="stylesheet"
     />
     <title>{title}</title>
+    <!-- FOUC Prevention: Apply theme before page render -->
+    <!-- This runs synchronously before styles are parsed, preventing flash -->
+    <script is:inline>
+      (function() {
+        try {
+          // Try to get companyId from cookies
+          const companyId = document.cookie
+            .split('; ')
+            .find(row => row.startsWith('companyId='))
+            ?.split('=')[1] || 'default';
+
+          // Get stored theme preference
+          const storageKey = 'theme:' + companyId;
+          const savedTheme = localStorage.getItem(storageKey);
+
+          // Determine which theme to apply
+          let themeToApply = savedTheme || 'auto';
+          let resolvedTheme = themeToApply;
+
+          // If theme is 'auto', resolve to system preference
+          if (themeToApply === 'auto') {
+            resolvedTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+          }
+
+          // Apply the theme to the document immediately
+          document.documentElement.classList.add(resolvedTheme);
+          document.documentElement.setAttribute('data-theme', resolvedTheme);
+          document.documentElement.style.setProperty('--resolved-theme', resolvedTheme);
+        } catch (e) {
+          // Silently fail - theme will be applied by React after hydration
+          // Default to light theme to prevent FOUC
+          document.documentElement.classList.add('light');
+        }
+      })();
+    </script>
     <style is:global>
       * {
         box-sizing: border-box;

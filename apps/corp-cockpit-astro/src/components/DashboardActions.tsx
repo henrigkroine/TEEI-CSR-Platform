@@ -10,7 +10,7 @@
  * @module DashboardActions
  */
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import ReportGenerationModal from './reports/ReportGenerationModal';
 
 interface DashboardActionsProps {

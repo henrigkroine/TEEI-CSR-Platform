@@ -1,11 +1,11 @@
 ---
 import BaseLayout from '../../../../../layouts/BaseLayout.astro';
 import { hasPermission } from '../../../../../utils/rbac';
-import SSOSettings from '../../../../../components/identity/SSOSettings.tsx';
-import RoleMappingTable from '../../../../../components/identity/RoleMappingTable.tsx';
-import SCIMRoleMappingEditor from '../../../../../components/identity/SCIMRoleMappingEditor.tsx';
-import SCIMStatus from '../../../../../components/identity/SCIMStatus.tsx';
-import SyncTestButton from '../../../../../components/identity/SyncTestButton.tsx';
+import SSOSettings from '../../../../../components/identity/SSOSettings';
+import RoleMappingTable from '../../../../../components/identity/RoleMappingTable';
+import SCIMRoleMappingEditor from '../../../../../components/identity/SCIMRoleMappingEditor';
+import SCIMStatus from '../../../../../components/identity/SCIMStatus';
+import SyncTestButton from '../../../../../components/identity/SyncTestButton';
 
 // Extract route parameters
 const { lang, companyId } = Astro.params;

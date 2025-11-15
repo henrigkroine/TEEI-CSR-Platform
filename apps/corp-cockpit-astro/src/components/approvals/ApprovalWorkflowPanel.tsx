@@ -11,7 +11,7 @@
  * @module components/approvals/ApprovalWorkflowPanel
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 
 interface ApprovalWorkflowPanelProps {
   companyId: string;
@@ -84,7 +84,7 @@ interface Version {
 export default function ApprovalWorkflowPanel({
   companyId,
   reportId,
-  userRole,
+  userRole: _userRole,
 }: ApprovalWorkflowPanelProps) {
   const [approvalState, setApprovalState] = useState<ApprovalState | null>(null);
   const [history, setHistory] = useState<ApprovalEvent[]>([]);
@@ -421,7 +421,7 @@ export default function ApprovalWorkflowPanel({
         )}
       </div>
 
-      <style jsx>{`
+      <style>{`
         .approval-workflow-panel {
           background: white;
           border: 1px solid #e5e7eb;
@@ -820,7 +820,7 @@ function StatusBadge({
       style={{ backgroundColor: colors[status] }}
     >
       {labels[status]}
-      <style jsx>{`
+      <style>{`
         .status-badge {
           color: white;
           border-radius: 12px;

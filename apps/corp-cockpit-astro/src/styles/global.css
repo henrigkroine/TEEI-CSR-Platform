@@ -4,24 +4,35 @@
 
 :root {
   /* Tenant-specific brand colors (dynamically set via JS) */
-  --color-primary: #0066CC;
-  --color-secondary: #1E40AF;
-  --color-accent: #10B981;
+  --color-primary: #2563eb;
+  --color-secondary: #1e40af;
+  --color-accent: #047857;
   --color-text-on-primary: #FFFFFF;
   --color-text-on-secondary: #FFFFFF;
   --color-text-on-accent: #FFFFFF;
 
-  /* Dark mode overrides (optional) */
-  --color-primary-dark: #3B82F6;
-  --color-secondary-dark: #60A5FA;
-  --color-accent-dark: #34D399;
+  /* Dark mode overrides (WCAG AA compliant) */
+  --color-primary-dark: #60a5fa;
+  --color-secondary-dark: #3b82f6;
+  --color-accent-dark: #34d399;
 
-  /* Neutral colors */
+  /* Neutral colors - Light mode (WCAG AA compliant) */
   --color-background: #FFFFFF;
-  --color-foreground: #1A1A1A;
-  --color-border: #E0E0E0;
+  --color-foreground: #111827;
+  --color-border: #6b7280;
+  --color-border-hover: #4b5563;
   --color-muted: #F5F5F5;
-  --color-muted-foreground: #595959; /* WCAG AA compliant: 7:1 contrast on white */
+  --color-muted-foreground: #6b7280;
+
+  /* Text hierarchy - Light mode */
+  --color-text-primary: #111827;
+  --color-text-secondary: #6b7280;
+  --color-text-tertiary: #6b7280;
+
+  /* Status colors - Light mode (WCAG AA) */
+  --color-warning: #b45309;
+  --color-error: #dc2626;
+  --color-success: #047857;
 
   /* Typography */
   --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -36,17 +47,29 @@
   --spacing-xl: 2rem;
 }
 
-[data-theme="dark"] {
-  --color-background: #121212;
-  --color-foreground: #E0E0E0;
-  --color-border: #333333;
+[data-theme="dark"],
+html.dark {
+  --color-background: #111827;
+  --color-foreground: #f9fafb;
+  --color-border: #6b7280;
+  --color-border-hover: #9ca3af;
   --color-muted: #1E1E1E;
-  --color-muted-foreground: #A0A0A0;
+  --color-muted-foreground: #d1d5db;
+
+  /* Text hierarchy - Dark mode */
+  --color-text-primary: #f9fafb;
+  --color-text-secondary: #d1d5db;
+  --color-text-tertiary: #d1d5db;
 
   /* Use dark mode brand colors if available */
   --color-primary: var(--color-primary-dark, var(--color-primary));
   --color-secondary: var(--color-secondary-dark, var(--color-secondary));
   --color-accent: var(--color-accent-dark, var(--color-accent));
+
+  /* Status colors - Dark mode (WCAG AA) */
+  --color-warning: #fbbf24;
+  --color-error: #f87171;
+  --color-success: #34d399;
 }
 
 @layer base {

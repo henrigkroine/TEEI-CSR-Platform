@@ -166,12 +166,12 @@ export default function PercentileChart({ data, metric, companyName }: Props) {
           displayColors: true,
           callbacks: {
             title: (context) => {
-              return `Period: ${context[0].label}`;
+              return context[0] ? `Period: ${context[0].label}` : '';
             },
             label: (context) => {
               const label = context.dataset.label || '';
               const value = context.parsed.y;
-              return `${label}: ${formatValue(value, data.unit)}`;
+              return value !== null ? `${label}: ${formatValue(value, data.unit)}` : '';
             },
           },
         },
@@ -204,8 +204,8 @@ export default function PercentileChart({ data, metric, companyName }: Props) {
     [data.unit, companyName]
   );
 
-  // Find current period stats
-  const currentPeriod = data.data_points[data.data_points.length - 1];
+  // Find current period stats (already checked for empty array above)
+  const currentPeriod = data.data_points[data.data_points.length - 1]!;
   const companyPercentile = calculatePercentile(
     currentPeriod.company_value,
     currentPeriod.p25,

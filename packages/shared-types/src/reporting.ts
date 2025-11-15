@@ -51,6 +51,20 @@ export const CitationSchema = z.object({
 
 export type Citation = z.infer<typeof CitationSchema>;
 
+// API Citation (from backend responses)
+export const APICitationSchema = z.object({
+  id: z.string(), // Citation ID
+  snippetId: z.string(), // For backward compatibility
+  evidenceId: z.string(), // Q2Q evidence snippet ID
+  text: z.string().optional(), // Snippet text (may be redacted)
+  snippetText: z.string().optional(), // Alias for snippet text
+  source: z.string().optional(),
+  relevanceScore: z.number().min(0).max(1).optional(), // Alias for confidence
+  confidence: z.number().min(0).max(1).optional(),
+});
+
+export type APICitation = z.infer<typeof APICitationSchema>;
+
 // Report metadata
 export const ReportMetadataSchema = z.object({
   model: z.string(), // e.g., "gpt-4-turbo-2024-04-09"
@@ -62,15 +76,26 @@ export const ReportMetadataSchema = z.object({
 
 export type ReportMetadata = z.infer<typeof ReportMetadataSchema>;
 
+// API Section with citations (different from ReportSection)
+export const APISectionSchema = z.object({
+  type: z.string(),
+  content: z.string(),
+  citations: z.array(APICitationSchema),
+});
+
+export type APISection = z.infer<typeof APISectionSchema>;
+
 // Report generation response
 export const GenerateReportResponseSchema = z.object({
   reportId: z.string().uuid(),
-  generatedAt: z.string().datetime(),
-  narrative: z.object({
-    sections: z.array(ReportSectionSchema),
-    citations: z.array(CitationSchema),
+  generatedAt: z.string().datetime().optional(),
+  sections: z.array(APISectionSchema),
+  lineage: z.object({
+    modelName: z.string(),
+    promptVersion: z.string(),
+    tokensUsed: z.number(),
+    timestamp: z.string().datetime(),
   }),
-  metadata: ReportMetadataSchema,
 });
 
 export type GenerateReportResponse = z.infer<typeof GenerateReportResponseSchema>;
@@ -94,3 +119,33 @@ export const RedactionResultSchema = z.object({
 });
 
 export type RedactionResult = z.infer<typeof RedactionResultSchema>;
+
+// Lineage metadata
+export const LineageMetadataSchema = z.object({
+  modelName: z.string(),
+  promptVersion: z.string(),
+  tokensUsed: z.number(),
+  timestamp: z.string().datetime(),
+});
+
+export type LineageMetadata = z.infer<typeof LineageMetadataSchema>;
+
+// Cost summary response
+export const ModelCostBreakdownSchema = z.object({
+  modelName: z.string(),
+  requestsCount: z.number(),
+  totalCostUsd: z.string(),
+  totalTokens: z.number(),
+});
+
+export type ModelCostBreakdown = z.infer<typeof ModelCostBreakdownSchema>;
+
+export const CostSummaryResponseSchema = z.object({
+  totalCostUsd: z.string(),
+  requestsCount: z.number(),
+  totalTokens: z.number(),
+  avgCostPerRequest: z.string(),
+  byModel: z.array(ModelCostBreakdownSchema),
+});
+
+export type CostSummaryResponse = z.infer<typeof CostSummaryResponseSchema>;

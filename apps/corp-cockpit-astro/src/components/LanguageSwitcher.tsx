@@ -49,7 +49,10 @@ export default function LanguageSwitcher({ currentLang }: LanguageSwitcherProps)
         case 'Enter':
         case ' ':
           e.preventDefault();
-          handleLanguageChange(languages[focusedIndex]);
+          const selectedLang = languages[focusedIndex];
+          if (selectedLang) {
+            handleLanguageChange(selectedLang);
+          }
           break;
       }
     };
@@ -113,7 +116,7 @@ export default function LanguageSwitcher({ currentLang }: LanguageSwitcherProps)
             className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 z-20"
           >
             <div className="py-1" role="menu" aria-orientation="vertical" aria-labelledby="language-menu">
-              {languages.map((lang, index) => (
+              {languages.map((lang) => (
                 <button
                   key={lang}
                   onClick={() => handleLanguageChange(lang)}

@@ -339,7 +339,7 @@ export function BrandingConfig({ companyId, onSave }: BrandingConfigProps) {
     const [r, g, b] = rgb.map((val) => {
       const s = val / 255;
       return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
-    });
+    }) as [number, number, number];
     return 0.2126 * r + 0.7152 * g + 0.0722 * b;
   }
 
@@ -350,9 +350,9 @@ export function BrandingConfig({ companyId, onSave }: BrandingConfigProps) {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
     return result
       ? [
-          parseInt(result[1], 16),
-          parseInt(result[2], 16),
-          parseInt(result[3], 16),
+          parseInt(result[1] ?? '00', 16),
+          parseInt(result[2] ?? '00', 16),
+          parseInt(result[3] ?? '00', 16),
         ]
       : [0, 0, 0];
   }
@@ -364,7 +364,7 @@ export function BrandingConfig({ companyId, onSave }: BrandingConfigProps) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onloadend = () => {
-        const base64 = (reader.result as string).split(',')[1];
+        const base64 = (reader.result as string).split(',')[1] ?? '';
         resolve(base64);
       };
       reader.onerror = reject;

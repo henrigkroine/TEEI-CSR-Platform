@@ -1385,3 +1385,379 @@ Day 1-2: Prompt Templates (Team 2)
 **Orchestrator**: Tech Lead (Worker 3)
 **Next Review**: After Team 2 (Gen-AI Core) completion
 
+# Worker 3 Phase E: Cockpit Polish & SSE Resilience
+
+**Status**: 🚧 In Progress
+**Branch**: `claude/worker3-phaseE-cockpit-polish-01DEt2S7UMEooTBJBivWKcpD`
+**Started**: 2025-11-15
+**Priority**: P0/P1 - Production Polish & Resilience
+**Target Completion**: TBD
+
+---
+
+## Mission
+
+Polish Corporate Cockpit to production-grade with zero TypeScript debt, SSE resilience, dark mode, enhanced UX, and comprehensive testing—ready for pilot launch.
+
+### Scope (Must Deliver All)
+
+1. **TypeScript Zero-Debt (P0)**: Resolve 200+ TS errors, fix missing types, create `@teei/shared-types` package
+2. **SSE Resilience (P1)**: Backoff/jitter, last-event-id resume, boardroom mode with snapshot caching
+3. **Dark Mode (P1)**: System preference + manual toggle, persist per tenant, chart palettes, WCAG AA contrast
+4. **Gen-AI UX Hardening (P2)**: Cost guardrails, cancel/retry, granular progress, citation preview drawer
+5. **Evidence Explorer Productivity (P2)**: Faceted filters, saved views, CSV export with PII redaction
+6. **Impact-In Monitor Enhancements (P2)**: SLA badges, platform filters, bulk retry, drilldown breadcrumbs
+7. **A11y & i18n Completeness (P3)**: Axe-core CI, keyboard nav fixes, live regions, localized strings
+8. **Quality Gates (P3)**: E2E ≥60%, unit ≥80%, VRT ≤0.3%, a11y 0 critical/serious
+9. **Docs & Runbooks (P4)**: Boardroom mode, SSE resilience, pilot quickstart
+
+---
+
+## 30 Specialist Agents (Phase E)
+
+### Team 1: Code Quality & Foundations (6 agents)
+**Status**: 🚧 In Progress
+
+| Agent | Trigger | Deliverable | Status |
+|-------|---------|-------------|--------|
+| **ts-fixer** | pnpm typecheck fails | Fix 200+ TS errors, create @teei/shared-types | ⏳ Pending |
+| **eslint-doctor** | ESLint errors | Fix linting issues, unused vars | ⏳ Pending |
+| **sse-architect** | SSE design needed | State machine, backoff strategy design doc | ⏳ Pending |
+| **sse-implementer** | SSE client needed | Enhance sseClient.ts with resume/backoff | ⏳ Pending |
+| **snapshot-cache-engineer** | Offline cache needed | IndexedDB ring buffer, compression | ⏳ Pending |
+| **boardroom-ux** | Boardroom mode needed | Full-screen KPI view, stale banner | ⏳ Pending |
+
+---
+
+### Team 2: Dark Mode & Theming (3 agents)
+**Status**: ⏳ Pending
+
+| Agent | Trigger | Deliverable | Status |
+|-------|---------|-------------|--------|
+| **darkmode-theming** | Theme toggle needed | System pref, toggle component, persistence | ⏳ Pending |
+| **charts-contrast** | Chart palettes needed | Dark mode palettes, WCAG AA validation | ⏳ Pending |
+| **a11y-sweeper** | Focus states validation | Update focus styles for dark mode | ⏳ Pending |
+
+---
+
+### Team 3: Gen-AI & Evidence UX (5 agents)
+**Status**: ⏳ Pending
+
+| Agent | Trigger | Deliverable | Status |
+|-------|---------|-------------|--------|
+| **cost-guardrails** | Budget caps needed | Cost estimation, budget checks | ⏳ Pending |
+| **report-citations-ui** | Citation preview needed | Citation drawer component | ⏳ Pending |
+| **evidence-facets** | Filters/saved views needed | Multi-facet filters, saved views | ⏳ Pending |
+| **pii-guardian** | CSV export safety needed | PII redaction preview for exports | ⏳ Pending |
+| **impactin-sla-ui** | Impact-In enhancements needed | SLA badges, filters, bulk retry | ⏳ Pending |
+
+---
+
+### Team 4: Accessibility & i18n (4 agents)
+**Status**: ⏳ Pending
+
+| Agent | Trigger | Deliverable | Status |
+|-------|---------|-------------|--------|
+| **a11y-sweeper** | axe-core violations | Fix critical/serious a11y issues | ⏳ Pending |
+| **i18n-linter** | Hardcoded strings found | Scan & update i18n JSON files | ⏳ Pending |
+| **a11y-tester** | CI integration needed | Integrate axe-core in GitHub Actions | ⏳ Pending |
+| **i18n-proofreader** | Translation review needed | Review en/no/uk translations | ⏳ Pending |
+
+---
+
+### Team 5: Quality & Testing (7 agents)
+**Status**: ⏳ Pending
+
+| Agent | Trigger | Deliverable | Status |
+|-------|---------|-------------|--------|
+| **e2e-author** | E2E tests needed | Boardroom, dark mode, cost guardrails E2E | ⏳ Pending |
+| **vrt-author** | Visual regression needed | Dark mode snapshots, diff thresholds | ⏳ Pending |
+| **sse-failure-lab** | SSE testing needed | Network flap scenarios, reconnect tests | ⏳ Pending |
+| **qa-checkpointer** | Quality gates validation | HTML dashboard, coverage reports | ⏳ Pending |
+| **perf-profiler** | Performance metrics needed | TTI/LCP measurements | ⏳ Pending |
+| **regression-scout** | Smoke tests needed | Critical path smoke tests | ⏳ Pending |
+| **rbac-verifier** | Permissions testing needed | Verify admin/viewer roles | ⏳ Pending |
+
+---
+
+### Team 6: Documentation & Release (5 agents)
+**Status**: ⏳ Pending
+
+| Agent | Trigger | Deliverable | Status |
+|-------|---------|-------------|--------|
+| **docs-scribe** | Documentation needed | Boardroom, SSE runbooks, quickstart | ⏳ Pending |
+| **release-notes** | PR ready | Draft PR body with changelog | ⏳ Pending |
+| **error-boundary-smith** | Error handling needed | Boundaries, toasts, Sentry correlation | ⏳ Pending |
+| **observability-ui** | Telemetry needed | User action trace spans | ⏳ Pending |
+| **security-reviewer** | Security review needed | CSP, headers, secrets audit | ⏳ Pending |
+
+---
+
+## Execution Plan (9 Phases)
+
+### Phase 1: TypeScript Zero-Debt (P0) ⏳
+**Duration**: 6-8 hours
+**Blockers**: None
+**Parallel**: No (blocks all other work)
+
+**Tasks**:
+1. ✅ Run typecheck, save output → `/reports/worker3/typecheck_output.txt`
+2. ⏳ Fix missing React imports (20+ files)
+3. ⏳ Create `@teei/shared-types` package
+4. ⏳ Add missing SSE type exports (`ConnectionState`, `SSEError`)
+5. ⏳ Fix implicit `any` types (15+ instances)
+6. ⏳ Fix possibly undefined errors (40+ instances)
+7. ⏳ Remove unused variables (30+ instances)
+8. ⏳ Fix Storybook prop type mismatches
+9. ⏳ Add Vitest DOM matchers
+10. ⏳ Fix JSX style props (remove `jsx` attribute)
+11. ⏳ Verify: `pnpm typecheck && pnpm lint` → exit 0
+
+**Agents**: ts-fixer (primary), eslint-doctor
+**Deliverable**: Zero TypeScript errors, clean linting
+
+---
+
+### Phase 2: SSE Resilience Architecture (P1) ⏳
+**Duration**: 2-3 hours
+**Blockers**: Phase 1 complete
+**Parallel**: Yes (with Phase 3)
+
+**Tasks**:
+1. ⏳ Design SSE state machine diagram
+2. ⏳ Define backoff strategy (exponential + jitter)
+3. ⏳ Specify last-event-id resume flow
+4. ⏳ Write design doc → `/reports/worker3/diffs/sse_architecture.md`
+
+**Agents**: sse-architect
+**Deliverable**: SSE architecture design doc
+
+---
+
+### Phase 3: Dark Mode Foundation (P1) ⏳
+**Duration**: 4-5 hours
+**Blockers**: Phase 1 complete
+**Parallel**: Yes (with Phase 2)
+
+**Tasks**:
+1. ⏳ Create ThemeProvider component (system preference detection)
+2. ⏳ Create ThemeToggle component
+3. ⏳ Update CSS variables for dark mode
+4. ⏳ Implement tenant preference persistence
+5. ⏳ Update chart palettes
+6. ⏳ Validate contrast ratios (WCAG AA)
+
+**Agents**: darkmode-theming, charts-contrast
+**Deliverable**: Functional dark mode toggle, persistent per tenant
+
+---
+
+### Phase 4: SSE Implementation (P1) ⏳
+**Duration**: 6-8 hours
+**Blockers**: Phase 2 complete
+**Parallel**: Yes (with Phase 5)
+
+**Tasks**:
+1. ⏳ Enhance `sseClient.ts` with last-event-id resume
+2. ⏳ Implement exponential backoff with jitter
+3. ⏳ Build IndexedDB snapshot cache (ring buffer)
+4. ⏳ Create BoardroomView component
+5. ⏳ Add stale data banner
+6. ⏳ Create boardroom route
+7. ⏳ Write E2E tests for SSE resilience
+
+**Agents**: sse-implementer, snapshot-cache-engineer, boardroom-ux, sse-failure-lab
+**Deliverable**: Boardroom mode with offline snapshot, SSE resume
+
+---
+
+### Phase 5: Dark Mode Polish (P1) ⏳
+**Duration**: 4-5 hours
+**Blockers**: Phase 3 complete
+**Parallel**: Yes (with Phase 4)
+
+**Tasks**:
+1. ⏳ Update focus states for dark mode
+2. ⏳ Apply dark mode to all charts
+3. ⏳ Apply dark mode to tables
+4. ⏳ VRT snapshots for dark mode
+5. ⏳ E2E test for theme toggle
+
+**Agents**: a11y-sweeper, charts-contrast, vrt-author, e2e-author
+**Deliverable**: WCAG AA dark mode across all UI
+
+---
+
+### Phase 6: UX Enhancements (P2) ⏳
+**Duration**: 20-26 hours
+**Blockers**: Phase 1 complete
+**Parallel**: Yes (sub-phases parallel)
+
+**Sub-Phase 6A: Gen-AI UX (6-8h)**
+1. ⏳ Cost guardrails (budget caps, warnings)
+2. ⏳ Cancel/retry UI
+3. ⏳ Granular progress stages
+4. ⏳ Citation preview drawer
+
+**Sub-Phase 6B: Evidence Explorer (8-10h)**
+1. ⏳ Faceted filters (program, time, outcome, cohort)
+2. ⏳ Saved views (RBAC-scoped)
+3. ⏳ CSV export with PII redaction preview
+4. ⏳ "Copy with citation" helper
+
+**Sub-Phase 6C: Impact-In Monitor (6-8h)**
+1. ⏳ SLA badges (color-coded)
+2. ⏳ Platform filters
+3. ⏳ Bulk retry safety dialog
+4. ⏳ Drilldown breadcrumbs
+5. ⏳ Multi-tenant switcher
+
+**Agents**: cost-guardrails, report-citations-ui, evidence-facets, pii-guardian, impactin-sla-ui
+**Deliverable**: Enhanced UX for all critical workflows
+
+---
+
+### Phase 7: A11y & i18n (P3) ⏳
+**Duration**: 8-10 hours
+**Blockers**: Phase 5 complete (dark mode)
+**Parallel**: No
+
+**Tasks**:
+1. ⏳ Run axe-core, fix critical/serious violations
+2. ⏳ Remove keyboard traps
+3. ⏳ Verify live regions (SSE status, progress)
+4. ⏳ Scan for hardcoded strings
+5. ⏳ Update i18n JSON files (en/no/uk)
+6. ⏳ Integrate axe-core in CI
+7. ⏳ Review translations for tone/accuracy
+
+**Agents**: a11y-sweeper, i18n-linter, a11y-tester, i18n-proofreader
+**Deliverable**: WCAG 2.2 AA compliance, complete i18n
+
+---
+
+### Phase 8: Quality Gates (P3) ⏳
+**Duration**: 10-12 hours
+**Blockers**: All implementation phases complete
+**Parallel**: No
+
+**Tasks**:
+1. ⏳ Write E2E tests (boardroom, dark mode, cost, evidence, Impact-In)
+2. ⏳ VRT for dark mode (all views)
+3. ⏳ Set VRT diff threshold (≤0.3%)
+4. ⏳ Generate unit coverage report (≥80%)
+5. ⏳ Generate E2E coverage report (≥60%)
+6. ⏳ Generate quality dashboard HTML
+7. ⏳ Run all gates, fix failures
+
+**Agents**: e2e-author, vrt-author, qa-checkpointer, regression-scout, rbac-verifier
+**Deliverable**: All quality gates pass
+
+---
+
+### Phase 9: Documentation (P4) ⏳
+**Duration**: 6-8 hours
+**Blockers**: None (can run in parallel)
+**Parallel**: Yes (with all phases)
+
+**Tasks**:
+1. ⏳ Write `/docs/cockpit/boardroom_mode.md`
+2. ⏳ Write `/docs/cockpit/sse_resilience.md`
+3. ⏳ Write `/docs/cockpit/pilot_quickstart.md`
+4. ⏳ Update `/apps/corp-cockpit-astro/README.md`
+5. ⏳ Create GIFs (boardroom toggle, SSE reconnect, dark mode)
+6. ⏳ Draft PR changelog
+
+**Agents**: docs-scribe, release-notes
+**Deliverable**: Comprehensive documentation + pilot quickstart
+
+---
+
+## Acceptance Criteria
+
+### Build Quality ✅
+- [ ] `pnpm typecheck` → 0 errors
+- [ ] `pnpm lint` → 0 errors
+- [ ] `pnpm test:cov` → ≥80% coverage (lib, utils, api)
+- [ ] `pnpm e2e:coverage` → ≥60% route coverage
+- [ ] `pnpm test:visual` → VRT diff ≤0.3%
+- [ ] `pnpm a11y:ci` → 0 critical/serious violations
+
+### Resilience ✅
+- [ ] SSE reconnects within ≤5s p95 after network flap
+- [ ] Boardroom view shows last snapshot within ≤250ms
+- [ ] "Stale data" banner appears when offline >5min
+- [ ] Last-Event-ID resume verified in E2E tests
+- [ ] Backoff strategy verified (2s, 4s, 8s, 16s, 32s)
+
+### UX ✅
+- [ ] Dark mode toggle works (system pref + manual)
+- [ ] Dark mode persists per tenant
+- [ ] All charts/tables have dark mode palettes
+- [ ] Contrast ratios ≥4.5:1 (WCAG AA)
+- [ ] Cost guardrails block over-budget reports
+- [ ] Citation preview drawer functional
+- [ ] Evidence faceted filters + saved views working
+- [ ] Impact-In SLA badges + platform filters working
+- [ ] All UI strings localized (en/no/uk)
+
+### Documentation ✅
+- [ ] `/docs/cockpit/boardroom_mode.md` complete with GIF
+- [ ] `/docs/cockpit/sse_resilience.md` complete with diagram
+- [ ] `/docs/cockpit/pilot_quickstart.md` complete
+- [ ] `/apps/corp-cockpit-astro/README.md` updated
+- [ ] Changelog in PR description
+
+---
+
+## Progress Tracking
+
+**Overall**: 1 / 80 tasks complete (1%)
+
+| Phase | Focus | Tasks | Complete | % | Status |
+|-------|-------|-------|----------|---|--------|
+| 1. TS Zero-Debt | Fix 200+ errors | 11 | 1 | 9% | 🚧 In Progress |
+| 2. SSE Architecture | Design state machine | 4 | 0 | 0% | ⏳ Pending |
+| 3. Dark Mode Foundation | Theme toggle, persistence | 6 | 0 | 0% | ⏳ Pending |
+| 4. SSE Implementation | Backoff, snapshot cache | 7 | 0 | 0% | ⏳ Pending |
+| 5. Dark Mode Polish | Charts, focus states | 5 | 0 | 0% | ⏳ Pending |
+| 6. UX Enhancements | Gen-AI, Evidence, Impact-In | 15 | 0 | 0% | ⏳ Pending |
+| 7. A11y & i18n | WCAG 2.2 AA, localization | 7 | 0 | 0% | ⏳ Pending |
+| 8. Quality Gates | E2E, VRT, coverage | 7 | 0 | 0% | ⏳ Pending |
+| 9. Documentation | Runbooks, quickstart | 6 | 0 | 0% | ⏳ Pending |
+
+**Last Updated**: 2025-11-15 by orchestrator-lead
+
+---
+
+## Risk Register
+
+| Risk | Impact | Probability | Mitigation |
+|------|--------|-------------|------------|
+| TS errors block all work | High | Low | Prioritize Phase 1, allocate extra time |
+| SSE reconnect >5s p95 | Medium | Medium | Test with simulated network flaps, tune backoff |
+| Dark mode contrast failures | Medium | Low | Use contrast checker script, automated validation |
+| E2E tests flaky | Medium | Medium | Use Playwright retry logic, explicit waits |
+| i18n translation gaps | Low | Medium | Automated hardcoded string scanner |
+| VRT diff threshold exceeded | Medium | Low | Re-baseline after major UI changes |
+| Boardroom snapshot >250ms | Medium | Low | Optimize IndexedDB queries, compression |
+
+---
+
+## Non-Negotiables
+
+1. **Zero TypeScript errors** - No merge until `pnpm typecheck` passes
+2. **WCAG 2.2 AA compliance** - CI fails on critical/serious a11y violations
+3. **SSE resume verified** - E2E test must validate last-event-id flow
+4. **Dark mode contrast** - All text/background pairs ≥4.5:1
+5. **Quality gates enforced** - Unit ≥80%, E2E ≥60%, VRT ≤0.3%
+6. **Documentation complete** - All 3 runbooks + quickstart delivered
+7. **No PII leakage** - All exports redacted, validated in tests
+8. **Tenant isolation** - RBAC verified for all new features
+
+---
+
+**Version**: 1.0
+**Orchestrator**: Tech Lead (Worker 3)
+**Next Review**: After Phase 1 (TS Zero-Debt) completion
+

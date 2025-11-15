@@ -35,7 +35,7 @@ export const WEB_VITALS_THRESHOLDS = {
   },
 } as const;
 
-export type MetricName = 'LCP' | 'FID' | 'CLS' | 'TTFB' | 'INP' | 'FCP';
+export type MetricName = 'LCP' | 'FID' | 'CLS' | 'TTFB' | 'INP';
 export type MetricRating = 'good' | 'needs-improvement' | 'poor';
 
 export interface Metric {
@@ -333,17 +333,19 @@ function measureFCP(): void {
     const observer = new PerformanceObserver((list) => {
       const entries = list.getEntries();
       entries.forEach((entry: any) => {
-        if (entry.name === 'first-contentful-paint') {
-          const metric: Metric = {
-            name: 'FCP',
-            value: entry.startTime,
-            rating: 'good', // FCP doesn't have official thresholds
-            delta: entry.startTime,
-            id: `fcp-${Date.now()}`,
-            navigationType: (performance as any).navigation?.type || 'navigate',
-          };
-          reportMetric(metric);
-        }
+        // FCP (First Contentful Paint) is not tracked as it lacks official thresholds
+        // Uncomment if FCP is added back to MetricName type
+        // if (entry.name === 'first-contentful-paint') {
+        //   const metric: Metric = {
+        //     name: 'FCP',
+        //     value: entry.startTime,
+        //     rating: 'good', // FCP doesn't have official thresholds
+        //     delta: entry.startTime,
+        //     id: `fcp-${Date.now()}`,
+        //     navigationType: (performance as any).navigation?.type || 'navigate',
+        //   };
+        //   reportMetric(metric);
+        // }
       });
     });
 
@@ -502,7 +504,7 @@ export function measure(name: string, startMark: string, endMark?: string): numb
     try {
       performance.measure(name, startMark, endMark);
       const entries = performance.getEntriesByName(name, 'measure');
-      return entries.length > 0 ? entries[0].duration : null;
+      return entries.length > 0 ? (entries[0] as PerformanceMeasure).duration : null;
     } catch (error) {
       console.error('Error measuring performance:', error);
       return null;

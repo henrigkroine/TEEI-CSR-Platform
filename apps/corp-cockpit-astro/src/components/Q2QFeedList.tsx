@@ -22,7 +22,7 @@ export interface Q2QFeedListProps {
   lang?: string;
 }
 
-export default function Q2QFeedList({ companyId, token, lang = 'en' }: Q2QFeedListProps) {
+export default function Q2QFeedList({ companyId, token, lang: _lang = 'en' }: Q2QFeedListProps) {
   const [feedItems, setFeedItems] = useState<Q2QFeedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

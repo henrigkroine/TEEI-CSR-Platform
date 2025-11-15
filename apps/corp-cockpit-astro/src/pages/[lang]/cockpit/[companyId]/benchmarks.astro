@@ -1,8 +1,8 @@
 ---
 import BaseLayout from '../../../../layouts/BaseLayout.astro';
 import { hasPermission } from '../../../../utils/rbac';
-import CohortSelector from '../../../../components/benchmarks/CohortSelector.tsx';
-import BenchmarkCharts from '../../../../components/benchmarks/BenchmarkCharts.tsx';
+import CohortSelector from '../../../../components/benchmarks/CohortSelector';
+import BenchmarkCharts from '../../../../components/benchmarks/BenchmarkCharts';
 
 // Extract route parameters
 const { lang, companyId } = Astro.params;
@@ -24,6 +24,11 @@ const canViewBenchmarks = hasPermission(user.role, 'VIEW_REPORTS');
 if (!canViewBenchmarks) {
   return Astro.redirect(`/${lang}/cockpit/${companyId}/401`);
 }
+
+// Client-side callback (will be replaced by script below)
+const handleCohortChange = (industry?: string, size?: string, geography?: string) => {
+  console.log('Cohort changed:', { industry, size, geography });
+};
 ---
 
 <BaseLayout title="Benchmarks & Cohorts - TEEI Corporate Cockpit" lang={lang}>
@@ -237,7 +242,7 @@ if (!canViewBenchmarks) {
           // Render benchmarks (using React component via client:load)
           if (data.benchmarks && data.benchmarks.length > 0) {
             // Import and render BenchmarkCharts component
-            const { default: BenchmarkCharts } = await import('../../../../components/benchmarks/BenchmarkCharts.tsx');
+            const { default: BenchmarkCharts } = await import('../../../../components/benchmarks/BenchmarkCharts');
             const { createRoot } = await import('react-dom/client');
             const { createElement } = await import('react');
 
