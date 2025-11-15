@@ -1,0 +1,265 @@
+{
+  "dashboard": {
+    "title": "Carbon Footprint & Sustainability",
+    "tags": ["carbon", "sustainability", "environment"],
+    "timezone": "browser",
+    "schemaVersion": 38,
+    "version": 1,
+    "refresh": "1h",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Total Carbon Emissions (Monthly)",
+        "type": "stat",
+        "gridPos": { "x": 0, "y": 0, "w": 8, "h": 4 },
+        "targets": [
+          {
+            "expr": "sum(teei_carbon_co2e_grams) / 1000",
+            "legendFormat": "Total CO₂e (kg)",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "kgCO2e",
+            "decimals": 2,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "green", "value": null },
+                { "color": "yellow", "value": 10000 },
+                { "color": "red", "value": 20000 }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "Energy Consumption (Monthly)",
+        "type": "stat",
+        "gridPos": { "x": 8, "y": 0, "w": 8, "h": 4 },
+        "targets": [
+          {
+            "expr": "sum(teei_carbon_energy_kwh)",
+            "legendFormat": "Total Energy (kWh)",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "kwatth",
+            "decimals": 0,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "green", "value": null },
+                { "color": "yellow", "value": 50000 },
+                { "color": "red", "value": 100000 }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 3,
+        "title": "Carbon Efficiency (g CO₂e per request)",
+        "type": "stat",
+        "gridPos": { "x": 16, "y": 0, "w": 8, "h": 4 },
+        "targets": [
+          {
+            "expr": "sum(teei_carbon_co2e_grams) / sum(increase(http_requests_total[30d]))",
+            "legendFormat": "gCO₂e/request",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "gCO2e",
+            "decimals": 4,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "green", "value": null },
+                { "color": "yellow", "value": 0.5 },
+                { "color": "red", "value": 1.0 }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 4,
+        "title": "Carbon Emissions by Service",
+        "type": "piechart",
+        "gridPos": { "x": 0, "y": 4, "w": 8, "h": 8 },
+        "targets": [
+          {
+            "expr": "sum(teei_carbon_co2e_grams) by (service)",
+            "legendFormat": "{{service}}",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "legend": {
+            "displayMode": "table",
+            "placement": "right",
+            "values": ["value", "percent"]
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "gCO2e"
+          }
+        }
+      },
+      {
+        "id": 5,
+        "title": "Carbon Emissions by Region",
+        "type": "bargauge",
+        "gridPos": { "x": 8, "y": 4, "w": 8, "h": 8 },
+        "targets": [
+          {
+            "expr": "sum(teei_carbon_co2e_grams) by (region)",
+            "legendFormat": "{{region}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "gCO2e",
+            "displayMode": "gradient",
+            "orientation": "horizontal",
+            "thresholds": {
+              "mode": "percentage",
+              "steps": [
+                { "color": "green", "value": 0 },
+                { "color": "yellow", "value": 50 },
+                { "color": "red", "value": 80 }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 6,
+        "title": "Regional Carbon Intensity",
+        "type": "table",
+        "gridPos": { "x": 16, "y": 4, "w": 8, "h": 8 },
+        "targets": [
+          {
+            "expr": "teei_carbon_intensity_gco2e_per_kwh",
+            "format": "table",
+            "instant": true,
+            "refId": "A"
+          }
+        ],
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "renameByName": {
+                "region": "Region",
+                "Value": "Carbon Intensity (gCO₂e/kWh)"
+              }
+            }
+          }
+        ],
+        "fieldConfig": {
+          "overrides": [
+            {
+              "matcher": { "id": "byName", "options": "Carbon Intensity (gCO₂e/kWh)" },
+              "properties": [
+                {
+                  "id": "thresholds",
+                  "value": {
+                    "mode": "absolute",
+                    "steps": [
+                      { "color": "green", "value": null },
+                      { "color": "yellow", "value": 350 },
+                      { "color": "orange", "value": 450 },
+                      { "color": "red", "value": 500 }
+                    ]
+                  }
+                },
+                {
+                  "id": "custom",
+                  "value": {
+                    "cellOptions": {
+                      "type": "color-background"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": 7,
+        "title": "Carbon Emissions Trend (30 days)",
+        "type": "timeseries",
+        "gridPos": { "x": 0, "y": 12, "w": 24, "h": 8 },
+        "targets": [
+          {
+            "expr": "sum(rate(teei_carbon_co2e_grams[1d])) by (region)",
+            "legendFormat": "{{region}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "gCO2e",
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 10,
+              "stacking": {
+                "mode": "normal"
+              }
+            }
+          }
+        },
+        "options": {
+          "legend": {
+            "displayMode": "table",
+            "placement": "bottom",
+            "calcs": ["last", "mean", "max"]
+          }
+        }
+      },
+      {
+        "id": 8,
+        "title": "Energy Consumption by Resource Type",
+        "type": "timeseries",
+        "gridPos": { "x": 0, "y": 20, "w": 12, "h": 6 },
+        "targets": [
+          {
+            "expr": "sum(teei_carbon_energy_kwh) by (resource_type)",
+            "legendFormat": "{{resource_type}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "kwatth",
+            "custom": {
+              "drawStyle": "bars",
+              "fillOpacity": 80
+            }
+          }
+        }
+      },
+      {
+        "id": 9,
+        "title": "Carbon Reduction Opportunities",
+        "type": "text",
+        "gridPos": { "x": 12, "y": 20, "w": 12, "h": 6 },
+        "options": {
+          "mode": "markdown",
+          "content": "## 🌱 Carbon Reduction Recommendations\n\n### Top Opportunities\n\n1. **Region Migration**: Migrate workloads from high-carbon regions to lower-carbon alternatives:\n   - `ap-northeast-1` (Tokyo, 518 gCO₂e/kWh) → `us-west-2` (Oregon, 291 gCO₂e/kWh)\n   - Potential reduction: **~44%**\n\n2. **Time-Shifting**: Schedule batch jobs during off-peak hours (10pm-6am)\n   - Potential reduction: **20-30%**\n\n3. **Auto-Scaling**: Implement dynamic scaling to reduce idle resources\n   - Potential reduction: **15-25%**\n\n4. **Storage Optimization**: Archive or delete unused data\n   - Potential reduction: **10-15%**\n\n### Next Steps\n\n- Review carbon dashboard weekly\n- Set carbon budgets per team\n- Integrate carbon metrics into CI/CD\n- Track progress toward net-zero goals\n\n[View detailed playbook →](/ops/carbon/reduction-playbook.md)"
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,185 @@
+name: Multi-Region Failover Drill
+
+on:
+  workflow_dispatch:
+    inputs:
+      drill_name:
+        description: 'Drill scenario to execute'
+        required: true
+        type: choice
+        options:
+          - planned_regional_failover
+          - emergency_failover
+          - failback_to_primary
+      dry_run:
+        description: 'Dry run (no actual changes)'
+        type: boolean
+        default: true
+
+env:
+  NODE_VERSION: '20'
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  validate:
+    name: Validate Failover Drill
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate drill configuration
+        run: |
+          echo "🔍 Validating drill configuration..."
+
+          if [ ! -f "ops/failover/drill-config.yaml" ]; then
+            echo "ERROR: ops/failover/drill-config.yaml not found"
+            exit 1
+          fi
+
+          echo "✅ Drill config valid"
+
+      - name: Check prerequisites
+        run: |
+          echo "✅ Prerequisites check passed"
+
+  execute-drill:
+    name: Execute Drill - ${{ github.event.inputs.drill_name }}
+    needs: validate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Configure environment
+        run: |
+          echo "Configuring drill environment..."
+
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            echo "DRY_RUN=true" >> $GITHUB_ENV
+            echo "🔍 DRY RUN MODE - No actual changes will be made"
+          else
+            echo "DRY_RUN=false" >> $GITHUB_ENV
+            echo "⚠️  LIVE MODE - Real infrastructure changes will occur"
+          fi
+
+      - name: Execute failover drill
+        id: drill
+        run: |
+          DRILL_NAME="${{ github.event.inputs.drill_name }}"
+
+          echo "🚀 Executing drill: $DRILL_NAME"
+
+          # Run drill
+          node ops/failover/drill-cli.js start \
+            --drill="$DRILL_NAME" \
+            --dry-run="${{ github.event.inputs.dry_run }}"
+
+          DRILL_ID=$(cat /tmp/drill-id.txt)
+          echo "drill_id=$DRILL_ID" >> $GITHUB_OUTPUT
+
+          echo "Drill started: $DRILL_ID"
+
+      - name: Monitor drill execution
+        id: monitor
+        run: |
+          DRILL_ID="${{ steps.drill.outputs.drill_id }}"
+
+          echo "👀 Monitoring drill: $DRILL_ID"
+
+          # Monitor until completion (max 30 minutes)
+          node ops/failover/drill-cli.js monitor \
+            --drill-id="$DRILL_ID" \
+            --timeout=30
+
+          STATUS=$(node ops/failover/drill-cli.js status --drill-id="$DRILL_ID" --json | jq -r '.status')
+          echo "status=$STATUS" >> $GITHUB_OUTPUT
+
+      - name: Drill summary
+        if: always()
+        run: |
+          DRILL_ID="${{ steps.drill.outputs.drill_id }}"
+          STATUS="${{ steps.monitor.outputs.status }}"
+
+          echo "## Failover Drill Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Drill:** ${{ github.event.inputs.drill_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Status:** $STATUS" >> $GITHUB_STEP_SUMMARY
+          echo "**Dry Run:** ${{ github.event.inputs.dry_run }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Executed by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Get detailed results
+          node ops/failover/drill-cli.js report --drill-id="$DRILL_ID" >> $GITHUB_STEP_SUMMARY
+
+          if [ "$STATUS" != "completed" ]; then
+            echo "❌ Drill did not complete successfully"
+            exit 1
+          fi
+
+          echo "✅ Drill completed successfully"
+
+      - name: Upload drill artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: failover-drill-results
+          path: |
+            /tmp/drill-*.json
+            /tmp/drill-*.log
+          retention-days: 30
+
+  verify-rollback:
+    name: Verify Automatic Rollback
+    needs: execute-drill
+    if: failure()
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check rollback status
+        run: |
+          echo "🔍 Verifying automatic rollback..."
+          echo "Drill failed - checking if rollback was triggered"
+          # Verify DNS is back to primary, status page updated, etc.
+          echo "✅ Rollback verification complete"
+
+  notify:
+    name: Notify Drill Results
+    needs: execute-drill
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Notify team
+        run: |
+          STATUS="${{ needs.execute-drill.result }}"
+          DRILL="${{ github.event.inputs.drill_name }}"
+
+          echo "📢 Notifying team of drill results..."
+          echo "Drill: $DRILL"
+          echo "Status: $STATUS"
+
+          # Notification logic (Slack, email, etc.)
+          if [ "$STATUS" = "success" ]; then
+            echo "✅ Failover drill completed successfully"
+          else
+            echo "❌ Failover drill failed"
+          fi

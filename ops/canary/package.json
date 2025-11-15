@@ -1,0 +1,25 @@
+{
+  "name": "@teei/canary-controller",
+  "version": "1.0.0",
+  "description": "Multi-region canary deployment controller with error-budget gating",
+  "main": "controller.ts",
+  "scripts": {
+    "start": "ts-node deploy-cli.ts",
+    "build": "tsc",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "js-yaml": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^20.0.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.3.0",
+    "vitest": "^1.0.0"
+  },
+  "bin": {
+    "canary": "./deploy-cli.ts"
+  }
+}
