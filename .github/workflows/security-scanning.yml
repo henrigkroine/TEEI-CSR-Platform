@@ -1,0 +1,421 @@
+name: Security Scanning
+
+# Run security scans on PRs to main and scheduled daily
+on:
+  pull_request:
+    branches: [main, master]
+  push:
+    branches: [main, master]
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch: # Allow manual triggers
+
+permissions:
+  contents: read
+  security-events: write
+  pull-requests: write
+  actions: read
+
+jobs:
+  # =============================================================================
+  # Dependency Scanning with Snyk
+  # =============================================================================
+  snyk-scan:
+    name: Snyk Dependency Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run Snyk to check for vulnerabilities
+        uses: snyk/actions/node@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --all-projects --severity-threshold=high --fail-on=upgradable
+
+      - name: Upload Snyk results to GitHub Code Scanning
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: snyk.sarif
+
+      - name: Generate Snyk HTML report
+        if: always()
+        uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          command: test
+          args: --all-projects --json-file-output=snyk-report.json
+
+      - name: Upload Snyk report as artifact
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: snyk-vulnerability-report
+          path: snyk-report.json
+          retention-days: 30
+
+  # =============================================================================
+  # Static Code Analysis with CodeQL
+  # =============================================================================
+  codeql-analysis:
+    name: CodeQL Code Analysis
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ['javascript', 'typescript']
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v2
+        with:
+          languages: ${{ matrix.language }}
+          queries: +security-and-quality
+          config-file: ./.github/codeql-config.yml
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build projects
+        run: pnpm -r build
+        continue-on-error: true
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
+        with:
+          category: "/language:${{ matrix.language }}"
+          upload: true
+
+  # =============================================================================
+  # Secret Scanning
+  # =============================================================================
+  secret-scanning:
+    name: Secret Scanning (TruffleHog)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Full history for secret scanning
+
+      - name: Run TruffleHog
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+          extra_args: --debug --only-verified
+
+      - name: Fail on secrets found
+        if: failure()
+        run: |
+          echo "::error::Secrets detected in the repository. Review TruffleHog output above."
+          exit 1
+
+  # =============================================================================
+  # License Compliance Check
+  # =============================================================================
+  license-check:
+    name: License Compliance
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check licenses
+        run: |
+          npx license-checker --production --json --out licenses.json
+          npx license-checker --production --failOn "GPL;AGPL;LGPL"
+
+      - name: Upload license report
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: license-report
+          path: licenses.json
+          retention-days: 30
+
+  # =============================================================================
+  # Container Security Scanning (if using Docker)
+  # =============================================================================
+  container-scan:
+    name: Container Security Scan (Trivy)
+    runs-on: ubuntu-latest
+    if: github.event_name != 'schedule'
+    strategy:
+      matrix:
+        service: [api-gateway, notifications, impact-in, analytics]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: |
+          docker build -t teei/${{ matrix.service }}:scan -f services/${{ matrix.service }}/Dockerfile .
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: teei/${{ matrix.service }}:scan
+          format: 'sarif'
+          output: 'trivy-${{ matrix.service }}.sarif'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
+
+      - name: Upload Trivy results to GitHub Code Scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: 'trivy-${{ matrix.service }}.sarif'
+          category: 'container-${{ matrix.service }}'
+
+  # =============================================================================
+  # Dynamic Application Security Testing (DAST) with OWASP ZAP
+  # =============================================================================
+  owasp-zap-scan:
+    name: OWASP ZAP DAST Scan
+    runs-on: ubuntu-latest
+    # Only run DAST on schedule or manual trigger (not on every PR)
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: teei
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: teei_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build services
+        run: pnpm -r build
+
+      - name: Start API Gateway (target for ZAP)
+        run: |
+          pnpm --filter @teei/api-gateway start &
+          sleep 10
+        env:
+          DATABASE_URL: postgresql://teei:test_password@localhost:5432/teei_test
+          REDIS_URL: redis://localhost:6379
+          PORT: 3000
+          NODE_ENV: test
+
+      - name: Wait for API Gateway to be ready
+        run: |
+          timeout 30 bash -c 'until curl -f http://localhost:3000/health; do sleep 2; done'
+
+      - name: Run OWASP ZAP Baseline Scan
+        uses: zaproxy/action-baseline@v0.10.0
+        with:
+          target: 'http://localhost:3000'
+          rules_file_name: '.github/zap-rules.tsv'
+          cmd_options: '-a -j -l WARN'
+          fail_action: true
+          allow_issue_writing: true
+
+      - name: Upload ZAP report
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: zap-scan-report
+          path: report_html.html
+          retention-days: 30
+
+  # =============================================================================
+  # Infrastructure as Code Security (Terraform/Docker)
+  # =============================================================================
+  iac-scan:
+    name: IaC Security Scan (Checkov)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Checkov
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: .
+          framework: dockerfile,github_actions
+          output_format: sarif
+          output_file_path: checkov.sarif
+          soft_fail: false
+          quiet: false
+
+      - name: Upload Checkov results
+        if: always()
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: checkov.sarif
+
+  # =============================================================================
+  # Security Report Aggregation
+  # =============================================================================
+  security-report:
+    name: Generate Security Report
+    runs-on: ubuntu-latest
+    needs: [snyk-scan, codeql-analysis, secret-scanning, license-check]
+    if: always()
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v3
+
+      - name: Generate summary report
+        run: |
+          cat <<EOF > security-summary.md
+          # Security Scan Summary
+
+          **Date**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          **Branch**: ${{ github.ref_name }}
+          **Commit**: ${{ github.sha }}
+
+          ## Scan Results
+
+          - **Snyk Dependency Scan**: ${{ needs.snyk-scan.result }}
+          - **CodeQL Analysis**: ${{ needs.codeql-analysis.result }}
+          - **Secret Scanning**: ${{ needs.secret-scanning.result }}
+          - **License Check**: ${{ needs.license-check.result }}
+
+          ## Action Items
+
+          - Review any HIGH or CRITICAL vulnerabilities in Snyk report
+          - Address CodeQL findings in Security tab
+          - Remediate secrets if detected
+          - Update dependencies with known vulnerabilities
+
+          ## Resources
+
+          - [Snyk Dashboard](https://app.snyk.io)
+          - [GitHub Security](https://github.com/${{ github.repository }}/security)
+          - [CodeQL Results](https://github.com/${{ github.repository }}/security/code-scanning)
+
+          ---
+          *Auto-generated by Security Scanning workflow*
+          EOF
+
+          cat security-summary.md
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const summary = fs.readFileSync('security-summary.md', 'utf8');
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: summary
+            });
+
+      - name: Upload security summary
+        uses: actions/upload-artifact@v3
+        with:
+          name: security-summary
+          path: security-summary.md
+          retention-days: 90
+
+  # =============================================================================
+  # Block on Critical Vulnerabilities
+  # =============================================================================
+  security-gate:
+    name: Security Gate Check
+    runs-on: ubuntu-latest
+    needs: [snyk-scan, codeql-analysis, secret-scanning]
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Check for blocking issues
+        run: |
+          if [[ "${{ needs.snyk-scan.result }}" == "failure" ]]; then
+            echo "::error::Snyk found HIGH or CRITICAL vulnerabilities. Fix before merging."
+            exit 1
+          fi
+
+          if [[ "${{ needs.secret-scanning.result }}" == "failure" ]]; then
+            echo "::error::Secrets detected in repository. Remove before merging."
+            exit 1
+          fi
+
+          echo "✅ No blocking security issues found. Safe to merge."

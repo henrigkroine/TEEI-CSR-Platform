@@ -8,6 +8,7 @@ import Fastify from 'fastify';
 import { createServiceLogger } from '@teei/shared-utils';
 import { deliveryRoutes } from './routes/deliveries.js';
 import { replayRoutes } from './routes/replay.js';
+import { registerWebhookRoutes } from './routes/webhooks.js';
 import { createHealthManager, setupHealthRoutes } from './health/index.js';
 
 const logger = createServiceLogger('impact-in');
@@ -16,6 +17,8 @@ const PORT = parseInt(process.env.PORT_IMPACT_IN || '3007');
 async function start() {
   const app = Fastify({
     logger: logger as any,
+    // Enable raw body for webhook signature verification
+    disableRequestLogging: false,
   });
 
   // Setup health check manager
@@ -26,6 +29,7 @@ async function start() {
   // Register routes with API versioning
   app.register(deliveryRoutes, { prefix: '/v1/impact-in' });
   app.register(replayRoutes, { prefix: '/v1/impact-in' });
+  await registerWebhookRoutes(app);
 
   // Root endpoint
   app.get('/', async (request, reply) => {
@@ -33,12 +37,19 @@ async function start() {
       service: 'impact-in',
       version: '1.0.0',
       description: 'Impact data delivery service for external CSR platforms',
+      platforms: ['benevity', 'goodera', 'workday'],
       endpoints: {
         deliveries: '/v1/impact-in/deliveries',
         stats: '/v1/impact-in/stats',
         replay: '/v1/impact-in/deliveries/:id/replay',
         bulkReplay: '/v1/impact-in/deliveries/bulk-replay',
         retryAllFailed: '/v1/impact-in/deliveries/retry-all-failed',
+        webhooks: {
+          benevity: 'POST /webhooks/benevity',
+          goodera: 'POST /webhooks/goodera',
+          workday: 'POST /webhooks/workday',
+          health: 'GET /webhooks/health',
+        },
         health: '/health',
       },
     };
