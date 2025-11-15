@@ -3,13 +3,16 @@ kind: Kustomization
 
 namespace: teei-platform
 
+resources:
+  - grafana-deployment.yaml
+  - grafana-service.yaml
+  - grafana-provisioning.yaml
+  - grafana-secret.yaml
+  - jaeger
+  - loki
+  - promtail
+
 commonLabels:
-  app: grafana
+  app.kubernetes.io/part-of: teei-observability
   component: observability
   managed-by: kustomize
-
-resources:
-- grafana-deployment.yaml
-- grafana-service.yaml
-- grafana-provisioning.yaml
-- grafana-secret.yaml

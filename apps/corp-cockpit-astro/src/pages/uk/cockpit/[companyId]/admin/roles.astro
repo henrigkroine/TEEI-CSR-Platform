@@ -1,0 +1,365 @@
+---
+import BaseLayout from '../../../../../layouts/BaseLayout.astro';
+import { hasPermission } from '../../../../../utils/rbac';
+import RoleMappingTable from '../../../../../components/identity/RoleMappingTable.tsx';
+import SCIMRoleMappingEditor from '../../../../../components/identity/SCIMRoleMappingEditor.tsx';
+
+// Extract route parameters
+const { companyId } = Astro.params;
+const lang = 'uk';
+const user = Astro.locals.user;
+const tenantContext = Astro.locals.tenantContext;
+
+// Middleware handles auth/tenant validation
+if (!user || !tenantContext) {
+  return Astro.redirect('/login');
+}
+
+// Verify tenant context matches route
+if (tenantContext.companyId !== companyId) {
+  return Astro.redirect(`/${lang}/cockpit/401`);
+}
+
+// Only ADMIN and SUPER_ADMIN can view role mapping
+const canViewRoles = hasPermission(user.role, 'ADMIN_CONSOLE');
+if (!canViewRoles) {
+  return Astro.redirect(`/${lang}/cockpit/${companyId}/401`);
+}
+
+const isSuperAdmin = hasPermission(user.role, 'SUPER_ADMIN');
+---
+
+<BaseLayout title="Відображення ролей - TEEI Corporate Cockpit" lang={lang}>
+  <div class="roles-page">
+    <div class="page-header">
+      <div>
+        <a href={`/${lang}/cockpit/${companyId}/admin`} class="back-link">
+          ← Назад до консолі адміністратора
+        </a>
+        <h1>Відображення ролей</h1>
+        <p class="subtitle">
+          Відображення атрибутів постачальника ідентифікації на ролі платформи TEEI для автоматичного налаштування користувачів
+        </p>
+      </div>
+    </div>
+
+    <div class="alert-info">
+      <strong>Автоматичне призначення ролей</strong>
+      <p>
+        Коли користувачі автентифікуються через SSO, їх постачальник ідентифікації надсилає атрибути про користувача.
+        Ці відображення автоматично призначають ролі TEEI на основі відповідних значень атрибутів. Відображення з вищим
+        пріоритетом мають перевагу, коли збігаються кілька правил.
+      </p>
+    </div>
+
+    {/* Role Mapping Table/Editor */}
+    <section class="settings-section">
+      {isSuperAdmin ? (
+        <SCIMRoleMappingEditor companyId={companyId} client:load />
+      ) : (
+        <RoleMappingTable companyId={companyId} client:load />
+      )}
+    </section>
+
+    {/* Help Section */}
+    <section class="help-section">
+      <h3>Розуміння відображення ролей</h3>
+
+      <div class="help-grid">
+        <div class="help-card">
+          <h4>Ролі платформи</h4>
+          <div class="role-list">
+            <div class="role-item">
+              <span class="role-badge viewer">VIEWER</span>
+              <p>Доступ лише для читання до панелей, звітів та доказів. Не може створювати або змінювати вміст.</p>
+            </div>
+            <div class="role-item">
+              <span class="role-badge manager">MANAGER</span>
+              <p>Створення чернеток, подання звітів на затвердження, управління даними команди. Не може затверджувати остаточні звіти.</p>
+            </div>
+            <div class="role-item">
+              <span class="role-badge admin">ADMIN</span>
+              <p>Перегляд і затвердження звітів, управління користувачами, доступ до консолі адміністратора. Не може змінювати налаштування платформи.</p>
+            </div>
+            <div class="role-item">
+              <span class="role-badge super-admin">SUPER_ADMIN</span>
+              <p>Повний доступ до системи, включаючи остаточні затвердження та конфігурацію платформи. Найвищий рівень доступу.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="help-card">
+          <h4>Поширені приклади відображення</h4>
+          <ul>
+            <li>
+              <strong>На основі груп:</strong>
+              <code>groups = "teei-admins"</code> → <code>ADMIN</code>
+            </li>
+            <li>
+              <strong>На основі відділу:</strong>
+              <code>department = "CSR"</code> → <code>MANAGER</code>
+            </li>
+            <li>
+              <strong>Домен електронної пошти:</strong>
+              <code>email = "*@executive.company.com"</code> → <code>ADMIN</code>
+            </li>
+            <li>
+              <strong>Резервний за замовчуванням:</strong>
+              <code>groups = "teei-users"</code> → <code>VIEWER</code> (пріоритет: 10)
+            </li>
+          </ul>
+        </div>
+
+        <div class="help-card">
+          <h4>Система пріоритетів</h4>
+          <p>
+            Пріоритет визначає, яке відображення використовувати, коли користувач відповідає кільком правилам.
+            Більші числа мають перевагу.
+          </p>
+          <ul>
+            <li><strong>100:</strong> Перевизначення Super Admin (найвищий пріоритет)</li>
+            <li><strong>90:</strong> Призначення Admin</li>
+            <li><strong>80:</strong> Призначення Manager</li>
+            <li><strong>10-50:</strong> Призначення Viewer та за замовчуванням</li>
+          </ul>
+          <p class="tip">
+            <strong>Порада:</strong> Залишайте проміжки між номерами пріоритетів для майбутніх вставок.
+          </p>
+        </div>
+
+        <div class="help-card">
+          <h4>Найкращі практики</h4>
+          <ul>
+            <li>Завжди включайте резервне правило з низьким пріоритетом для всіх автентифікованих користувачів</li>
+            <li>По можливості використовуйте відображення на основі груп (більш підтримувані)</li>
+            <li>Спочатку тестуйте нові відображення в непродуктивному середовищі</li>
+            <li>Документуйте кожне відображення з чітким описом</li>
+            <li>Вимикайте відображення замість їх видалення для аудиторського сліду</li>
+            <li>Регулярно переглядайте відображення при зміні організаційної структури</li>
+          </ul>
+        </div>
+      </div>
+
+      {!isSuperAdmin && (
+        <div class="permission-notice">
+          <strong>Доступ лише для читання</strong>
+          <p>
+            Ви переглядаєте відображення ролей у режимі лише для читання. Щоб створювати, редагувати або видаляти відображення,
+            вам потрібна роль SUPER_ADMIN. Зверніться до адміністратора платформи за допомогою.
+          </p>
+        </div>
+      )}
+    </section>
+  </div>
+</BaseLayout>
+
+<style>
+  .roles-page {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: calc(var(--spacing-unit) * 4);
+  }
+
+  .page-header {
+    margin-bottom: calc(var(--spacing-unit) * 4);
+  }
+
+  .back-link {
+    color: var(--color-primary);
+    text-decoration: none;
+    font-size: 0.9375rem;
+    margin-bottom: calc(var(--spacing-unit) * 2);
+    display: inline-block;
+  }
+
+  .back-link:hover {
+    text-decoration: underline;
+  }
+
+  h1 {
+    font-size: 2rem;
+    margin: calc(var(--spacing-unit) * 2) 0 calc(var(--spacing-unit) * 1);
+  }
+
+  .subtitle {
+    color: var(--color-text-secondary);
+    font-size: 1.125rem;
+    margin: 0;
+  }
+
+  .alert-info {
+    background: #dbeafe;
+    border: 1px solid #3b82f6;
+    border-left: 4px solid #3b82f6;
+    padding: calc(var(--spacing-unit) * 3);
+    border-radius: var(--border-radius);
+    margin-bottom: calc(var(--spacing-unit) * 4);
+  }
+
+  .alert-info strong {
+    display: block;
+    margin-bottom: calc(var(--spacing-unit) * 1);
+    color: #1e40af;
+  }
+
+  .alert-info p {
+    margin: 0;
+    color: #1e3a8a;
+    line-height: 1.6;
+  }
+
+  .settings-section {
+    background: white;
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius);
+    padding: calc(var(--spacing-unit) * 4);
+    margin-bottom: calc(var(--spacing-unit) * 4);
+  }
+
+  .help-section {
+    background: var(--color-bg-secondary);
+    padding: calc(var(--spacing-unit) * 4);
+    border-radius: var(--border-radius);
+  }
+
+  .help-section h3 {
+    margin-top: 0;
+    margin-bottom: calc(var(--spacing-unit) * 3);
+  }
+
+  .help-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: calc(var(--spacing-unit) * 3);
+    margin-bottom: calc(var(--spacing-unit) * 3);
+  }
+
+  .help-card {
+    background: white;
+    padding: calc(var(--spacing-unit) * 3);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--color-border);
+  }
+
+  .help-card h4 {
+    margin-top: 0;
+    margin-bottom: calc(var(--spacing-unit) * 2);
+    color: var(--color-primary);
+  }
+
+  .help-card ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .help-card li {
+    padding: calc(var(--spacing-unit) * 1.5) 0;
+    border-bottom: 1px solid var(--color-bg-secondary);
+    line-height: 1.6;
+  }
+
+  .help-card li:last-child {
+    border-bottom: none;
+  }
+
+  .help-card strong {
+    color: var(--color-text);
+    font-weight: 600;
+  }
+
+  .help-card code {
+    background: #f3f4f6;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.875rem;
+    color: var(--color-primary);
+  }
+
+  .help-card .tip {
+    background: #fef3c7;
+    padding: calc(var(--spacing-unit) * 2);
+    border-radius: 6px;
+    margin-top: calc(var(--spacing-unit) * 2);
+    font-size: 0.9375rem;
+  }
+
+  .help-card .tip strong {
+    color: #92400e;
+  }
+
+  .role-list {
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--spacing-unit) * 2);
+  }
+
+  .role-item {
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--spacing-unit) * 1);
+  }
+
+  .role-item p {
+    margin: 0;
+    color: var(--color-text-secondary);
+    font-size: 0.9375rem;
+    line-height: 1.5;
+  }
+
+  .role-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+  }
+
+  .role-badge.viewer {
+    background: #e5e7eb;
+    color: #374151;
+  }
+
+  .role-badge.manager {
+    background: #dbeafe;
+    color: #1e40af;
+  }
+
+  .role-badge.admin {
+    background: #fef3c7;
+    color: #92400e;
+  }
+
+  .role-badge.super-admin {
+    background: #fce7f3;
+    color: #831843;
+  }
+
+  .permission-notice {
+    background: #fef3c7;
+    border: 1px solid #fcd34d;
+    padding: calc(var(--spacing-unit) * 3);
+    border-radius: var(--border-radius);
+  }
+
+  .permission-notice strong {
+    display: block;
+    margin-bottom: calc(var(--spacing-unit) * 1);
+    color: #92400e;
+  }
+
+  .permission-notice p {
+    margin: 0;
+    color: #78350f;
+    line-height: 1.6;
+  }
+
+  @media (max-width: 768px) {
+    .help-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

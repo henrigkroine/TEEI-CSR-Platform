@@ -1,0 +1,52 @@
+apiVersion: bitnami.com/v1alpha1
+kind: SealedSecret
+metadata:
+  name: teei-sentry-dsn
+  namespace: teei-platform
+  labels:
+    app: teei-platform
+    component: observability
+    part-of: teei-observability
+spec:
+  # This is a template for the SealedSecret
+  # To create the actual sealed secret, run:
+  # kubectl create secret generic teei-sentry-dsn \
+  #   --from-literal=SENTRY_DSN='https://<key>@<org>.ingest.sentry.io/<project>' \
+  #   --dry-run=client -o yaml | \
+  #   kubeseal --format yaml > observability/sentry/sentry-sealed.yaml
+  #
+  # Then apply: kubectl apply -f observability/sentry/sentry-sealed.yaml
+
+  encryptedData:
+    # PLACEHOLDER: Replace with actual sealed secret data
+    # Generate using kubeseal after setting your actual Sentry DSN
+    SENTRY_DSN: PLACEHOLDER_ENCRYPTED_DSN
+---
+# Sentry Configuration Guide
+#
+# 1. Create a Sentry project at https://sentry.io
+# 2. Get your DSN from Project Settings > Client Keys (DSN)
+# 3. Install kubeseal: https://github.com/bitnami-labs/sealed-secrets
+# 4. Create the sealed secret:
+#
+#    kubectl create secret generic teei-sentry-dsn \
+#      --from-literal=SENTRY_DSN='https://YOUR_KEY@YOUR_ORG.ingest.sentry.io/YOUR_PROJECT' \
+#      --dry-run=client -o yaml | \
+#      kubeseal --controller-name=sealed-secrets-controller \
+#      --controller-namespace=kube-system \
+#      --format yaml > observability/sentry/sentry-sealed.yaml
+#
+# 5. Apply the sealed secret:
+#    kubectl apply -f observability/sentry/sentry-sealed.yaml
+#
+# 6. Reference in service deployments:
+#    envFrom:
+#      - secretRef:
+#          name: teei-sentry-dsn
+#
+# Sentry Environment Variables:
+# - SENTRY_DSN: The Data Source Name for sending events to Sentry
+# - SENTRY_ENVIRONMENT: Environment tag (staging/production)
+# - SENTRY_RELEASE: Release version for tracking
+# - SENTRY_TRACES_SAMPLE_RATE: Sample rate for performance monitoring (0.0-1.0)
+# - SENTRY_PROFILES_SAMPLE_RATE: Sample rate for profiling (0.0-1.0)

@@ -1,0 +1,53 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: teei-jaeger
+  labels:
+    app: teei-jaeger
+    component: tracing
+    part-of: teei-observability
+spec:
+  type: ClusterIP
+  ports:
+  - port: 5775
+    protocol: UDP
+    targetPort: 5775
+    name: zipkin-compact
+  - port: 6831
+    protocol: UDP
+    targetPort: 6831
+    name: jaeger-compact
+  - port: 6832
+    protocol: UDP
+    targetPort: 6832
+    name: jaeger-binary
+  - port: 5778
+    protocol: TCP
+    targetPort: 5778
+    name: config-rest
+  - port: 16686
+    protocol: TCP
+    targetPort: 16686
+    name: ui
+  - port: 14268
+    protocol: TCP
+    targetPort: 14268
+    name: jaeger-http
+  - port: 14250
+    protocol: TCP
+    targetPort: 14250
+    name: grpc
+  - port: 4317
+    protocol: TCP
+    targetPort: 4317
+    name: otlp-grpc
+  - port: 4318
+    protocol: TCP
+    targetPort: 4318
+    name: otlp-http
+  - port: 9411
+    protocol: TCP
+    targetPort: 9411
+    name: zipkin
+  selector:
+    app: teei-jaeger

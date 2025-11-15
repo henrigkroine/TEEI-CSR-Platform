@@ -21,3 +21,9 @@ data:
   # Rate limiting (non-sensitive config)
   RATE_LIMIT_MAX: "100"
   RATE_LIMIT_WINDOW: "60000"
+
+  # OpenTelemetry configuration
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://teei-jaeger:4318"
+  OTEL_SERVICE_NAME: "teei-api-gateway"
+  OTEL_TRACES_SAMPLER: "parentbased_traceidratio"
+  OTEL_TRACES_SAMPLER_ARG: "0.1"

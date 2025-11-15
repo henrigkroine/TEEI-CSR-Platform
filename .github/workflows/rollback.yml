@@ -1,0 +1,306 @@
+name: Rollback Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      service:
+        description: 'Service to rollback'
+        required: true
+        type: choice
+        options:
+          - api-gateway
+          - corp-cockpit-astro
+          - reporting
+          - impact-calculator
+          - q2q-ai
+          - analytics
+          - journey-engine
+          - notifications
+          - unified-profile
+          - all-services
+      environment:
+        description: 'Environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+      revision:
+        description: 'Rollback to specific revision (leave empty for previous)'
+        required: false
+        type: string
+      reason:
+        description: 'Reason for rollback'
+        required: true
+        type: string
+      skip_verification:
+        description: 'Skip post-rollback verification'
+        required: false
+        type: boolean
+        default: false
+
+env:
+  KUBECONFIG: /tmp/kubeconfig
+
+jobs:
+  validate:
+    name: Validate Rollback Request
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Validate production rollback
+        if: ${{ inputs.environment == 'production' }}
+        run: |
+          echo "⚠️ PRODUCTION ROLLBACK REQUESTED"
+          echo "Service: ${{ inputs.service }}"
+          echo "Reason: ${{ inputs.reason }}"
+          echo ""
+          echo "This will rollback production. Please confirm this is intentional."
+
+      - name: Check if reason is provided
+        run: |
+          if [ -z "${{ inputs.reason }}" ]; then
+            echo "❌ Error: Rollback reason is required"
+            exit 1
+          fi
+          echo "✅ Rollback reason provided: ${{ inputs.reason }}"
+
+      - name: Notify team
+        uses: sarisia/actions-status-discord@v1
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK_ALERTS }}
+          title: "🔄 Rollback Initiated"
+          description: |
+            **Service**: ${{ inputs.service }}
+            **Environment**: ${{ inputs.environment }}
+            **Reason**: ${{ inputs.reason }}
+            **Initiated by**: ${{ github.actor }}
+          color: 0xFFA500
+          url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+  rollback:
+    name: Execute Rollback
+    runs-on: ubuntu-latest
+    needs: validate
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.28.0'
+
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p $(dirname $KUBECONFIG)
+          if [ "${{ inputs.environment }}" == "production" ]; then
+            echo "${{ secrets.KUBECONFIG_PRODUCTION }}" | base64 -d > $KUBECONFIG
+          else
+            echo "${{ secrets.KUBECONFIG_STAGING }}" | base64 -d > $KUBECONFIG
+          fi
+          chmod 600 $KUBECONFIG
+
+      - name: Verify cluster access
+        run: |
+          kubectl cluster-info
+          kubectl get nodes
+
+      - name: Get current deployment status
+        run: |
+          echo "Current deployment status:"
+          if [ "${{ inputs.service }}" == "all-services" ]; then
+            kubectl get deployments -n teei-csr
+          else
+            kubectl get deployment ${{ inputs.service }} -n teei-csr
+            kubectl rollout history deployment/${{ inputs.service }} -n teei-csr
+          fi
+
+      - name: Execute rollback
+        run: |
+          chmod +x scripts/rollback/rollback-deployment.sh
+
+          if [ "${{ inputs.service }}" == "all-services" ]; then
+            echo "Rolling back all services..."
+            for service in api-gateway corp-cockpit-astro reporting impact-calculator q2q-ai analytics journey-engine notifications unified-profile; do
+              echo "Rolling back $service..."
+              ./scripts/rollback/rollback-deployment.sh $service ${{ inputs.revision && format('--revision={0}', inputs.revision) || '' }}
+            done
+          else
+            echo "Rolling back ${{ inputs.service }}..."
+            ./scripts/rollback/rollback-deployment.sh ${{ inputs.service }} ${{ inputs.revision && format('--revision={0}', inputs.revision) || '' }}
+          fi
+
+      - name: Monitor rollback progress
+        run: |
+          if [ "${{ inputs.service }}" == "all-services" ]; then
+            for service in api-gateway corp-cockpit-astro reporting impact-calculator q2q-ai analytics journey-engine notifications unified-profile; do
+              echo "Monitoring $service rollback..."
+              kubectl rollout status deployment/$service -n teei-csr --timeout=5m || true
+            done
+          else
+            echo "Monitoring ${{ inputs.service }} rollback..."
+            kubectl rollout status deployment/${{ inputs.service }} -n teei-csr --timeout=5m
+          fi
+
+      - name: Get rollback status
+        if: always()
+        run: |
+          echo "Deployment status after rollback:"
+          if [ "${{ inputs.service }}" == "all-services" ]; then
+            kubectl get deployments -n teei-csr
+            kubectl get pods -n teei-csr
+          else
+            kubectl get deployment ${{ inputs.service }} -n teei-csr
+            kubectl get pods -n teei-csr -l app=${{ inputs.service }}
+          fi
+
+  verify:
+    name: Verify Rollback
+    runs-on: ubuntu-latest
+    needs: rollback
+    if: ${{ !inputs.skip_verification }}
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.28.0'
+
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p $(dirname $KUBECONFIG)
+          if [ "${{ inputs.environment }}" == "production" ]; then
+            echo "${{ secrets.KUBECONFIG_PRODUCTION }}" | base64 -d > $KUBECONFIG
+          else
+            echo "${{ secrets.KUBECONFIG_STAGING }}" | base64 -d > $KUBECONFIG
+          fi
+          chmod 600 $KUBECONFIG
+
+      - name: Run verification script
+        run: |
+          chmod +x scripts/rollback/verify-rollback.sh
+          ./scripts/rollback/verify-rollback.sh ${{ inputs.service }}
+
+      - name: Run synthetic health checks
+        run: |
+          chmod +x scripts/synthetics/uptime-probe.sh
+
+          if [ "${{ inputs.environment }}" == "production" ]; then
+            export BASE_URL="${{ secrets.PRODUCTION_URL }}"
+          else
+            export BASE_URL="${{ secrets.STAGING_URL }}"
+          fi
+
+          ./scripts/synthetics/uptime-probe.sh
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+
+      - name: Run smoke tests
+        run: |
+          if [ "${{ inputs.environment }}" == "production" ]; then
+            export BASE_URL="${{ secrets.PRODUCTION_URL }}"
+          else
+            export BASE_URL="${{ secrets.STAGING_URL }}"
+          fi
+
+          pnpm exec playwright test tests/smoke/ --reporter=list
+        continue-on-error: true
+
+      - name: Verification summary
+        if: always()
+        run: |
+          echo "✅ Rollback verification complete"
+          echo "Check logs above for any failures"
+
+  notify:
+    name: Notify Result
+    runs-on: ubuntu-latest
+    needs: [rollback, verify]
+    if: always()
+    timeout-minutes: 5
+
+    steps:
+      - name: Determine rollback status
+        id: status
+        run: |
+          if [ "${{ needs.rollback.result }}" == "success" ] && [ "${{ needs.verify.result }}" == "success" ]; then
+            echo "status=success" >> $GITHUB_OUTPUT
+            echo "color=0x00FF00" >> $GITHUB_OUTPUT
+            echo "title=✅ Rollback Successful" >> $GITHUB_OUTPUT
+          elif [ "${{ needs.rollback.result }}" == "success" ]; then
+            echo "status=partial" >> $GITHUB_OUTPUT
+            echo "color=0xFFA500" >> $GITHUB_OUTPUT
+            echo "title=⚠️ Rollback Complete (Verification Failed)" >> $GITHUB_OUTPUT
+          else
+            echo "status=failure" >> $GITHUB_OUTPUT
+            echo "color=0xFF0000" >> $GITHUB_OUTPUT
+            echo "title=❌ Rollback Failed" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Notify Discord
+        uses: sarisia/actions-status-discord@v1
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK_ALERTS }}
+          title: ${{ steps.status.outputs.title }}
+          description: |
+            **Service**: ${{ inputs.service }}
+            **Environment**: ${{ inputs.environment }}
+            **Reason**: ${{ inputs.reason }}
+            **Initiated by**: ${{ github.actor }}
+            **Duration**: ${{ github.event.workflow_run.run_started_at }}
+
+            [View workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+          color: ${{ steps.status.outputs.color }}
+
+      - name: Create incident documentation
+        if: ${{ needs.rollback.result == 'success' }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = `## Rollback Executed
+
+            **Service**: ${{ inputs.service }}
+            **Environment**: ${{ inputs.environment }}
+            **Reason**: ${{ inputs.reason }}
+            **Initiated by**: @${{ github.actor }}
+            **Timestamp**: ${new Date().toISOString()}
+
+            ### Rollback Status
+            - Rollback execution: ${{ needs.rollback.result }}
+            - Verification: ${{ needs.verify.result }}
+
+            ### Next Steps
+            - [ ] Investigate root cause
+            - [ ] Create postmortem
+            - [ ] File follow-up tickets
+            - [ ] Update runbooks if needed
+
+            ### Related
+            - Workflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            `;
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `[ROLLBACK] ${{ inputs.service }} - ${{ inputs.reason }}`,
+              body: body,
+              labels: ['rollback', 'incident', '${{ inputs.environment }}']
+            });

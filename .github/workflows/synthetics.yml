@@ -1,0 +1,148 @@
+name: Synthetic Monitoring
+
+on:
+  schedule:
+    # Run every 5 minutes
+    - cron: '*/5 * * * *'
+  workflow_dispatch: # Allow manual trigger
+
+env:
+  SYNTHETIC_BASE_URL: ${{ secrets.SYNTHETIC_BASE_URL || 'https://staging.teei-csr.com' }}
+  SYNTHETIC_TIMEOUT: 30000
+
+jobs:
+  uptime-probe:
+    name: Uptime Health Checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run uptime probe
+        run: |
+          chmod +x scripts/synthetics/uptime-probe.sh
+          scripts/synthetics/uptime-probe.sh
+        env:
+          BASE_URL: ${{ env.SYNTHETIC_BASE_URL }}
+
+      - name: Report failure to Discord
+        if: failure()
+        uses: sarisia/actions-status-discord@v1
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK_ALERTS }}
+          status: failure
+          title: "Synthetic Uptime Check Failed"
+          description: "One or more services are down"
+          color: 0xFF0000
+
+  login-flow-synthetic:
+    name: Login Flow Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run login flow synthetic
+        run: pnpm exec playwright test scripts/synthetics/login-flow.spec.ts
+        env:
+          BASE_URL: ${{ env.SYNTHETIC_BASE_URL }}
+          SYNTHETIC_USERNAME: ${{ secrets.SYNTHETIC_USERNAME }}
+          SYNTHETIC_PASSWORD: ${{ secrets.SYNTHETIC_PASSWORD }}
+
+      - name: Upload failure screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: login-flow-failures
+          path: test-results/
+          retention-days: 7
+
+      - name: Report failure to Discord
+        if: failure()
+        uses: sarisia/actions-status-discord@v1
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK_ALERTS }}
+          status: failure
+          title: "Login Flow Synthetic Failed"
+          description: "Critical user journey is broken"
+          color: 0xFF0000
+
+  sse-probe:
+    name: SSE Functionality Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run SSE probe synthetic
+        run: pnpm exec playwright test scripts/synthetics/sse-probe.spec.ts
+        env:
+          BASE_URL: ${{ env.SYNTHETIC_BASE_URL }}
+          SYNTHETIC_USERNAME: ${{ secrets.SYNTHETIC_USERNAME }}
+          SYNTHETIC_PASSWORD: ${{ secrets.SYNTHETIC_PASSWORD }}
+
+      - name: Upload failure screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sse-probe-failures
+          path: test-results/
+          retention-days: 7
+
+      - name: Report failure to Discord
+        if: failure()
+        uses: sarisia/actions-status-discord@v1
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK_ALERTS }}
+          status: failure
+          title: "SSE Synthetic Failed"
+          description: "Real-time event streaming is not working"
+          color: 0xFF0000
+
+  report-success:
+    name: Report All Synthetics Passed
+    runs-on: ubuntu-latest
+    needs: [uptime-probe, login-flow-synthetic, sse-probe]
+    if: success()
+
+    steps:
+      - name: Report success
+        run: |
+          echo "All synthetic checks passed at $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          echo "✅ Uptime checks: PASS"
+          echo "✅ Login flow: PASS"
+          echo "✅ SSE functionality: PASS"

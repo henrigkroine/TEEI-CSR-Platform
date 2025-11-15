@@ -1,0 +1,39 @@
+apiVersion: 1
+
+datasources:
+  - name: Sentry
+    type: prometheus
+    uid: sentry-ds
+    access: proxy
+    # Note: Sentry doesn't have a native Grafana datasource
+    # This uses Prometheus metrics exported by Sentry
+    # Alternative: Use Sentry webhook to push metrics to Prometheus
+    url: http://prometheus:9090
+    editable: false
+    jsonData:
+      exemplarTraceIdDestinations:
+        # Link Sentry metrics to Jaeger traces
+        - name: trace_id
+          datasourceUid: jaeger-ds
+          urlDisplayLabel: 'View Trace'
+      # Custom headers for Sentry API if needed
+      # httpHeaderName1: 'X-Sentry-Auth'
+    # secureJsonData:
+    #   httpHeaderValue1: 'Sentry sentry_key=YOUR_KEY'
+---
+# Sentry Integration Notes:
+#
+# Since Sentry doesn't have a native Grafana datasource, we use Prometheus
+# to collect and expose Sentry metrics. Options:
+#
+# 1. Sentry SDK Metrics: Node.js services send metrics to Prometheus
+#    using @sentry/node with custom integrations
+#
+# 2. Sentry Webhooks: Configure Sentry to send events to a webhook endpoint
+#    that converts them to Prometheus metrics
+#
+# 3. Sentry API Polling: Create a Prometheus exporter that polls Sentry API
+#    for issue/event counts (see packages/observability/sentry-exporter/)
+#
+# Recommended approach: Use Sentry SDK to expose metrics endpoint on each
+# service, then scrape with Prometheus. See packages/observability/README.md
