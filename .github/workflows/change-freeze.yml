@@ -1,0 +1,297 @@
+name: Change Freeze Enforcement
+
+# This workflow enforces change freeze windows during pilot periods
+# to ensure stability and reduce risk during critical business hours
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+    branches: [main, master, production]
+  push:
+    branches: [main, master, production]
+  workflow_dispatch:
+    inputs:
+      override_freeze:
+        description: 'Override freeze (emergency only)'
+        type: boolean
+        default: false
+      override_reason:
+        description: 'Reason for override (required)'
+        type: string
+
+env:
+  PILOT_START_WEEK: 1  # Week number when pilot started
+  CURRENT_PILOT_WEEK: 4  # Update this weekly
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  check-freeze-window:
+    name: Check Change Freeze Window
+    runs-on: ubuntu-latest
+    outputs:
+      is_frozen: ${{ steps.freeze_check.outputs.is_frozen }}
+      freeze_reason: ${{ steps.freeze_check.outputs.freeze_reason }}
+      requires_cab_approval: ${{ steps.freeze_check.outputs.requires_cab }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check freeze window
+        id: freeze_check
+        run: |
+          #!/bin/bash
+          set -e
+
+          echo "🔍 Checking change freeze window..."
+
+          # Get current time in UTC
+          CURRENT_HOUR=$(date -u +%H)
+          CURRENT_DAY=$(date -u +%u)  # 1=Monday, 7=Sunday
+          PILOT_WEEK=${{ env.CURRENT_PILOT_WEEK }}
+
+          IS_FROZEN=false
+          FREEZE_REASON=""
+          REQUIRES_CAB=false
+
+          # Pilot Week 1-2: Daily freeze 16:00-09:00 UTC (overnight)
+          if [ "$PILOT_WEEK" -le 2 ]; then
+            echo "📅 Pilot Week $PILOT_WEEK: Daily overnight freeze (16:00-09:00 UTC)"
+
+            if [ "$CURRENT_HOUR" -ge 16 ] || [ "$CURRENT_HOUR" -lt 9 ]; then
+              IS_FROZEN=true
+              FREEZE_REASON="Daily overnight freeze (Week 1-2): 16:00-09:00 UTC"
+              REQUIRES_CAB=true
+            fi
+
+          # Pilot Week 3-8: Weekend freeze Friday 12:00 - Monday 09:00 UTC
+          elif [ "$PILOT_WEEK" -ge 3 ] && [ "$PILOT_WEEK" -le 8 ]; then
+            echo "📅 Pilot Week $PILOT_WEEK: Weekend freeze (Fri 12:00 - Mon 09:00 UTC)"
+
+            # Friday from 12:00 onwards
+            if [ "$CURRENT_DAY" -eq 5 ] && [ "$CURRENT_HOUR" -ge 12 ]; then
+              IS_FROZEN=true
+              FREEZE_REASON="Weekend freeze (Week 3-8): Friday 12:00 - Monday 09:00 UTC"
+              REQUIRES_CAB=true
+
+            # All of Saturday and Sunday
+            elif [ "$CURRENT_DAY" -eq 6 ] || [ "$CURRENT_DAY" -eq 7 ]; then
+              IS_FROZEN=true
+              FREEZE_REASON="Weekend freeze (Week 3-8): Friday 12:00 - Monday 09:00 UTC"
+              REQUIRES_CAB=true
+
+            # Monday until 09:00
+            elif [ "$CURRENT_DAY" -eq 1 ] && [ "$CURRENT_HOUR" -lt 9 ]; then
+              IS_FROZEN=true
+              FREEZE_REASON="Weekend freeze (Week 3-8): Friday 12:00 - Monday 09:00 UTC"
+              REQUIRES_CAB=true
+            fi
+          fi
+
+          # Output results
+          echo "is_frozen=$IS_FROZEN" >> $GITHUB_OUTPUT
+          echo "freeze_reason=$FREEZE_REASON" >> $GITHUB_OUTPUT
+          echo "requires_cab=$REQUIRES_CAB" >> $GITHUB_OUTPUT
+
+          if [ "$IS_FROZEN" = true ]; then
+            echo "🔒 CHANGE FREEZE ACTIVE"
+            echo "   Reason: $FREEZE_REASON"
+            echo "   CAB Approval Required: $REQUIRES_CAB"
+          else
+            echo "✅ No freeze window active - changes allowed"
+          fi
+
+  check-cab-approval:
+    name: Check CAB Approval
+    runs-on: ubuntu-latest
+    needs: check-freeze-window
+    if: needs.check-freeze-window.outputs.is_frozen == 'true' && github.event_name == 'pull_request'
+    steps:
+      - name: Check for CAB approval label
+        id: check_label
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: pullRequest } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number
+            });
+
+            const labels = pullRequest.labels.map(label => label.name);
+            const hasCABApproval = labels.includes('cab-approved');
+            const isEmergency = labels.includes('emergency-change');
+
+            console.log('PR Labels:', labels);
+            console.log('Has CAB Approval:', hasCABApproval);
+            console.log('Is Emergency:', isEmergency);
+
+            core.setOutput('has_cab_approval', hasCABApproval);
+            core.setOutput('is_emergency', isEmergency);
+
+            return { hasCABApproval, isEmergency };
+
+      - name: Check emergency change approvals
+        if: steps.check_label.outputs.is_emergency == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: reviews } = await github.rest.pulls.listReviews({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number
+            });
+
+            const approvals = reviews.filter(review => review.state === 'APPROVED');
+            const uniqueApprovers = new Set(approvals.map(a => a.user.login));
+
+            console.log(`Emergency change has ${uniqueApprovers.size} approvals`);
+            console.log('Approvers:', Array.from(uniqueApprovers));
+
+            if (uniqueApprovers.size < 2) {
+              core.setFailed(`Emergency changes require 2 approvals. Currently has ${uniqueApprovers.size}.`);
+            }
+
+      - name: Enforce freeze
+        if: steps.check_label.outputs.has_cab_approval != 'true' && steps.check_label.outputs.is_emergency != 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const freezeReason = '${{ needs.check-freeze-window.outputs.freeze_reason }}';
+
+            // Add comment to PR
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body: `## 🔒 Change Freeze Active
+
+            **Freeze Window:** ${freezeReason}
+
+            ### Options to Proceed:
+
+            1. **Wait for freeze to end** (recommended)
+               - Changes will automatically be allowed once the freeze window ends
+
+            2. **Request CAB Approval** (non-emergency changes)
+               - Submit change request to Change Advisory Board
+               - Once approved, add the \`cab-approved\` label to this PR
+               - Requires business justification and risk assessment
+
+            3. **Emergency Change Process** (critical issues only)
+               - Add the \`emergency-change\` label
+               - Requires 2 approvals from authorized personnel
+               - Must provide incident ticket and rollback plan
+
+            ---
+
+            📚 See [Change Freeze Policy](../docs/success/change_freeze_policy.md) for details.
+
+            ⏰ This check will re-run automatically when the freeze window ends.`
+            });
+
+            // Fail the check
+            core.setFailed('Change freeze is active. CAB approval or emergency override required.');
+
+  validate-emergency-override:
+    name: Validate Emergency Override
+    runs-on: ubuntu-latest
+    needs: check-freeze-window
+    if: |
+      needs.check-freeze-window.outputs.is_frozen == 'true' &&
+      github.event_name == 'workflow_dispatch' &&
+      github.event.inputs.override_freeze == 'true'
+    steps:
+      - name: Validate override reason
+        run: |
+          REASON="${{ github.event.inputs.override_reason }}"
+
+          if [ -z "$REASON" ] || [ "${#REASON}" -lt 20 ]; then
+            echo "❌ Emergency override requires a detailed reason (min 20 characters)"
+            echo "   Provided: $REASON"
+            exit 1
+          fi
+
+          echo "✅ Emergency override authorized by: ${{ github.actor }}"
+          echo "   Reason: $REASON"
+
+      - name: Log override
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Create an issue to track the emergency override
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `🚨 Emergency Change Freeze Override - ${new Date().toISOString()}`,
+              body: `## Emergency Change Freeze Override
+
+            **Authorized by:** @${{ github.actor }}
+            **Timestamp:** ${new Date().toISOString()}
+            **Freeze Window:** ${{ needs.check-freeze-window.outputs.freeze_reason }}
+
+            ### Reason
+            ${{ github.event.inputs.override_reason }}
+
+            ### Actions Required
+            - [ ] Post-incident review scheduled
+            - [ ] Change documented in CAB meeting notes
+            - [ ] Rollback plan validated
+
+            This issue serves as an audit trail for the emergency override.`,
+              labels: ['emergency-override', 'audit-required']
+            });
+
+            console.log('✅ Emergency override logged and tracked');
+
+  block-direct-push:
+    name: Block Direct Pushes During Freeze
+    runs-on: ubuntu-latest
+    needs: check-freeze-window
+    if: |
+      needs.check-freeze-window.outputs.is_frozen == 'true' &&
+      github.event_name == 'push' &&
+      github.event.inputs.override_freeze != 'true'
+    steps:
+      - name: Block push
+        run: |
+          echo "🔒 Direct pushes to protected branches are blocked during freeze windows"
+          echo "   Freeze: ${{ needs.check-freeze-window.outputs.freeze_reason }}"
+          echo ""
+          echo "Please use the following process:"
+          echo "  1. Create a pull request"
+          echo "  2. Request CAB approval or follow emergency change process"
+          echo "  3. Wait for freeze window to end"
+          exit 1
+
+  notify-status:
+    name: Notify Freeze Status
+    runs-on: ubuntu-latest
+    needs: check-freeze-window
+    if: always()
+    steps:
+      - name: Display freeze status
+        run: |
+          IS_FROZEN="${{ needs.check-freeze-window.outputs.is_frozen }}"
+          FREEZE_REASON="${{ needs.check-freeze-window.outputs.freeze_reason }}"
+
+          echo "## Change Freeze Status" >> $GITHUB_STEP_SUMMARY
+
+          if [ "$IS_FROZEN" = "true" ]; then
+            echo "### 🔒 FREEZE ACTIVE" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Reason:** $FREEZE_REASON" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Changes require CAB approval or emergency override." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### ✅ No Freeze Active" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Changes are allowed during this window." >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Current Time (UTC):** $(date -u)" >> $GITHUB_STEP_SUMMARY
+          echo "**Pilot Week:** ${{ env.CURRENT_PILOT_WEEK }}" >> $GITHUB_STEP_SUMMARY

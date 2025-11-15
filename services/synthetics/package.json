@@ -1,0 +1,48 @@
+{
+  "name": "@teei/synthetics",
+  "version": "1.0.0",
+  "description": "Synthetic monitoring for TEEI CSR Platform pilot tenants",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "test": "vitest",
+    "test:coverage": "vitest --coverage",
+    "lint": "eslint src --ext .ts",
+    "typecheck": "tsc --noEmit",
+    "monitor:tenant-login": "tsx pilot-routes/tenant-login.ts",
+    "monitor:dashboard-load": "tsx pilot-routes/dashboard-load.ts",
+    "monitor:report-generation": "tsx pilot-routes/report-generation.ts",
+    "monitor:export-pdf": "tsx pilot-routes/export-pdf.ts",
+    "monitor:approval-workflow": "tsx pilot-routes/approval-workflow.ts",
+    "monitor:evidence-explorer": "tsx pilot-routes/evidence-explorer.ts",
+    "monitor:all": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@teei/observability": "workspace:*",
+    "@opentelemetry/api": "^1.7.0",
+    "@opentelemetry/sdk-node": "^0.45.0",
+    "@opentelemetry/auto-instrumentations-node": "^0.40.0",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.45.0",
+    "@opentelemetry/exporter-metrics-otlp-http": "^0.45.0",
+    "axios": "^1.6.0",
+    "node-cron": "^3.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/node-cron": "^3.0.11",
+    "tsx": "^4.6.2",
+    "typescript": "^5.3.0",
+    "vitest": "^1.0.0",
+    "eslint": "^8.55.0",
+    "@typescript-eslint/eslint-plugin": "^6.14.0",
+    "@typescript-eslint/parser": "^6.14.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

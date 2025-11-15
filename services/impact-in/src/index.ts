@@ -8,7 +8,10 @@ import Fastify from 'fastify';
 import { createServiceLogger } from '@teei/shared-utils';
 import { deliveryRoutes } from './routes/deliveries.js';
 import { replayRoutes } from './routes/replay.js';
+import { slaRoutes } from './routes/sla.js';
 import { createHealthManager, setupHealthRoutes } from './health/index.js';
+import { startScheduler } from '../scheduler/index.js';
+import { startSLAMonitoring } from '../sla-monitor/index.js';
 
 const logger = createServiceLogger('impact-in');
 const PORT = parseInt(process.env.PORT_IMPACT_IN || '3007');
@@ -26,6 +29,7 @@ async function start() {
   // Register routes with API versioning
   app.register(deliveryRoutes, { prefix: '/v1/impact-in' });
   app.register(replayRoutes, { prefix: '/v1/impact-in' });
+  app.register(slaRoutes, { prefix: '/v1/impact-in' });
 
   // Root endpoint
   app.get('/', async (request, reply) => {
@@ -39,6 +43,9 @@ async function start() {
         replay: '/v1/impact-in/deliveries/:id/replay',
         bulkReplay: '/v1/impact-in/deliveries/bulk-replay',
         retryAllFailed: '/v1/impact-in/deliveries/retry-all-failed',
+        slaStatus: '/v1/impact-in/sla-status',
+        slaReport: '/v1/impact-in/sla-report',
+        deliveryTimeline: '/v1/impact-in/delivery-timeline',
         health: '/health',
       },
     };
@@ -50,6 +57,19 @@ async function start() {
     healthManager.setReady(true);
     logger.info(`Impact-In Service running on port ${PORT}`);
     logger.info('Supported providers: Benevity, Goodera, Workday');
+
+    // Start scheduler daemon (if enabled)
+    if (process.env.ENABLE_SCHEDULER !== 'false') {
+      startScheduler({
+        checkInterval: parseInt(process.env.SCHEDULER_CHECK_INTERVAL || '1'),
+        maxRetries: parseInt(process.env.SCHEDULER_MAX_RETRIES || '3'),
+      });
+    }
+
+    // Start SLA monitoring daemon (if enabled)
+    if (process.env.ENABLE_SLA_MONITORING !== 'false') {
+      startSLAMonitoring();
+    }
   } catch (err) {
     logger.error(err);
     process.exit(1);

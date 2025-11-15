@@ -1042,3 +1042,344 @@ cacheMiddleware({
 **Orchestrator**: Worker 2 Backend Lead (Claude)
 **Last Updated**: 2025-11-14
 
+---
+
+# Worker 4 Phase F: Pilot Execution & Enterprise Readiness
+
+**Status**: 🚀 In Progress
+**Branch**: `claude/worker4-phaseF-pilot-execution-01D4PuRxUkz25bWEvTPKwSRz`
+**Started**: 2025-11-15
+**Target Completion**: Week 8 (Pilot Scorecards & Exec Readout)
+
+---
+
+## Mission
+
+Execute live pilots with 3–5 tenants, harden operations, and deliver enterprise readiness:
+- **A) Tenant Onboarding & Security Review**: SSO/SAML/OIDC, SCIM, role mapping, DPIA/DPA packet
+- **B) Pilot Playbooks & Training**: Enablement kits, help center, NPS/CSAT collection, feedback loops
+- **C) Adoption & Reliability Metrics**: Activation, FTUE, TTFV, weekly active volunteers, delivery success
+- **D) Impact-In Deliveries @ Scale**: Scheduled exports with delivery SLAs + replay workflows
+- **E) Enterprise Integrations**: Slack/Teams notifications, SMTP domain setup, custom subdomain/branding
+- **F) Production Launch Gating**: Change advisory board (CAB), freeze windows, run-of-show, rollback rehearsal
+
+---
+
+## Team Structure (30 agents / 5 leads)
+
+### Lead 1: Launch Operations Lead (launch-lead)
+**Responsibilities**: Orchestrate pilots, gates, go/no-go calls, CAB coordination
+
+**Specialists**:
+1. **sso-onboarding** - SAML/OIDC metadata checks per tenant
+2. **scim-provisioner** - SCIM user/group sync and deprovisioning flows
+3. **role-mapping-engineer** - Group→role mapping and RBAC tests
+4. **dpia-writer** - Assemble DPIA/DPA packet from templates
+5. **legal-reviewer** - DPA/addenda alignment
+6. **docs-packager** - Assemble complete pilot kit bundle
+
+---
+
+### Lead 2: Customer Success Management Lead (csm-lead)
+**Responsibilities**: Enablement, training, NPS/CSAT, stakeholder communications
+
+**Specialists**:
+7. **ftue-coachmarks** - First-time user guidance implementation
+8. **training-deck-author** - Tenant-branded training materials
+9. **help-center-builder** - Create/curate help docs and walkthrough videos
+10. **nps-collector** - Run NPS/CSAT surveys and persist results
+11. **admin-faq-editor** - Maintain admin FAQ per tenant feedback
+12. **weekly-reporter** - Assemble pilot_week_n_report.md with KPIs and asks
+
+---
+
+### Lead 3: Reliability Engineering Lead (reliability-lead)
+**Responsibilities**: SLO tracking, incident response, change freezes
+
+**Specialists**:
+13. **synthetic-owner** - Extend synthetics to tenant routes (login, approvals, scheduling)
+14. **load-runner** - Re-run k6 tests under pilot usage patterns
+15. **freeze-enforcer** - Implement change freezes and CAB approval in CI
+16. **incident-scribe** - Postmortems and status page updates
+17. **risk-register-owner** - Track risks and mitigations weekly
+
+---
+
+### Lead 4: Integrations Lead (integrations-lead)
+**Responsibilities**: Slack/Teams/SMTP/domain and Impact-In schedules
+
+**Specialists**:
+18. **impact-scheduler** - Configure scheduled deliveries and calendars per tenant
+19. **delivery-sla-monitor** - Track export success, retries, SLAs; publish weekly status
+20. **replay-operator** - Execute safe replays and document outcomes
+21. **slack-notifier** - Wire Slack/Teams alerts for SLA breaches and approvals
+22. **smtp-domain-owner** - Set up DKIM/SPF, from-domain branding, bounce handling
+23. **branding-coordinator** - Custom subdomain + tenant theming checks
+
+---
+
+### Lead 5: Compliance & Privacy Lead (compliance-lead)
+**Responsibilities**: DPIA, DPA, consent flows, DSAR rehearsals
+
+**Specialists**:
+24. **adoption-analyst** - Define activation, TTFV, WAU/MAU, cohort views
+25. **success-telemetry** - Instrument cockpit for adoption metrics (RUM + events)
+
+---
+
+## Workstreams (W0-W8)
+
+### W0: Kickoff & Roster
+**Owners**: launch-lead, docs-packager
+**Duration**: Day 1
+**Deliverables**:
+- [ ] Phase F plan added to MULTI_AGENT_PLAN.md
+- [ ] Team roster with agent assignments documented
+- [ ] Directory structure created: `/docs/pilot/`, `/docs/success/`, `/reports/pilot/`
+- [ ] Initial risk register created
+
+---
+
+### W1: Tenant Onboarding & Security Review
+**Owners**: sso-onboarding, scim-provisioner, role-mapping-engineer, dpia-writer
+**Duration**: Week 1-2
+**Deliverables**:
+- [ ] `/docs/pilot/tenant_onboarding_guide.md` - Step-by-step tenant onboarding guide
+- [ ] `/docs/pilot/security_review_template.md` - DPIA/DPA packet template
+- [ ] `/docs/pilot/admin_faq.md` - Admin FAQ for common questions
+- [ ] `/docs/pilot/tenants/<tenant_name>/` - Per-tenant directories with:
+  - [ ] SSO/SAML/OIDC metadata verification checklist
+  - [ ] SCIM provisioning test results
+  - [ ] Role mapping configuration and validation
+  - [ ] DPIA/DPA packet (signed)
+- [ ] 3-5 tenants fully onboarded with verified SSO/SCIM/roles
+
+**Acceptance Criteria**:
+- ✅ Each tenant has SSO/OIDC configured and tested
+- ✅ SCIM user/group sync validated with deprovisioning test
+- ✅ Role mappings tested for all tenant user groups
+- ✅ DPIA/DPA packets stored in `/docs/pilot/tenants/<tenant>/`
+
+---
+
+### W2: Enablement & Training
+**Owners**: training-deck-author, help-center-builder, admin-faq-editor
+**Duration**: Week 2-3
+**Deliverables**:
+- [ ] `/docs/success/training_deck.pdf` - Tenant-branded training materials
+- [ ] `/docs/success/admin_walkthrough.md` - Admin console walkthrough
+- [ ] `/docs/success/help_center/` - Directory of help articles:
+  - [ ] Getting started guide
+  - [ ] Dashboard navigation
+  - [ ] Evidence explorer usage
+  - [ ] Report generation workflow
+  - [ ] Export and scheduling
+  - [ ] Troubleshooting common issues
+- [ ] `/docs/success/video_walkthroughs.md` - Links to recorded walkthroughs
+
+**Acceptance Criteria**:
+- ✅ Training deck customized for each pilot tenant
+- ✅ Help center articles cover all major features
+- ✅ Admin walkthrough tested with pilot tenant admins
+
+---
+
+### W3: Adoption Telemetry & KPIs
+**Owners**: adoption-analyst, success-telemetry
+**Duration**: Week 1-8 (ongoing)
+**Deliverables**:
+- [ ] `/docs/success/adoption_metrics.md` - Definitions and targets for:
+  - **Activation**: % of invited users who complete first login
+  - **FTUE (First Time User Experience)**: % who complete onboarding flow
+  - **TTFV (Time to First Value)**: Days until first dashboard view
+  - **WAU/MAU**: Weekly/Monthly Active Users
+  - **Delivery Success**: % of scheduled Impact-In deliveries that succeed
+- [ ] `/apps/corp-cockpit-astro/src/utils/adoption-tracker.ts` - Client-side RUM instrumentation
+- [ ] Grafana dashboard with adoption KPIs (live during pilot)
+- [ ] `/reports/pilot/weekly_adoption_report_week_n.md` - Weekly adoption reports
+
+**Acceptance Criteria**:
+- ✅ Adoption metrics live in Grafana
+- ✅ Activation ≥ 60%, TTFV ≤ 3 days, Delivery success ≥ 98%
+- ✅ WAU/MAU trends charted weekly
+- ✅ Weekly reports published with commentary
+
+---
+
+### W4: Impact-In Delivery at Scale
+**Owners**: impact-scheduler, delivery-sla-monitor, replay-operator
+**Duration**: Week 2-8 (ongoing)
+**Deliverables**:
+- [ ] `/services/impact-in/scheduler/` - Scheduled delivery service (cron-based)
+- [ ] `/services/impact-in/sla-monitor/` - Delivery SLA tracking service
+- [ ] `/docs/success/impact_in_delivery_slas.md` - SLA definitions and targets
+- [ ] `/apps/corp-cockpit-astro/src/pages/[lang]/cockpit/[companyId]/deliveries.astro` - Delivery status UI
+- [ ] `/reports/pilot/delivery_sla_attestation_week_n.md` - Weekly SLA attestation reports
+- [ ] Replay workflow documentation and test results
+
+**Acceptance Criteria**:
+- ✅ Scheduled deliveries run on time per tenant calendar
+- ✅ SLA dashboard shows ≥ 98% success rate
+- ✅ Replay workflow validated with test scenarios
+- ✅ No PII in delivery logs or alerts
+
+---
+
+### W5: Enterprise Integrations
+**Owners**: slack-notifier, smtp-domain-owner, branding-coordinator
+**Duration**: Week 3-4
+**Deliverables**:
+- [ ] `/services/notifications/integrations/slack.ts` - Slack webhook notifications
+- [ ] `/services/notifications/integrations/teams.ts` - Microsoft Teams webhook notifications
+- [ ] `/docs/success/slack_teams_setup.md` - Integration setup guide
+- [ ] `/services/notifications/smtp/domain-setup.ts` - SMTP domain verification helpers
+- [ ] `/docs/success/smtp_branding_guide.md` - DKIM/SPF/from-domain setup guide
+- [ ] `/apps/corp-cockpit-astro/src/components/admin/BrandingConfig.tsx` - Branding configuration UI
+- [ ] Per-tenant subdomain and theme validation
+
+**Acceptance Criteria**:
+- ✅ Slack/Teams notifications active for SLA breaches and approvals
+- ✅ SMTP from-domain branding configured for pilot tenants
+- ✅ No PII in alerts or notification URLs
+- ✅ Custom subdomain + tenant theming validated
+
+---
+
+### W6: Reliability & Change Management
+**Owners**: synthetic-owner, load-runner, freeze-enforcer
+**Duration**: Week 1-8 (ongoing)
+**Deliverables**:
+- [ ] `/services/synthetics/pilot-routes/` - Synthetic monitors for tenant routes
+- [ ] `/tests/load/pilot-patterns.js` - k6 load tests for pilot usage patterns
+- [ ] `/.github/workflows/change-freeze.yml` - CI workflow enforcing freeze windows
+- [ ] `/docs/success/change_freeze_policy.md` - Freeze windows and CAB approval process
+- [ ] `/reports/pilot/synthetics_status_week_n.md` - Weekly synthetics health reports
+- [ ] At least one rollback rehearsal completed and documented
+
+**Acceptance Criteria**:
+- ✅ Synthetics green ≥ 95% for pilot window
+- ✅ Load tests pass under pilot usage patterns
+- ✅ Change freeze enforced by CI (blocked PRs during freeze)
+- ✅ Rollback rehearsal completed with <5 min downtime
+
+---
+
+### W7: CAB, Run-of-Show, Postmortems
+**Owners**: incident-scribe, risk-register-owner, weekly-reporter
+**Duration**: Week 4-8 (ongoing)
+**Deliverables**:
+- [ ] `/docs/success/change_advisory_board.md` - CAB charter and process
+- [ ] `/docs/success/run_of_show.md` - Production launch run-of-show checklist
+- [ ] `/reports/pilot/postmortem_<incident_id>.md` - Postmortem template and incidents
+- [ ] `/reports/pilot/risk_register_week_n.md` - Weekly risk register updates
+- [ ] `/reports/pilot/pilot_week_n_report.md` - Weekly pilot status reports (W1-W8)
+
+**Acceptance Criteria**:
+- ✅ CAB meets weekly; all changes approved before deployment
+- ✅ Run-of-show validated with dry run
+- ✅ At least one postmortem written (real or simulated incident)
+- ✅ Risk register updated weekly with mitigations tracked
+
+---
+
+### W8: Final Pilot Scorecards & Exec Readout
+**Owners**: csm-lead, launch-lead, docs-packager
+**Duration**: Week 8
+**Deliverables**:
+- [ ] `/reports/pilot/pilot_scorecard_<tenant_name>.md` - Per-tenant scorecards with:
+  - Adoption metrics (Activation, TTFV, WAU/MAU)
+  - Delivery SLA performance
+  - NPS/CSAT scores
+  - Incident summary
+  - Go/no-go recommendation
+- [ ] `/reports/pilot/exec_readout_deck.pdf` - Executive readout presentation
+- [ ] `/reports/pilot/phase_f_final_summary.md` - Comprehensive Phase F summary
+- [ ] Go/no-go decision documented with rationale
+
+**Acceptance Criteria**:
+- ✅ All 3-5 pilot tenants have scorecards
+- ✅ Exec readout deck includes KPIs, trends, recommendations
+- ✅ Go/no-go decision documented and approved by stakeholders
+
+---
+
+## Progress Tracking
+
+**Overall**: 0 / 60 major tasks complete (0%)
+
+| Workstream | Focus | Tasks | Complete | % |
+|------------|-------|-------|----------|---|
+| W0. Kickoff & Roster | Planning & setup | 4 | 0 | 0% ⏳ |
+| W1. Tenant Onboarding & Security Review | SSO/SCIM/DPIA | 10 | 0 | 0% ⏳ |
+| W2. Enablement & Training | Training materials | 7 | 0 | 0% ⏳ |
+| W3. Adoption Telemetry & KPIs | Metrics & tracking | 6 | 0 | 0% ⏳ |
+| W4. Impact-In Delivery at Scale | Scheduled exports | 7 | 0 | 0% ⏳ |
+| W5. Enterprise Integrations | Slack/SMTP/Branding | 7 | 0 | 0% ⏳ |
+| W6. Reliability & Change Mgmt | Synthetics & freeze | 6 | 0 | 0% ⏳ |
+| W7. CAB, Run-of-Show | Governance & postmortems | 5 | 0 | 0% ⏳ |
+| W8. Pilot Scorecards & Readout | Final assessment | 4 | 0 | 0% ⏳ |
+
+**Last Updated**: 2025-11-15 by Tech Lead Orchestrator (Worker 4 Phase F)
+
+---
+
+## Integration with Other Workers
+
+### Worker 1 (IaC/Security/Observability)
+**Coordination Points**:
+- OTel traces for adoption metrics correlation
+- Synthetics infrastructure and monitoring
+- SSO/OIDC provider configuration
+- Secrets management for SMTP/Slack/Teams credentials
+
+### Worker 2 (Backend Services)
+**Coordination Points**:
+- Impact-In delivery scheduler integration
+- Q2Q evidence for training examples
+- DSAR flow validation for GDPR compliance
+- Reporting API for adoption metrics
+
+### Worker 3 (Corporate Cockpit)
+**Coordination Points**:
+- Adoption telemetry instrumentation in frontend
+- Branding configuration UI
+- Delivery status dashboard
+- Help center embedded in cockpit
+
+---
+
+## Non-Negotiables
+
+1. **No PII in URLs, logs, or synthetic outputs** - Consent respected, DSAR path verified
+2. **SLOs must be visible in Grafana** - Real-time monitoring required
+3. **Incidents follow runbook with postmortems** - All incidents documented
+4. **CAB approval required during pilot** - No direct deployments without approval
+5. **Freeze windows enforced by CI** - Automated enforcement, no manual overrides
+
+---
+
+## Success Criteria
+
+- ✅ 3-5 tenants fully onboarded (SSO/SCIM/roles verified)
+- ✅ DPIA/DPA packets stored in `/docs/pilot/tenants/<tenant>/`
+- ✅ Adoption KPIs live in Grafana: Activation ≥ 60%, TTFV ≤ 3 days, Delivery success ≥ 98%
+- ✅ Scheduled Impact-In deliveries run on time with ≥ 98% SLA
+- ✅ Slack/Teams notifications and SMTP branding active
+- ✅ Synthetics green ≥ 95% for pilot window
+- ✅ Change freeze enforced; at least one rollback rehearsal completed
+- ✅ Pilot scorecards and exec readout deck produced
+- ✅ Go/no-go recommendations documented
+
+---
+
+## Next Actions
+
+1. ✅ Update MULTI_AGENT_PLAN.md with Phase F (this section)
+2. 🚧 Create directory structure for Phase F outputs
+3. 🚧 Execute W0: Kickoff & Roster documentation
+4. ⏳ Execute W1-W7 in parallel (respecting dependencies)
+5. ⏳ Produce weekly pilot reports (W1-W8)
+6. ⏳ Execute W8: Final scorecards and exec readout
+
+**Orchestrator**: Tech Lead Orchestrator (Worker 4 Phase F)
+
