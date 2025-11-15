@@ -1,0 +1,363 @@
+# Labeling Contracts for Q2Q Active Learning
+# Defines the schema and rules for human review and annotation
+
+version: "1.0"
+name: "Q2Q Outcome Classification Labeling"
+
+# Reviewer UI Input Fields
+input_fields:
+  - id: feedback_text
+    type: text
+    label: "Feedback Text"
+    readonly: true
+    description: "Original learner feedback or check-in text"
+    max_length: 5000
+
+  - id: language_detected
+    type: enum
+    label: "Language"
+    readonly: true
+    options:
+      - en: "English"
+      - uk: "Ukrainian (Українська)"
+      - no: "Norwegian (Norsk)"
+      - unknown: "Unknown/Other"
+    description: "Auto-detected language of the feedback"
+
+  - id: language_override
+    type: enum
+    label: "Correct Language (if detection is wrong)"
+    optional: true
+    options:
+      - en: "English"
+      - uk: "Ukrainian"
+      - no: "Norwegian"
+      - other: "Other"
+    description: "Override if language detection is incorrect"
+
+  - id: model_prediction
+    type: object
+    label: "Model Prediction"
+    readonly: true
+    description: "AI model's classification output (for reference)"
+    display_mode: expandable
+
+# Outcome Labels (Human Annotations)
+outcome_labels:
+  - dimension: confidence_increase
+    type: boolean
+    label: "Confidence Increase"
+    description: "Does the feedback express increased self-confidence or self-efficacy?"
+    examples:
+      - "I feel more confident about my abilities now"
+      - "I believe I can succeed"
+      - "I'm proud of my progress"
+    required: true
+
+  - dimension: confidence_decrease
+    type: boolean
+    label: "Confidence Decrease"
+    description: "Does the feedback express decreased confidence or self-doubt?"
+    examples:
+      - "I don't think I can do this"
+      - "Maybe this isn't for me"
+      - "I'm not good enough"
+    required: true
+
+  - dimension: belonging_increase
+    type: boolean
+    label: "Belonging Increase"
+    description: "Does the feedback express feeling connected or supported?"
+    examples:
+      - "My buddy has been so helpful"
+      - "I feel like I belong here"
+      - "The group is very supportive"
+    required: true
+
+  - dimension: belonging_decrease
+    type: boolean
+    label: "Belonging Decrease"
+    description: "Does the feedback express isolation or disconnection?"
+    examples:
+      - "I feel alone in this"
+      - "Nobody understands my situation"
+      - "I feel excluded"
+    required: true
+
+  - dimension: language_comfort
+    type: enum
+    label: "Language Proficiency Level"
+    options:
+      - low: "Low - Simple sentences, basic vocabulary, frequent errors"
+      - medium: "Medium - Moderate complexity, some advanced vocabulary"
+      - high: "High - Complex sentences, rich vocabulary, few errors"
+    description: "Assess language proficiency based on text complexity"
+    required: true
+
+  - dimension: employability_signals
+    type: multi_select
+    label: "Employability Signals"
+    options:
+      - job_search: "Job search activity"
+      - skills_gained: "New skills or competencies learned"
+      - networking: "Professional networking"
+      - resume_improvement: "CV/resume development"
+      - interview_prep: "Interview preparation"
+      - certification: "Certifications or credentials"
+      - portfolio_building: "Portfolio or project work"
+      - career_goal_setting: "Career planning"
+    description: "Select all relevant employability indicators"
+    required: false
+
+  - dimension: risk_cues
+    type: multi_select
+    label: "Risk Indicators"
+    options:
+      - isolation: "Social isolation"
+      - frustration: "Frustration or anger"
+      - disengagement: "Loss of motivation"
+      - anxiety: "Anxiety or stress"
+      - dropout_indication: "Considering leaving program"
+      - confusion: "Lack of understanding"
+      - negative_self_talk: "Negative self-perception"
+      - lack_of_support: "Insufficient support"
+    description: "Select all relevant risk indicators"
+    required: false
+
+# Evidence Attachment
+evidence_attachment:
+  enabled: true
+  description: "Provide evidence snippets that support your labels"
+  fields:
+    - id: snippet
+      type: text
+      label: "Text Excerpt"
+      description: "Specific portion of feedback that supports this label"
+      max_length: 500
+      required: true
+
+    - id: supported_dimension
+      type: reference
+      label: "Supported Dimension"
+      reference: outcome_labels
+      description: "Which label does this evidence support?"
+      required: true
+
+    - id: rationale
+      type: text
+      label: "Rationale"
+      description: "Brief explanation of why this excerpt is relevant"
+      max_length: 300
+      required: true
+
+    - id: position_start
+      type: integer
+      label: "Start Position"
+      description: "Character position where snippet starts (auto-filled if highlighted)"
+      optional: true
+
+    - id: position_end
+      type: integer
+      label: "End Position"
+      description: "Character position where snippet ends (auto-filled if highlighted)"
+      optional: true
+
+  min_evidence_count: 1
+  max_evidence_count: 10
+  guidance: "Highlight specific text that supports each label. At least one evidence snippet is required."
+
+# Quality Flags
+quality_flags:
+  - id: ambiguous
+    label: "Ambiguous"
+    description: "Feedback is unclear or can be interpreted multiple ways"
+    severity: medium
+
+  - id: offensive
+    label: "Offensive Content"
+    description: "Contains inappropriate, offensive, or harmful language"
+    severity: high
+    requires_escalation: true
+
+  - id: spam
+    label: "Spam/Junk"
+    description: "Not genuine feedback (spam, test data, nonsense)"
+    severity: high
+
+  - id: mixed_language
+    label: "Mixed Languages"
+    description: "Feedback contains multiple languages"
+    severity: low
+
+  - id: too_short
+    label: "Too Short"
+    description: "Insufficient text to make confident judgments"
+    severity: medium
+
+  - id: needs_context
+    label: "Needs Context"
+    description: "Requires additional context to interpret correctly"
+    severity: medium
+
+# Annotation Instructions
+annotation_instructions: |
+  ## How to Annotate
+
+  1. **Read carefully**: Read the entire feedback text thoroughly.
+
+  2. **Check language**: Verify the detected language is correct. Override if needed.
+
+  3. **Label dimensions**: For each dimension, decide if it applies to this feedback:
+     - Confidence increase/decrease: Look for expressions of self-efficacy
+     - Belonging increase/decrease: Look for social connection or isolation
+     - Language comfort: Assess based on vocabulary, grammar, complexity
+     - Employability signals: Identify job-readiness indicators
+     - Risk cues: Flag warning signs of disengagement or distress
+
+  4. **Provide evidence**: For each positive label, highlight and explain specific text that supports it.
+
+  5. **Flag quality issues**: Mark any quality concerns (ambiguous, offensive, spam, etc.).
+
+  6. **Review model prediction**: Compare your labels to the model's prediction. Disagreements are valuable!
+
+  ## Tips
+
+  - When in doubt, mark as "ambiguous" and provide rationale
+  - Multiple dimensions can be true (e.g., both confidence_increase and belonging_increase)
+  - Opposites (increase/decrease) are typically mutually exclusive
+  - Evidence should quote exact text, not paraphrase
+  - Be objective - label what the text says, not what you assume
+
+# Quality Checks
+quality_checks:
+  inter_annotator_agreement:
+    enabled: true
+    method: "cohens_kappa"
+    minimum_overlap: 0.1
+    target_kappa: 0.7
+    description: "Calculate agreement between annotators on overlapping samples"
+
+  label_consistency:
+    enabled: true
+    rules:
+      - name: "confidence_mutual_exclusivity"
+        description: "confidence_increase and confidence_decrease should not both be true"
+        check: "NOT (confidence_increase AND confidence_decrease)"
+        severity: warning
+
+      - name: "belonging_mutual_exclusivity"
+        description: "belonging_increase and belonging_decrease should not both be true"
+        check: "NOT (belonging_increase AND belonging_decrease)"
+        severity: warning
+
+      - name: "evidence_required"
+        description: "At least one evidence snippet required if any label is true"
+        check: "IF any_label_true THEN evidence_count >= 1"
+        severity: error
+
+  completeness:
+    required_fields:
+      - confidence_increase
+      - confidence_decrease
+      - belonging_increase
+      - belonging_decrease
+      - language_comfort
+    minimum_evidence: 1
+
+# Batch Assignment Rules
+batch_assignment:
+  batch_size: 20
+  assignment_strategy: "round_robin"
+  allow_reassignment: true
+  max_assignments_per_batch: 2
+  review_timeout_hours: 72
+
+  # Difficulty-based assignment
+  difficulty_levels:
+    - level: easy
+      criteria: "confidence >= 0.5 AND no quality_flags"
+      assign_to: "junior_reviewers"
+
+    - level: medium
+      criteria: "confidence >= 0.3 AND confidence < 0.5"
+      assign_to: "all_reviewers"
+
+    - level: hard
+      criteria: "confidence < 0.3 OR has_quality_flags"
+      assign_to: "senior_reviewers"
+
+# Output Format
+output_format:
+  type: "jsonl"
+  filename_pattern: "labeled_{tenant_id}_{batch_id}_{timestamp}.jsonl"
+  include_metadata: true
+
+  schema:
+    id: "string"
+    text: "string"
+    language: "enum[en,uk,no,unknown]"
+    labels:
+      confidence_increase: "boolean"
+      confidence_decrease: "boolean"
+      belonging_increase: "boolean"
+      belonging_decrease: "boolean"
+      language_comfort: "enum[low,medium,high]"
+      employability_signals: "array[string]"
+      risk_cues: "array[string]"
+    evidence: "array[object]"
+    quality_flags: "array[string]"
+    annotator_id: "string"
+    annotation_time_seconds: "number"
+    confidence_score: "number"
+    created_at: "iso8601"
+
+# Reviewer Qualifications
+reviewer_qualifications:
+  required_training:
+    - "Q2Q Label Taxonomy Overview"
+    - "Evidence-Based Annotation"
+    - "Inter-Annotator Agreement Best Practices"
+
+  certification_test:
+    enabled: true
+    passing_score: 0.85
+    num_questions: 20
+
+  ongoing_monitoring:
+    track_agreement_with_gold: true
+    min_gold_accuracy: 0.80
+    review_frequency_days: 30
+
+# Data Privacy & Security
+privacy:
+  anonymize_pii: true
+  redact_patterns:
+    - email_addresses
+    - phone_numbers
+    - street_addresses
+    - government_ids
+
+  access_control:
+    require_authentication: true
+    log_all_views: true
+    data_retention_days: 365
+
+# Reporting
+reporting:
+  generate_weekly_summary: true
+  metrics:
+    - samples_labeled
+    - inter_annotator_agreement
+    - avg_time_per_sample
+    - quality_flag_distribution
+    - label_distribution
+    - language_distribution
+
+  alerts:
+    - condition: "inter_annotator_agreement < 0.6"
+      severity: high
+      action: "notify_admin"
+
+    - condition: "avg_time_per_sample > 600"
+      severity: medium
+      action: "log_warning"

@@ -1,0 +1,271 @@
+# Model Registry Schema
+# Defines the structure for tenant-specific model configuration overrides
+# Version: 1.0.0
+
+# Tenant Override Schema
+tenantOverride:
+  description: "Per-tenant model configuration overrides with versioning and guardrails"
+
+  fields:
+    # Metadata
+    tenantId:
+      type: string
+      required: true
+      description: "Unique tenant identifier"
+
+    version:
+      type: string
+      required: true
+      pattern: "^\\d+\\.\\d+\\.\\d+$"
+      description: "Semantic version (e.g., 1.0.0)"
+
+    createdAt:
+      type: string
+      format: date-time
+      required: true
+      description: "Timestamp when this override was created"
+
+    createdBy:
+      type: string
+      required: true
+      description: "User or system that created this override"
+
+    description:
+      type: string
+      required: false
+      description: "Human-readable description of why this override was created"
+
+    # Q2Q Model Overrides
+    q2q:
+      type: object
+      required: false
+      fields:
+        model:
+          type: string
+          enum: ["gpt-4o-mini", "gpt-4o", "claude-3-5-sonnet-20241022", "gemini-1.5-flash"]
+          description: "Model identifier to use for this tenant"
+
+        weights:
+          type: object
+          description: "Outcome dimension weights (must sum to 1.0)"
+          fields:
+            confidence:
+              type: number
+              min: 0.0
+              max: 1.0
+            belonging:
+              type: number
+              min: 0.0
+              max: 1.0
+            language_proficiency:
+              type: number
+              min: 0.0
+              max: 1.0
+            job_readiness:
+              type: number
+              min: 0.0
+              max: 1.0
+            wellbeing:
+              type: number
+              min: 0.0
+              max: 1.0
+
+        thresholds:
+          type: object
+          description: "Confidence thresholds per outcome dimension"
+          fields:
+            confidence:
+              type: number
+              min: 0.0
+              max: 1.0
+              default: 0.7
+            belonging:
+              type: number
+              min: 0.0
+              max: 1.0
+              default: 0.7
+            language_proficiency:
+              type: number
+              min: 0.0
+              max: 1.0
+              default: 0.7
+            job_readiness:
+              type: number
+              min: 0.0
+              max: 1.0
+              default: 0.7
+            wellbeing:
+              type: number
+              min: 0.0
+              max: 1.0
+              default: 0.7
+
+        temperature:
+          type: number
+          min: 0.0
+          max: 2.0
+          default: 0.3
+          description: "Model temperature for inference"
+
+        maxTokens:
+          type: number
+          min: 100
+          max: 4000
+          default: 2000
+          description: "Maximum tokens for model output"
+
+    # SROI Calculator Overrides
+    sroi:
+      type: object
+      required: false
+      fields:
+        deadweightFactor:
+          type: number
+          min: 0.0
+          max: 1.0
+          default: 0.1
+          description: "Adjustment for outcomes that would have occurred anyway"
+
+        attributionFactor:
+          type: number
+          min: 0.0
+          max: 1.0
+          default: 0.85
+          description: "What proportion is attributable to the program"
+
+        dropOffRate:
+          type: number
+          min: 0.0
+          max: 1.0
+          default: 0.25
+          description: "Annual decline in impact"
+
+        discountRate:
+          type: number
+          min: 0.0
+          max: 0.2
+          default: 0.035
+          description: "Time value of money discount rate"
+
+        financialProxies:
+          type: object
+          description: "Custom financial proxies per outcome"
+          additionalProperties:
+            type: number
+            min: 0
+
+    # VIS Calculator Overrides
+    vis:
+      type: object
+      required: false
+      fields:
+        weights:
+          type: object
+          description: "Volunteer Impact Score dimension weights (must sum to 1.0)"
+          fields:
+            frequency:
+              type: number
+              min: 0.0
+              max: 1.0
+              default: 0.25
+            duration:
+              type: number
+              min: 0.0
+              max: 1.0
+              default: 0.2
+            skills_applied:
+              type: number
+              min: 0.0
+              max: 1.0
+              default: 0.3
+            beneficiary_reach:
+              type: number
+              min: 0.0
+              max: 1.0
+              default: 0.25
+
+    # Guardrails (cannot be weakened by tenant overrides)
+    guardrails:
+      type: object
+      required: false
+      description: "Minimum thresholds that cannot be lowered by tenant overrides"
+      fields:
+        minFairnessThreshold:
+          type: number
+          min: 0.8
+          max: 1.0
+          default: 0.9
+          description: "Minimum demographic parity across locales"
+
+        minPrivacyRedaction:
+          type: boolean
+          default: true
+          description: "Privacy redaction cannot be disabled"
+
+        maxCostPerRequest:
+          type: number
+          min: 0
+          description: "Maximum cost per request in USD"
+
+    # Rollback Configuration
+    rollback:
+      type: object
+      required: false
+      fields:
+        previousVersion:
+          type: string
+          pattern: "^\\d+\\.\\d+\\.\\d+$"
+          description: "Version to rollback to if this override fails"
+
+        autoRollbackTriggers:
+          type: array
+          items:
+            type: string
+            enum: ["accuracy_drop", "latency_spike", "cost_overrun", "fairness_violation"]
+          description: "Conditions that trigger automatic rollback"
+
+        canaryPercentage:
+          type: number
+          min: 0
+          max: 100
+          default: 10
+          description: "Percentage of traffic to route to new override during canary"
+
+# Global Defaults
+globalDefaults:
+  description: "Default values applied when no tenant override exists"
+
+  q2q:
+    model: "gpt-4o-mini"
+    temperature: 0.3
+    maxTokens: 2000
+    weights:
+      confidence: 0.2
+      belonging: 0.2
+      language_proficiency: 0.2
+      job_readiness: 0.2
+      wellbeing: 0.2
+    thresholds:
+      confidence: 0.7
+      belonging: 0.7
+      language_proficiency: 0.7
+      job_readiness: 0.7
+      wellbeing: 0.7
+
+  sroi:
+    deadweightFactor: 0.1
+    attributionFactor: 0.85
+    dropOffRate: 0.25
+    discountRate: 0.035
+
+  vis:
+    weights:
+      frequency: 0.25
+      duration: 0.2
+      skills_applied: 0.3
+      beneficiary_reach: 0.25
+
+  guardrails:
+    minFairnessThreshold: 0.9
+    minPrivacyRedaction: true
+    maxCostPerRequest: 0.5

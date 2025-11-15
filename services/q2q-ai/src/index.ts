@@ -36,6 +36,10 @@ async function start() {
   const { registryRoutes } = await import('./routes/registry.js');
   app.register(registryRoutes);
 
+  // Import and register safety routes
+  const { safetyRoutes } = await import('./routes/safety.js');
+  app.register(safetyRoutes);
+
   // Start server
   try {
     await app.listen({ port: PORT, host: '0.0.0.0' });
@@ -56,6 +60,10 @@ async function start() {
     logger.info(`  POST /q2q/registry/models/:id/activate - Activate model`);
     logger.info(`  GET  /q2q/registry/models/active/:provider - Get active model`);
     logger.info(`  POST /q2q/registry/sync - Sync models from YAML`);
+    logger.info(`  POST /safety/check-prompt - Detect prompt injection attacks`);
+    logger.info(`  POST /safety/check-anomaly - Detect anomalies in feedback`);
+    logger.info(`  GET  /safety/blocked-requests - List blocked requests`);
+    logger.info(`  GET  /safety/stats - Safety metrics dashboard`);
   } catch (err) {
     logger.error(err);
     process.exit(1);

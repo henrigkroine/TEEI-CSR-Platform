@@ -668,7 +668,7 @@ Take the production-ready Corporate Cockpit from Phase B and transform it into a
 | H. Theming/Whitelabel | Multi-tenant branding | 1 | 0 | 0% ⏳ |
 | I. Testing & Hardening | E2E + visual + security | 1 | 0 | 0% ⏳ |
 
-**Last Updated**: 2025-11-14 by Worker (Execution Lead)
+**Last Updated**: 2025-11-15 by Worker (Execution Lead)
 
 **Phase C Execution Summary**:
 - **Agent Tasks Completed**: 8 (by 7 specialist agents)
@@ -1041,4 +1041,276 @@ cacheMiddleware({
 
 **Orchestrator**: Worker 2 Backend Lead (Claude)
 **Last Updated**: 2025-11-14
+
+---
+
+# Worker 2 Phase F: Continuous ModelOps, Tenant Calibration & AI-Act Readiness
+
+**Status**: 🚀 In Progress
+**Branch**: `claude/worker2-phaseF-modelops-tenant-calibration-01YbQC5aMBMA9iwuM3KhizsJ`
+**Started**: 2025-11-15
+**Priority**: P0 - Model Production Readiness
+**Target Completion**: TBD
+
+---
+
+## Mission
+
+Productionize Q2Q-v3 and SROI/VIS with enterprise-grade ModelOps:
+1. **Tenant-Specific Calibration**: Per-tenant weights/thresholds with guardrails
+2. **Online Evaluation**: Shadow mode, golden sets, interleaved tests
+3. **Safety & Abuse Detection**: Prompt injection shields, anomaly signals
+4. **AI-Act & CSRD Compliance**: Model cards, risk logs, data provenance
+5. **Cost/Latency SLOs**: Per-tenant budgets, autoswitch, cache warming
+6. **Continuous Labeling Loop**: Active learning queues, reviewer UI
+
+---
+
+## Team Structure (30 agents / 5 leads)
+
+### **Lead 1: Modeling Lead** (modeling-lead)
+**Responsibilities**: Taxonomy, thresholds, override rules
+**Agents**: 6-8 (tenant-calibrator, threshold-tuner, override-publisher, fairness-auditor, explainer-writer, lineage-verifier)
+
+### **Lead 2: Evaluation Lead** (eval-lead)
+**Responsibilities**: Shadow/interleaving/golden sets, quality dashboards
+**Agents**: 9-11 (shadow-runner, interleave-tester, golden-set-curator, drift-watcher, dashboards-author)
+
+### **Lead 3: Platform Lead** (platform-lead)
+**Responsibilities**: Registry, rollouts, fallbacks, cache policy
+**Agents**: 18, 19, 20, 25, 27 (cost-budgeter, cache-warmer, cold-start-tuner, release-manager, telemetry-owner)
+
+### **Lead 4: Privacy Lead** (privacy-lead)
+**Responsibilities**: Redaction, DP budgets, risk logs
+**Agents**: None direct - collaborates with security-tester (26)
+
+### **Lead 5: Compliance Lead** (compliance-lead)
+**Responsibilities**: AI-Act/CSRD/model cards
+**Agents**: 29, 30 (docs-scribe, risk-register-owner)
+
+### **Specialists (25 agents)**:
+- **Tenant-calibrator** (6): Compute per-tenant SROI/VIS/Q2Q weights
+- **Threshold-tuner** (7): Set confidence thresholds via ROC/PR
+- **Override-publisher** (8): Commit versioned overrides to registry
+- **Shadow-runner** (9): Run shadow inference without user exposure
+- **Interleave-tester** (10): A/B output interleaving
+- **Golden-set-curator** (11): Maintain tenant-tagged golden datasets
+- **Drift-watcher** (12): Monitor PSI/JS per tenant
+- **Prompt-shield-engineer** (13): Prompt injection detection
+- **Anomaly-signals-builder** (14): Flag outliers and fraud
+- **Fairness-auditor** (15): Locale/language parity checks
+- **Explainer-writer** (16): Per-section impact explanations
+- **Lineage-verifier** (17): Citation validity after overrides
+- **Cost-budgeter** (18): Enforce budgets, autoswitch
+- **Cache-warmer** (19): Pre-warm hot prompts
+- **Cold-start-tuner** (20): Minimize p95 spikes
+- **Reviewer-queue-owner** (21): Active learning queues
+- **Labeling-contracts** (22): Reviewer UI schema
+- **OpenAPI-publisher** (23): API documentation
+- **Dashboards-author** (24): Weekly quality/cost dashboards
+- **Release-manager** (25): Canary waves, rollback
+- **Security-tester** (26): Fuzz payloads/prompts
+- **Telemetry-owner** (27): Tag traces with model version
+- **i18n-eval-owner** (28): UK/NO corpus expansion
+- **Docs-scribe** (29): Compliance docs
+- **Risk-register-owner** (30): Model risk logs
+
+---
+
+## Workstreams & Ownership
+
+| WS | Focus | Owner | Agents | Status |
+|----|-------|-------|--------|--------|
+| W0 | Kickoff & Registry Prep | platform-lead | 8, 25 | ⏳ In Progress |
+| W1 | Tenant Calibration | modeling-lead | 6, 7, 17 | ⏳ Pending |
+| W2 | Online Evaluation | eval-lead | 9, 10, 11, 24 | ⏳ Pending |
+| W3 | Safety & Abuse | platform-lead | 13, 14, 26 | ⏳ Pending |
+| W4 | Cost/Latency SLOs | platform-lead | 18, 19, 20, 27 | ⏳ Pending |
+| W5 | Active Learning Loop | eval-lead | 21, 22, 28 | ⏳ Pending |
+| W6 | Compliance Packs | compliance-lead | 16, 29, 30 | ⏳ Pending |
+| W7 | Release & Rollback | platform-lead | 12, 25 | ✅ Complete |
+
+---
+
+## Deliverables
+
+### W0: Registry & Infrastructure
+**Files**:
+- `/packages/model-registry/` - Package init
+- `/packages/model-registry/src/index.ts` - Registry client
+- `/packages/model-registry/tenant-overrides/` - YAML override storage
+- `/packages/model-registry/schema.yaml` - Override validation schema
+
+**Acceptance**:
+- [ ] Model registry package scaffolded
+- [ ] Tenant override schema defined
+- [ ] Index and validation logic implemented
+
+---
+
+### W1: Tenant-Specific Calibration
+**Files**:
+- `/services/q2q-ai/src/calibration/tenant-weights.ts` - Per-tenant weight computation
+- `/services/q2q-ai/src/calibration/threshold-optimizer.ts` - ROC/PR-based threshold tuning
+- `/services/reporting/src/sroi/tenant_calibration.ts` - SROI tenant calibration
+- `/services/reporting/src/vis/tenant_calibration.ts` - VIS tenant calibration
+- `/packages/model-registry/tenant-overrides/example-tenant.yaml` - Sample override
+
+**Acceptance**:
+- [ ] Per-tenant weights computed from ground truth
+- [ ] Thresholds optimized via ROC/PR curves
+- [ ] Guardrails enforce minimum fairness/privacy
+- [ ] Rollback tested for all overrides
+- [ ] Lineage verified after calibration changes
+
+---
+
+### W2: Online Evaluation
+**Files**:
+- `/services/q2q-ai/src/online/shadow-eval.ts` - Shadow inference runner
+- `/services/q2q-ai/src/online/interleaving.ts` - A/B interleaving
+- `/services/q2q-ai/src/online/golden-sets.ts` - Golden dataset manager
+- `/services/q2q-ai/src/eval/drift.ts` - (Extend) PSI/JS per tenant
+- `/reports/weekly_model_quality.md` - Weekly dashboard template
+
+**Acceptance**:
+- [ ] Shadow mode runs without user exposure
+- [ ] Interleaved tests emit comparison metrics
+- [ ] Golden sets tagged by tenant and locale
+- [ ] Weekly quality dashboard auto-generated
+- [ ] Drift alerts routed per tenant
+
+---
+
+### W3: Safety & Abuse Detection
+**Files**:
+- `/services/q2q-ai/src/safety/prompt_shield.ts` - Prompt injection detection
+- `/services/q2q-ai/src/safety/anomaly_signals.ts` - Fraud/outlier signals
+- `/services/q2q-ai/src/routes/safety.ts` - Safety API endpoints
+
+**Acceptance**:
+- [ ] Prompt shield blocks known injection patterns
+- [ ] Anomaly signals flag suspicious inputs
+- [ ] <1% false positive rate on pilot data
+- [ ] Security tests pass (fuzzing, injection)
+
+---
+
+### W4: Cost/Latency SLOs
+**Files**:
+- `/services/q2q-ai/src/slo/budget-enforcer.ts` - Per-tenant budget tracking
+- `/services/q2q-ai/src/slo/autoswitch.ts` - Model autoswitch on budget breach
+- `/services/q2q-ai/src/slo/cache-warmer.ts` - Cache warming for hot prompts
+- `/services/q2q-ai/src/slo/cold-start-optimizer.ts` - Connection pooling, JIT caching
+- `/reports/cost_latency_slo.md` - SLO tracking report
+
+**Acceptance**:
+- [ ] Per-tenant budgets enforced
+- [ ] Autoswitch triggers on budget/latency thresholds
+- [ ] Cache warmers reduce cold-start spikes
+- [ ] p95 latency documented per tenant
+- [ ] Fallback policies tested
+
+---
+
+### W5: Active Learning Loop
+**Files**:
+- `/services/q2q-ai/src/labeling/active-queue.ts` - Disagreement sampling
+- `/services/q2q-ai/src/labeling/contracts.yaml` - Reviewer UI JSON schema
+- `/services/q2q-ai/src/eval/multilingual.ts` - (Extend) UK/NO corpus
+
+**Acceptance**:
+- [ ] Active learning queues created
+- [ ] Disagreement sampling prioritizes uncertain cases
+- [ ] Reviewer UI contracts defined
+- [ ] UK/NO golden sets expanded
+
+---
+
+### W6: Compliance Packs
+**Files**:
+- `/docs/compliance/Model_Cards.md` - Model cards for Q2Q/SROI/VIS
+- `/docs/compliance/AI_Act_Risk_Log.md` - AI Act risk assessment
+- `/docs/compliance/CSRD_Impact_Pack.md` - CSRD reporting pack
+- `/docs/compliance/Data_Provenance.md` - Data lineage documentation
+
+**Acceptance**:
+- [ ] Model cards completed (performance, bias, limitations)
+- [ ] AI Act risk log with mitigations
+- [ ] CSRD impact pack with explanations
+- [ ] Data provenance manifest
+
+---
+
+### W7: Release & Rollback
+**Files**:
+- `/services/q2q-ai/src/registry/rollout.ts` - Canary rollout manager ✅
+- `/services/q2q-ai/src/registry/rollback.ts` - One-click rollback ✅
+- `/services/q2q-ai/src/eval/drift-alerts.ts` - Drift alert routing ✅
+- `/scripts/publish-weekly-dashboard.ts` - Weekly dashboard publisher ✅
+- `/reports/weekly_model_quality.md` - (Weekly publish)
+
+**Acceptance**:
+- [x] Canary waves executed (10% → 50% → 100%) ✅
+- [x] Rollback tested and proven ✅
+- [x] Drift alerts routed correctly ✅
+- [x] Dashboards published weekly ✅
+
+---
+
+## Progress Tracking
+
+**Overall**: 4 / 42 tasks complete (9.5%)
+
+| Workstream | Tasks | Complete | % |
+|------------|-------|----------|---|
+| W0. Registry Prep | 3 | 0 | 0% ⏳ |
+| W1. Tenant Calibration | 5 | 0 | 0% ⏳ |
+| W2. Online Evaluation | 5 | 0 | 0% ⏳ |
+| W3. Safety & Abuse | 3 | 0 | 0% ⏳ |
+| W4. Cost/Latency SLOs | 5 | 0 | 0% ⏳ |
+| W5. Active Learning | 4 | 0 | 0% ⏳ |
+| W6. Compliance Packs | 4 | 0 | 0% ⏳ |
+| W7. Release & Rollback | 4 | 4 | 100% ✅ |
+
+**Last Updated**: 2025-11-15 by platform-lead (W7 Complete)
+
+---
+
+## Integration Points
+
+### Worker 1 (Security/Observability)
+- OTel traces tagged with model version + tenant override IDs
+- Secrets management for AI API keys
+- Security review for prompt shields
+
+### Worker 3 (Corporate Cockpit)
+- Model quality dashboards exposed in cockpit
+- Tenant calibration UI for admins
+- Cost/latency SLO visibility
+
+---
+
+## Non-Negotiables
+
+1. **Tenant overrides cannot weaken global fairness/privacy thresholds**
+2. **Online eval NEVER affects user-visible results without canary gates**
+3. **All diffs explainable and reversible (one-click rollback)**
+4. **Weekly quality dashboards mandatory**
+5. **<1% false positive rate on safety signals**
+6. **Per-tenant budgets enforced; autoswitch documented**
+
+---
+
+## Success Criteria
+
+- ✅ Per-tenant overrides committed with versions; rollback tested
+- ✅ Weekly quality dashboard shows online eval metrics (delta vs control)
+- ✅ Prompt shield blocks injections; anomaly signals <1% false positives
+- ✅ Cost/Latency SLOs met; cache warmers reduce cold-start
+- ✅ Active learning queues live; reviewer contracts defined
+- ✅ Compliance packs complete (Model Cards, AI-Act, CSRD, Provenance)
+- ✅ Canary waves executed; rollback proven; dashboards published
+
+---
 
