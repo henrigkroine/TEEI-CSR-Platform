@@ -8,6 +8,7 @@ import type {
 import ReportPreview from './ReportPreview';
 import type { GeneratedReport } from '../../types/reports';
 import { FocusTrap } from '../a11y/FocusManager';
+import { reportingClient, estimateReportCost, formatCost, ReportingAPIError } from '../../api/reporting';
 
 interface GenerateReportModalProps {
   companyId: string;
@@ -44,8 +45,11 @@ export default function GenerateReportModal({
   const [report, setReport] = useState<GeneratedReport | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorType, setErrorType] = useState<'general' | 'rate_limit' | 'budget' | 'timeout'>('general');
   const [progress, setProgress] = useState(0);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const [estimatedCost, setEstimatedCost] = useState<string | null>(null);
+  const [showCostWarning, setShowCostWarning] = useState(false);
 
   // Form state - Step 1: Configuration
   const [reportType, setReportType] = useState<ReportType>('quarterly');
@@ -83,9 +87,23 @@ export default function GenerateReportModal({
     }
   }, [isOpen, report]);
 
+  // Update cost estimate when options change
+  useEffect(() => {
+    const request: GenerateReportRequest = {
+      reportType,
+      period: { from: startDate, to: endDate },
+      options: { tone, length, includeCharts, deterministic },
+    };
+    const estimate = estimateReportCost(request);
+    setEstimatedCost(estimate.estimatedCostUsd);
+    // Show warning if estimated cost is high (>$0.50)
+    setShowCostWarning(parseFloat(estimate.estimatedCostUsd) > 0.5);
+  }, [reportType, startDate, endDate, tone, length, includeCharts, deterministic]);
+
   const handleGenerate = async () => {
     setLoading(true);
     setError(null);
+    setErrorType('general');
     setProgress(0);
 
     try {
@@ -113,26 +131,30 @@ export default function GenerateReportModal({
         setProgress(prev => Math.min(prev + 10, 90));
       }, 1000);
 
-      const response = await fetch(`/api/companies/${companyId}/gen-reports/generate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(request),
-      });
+      // Use reporting client to generate report
+      const data = await reportingClient.generateReport(request, companyId);
 
       clearInterval(progressInterval);
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to generate report');
-      }
-
-      const data: GeneratedReport = await response.json();
       setProgress(100);
       setReport(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      // Handle different error types
+      if (err instanceof ReportingAPIError) {
+        setError(err.message);
+
+        if (err.isRateLimited()) {
+          setErrorType('rate_limit');
+        } else if (err.isBudgetExceeded()) {
+          setErrorType('budget');
+        } else if (err.message.includes('timeout')) {
+          setErrorType('timeout');
+        } else {
+          setErrorType('general');
+        }
+      } else {
+        setError(err instanceof Error ? err.message : 'An error occurred while generating the report');
+        setErrorType('general');
+      }
     } finally {
       setLoading(false);
     }
@@ -230,10 +252,49 @@ export default function GenerateReportModal({
 
         {/* Content */}
         <div className="max-h-[calc(90vh-10rem)] overflow-y-auto p-6">
+          {/* Error Display */}
           {error && (
-            <div className="mb-4 rounded-md bg-red-50 p-4 text-red-600 border border-red-200" role="alert" aria-live="assertive">
-              <p className="font-medium">Error generating report</p>
+            <div className={`mb-4 rounded-md p-4 border ${
+              errorType === 'rate_limit' ? 'bg-orange-50 text-orange-600 border-orange-200' :
+              errorType === 'budget' ? 'bg-red-50 text-red-600 border-red-200' :
+              errorType === 'timeout' ? 'bg-yellow-50 text-yellow-600 border-yellow-200' :
+              'bg-red-50 text-red-600 border-red-200'
+            }`} role="alert" aria-live="assertive">
+              <p className="font-medium">
+                {errorType === 'rate_limit' && '⏱️ Rate Limit Exceeded'}
+                {errorType === 'budget' && '💰 Budget Exceeded'}
+                {errorType === 'timeout' && '⏰ Request Timeout'}
+                {errorType === 'general' && 'Error Generating Report'}
+              </p>
               <p className="text-sm mt-1">{error}</p>
+              {errorType === 'rate_limit' && (
+                <p className="text-sm mt-2">
+                  Please wait a few minutes before trying again. Rate limits help ensure fair usage for all users.
+                </p>
+              )}
+              {errorType === 'budget' && (
+                <p className="text-sm mt-2">
+                  Your AI generation budget has been exceeded. Contact your administrator to increase limits.
+                </p>
+              )}
+              {errorType === 'timeout' && (
+                <p className="text-sm mt-2">
+                  The request took too long. Try generating a briefer report or try again later.
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Cost Estimate Warning */}
+          {estimatedCost && showCostWarning && !loading && !error && (
+            <div className="mb-4 rounded-md bg-yellow-50 p-4 text-yellow-800 border border-yellow-200">
+              <p className="font-medium flex items-center gap-2">
+                💰 High Cost Estimate
+              </p>
+              <p className="text-sm mt-1">
+                This report will cost approximately {formatCost(estimatedCost)} to generate.
+                Consider using a briefer format to reduce costs.
+              </p>
             </div>
           )}
 
@@ -493,6 +554,11 @@ export default function GenerateReportModal({
                 <li>Generation takes 8-15 seconds</li>
                 <li>All claims backed by Q2Q evidence</li>
                 <li>Editable content with inline citation tracking</li>
+                {estimatedCost && (
+                  <li className="font-medium text-foreground">
+                    Estimated cost: {formatCost(estimatedCost)}
+                  </li>
+                )}
               </ul>
             </div>
           </div>

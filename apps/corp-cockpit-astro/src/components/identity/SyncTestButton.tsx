@@ -8,6 +8,7 @@
  */
 
 import React, { useState } from 'react';
+import { testSCIMSync, getErrorMessage } from '@/api/identity';
 
 interface SyncTestButtonProps {
   companyId: string;
@@ -16,21 +17,10 @@ interface SyncTestButtonProps {
 interface SyncTestResult {
   status: 'success' | 'error';
   timestamp: string;
-  users_found: number;
-  groups_found: number;
-  users_to_create: number;
-  users_to_update: number;
-  users_to_delete: number;
-  groups_to_create: number;
-  groups_to_update: number;
-  groups_to_delete: number;
-  validation_errors: Array<{
-    resource_type: 'user' | 'group';
-    resource_id: string;
-    error: string;
-  }>;
-  connection_status: 'ok' | 'failed';
-  response_time_ms: number;
+  usersFound: number;
+  groupsFound: number;
+  latency: number;
+  errors: string[];
   message?: string;
 }
 
@@ -43,55 +33,42 @@ export default function SyncTestButton({ companyId }: SyncTestButtonProps) {
     setIsLoading(true);
 
     try {
-      // TODO: Call Worker 1 API: POST /identity/scim/test
-      const response = await fetch(`/api/identity/scim/${companyId}/test`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      });
+      // Call Worker 1 API: POST /v1/identity/scim-config/{companyId}/test-sync
+      // The API client will use mock data as fallback if USE_REAL_IDENTITY_API is false
+      const result = await testSCIMSync(companyId);
 
-      if (response.ok) {
-        const result = await response.json();
-        setTestResult(result);
-        setShowResults(true);
-      } else {
-        const errorData = await response.json();
-        setTestResult({
-          status: 'error',
-          timestamp: new Date().toISOString(),
-          users_found: 0,
-          groups_found: 0,
-          users_to_create: 0,
-          users_to_update: 0,
-          users_to_delete: 0,
-          groups_to_create: 0,
-          groups_to_update: 0,
-          groups_to_delete: 0,
-          validation_errors: [],
-          connection_status: 'failed',
-          response_time_ms: 0,
-          message: errorData.error || 'Failed to run sync test',
-        });
-        setShowResults(true);
-      }
-    } catch (error) {
-      console.error('Sync test failed:', error);
+      setTestResult({
+        status: 'success',
+        timestamp: new Date().toISOString(),
+        usersFound: result.usersFound,
+        groupsFound: result.groupsFound,
+        latency: result.latency,
+        errors: result.errors,
+        message: result.success ? undefined : 'Some validation errors occurred',
+      });
+      setShowResults(true);
+    } catch (err) {
+      const errorMessage = getErrorMessage(err);
+      console.error('Sync test failed:', err);
+
       setTestResult({
         status: 'error',
         timestamp: new Date().toISOString(),
-        users_found: 0,
-        groups_found: 0,
-        users_to_create: 0,
-        users_to_update: 0,
-        users_to_delete: 0,
-        groups_to_create: 0,
-        groups_to_update: 0,
-        groups_to_delete: 0,
-        validation_errors: [],
-        connection_status: 'failed',
-        response_time_ms: 0,
-        message: error instanceof Error ? error.message : 'Network error',
+        usersFound: 0,
+        groupsFound: 0,
+        latency: 0,
+        errors: [errorMessage],
+        message: 'Failed to connect to SCIM endpoint',
       });
       setShowResults(true);
+
+      // In development mode, show a helpful message
+      if (import.meta.env.DEV) {
+        console.warn(
+          '[SCIM Sync Test] API call failed. Using mock data. ' +
+          'Set USE_REAL_IDENTITY_API=true in .env to use real API.'
+        );
+      }
     } finally {
       setIsLoading(false);
     }
@@ -155,7 +132,7 @@ export default function SyncTestButton({ companyId }: SyncTestButtonProps) {
                 </div>
                 {testResult.status === 'success' && (
                   <div className="response-time">
-                    {testResult.response_time_ms}ms
+                    {testResult.latency}ms
                   </div>
                 )}
               </div>
@@ -172,66 +149,22 @@ export default function SyncTestButton({ companyId }: SyncTestButtonProps) {
                   <div className="stats-grid">
                     <div className="stat-card">
                       <div className="stat-label">Users Found</div>
-                      <div className="stat-value">{testResult.users_found}</div>
+                      <div className="stat-value">{testResult.usersFound}</div>
                     </div>
                     <div className="stat-card">
                       <div className="stat-label">Groups Found</div>
-                      <div className="stat-value">{testResult.groups_found}</div>
+                      <div className="stat-value">{testResult.groupsFound}</div>
                     </div>
                   </div>
 
-                  {/* Pending Changes */}
-                  <div className="changes-section">
-                    <h4>Pending Changes</h4>
-                    <div className="changes-grid">
-                      <div className="change-group">
-                        <h5>Users</h5>
-                        <ul>
-                          <li>
-                            <span className="change-icon create">+</span>
-                            {testResult.users_to_create} to create
-                          </li>
-                          <li>
-                            <span className="change-icon update">~</span>
-                            {testResult.users_to_update} to update
-                          </li>
-                          <li>
-                            <span className="change-icon delete">-</span>
-                            {testResult.users_to_delete} to delete
-                          </li>
-                        </ul>
-                      </div>
-                      <div className="change-group">
-                        <h5>Groups</h5>
-                        <ul>
-                          <li>
-                            <span className="change-icon create">+</span>
-                            {testResult.groups_to_create} to create
-                          </li>
-                          <li>
-                            <span className="change-icon update">~</span>
-                            {testResult.groups_to_update} to update
-                          </li>
-                          <li>
-                            <span className="change-icon delete">-</span>
-                            {testResult.groups_to_delete} to delete
-                          </li>
-                        </ul>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Validation Errors */}
-                  {testResult.validation_errors.length > 0 && (
+                  {/* Sync Errors */}
+                  {testResult.errors.length > 0 && (
                     <div className="validation-errors">
-                      <h4>Validation Errors ({testResult.validation_errors.length})</h4>
+                      <h4>Sync Errors ({testResult.errors.length})</h4>
                       <ul>
-                        {testResult.validation_errors.map((err, idx) => (
+                        {testResult.errors.map((err, idx) => (
                           <li key={idx}>
-                            <span className="error-resource">
-                              {err.resource_type}: {err.resource_id}
-                            </span>
-                            <span className="error-message">{err.error}</span>
+                            <span className="error-message">{err}</span>
                           </li>
                         ))}
                       </ul>
@@ -466,76 +399,12 @@ export default function SyncTestButton({ companyId }: SyncTestButtonProps) {
           color: #3b82f6;
         }
 
-        .changes-section {
-          background: #f9fafb;
-          padding: 20px;
-          border-radius: 8px;
-          margin-bottom: 24px;
-        }
-
-        .changes-section h4 {
-          margin: 0 0 16px;
-          font-size: 1rem;
-          color: #111827;
-        }
-
-        .changes-grid {
-          display: grid;
-          grid-template-columns: repeat(2, 1fr);
-          gap: 20px;
-        }
-
-        .change-group h5 {
-          margin: 0 0 12px;
-          font-size: 0.9375rem;
-          color: #6b7280;
-        }
-
-        .change-group ul {
-          list-style: none;
-          padding: 0;
-          margin: 0;
-        }
-
-        .change-group li {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          padding: 6px 0;
-          font-size: 0.9375rem;
-        }
-
-        .change-icon {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          width: 20px;
-          height: 20px;
-          border-radius: 50%;
-          font-weight: 700;
-          font-size: 0.875rem;
-        }
-
-        .change-icon.create {
-          background: #d1fae5;
-          color: #065f46;
-        }
-
-        .change-icon.update {
-          background: #dbeafe;
-          color: #1e40af;
-        }
-
-        .change-icon.delete {
-          background: #fee2e2;
-          color: #991b1b;
-        }
-
         .validation-errors {
           background: #fef2f2;
           border: 1px solid #fca5a5;
           padding: 16px;
           border-radius: 6px;
+          margin-top: 24px;
         }
 
         .validation-errors h4 {
@@ -545,33 +414,19 @@ export default function SyncTestButton({ companyId }: SyncTestButtonProps) {
         }
 
         .validation-errors ul {
-          list-style: none;
-          padding: 0;
+          list-style: disc;
+          padding-left: 24px;
           margin: 0;
         }
 
         .validation-errors li {
-          padding: 8px 0;
-          border-bottom: 1px solid #fecaca;
-        }
-
-        .validation-errors li:last-child {
-          border-bottom: none;
-        }
-
-        .error-resource {
-          display: block;
-          font-family: 'Courier New', monospace;
-          font-size: 0.8125rem;
-          font-weight: 600;
-          color: #7f1d1d;
-          margin-bottom: 4px;
+          padding: 6px 0;
+          color: #991b1b;
         }
 
         .error-message {
-          display: block;
-          font-size: 0.875rem;
-          color: #991b1b;
+          font-size: 0.9375rem;
+          color: #7f1d1d;
         }
 
         .modal-footer {
@@ -612,8 +467,7 @@ export default function SyncTestButton({ companyId }: SyncTestButtonProps) {
         }
 
         @media (max-width: 640px) {
-          .stats-grid,
-          .changes-grid {
+          .stats-grid {
             grid-template-columns: 1fr;
           }
         }

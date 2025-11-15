@@ -1,9 +1,9 @@
 # Generative Reporting Assistant - Technical Documentation
 
-**Version**: 1.0
-**Date**: 2025-11-13
+**Version**: 1.1
+**Date**: 2025-11-14
 **Owner**: AI & Safety Lead (Worker 3)
-**Status**: 🚧 Planning Phase
+**Status**: ✅ IMPLEMENTED
 
 ---
 
@@ -57,12 +57,12 @@ Export to PDF (with citations in footnotes)
 interface GenerateReportRequest {
   companyId: string;           // Tenant ID
   period: {
-    start: string;             // ISO 8601 date (e.g., "2024-01-01")
-    end: string;               // ISO 8601 date (e.g., "2024-03-31")
+    start: string;             // ISO 8601 date (e.g., "2025-10-01")
+    end: string;               // ISO 8601 date (e.g., "2025-12-31")
   };
   filters?: {
     programs?: string[];       // e.g., ["buddy", "language"]
-    cohorts?: string[];        // e.g., ["cohort-2024-Q1"]
+    cohorts?: string[];        // e.g., ["cohort-2025-Q4"]
     metrics?: string[];        // e.g., ["sroi", "vis", "integration_score"]
   };
   options?: {
@@ -85,7 +85,7 @@ interface GenerateReportResponse {
     citations: Citation[];     // Evidence citations
   };
   metadata: {
-    model: string;             // e.g., "gpt-4-turbo-2024-04-09"
+    model: string;             // e.g., "gpt-4-turbo-2025-05-13"
     promptVersion: string;     // e.g., "v2.1"
     tokensUsed: number;        // Total tokens consumed
     seed?: number;             // Seed used (if provided)
@@ -102,7 +102,7 @@ interface Citation {
   id: string;                  // Citation ID (e.g., "cite-001")
   evidenceId: string;          // Q2Q evidence snippet ID
   snippetText: string;         // Anonymized snippet (redacted)
-  source: string;              // e.g., "Buddy feedback, 2024-Q1"
+  source: string;              // e.g., "Buddy feedback, 2025-Q4"
   confidence: number;          // Model confidence (0-1)
 }
 ```
@@ -113,8 +113,8 @@ interface Citation {
 {
   "companyId": "uuid-company-123",
   "period": {
-    "start": "2024-01-01",
-    "end": "2024-03-31"
+    "start": "2025-10-01",
+    "end": "2025-12-31"
   },
   "filters": {
     "programs": ["buddy", "language"],
@@ -134,12 +134,12 @@ interface Citation {
 ```json
 {
   "reportId": "report-uuid-456",
-  "generatedAt": "2024-11-13T14:30:00Z",
+  "generatedAt": "2025-11-14T14:30:00Z",
   "narrative": {
     "sections": [
       {
         "title": "Executive Summary",
-        "content": "In Q1 2024, your CSR programs achieved a 3.2x Social Return on Investment (SROI) [citation:cite-001] with significant improvements in participant confidence [citation:cite-002] and belonging [citation:cite-003]. The Buddy program saw 89% completion rates [citation:cite-004], while Language Connect participants progressed an average of 1.2 CEFR levels [citation:cite-005].",
+        "content": "In Q4 2025, your CSR programs achieved a 3.2x Social Return on Investment (SROI) [citation:cite-001] with significant improvements in participant confidence [citation:cite-002] and belonging [citation:cite-003]. The Buddy program saw 89% completion rates [citation:cite-004], while Language Connect participants progressed an average of 1.2 CEFR levels [citation:cite-005].",
         "order": 1
       },
       {
@@ -167,7 +167,7 @@ interface Citation {
     ]
   },
   "metadata": {
-    "model": "gpt-4-turbo-2024-04-09",
+    "model": "gpt-4-turbo-2025-05-13",
     "promptVersion": "v2.1",
     "tokensUsed": 2847,
     "seed": 42
@@ -251,6 +251,22 @@ Return JSON:
   ]
 }
 `;
+```
+
+**Example with current dates**:
+```typescript
+const prompt = quarterlyReportPrompt(
+  {
+    sroi: 3.2,
+    vis: 4.8,
+    integrationScore: 0.87,
+    participantCount: 156,
+    completionRate: 0.89
+  },
+  evidenceSnippets,
+  { start: '2025-10-01', end: '2025-12-31' },
+  { name: 'Example Corp' }
+);
 ```
 
 ### Prompt Versioning
@@ -404,8 +420,8 @@ const response = await openai.chat.completions.create({
 const modelProvider = process.env.LLM_PROVIDER ?? 'openai'; // 'openai' | 'anthropic'
 
 const model = modelProvider === 'openai'
-  ? 'gpt-4-turbo-2024-04-09'
-  : 'claude-3-opus-20240229';
+  ? 'gpt-4-turbo-2025-05-13'
+  : 'claude-3-opus-20250109';
 ```
 
 **Abstraction**: Use unified interface for provider switching.
@@ -531,7 +547,7 @@ const GenerateReportModal: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           companyId: currentCompany.id,
-          period: { start: '2024-01-01', end: '2024-03-31' },
+          period: { start: '2025-10-01', end: '2025-12-31' },
           filters: selectedFilters,
         }),
       });
@@ -611,6 +627,6 @@ const GenerateReportModal: React.FC = () => {
 
 ---
 
-**Document Status**: 🚧 Planning Phase (to be updated during implementation)
-**Last Updated**: 2025-11-13
+**Document Status**: ✅ IMPLEMENTED (Phase D)
+**Last Updated**: 2025-11-14
 **Owner**: AI & Safety Lead (Worker 3)

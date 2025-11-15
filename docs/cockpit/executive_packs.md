@@ -271,9 +271,9 @@ Content-Type: application/json
 **Response (202 Accepted)**
 ```json
 {
-  "exportId": "RPT-COMPANY-2024Q4-abc123",
+  "exportId": "RPT-COMPANY-2025Q4-abc123",
   "message": "Export generation started",
-  "statusUrl": "/exports/RPT-COMPANY-2024Q4-abc123/status"
+  "statusUrl": "/exports/RPT-COMPANY-2025Q4-abc123/status"
 }
 ```
 
@@ -286,13 +286,13 @@ GET /exports/{exportId}/status
 **Response (200 OK)**
 ```json
 {
-  "exportId": "RPT-COMPANY-2024Q4-abc123",
+  "exportId": "RPT-COMPANY-2025Q4-abc123",
   "status": "completed",
   "progress": 100,
   "message": "Export completed",
   "pdfUrl": "/exports/.../report.pdf",
   "pptxUrl": "/exports/.../presentation.pptx",
-  "completedAt": "2024-12-01T10:30:00Z"
+  "completedAt": "2025-11-14T14:30:00Z"
 }
 ```
 
@@ -326,10 +326,10 @@ POST /verify/signature
 Content-Type: application/json
 
 {
-  "reportId": "RPT-COMPANY-2024Q4-abc123",
+  "reportId": "RPT-COMPANY-2025Q4-abc123",
   "signature": "hex-encoded-signature",
   "approverEmail": "approver@company.com",
-  "approvedAt": "2024-12-01T10:00:00Z"
+  "approvedAt": "2025-11-14T10:00:00Z"
 }
 ```
 
@@ -450,5 +450,5 @@ For assistance with Executive Packs:
 
 ---
 
-*Last Updated: December 2024*
-*Version: 1.0.0*
+*Last Updated: November 2025*
+*Version: 1.1.0*
