@@ -5,8 +5,8 @@
  */
 
 import { useState } from 'react';
-import BrandingConfig from './BrandingConfig';
-import ThemeEditor from './ThemeEditor';
+import { BrandingConfig } from './BrandingConfig';
+import { ThemeEditor } from './ThemeEditor';
 import APIKeyManager from './APIKeyManager';
 import AuditLog from './AuditLog';
 import WeightOverrides from './WeightOverrides';

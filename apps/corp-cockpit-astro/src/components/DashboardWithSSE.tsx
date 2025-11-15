@@ -45,13 +45,23 @@ export default function DashboardWithSSE({
       {/* Connection status banner (only shown when not connected) */}
       {showBanner && (
         <ConnectionStatusBanner
-          connection={connection}
+          state={connection.state}
+          retryAttempt={0}
+          maxRetries={10}
+          error={connection.error}
           onDismiss={() => setShowBanner(false)}
         />
       )}
 
       {/* Floating connection status indicator */}
-      <ConnectionStatus connection={connection} position="top-right" />
+      <ConnectionStatus
+        state={connection.state}
+        retryAttempt={0}
+        maxRetries={10}
+        error={connection.error}
+        lastEventId={connection.lastEventId}
+        position="top-right"
+      />
 
       {/* Last update indicator */}
       {lastUpdate && (

@@ -146,7 +146,12 @@ html.dark {
   }
 
   .btn-secondary {
-    @apply btn border border-border bg-background hover:bg-border/50;
+    @apply btn border border-border bg-background;
+    transition: opacity 0.2s;
+  }
+
+  .btn-secondary:hover {
+    opacity: 0.8;
   }
 
   .card {
