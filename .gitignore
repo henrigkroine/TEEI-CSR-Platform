@@ -53,6 +53,8 @@ coverage/
 .stylelintcache
 .parcel-cache
 .cache/
+*.tsbuildinfo
+tsconfig.tsbuildinfo
 
 # Temporary files
 tmp/
