@@ -41,6 +41,52 @@ const canOverrideWeights = hasPermission(user.role, 'OVERRIDE_WEIGHTS');
     </div>
   </div>
 
+  <!-- Quick Links -->
+  <div class="quick-links">
+    <a href={`/${lang}/cockpit/${companyId}/admin/scheduler`} class="quick-link">
+      <span class="icon">📅</span>
+      <div>
+        <h3>Board Pack Scheduler</h3>
+        <p>Automate board pack delivery</p>
+      </div>
+    </a>
+    <a href={`/${lang}/cockpit/${companyId}/admin/residency`} class="quick-link">
+      <span class="icon">🌍</span>
+      <div>
+        <h3>Data Residency</h3>
+        <p>Control data location</p>
+      </div>
+    </a>
+    <a href={`/${lang}/cockpit/${companyId}/admin/sla`} class="quick-link">
+      <span class="icon">📊</span>
+      <div>
+        <h3>SLA Dashboard</h3>
+        <p>Monitor service levels</p>
+      </div>
+    </a>
+    <a href={`/${lang}/cockpit/${companyId}/admin/domains`} class="quick-link">
+      <span class="icon">🔒</span>
+      <div>
+        <h3>Domain Allow-List</h3>
+        <p>Manage CORS & embedding</p>
+      </div>
+    </a>
+    <a href={`/${lang}/cockpit/${companyId}/admin/embed-tokens`} class="quick-link">
+      <span class="icon">🎫</span>
+      <div>
+        <h3>Embed Tokens</h3>
+        <p>API & embed credentials</p>
+      </div>
+    </a>
+    <a href={`/${lang}/cockpit/${companyId}/admin/governance`} class="quick-link">
+      <span class="icon">⚖️</span>
+      <div>
+        <h3>Governance</h3>
+        <p>SSO, branding, & policies</p>
+      </div>
+    </a>
+  </div>
+
   <div class="admin-grid">
     <!-- API Key Management -->
     {canManageAPIKeys && (
@@ -189,8 +235,52 @@ const canOverrideWeights = hasPermission(user.role, 'OVERRIDE_WEIGHTS');
     font-size: 0.9375rem;
   }
 
+  .quick-links {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: calc(var(--spacing-unit) * 3);
+    margin-bottom: calc(var(--spacing-unit) * 6);
+  }
+
+  .quick-link {
+    display: flex;
+    align-items: center;
+    gap: calc(var(--spacing-unit) * 2);
+    padding: calc(var(--spacing-unit) * 3);
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+    color: white;
+    text-decoration: none;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-md);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+
+  .quick-link:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .quick-link .icon {
+    font-size: 2rem;
+  }
+
+  .quick-link h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: calc(var(--spacing-unit) * 0.5);
+  }
+
+  .quick-link p {
+    font-size: 0.8125rem;
+    opacity: 0.9;
+  }
+
   @media (max-width: 768px) {
     .admin-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .quick-links {
       grid-template-columns: 1fr;
     }
 
