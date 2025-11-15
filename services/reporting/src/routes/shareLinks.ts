@@ -25,6 +25,12 @@ import {
   sanitizeFilterConfig,
   type ShareLinkPayload,
 } from '../../utils/signedLinks.js';
+import { validateIPAllowlist, validateRequestIP, getClientIP } from '../utils/ipValidation.js';
+import { getDefaultWatermarkPolicy, validateWatermarkPolicy, generateWatermarkMetadata, type WatermarkPolicyType } from '../utils/watermarking.js';
+import { validateUserAccess, type AccessType, type UserRole } from '../utils/sharingRBAC.js';
+import { createServiceLogger } from '@teei/shared-utils';
+
+const logger = createServiceLogger('reporting:shareLinks');
 
 interface CompanyParams {
   companyId: string;
@@ -61,6 +67,36 @@ export async function shareLinksRoutes(fastify: FastifyInstance) {
           filter_config: { type: 'object' },
           ttl_days: { type: 'number', minimum: 1, maximum: 90, default: 7 },
           boardroom_mode: { type: 'boolean', default: false },
+          // Phase H: Enhanced Sharing
+          access_type: {
+            type: 'string',
+            enum: ['public_link', 'org_share', 'group_share'],
+            default: 'public_link',
+            description: 'Access control type',
+          },
+          allowed_ips: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'IP allowlist (CIDR notation supported)',
+          },
+          ip_allowlist_enabled: { type: 'boolean', default: false },
+          watermark_policy: {
+            type: 'string',
+            enum: ['none', 'standard', 'strict', 'custom'],
+            default: 'standard',
+            description: 'Watermark policy to apply',
+          },
+          watermark_text: { type: 'string', maxLength: 500 },
+          group_ids: {
+            type: 'array',
+            items: { type: 'string', format: 'uuid' },
+            description: 'Group IDs for group_share access type',
+          },
+          role_restrictions: {
+            type: 'array',
+            items: { type: 'string', enum: ['admin', 'manager', 'member', 'viewer', 'guest'] },
+            description: 'Required roles for access',
+          },
         },
       },
       response: {
@@ -87,7 +123,19 @@ export async function shareLinksRoutes(fastify: FastifyInstance) {
     },
     async handler(request, reply) {
       const { companyId } = request.params;
-      const { saved_view_id, filter_config, ttl_days, boardroom_mode } = request.body;
+      const {
+        saved_view_id,
+        filter_config,
+        ttl_days,
+        boardroom_mode,
+        access_type,
+        allowed_ips,
+        ip_allowlist_enabled,
+        watermark_policy,
+        watermark_text,
+        group_ids,
+        role_restrictions,
+      } = request.body;
 
       const userId = (request as any).user?.id;
       if (!userId) {
@@ -98,6 +146,39 @@ export async function shareLinksRoutes(fastify: FastifyInstance) {
       if (!saved_view_id && !filter_config) {
         return reply.code(400).send({
           error: 'Must provide either saved_view_id or filter_config',
+        });
+      }
+
+      // Phase H: Validate IP allowlist if enabled
+      if (ip_allowlist_enabled && allowed_ips && allowed_ips.length > 0) {
+        const ipValidation = validateIPAllowlist(allowed_ips);
+        if (!ipValidation.valid) {
+          return reply.code(400).send({
+            error: 'Invalid IP allowlist',
+            details: ipValidation.errors,
+          });
+        }
+      }
+
+      // Phase H: Validate watermark policy if custom
+      if (watermark_policy === 'custom' && watermark_text) {
+        const policy = {
+          type: 'custom' as WatermarkPolicyType,
+          text: watermark_text,
+        };
+        const wmValidation = validateWatermarkPolicy(policy);
+        if (!wmValidation.valid) {
+          return reply.code(400).send({
+            error: 'Invalid watermark policy',
+            details: wmValidation.errors,
+          });
+        }
+      }
+
+      // Phase H: Validate group_share requires group_ids
+      if (access_type === 'group_share' && (!group_ids || group_ids.length === 0)) {
+        return reply.code(400).send({
+          error: 'group_share access type requires at least one group_id',
         });
       }
 
@@ -127,12 +208,13 @@ export async function shareLinksRoutes(fastify: FastifyInstance) {
         boardroomMode: boardroom_mode || false,
       });
 
-      // Store in database
+      // Store in database with Phase H enhancements
       const result = await pool.query(
         `INSERT INTO share_links
-         (link_id, company_id, created_by, saved_view_id, filter_config, signature, expires_at, boardroom_mode)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-         RETURNING id, link_id, expires_at, boardroom_mode, access_count, created_at`,
+         (link_id, company_id, created_by, saved_view_id, filter_config, signature, expires_at, boardroom_mode,
+          access_type, allowed_ips, ip_allowlist_enabled, watermark_policy, watermark_text, group_ids, role_restrictions)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+         RETURNING id, link_id, expires_at, boardroom_mode, access_type, ip_allowlist_enabled, watermark_policy, access_count, created_at`,
         [
           signedLink.linkId,
           companyId,
@@ -142,10 +224,44 @@ export async function shareLinksRoutes(fastify: FastifyInstance) {
           signedLink.signature,
           signedLink.expiresAt,
           boardroom_mode || false,
+          access_type || 'public_link',
+          allowed_ips ? JSON.stringify(allowed_ips) : null,
+          ip_allowlist_enabled || false,
+          watermark_policy || 'standard',
+          watermark_text || null,
+          group_ids ? JSON.stringify(group_ids) : null,
+          role_restrictions ? JSON.stringify(role_restrictions) : null,
         ]
       );
 
       const link = result.rows[0];
+
+      // Audit log
+      await pool.query(
+        `INSERT INTO sharing_audit_log (company_id, share_link_id, action, actor_id, ip_address, metadata)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [
+          companyId,
+          link.id,
+          'created',
+          userId,
+          getClientIP(request),
+          JSON.stringify({
+            access_type,
+            ip_allowlist_enabled,
+            watermark_policy,
+            boardroom_mode,
+          }),
+        ]
+      );
+
+      logger.info('Share link created', {
+        linkId: link.link_id,
+        companyId,
+        accessType: access_type,
+        ipAllowlistEnabled: ip_allowlist_enabled,
+        watermarkPolicy: watermark_policy,
+      });
 
       // Generate full URL with base URL from request
       const baseURL = `${request.protocol}://${request.hostname}`;
@@ -156,6 +272,9 @@ export async function shareLinksRoutes(fastify: FastifyInstance) {
         url: fullURL,
         expires_at: link.expires_at.toISOString(),
         boardroom_mode: link.boardroom_mode,
+        access_type: link.access_type,
+        ip_allowlist_enabled: link.ip_allowlist_enabled,
+        watermark_policy: link.watermark_policy,
         access_count: link.access_count,
         created_at: link.created_at.toISOString(),
       });
@@ -426,9 +545,11 @@ export async function shareLinksRoutes(fastify: FastifyInstance) {
     async handler(request, reply) {
       const { linkId } = request.params;
 
-      // Fetch link from database
+      // Fetch link from database with Phase H enhancements
       const result = await pool.query(
-        `SELECT id, company_id, filter_config, signature, expires_at, revoked_at, boardroom_mode, created_by
+        `SELECT id, company_id, filter_config, signature, expires_at, revoked_at, boardroom_mode, created_by,
+                access_type, allowed_ips, ip_allowlist_enabled, watermark_policy, watermark_text,
+                group_ids, role_restrictions
          FROM share_links
          WHERE link_id = $1`,
         [linkId]
@@ -443,6 +564,27 @@ export async function shareLinksRoutes(fastify: FastifyInstance) {
       }
 
       const link = result.rows[0];
+
+      // Phase H: Validate IP allowlist
+      if (link.ip_allowlist_enabled) {
+        const allowedIps = link.allowed_ips ? JSON.parse(link.allowed_ips) : [];
+        const ipValidation = validateRequestIP(request, {
+          ip_allowlist_enabled: link.ip_allowlist_enabled,
+          allowed_ips: allowedIps,
+        });
+
+        if (!ipValidation.allowed) {
+          await logAccess(link.id, request, false, 'ip_blocked');
+          logger.warn('Share link access denied - IP not in allowlist', {
+            linkId,
+            clientIP: ipValidation.ip,
+          });
+          return reply.code(403).send({
+            error: 'Access denied',
+            reason: 'ip_not_allowed',
+          });
+        }
+      }
 
       // Validate signature and expiry
       const payload: ShareLinkPayload = {
@@ -464,35 +606,97 @@ export async function shareLinksRoutes(fastify: FastifyInstance) {
         });
       }
 
-      // Log successful access
-      await logAccess(link.id, request, true);
+      // Phase H: Validate RBAC for org/group shares
+      const user = (request as any).user;
+      if (link.access_type !== 'public_link') {
+        const groupIds = link.group_ids ? JSON.parse(link.group_ids) : [];
+        const roleRestrictions = link.role_restrictions ? JSON.parse(link.role_restrictions) : [];
+
+        const rbacValidation = await validateUserAccess(
+          user || null,
+          {
+            accessType: link.access_type as AccessType,
+            groupIds,
+            roleRestrictions,
+            companyId: link.company_id,
+          }
+        );
+
+        if (!rbacValidation.allowed) {
+          await logAccess(link.id, request, false, 'rbac_denied');
+          logger.warn('Share link access denied - RBAC validation failed', {
+            linkId,
+            userId: user?.id,
+            reason: rbacValidation.reason,
+          });
+          return reply.code(403).send({
+            error: 'Access denied',
+            reason: rbacValidation.reason || 'insufficient_permissions',
+          });
+        }
+      }
+
+      // Phase H: Generate watermark metadata
+      const watermarkPolicy = getDefaultWatermarkPolicy(link.watermark_policy as WatermarkPolicyType);
+      if (link.watermark_text) {
+        watermarkPolicy.text = link.watermark_text;
+      }
+
+      const watermarkMeta = generateWatermarkMetadata(watermarkPolicy, {
+        shareLink_id: linkId,
+        accessedBy: user?.id || user?.email,
+        accessedAt: new Date(),
+        clientIP: getClientIP(request),
+        companyName: undefined,  // TODO: Fetch company name if needed
+      });
+
+      // Log successful access with watermark info
+      await logAccess(link.id, request, true, undefined, watermarkPolicy.type !== 'none');
+
+      // Update access count and last accessed timestamp
+      await pool.query(
+        `UPDATE share_links
+         SET access_count = access_count + 1, last_accessed_at = NOW()
+         WHERE id = $1`,
+        [link.id]
+      );
+
+      logger.info('Share link accessed', {
+        linkId,
+        accessType: link.access_type,
+        watermarkApplied: watermarkPolicy.type !== 'none',
+        userId: user?.id,
+      });
 
       return reply.send({
         company_id: link.company_id,
         filter_config: link.filter_config,
         boardroom_mode: link.boardroom_mode,
+        watermark: watermarkPolicy.type !== 'none' ? watermarkMeta : undefined,
       });
     },
   });
 }
 
 /**
- * Helper: Log share link access attempt
+ * Helper: Log share link access attempt (Phase H enhanced)
  */
 async function logAccess(
   shareLinkId: string,
   request: FastifyRequest,
   accessGranted: boolean,
-  failureReason?: string
+  failureReason?: string,
+  watermarkApplied: boolean = false
 ) {
-  const ipAddress = request.ip;
+  const ipAddress = getClientIP(request);
   const userAgent = request.headers['user-agent'] || null;
   const referer = request.headers['referer'] || null;
+  const userId = (request as any).user?.id || null;
 
   await pool.query(
     `INSERT INTO share_link_access_log
-     (share_link_id, ip_address, user_agent, referer, access_granted, failure_reason)
-     VALUES ($1, $2, $3, $4, $5, $6)`,
-    [shareLinkId, ipAddress, userAgent, referer, accessGranted, failureReason || null]
+     (share_link_id, ip_address, user_agent, referer, user_id, access_granted, failure_reason, watermark_applied)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+    [shareLinkId, ipAddress, userAgent, referer, userId, accessGranted, failureReason || null, watermarkApplied]
   );
 }
