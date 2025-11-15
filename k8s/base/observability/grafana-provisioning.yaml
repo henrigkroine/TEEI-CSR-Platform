@@ -1,0 +1,502 @@
+---
+# Grafana datasource configuration - Prometheus
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-datasources
+  labels:
+    app: grafana
+    component: observability
+    part-of: teei-csr-platform
+data:
+  datasources.yaml: |
+    apiVersion: 1
+    datasources:
+    - name: Prometheus
+      type: prometheus
+      access: proxy
+      url: http://prometheus:9090
+      isDefault: true
+      editable: false
+      jsonData:
+        httpMethod: POST
+        timeInterval: 30s
+
+---
+# Grafana dashboard provider configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-providers
+  labels:
+    app: grafana
+    component: observability
+    part-of: teei-csr-platform
+data:
+  dashboards.yaml: |
+    apiVersion: 1
+    providers:
+    - name: 'TEEI Platform Dashboards'
+      orgId: 1
+      folder: 'TEEI'
+      type: file
+      disableDeletion: true
+      updateIntervalSeconds: 30
+      allowUiUpdates: false
+      options:
+        path: /etc/grafana/dashboards
+
+---
+# ConfigMap containing all dashboard JSON files
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards
+  labels:
+    app: grafana
+    component: observability
+    part-of: teei-csr-platform
+    grafana_dashboard: "1"
+data:
+  nats-consumer-lag.json: |
+    {
+      "dashboard": {
+        "title": "TEEI Platform - NATS Consumer Metrics",
+        "tags": ["teei", "nats", "messaging"],
+        "timezone": "utc",
+        "panels": [
+          {
+            "id": 1,
+            "title": "Consumer Lag (Pending Messages)",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "nats_consumer_num_pending",
+                "legendFormat": "{{ consumer }}"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "Pending Messages",
+                "format": "short"
+              }
+            ],
+            "thresholds": [
+              {
+                "value": 1000,
+                "colorMode": "warning"
+              },
+              {
+                "value": 10000,
+                "colorMode": "critical"
+              }
+            ]
+          },
+          {
+            "id": 2,
+            "title": "Message Processing Rate",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(nats_consumer_delivered_consumer_seq[5m])",
+                "legendFormat": "{{ consumer }}"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "Messages/sec",
+                "format": "msg/s"
+              }
+            ]
+          },
+          {
+            "id": 3,
+            "title": "Ack Pending",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "nats_consumer_ack_pending",
+                "legendFormat": "{{ consumer }}"
+              }
+            ]
+          },
+          {
+            "id": 4,
+            "title": "Redeliveries",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(nats_consumer_num_redelivered[5m])",
+                "legendFormat": "{{ consumer }}"
+              }
+            ]
+          },
+          {
+            "id": 5,
+            "title": "Stream Lag (Time)",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "time() - nats_consumer_last_delivered_time_seconds",
+                "legendFormat": "{{ consumer }}"
+              }
+            ],
+            "unit": "s"
+          }
+        ],
+        "time": {
+          "from": "now-1h",
+          "to": "now"
+        },
+        "refresh": "10s"
+      }
+    }
+
+  postgres-metrics.json: |
+    {
+      "dashboard": {
+        "title": "TEEI Platform - PostgreSQL Metrics",
+        "tags": ["teei", "database", "postgresql"],
+        "timezone": "utc",
+        "panels": [
+          {
+            "id": 1,
+            "title": "Active Connections",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "pg_stat_database_numbackends",
+                "legendFormat": "{{ datname }}"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "Connections",
+                "format": "short"
+              }
+            ]
+          },
+          {
+            "id": 2,
+            "title": "Transactions per Second",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(pg_stat_database_xact_commit[5m]) + rate(pg_stat_database_xact_rollback[5m])",
+                "legendFormat": "{{ datname }}"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "TPS",
+                "format": "tps"
+              }
+            ]
+          },
+          {
+            "id": 3,
+            "title": "Cache Hit Ratio",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "pg_stat_database_blks_hit / (pg_stat_database_blks_hit + pg_stat_database_blks_read) * 100",
+                "legendFormat": "{{ datname }}"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "Hit Ratio %",
+                "format": "percent",
+                "max": 100
+              }
+            ]
+          },
+          {
+            "id": 4,
+            "title": "Query Duration (avg)",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(pg_stat_statements_mean_time_seconds[5m])",
+                "legendFormat": "{{ query }}"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "Duration",
+                "format": "s"
+              }
+            ]
+          },
+          {
+            "id": 5,
+            "title": "Table Sizes",
+            "type": "table",
+            "targets": [
+              {
+                "expr": "pg_table_size_bytes",
+                "format": "table"
+              }
+            ]
+          },
+          {
+            "id": 6,
+            "title": "Replication Lag",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "pg_replication_lag_seconds",
+                "legendFormat": "{{ application_name }}"
+              }
+            ],
+            "unit": "s",
+            "thresholds": [
+              {
+                "value": 10,
+                "colorMode": "warning"
+              },
+              {
+                "value": 60,
+                "colorMode": "critical"
+              }
+            ]
+          }
+        ],
+        "time": {
+          "from": "now-1h",
+          "to": "now"
+        },
+        "refresh": "30s"
+      }
+    }
+
+  http-overview.json: |
+    {
+      "dashboard": {
+        "title": "TEEI Platform - HTTP Overview",
+        "tags": ["teei", "http", "overview"],
+        "timezone": "utc",
+        "panels": [
+          {
+            "id": 1,
+            "title": "Request Rate (req/s)",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "sum(rate(http_requests_total[5m])) by (service)",
+                "legendFormat": "{{ service }}"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "Requests/sec",
+                "format": "reqps"
+              }
+            ]
+          },
+          {
+            "id": 2,
+            "title": "Error Rate (%)",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "sum(rate(http_requests_total{status=~\"5..\"}[5m])) by (service) / sum(rate(http_requests_total[5m])) by (service) * 100",
+                "legendFormat": "{{ service }}"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "Error %",
+                "format": "percent"
+              }
+            ],
+            "thresholds": [
+              {
+                "value": 5,
+                "colorMode": "warning"
+              },
+              {
+                "value": 10,
+                "colorMode": "critical"
+              }
+            ]
+          },
+          {
+            "id": 3,
+            "title": "Response Time (p95)",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, service))",
+                "legendFormat": "{{ service }} p95"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "Latency",
+                "format": "s"
+              }
+            ]
+          },
+          {
+            "id": 4,
+            "title": "HTTP Status Codes",
+            "type": "piechart",
+            "targets": [
+              {
+                "expr": "sum(rate(http_requests_total[5m])) by (status)",
+                "legendFormat": "{{ status }}"
+              }
+            ]
+          },
+          {
+            "id": 5,
+            "title": "Active Connections",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "sum(http_active_connections) by (service)",
+                "legendFormat": "{{ service }}"
+              }
+            ]
+          },
+          {
+            "id": 6,
+            "title": "Request Duration Heatmap",
+            "type": "heatmap",
+            "targets": [
+              {
+                "expr": "sum(increase(http_request_duration_seconds_bucket[1m])) by (le)",
+                "format": "heatmap"
+              }
+            ]
+          }
+        ],
+        "time": {
+          "from": "now-1h",
+          "to": "now"
+        },
+        "refresh": "10s"
+      }
+    }
+
+  clickhouse-metrics.json: |
+    {
+      "dashboard": {
+        "title": "TEEI Platform - ClickHouse Metrics",
+        "tags": ["teei", "database", "clickhouse", "analytics"],
+        "timezone": "utc",
+        "panels": [
+          {
+            "id": 1,
+            "title": "Query Rate",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(clickhouse_query_total[5m])",
+                "legendFormat": "Queries/sec"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "Queries/sec",
+                "format": "qps"
+              }
+            ]
+          },
+          {
+            "id": 2,
+            "title": "Query Duration (p95)",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "histogram_quantile(0.95, rate(clickhouse_query_duration_seconds_bucket[5m]))",
+                "legendFormat": "p95"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "Duration",
+                "format": "s"
+              }
+            ]
+          },
+          {
+            "id": 3,
+            "title": "Rows Read/Written",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(clickhouse_rows_read_total[5m])",
+                "legendFormat": "Read"
+              },
+              {
+                "expr": "rate(clickhouse_rows_written_total[5m])",
+                "legendFormat": "Written"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "Rows/sec",
+                "format": "short"
+              }
+            ]
+          },
+          {
+            "id": 4,
+            "title": "Disk Usage",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "clickhouse_disk_used_bytes / clickhouse_disk_total_bytes * 100",
+                "legendFormat": "Disk Usage %"
+              }
+            ],
+            "unit": "percent",
+            "thresholds": [
+              {
+                "value": 70,
+                "colorMode": "warning"
+              },
+              {
+                "value": 85,
+                "colorMode": "critical"
+              }
+            ]
+          },
+          {
+            "id": 5,
+            "title": "Active Connections",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "clickhouse_connections_active",
+                "legendFormat": "Active"
+              }
+            ]
+          },
+          {
+            "id": 6,
+            "title": "Memory Usage",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "clickhouse_memory_usage_bytes",
+                "legendFormat": "Memory Usage"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "Memory",
+                "format": "bytes"
+              }
+            ]
+          }
+        ],
+        "time": {
+          "from": "now-1h",
+          "to": "now"
+        },
+        "refresh": "30s"
+      }
+    }

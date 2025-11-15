@@ -1,0 +1,4 @@
+# This directory will contain sealed secrets for staging
+# Sealed secrets are encrypted and safe to commit to Git
+#
+# To create sealed secrets, see README.md in this directory

@@ -1,0 +1,602 @@
+---
+# Network Policies for TEEI Platform
+# Default deny-all policy, then explicit allow rules for required traffic
+
+# ============================================================================
+# Default Deny All Policy
+# ============================================================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  labels:
+    part-of: teei-csr-platform
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+
+---
+# ============================================================================
+# Allow DNS Resolution for All Pods
+# ============================================================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns-access
+  labels:
+    part-of: teei-csr-platform
+spec:
+  podSelector: {}
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: kube-system
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+
+---
+# ============================================================================
+# API Gateway Network Policy
+# ============================================================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: teei-api-gateway-netpol
+  labels:
+    app: teei-api-gateway
+    part-of: teei-csr-platform
+spec:
+  podSelector:
+    matchLabels:
+      app: teei-api-gateway
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Allow traffic from NGINX Ingress Controller
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    - podSelector: {}  # Allow from any pod (for cross-service calls)
+    ports:
+    - protocol: TCP
+      port: 3000
+  egress:
+  # Allow api-gateway to call all backend services
+  - to:
+    - podSelector:
+        matchLabels:
+          component: backend
+    ports:
+    - protocol: TCP
+      port: 80
+  # Allow api-gateway to call NATS
+  - to:
+    - podSelector:
+        matchLabels:
+          app: nats
+    ports:
+    - protocol: TCP
+      port: 4222
+
+---
+# ============================================================================
+# Corporate Cockpit Network Policy
+# ============================================================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: teei-corp-cockpit-netpol
+  labels:
+    app: teei-corp-cockpit
+    part-of: teei-csr-platform
+spec:
+  podSelector:
+    matchLabels:
+      app: teei-corp-cockpit
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Allow traffic from NGINX Ingress Controller
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    ports:
+    - protocol: TCP
+      port: 4321
+  egress:
+  # Allow corp-cockpit to call api-gateway
+  - to:
+    - podSelector:
+        matchLabels:
+          app: teei-api-gateway
+    ports:
+    - protocol: TCP
+      port: 80
+  # Allow external HTTPS (for CDN, external APIs, etc.)
+  - to:
+    - namespaceSelector: {}
+    ports:
+    - protocol: TCP
+      port: 443
+
+---
+# ============================================================================
+# Backend Services Network Policy (applies to all backend services)
+# ============================================================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: teei-backend-services-netpol
+  labels:
+    component: backend
+    part-of: teei-csr-platform
+spec:
+  podSelector:
+    matchLabels:
+      component: backend
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Allow traffic from api-gateway
+  - from:
+    - podSelector:
+        matchLabels:
+          app: teei-api-gateway
+    ports:
+    - protocol: TCP
+      port: 80
+  # Allow traffic from other backend services (for inter-service communication)
+  - from:
+    - podSelector:
+        matchLabels:
+          component: backend
+    ports:
+    - protocol: TCP
+      port: 80
+  egress:
+  # Allow backend services to call PostgreSQL
+  - to:
+    - podSelector:
+        matchLabels:
+          app: postgresql
+    ports:
+    - protocol: TCP
+      port: 5432
+  # Allow backend services to call NATS
+  - to:
+    - podSelector:
+        matchLabels:
+          app: nats
+    ports:
+    - protocol: TCP
+      port: 4222
+  # Allow backend services to call ClickHouse
+  - to:
+    - podSelector:
+        matchLabels:
+          app: clickhouse
+    ports:
+    - protocol: TCP
+      port: 8123
+    - protocol: TCP
+      port: 9000
+  # Allow backend services to call other backend services
+  - to:
+    - podSelector:
+        matchLabels:
+          component: backend
+    ports:
+    - protocol: TCP
+      port: 80
+  # Allow external HTTPS (for webhooks, external APIs, etc.)
+  - to:
+    - namespaceSelector: {}
+    ports:
+    - protocol: TCP
+      port: 443
+
+---
+# ============================================================================
+# Unified Profile Service Network Policy
+# ============================================================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: teei-unified-profile-netpol
+  labels:
+    app: teei-unified-profile
+    part-of: teei-csr-platform
+spec:
+  podSelector:
+    matchLabels:
+      app: teei-unified-profile
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: teei-api-gateway
+    - podSelector:
+        matchLabels:
+          component: backend
+    ports:
+    - protocol: TCP
+      port: 3001
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app: postgresql
+    ports:
+    - protocol: TCP
+      port: 5432
+  - to:
+    - podSelector:
+        matchLabels:
+          app: nats
+    ports:
+    - protocol: TCP
+      port: 4222
+
+---
+# ============================================================================
+# Reporting Service Network Policy
+# ============================================================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: teei-reporting-netpol
+  labels:
+    app: teei-reporting
+    part-of: teei-csr-platform
+spec:
+  podSelector:
+    matchLabels:
+      app: teei-reporting
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: teei-api-gateway
+    - podSelector:
+        matchLabels:
+          component: backend
+    ports:
+    - protocol: TCP
+      port: 3014
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app: postgresql
+    ports:
+    - protocol: TCP
+      port: 5432
+  - to:
+    - podSelector:
+        matchLabels:
+          app: clickhouse
+    ports:
+    - protocol: TCP
+      port: 8123
+    - protocol: TCP
+      port: 9000
+  - to:
+    - podSelector:
+        matchLabels:
+          app: nats
+    ports:
+    - protocol: TCP
+      port: 4222
+
+---
+# ============================================================================
+# Analytics Service Network Policy
+# ============================================================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: teei-analytics-netpol
+  labels:
+    app: teei-analytics
+    part-of: teei-csr-platform
+spec:
+  podSelector:
+    matchLabels:
+      app: teei-analytics
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: teei-api-gateway
+    - podSelector:
+        matchLabels:
+          component: backend
+    ports:
+    - protocol: TCP
+      port: 3007
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app: clickhouse
+    ports:
+    - protocol: TCP
+      port: 8123
+    - protocol: TCP
+      port: 9000
+  - to:
+    - podSelector:
+        matchLabels:
+          app: nats
+    ports:
+    - protocol: TCP
+      port: 4222
+
+---
+# ============================================================================
+# Discord Bot Network Policy
+# ============================================================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: teei-discord-bot-netpol
+  labels:
+    app: teei-discord-bot
+    part-of: teei-csr-platform
+spec:
+  podSelector:
+    matchLabels:
+      app: teei-discord-bot
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: teei-api-gateway
+    ports:
+    - protocol: TCP
+      port: 3010
+  egress:
+  # Allow Discord bot to reach Discord API
+  - to:
+    - namespaceSelector: {}
+    ports:
+    - protocol: TCP
+      port: 443
+  - to:
+    - podSelector:
+        matchLabels:
+          app: nats
+    ports:
+    - protocol: TCP
+      port: 4222
+
+---
+# ============================================================================
+# Q2Q AI Service Network Policy
+# ============================================================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: teei-q2q-ai-netpol
+  labels:
+    app: teei-q2q-ai
+    part-of: teei-csr-platform
+spec:
+  podSelector:
+    matchLabels:
+      app: teei-q2q-ai
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: teei-api-gateway
+    - podSelector:
+        matchLabels:
+          component: backend
+    ports:
+    - protocol: TCP
+      port: 3005
+  egress:
+  # Allow Q2Q AI to call external AI APIs (OpenAI, Anthropic, etc.)
+  - to:
+    - namespaceSelector: {}
+    ports:
+    - protocol: TCP
+      port: 443
+  - to:
+    - podSelector:
+        matchLabels:
+          app: postgresql
+    ports:
+    - protocol: TCP
+      port: 5432
+  - to:
+    - podSelector:
+        matchLabels:
+          app: nats
+    ports:
+    - protocol: TCP
+      port: 4222
+
+---
+# ============================================================================
+# Connector Services Network Policies
+# (Kintell, Buddy, Upskilling)
+# ============================================================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: teei-connectors-netpol
+  labels:
+    component: connector
+    part-of: teei-csr-platform
+spec:
+  podSelector:
+    matchExpressions:
+    - key: app
+      operator: In
+      values:
+      - teei-kintell-connector
+      - teei-buddy-connector
+      - teei-upskilling-connector
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: teei-api-gateway
+    - podSelector:
+        matchLabels:
+          component: backend
+    ports:
+    - protocol: TCP
+      port: 80
+  egress:
+  # Allow connectors to reach external partner APIs
+  - to:
+    - namespaceSelector: {}
+    ports:
+    - protocol: TCP
+      port: 443
+  - to:
+    - podSelector:
+        matchLabels:
+          app: postgresql
+    ports:
+    - protocol: TCP
+      port: 5432
+  - to:
+    - podSelector:
+        matchLabels:
+          app: nats
+    ports:
+    - protocol: TCP
+      port: 4222
+
+---
+# ============================================================================
+# Infrastructure Services Network Policies
+# ============================================================================
+
+# PostgreSQL Network Policy
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: postgresql-netpol
+  labels:
+    app: postgresql
+    part-of: teei-csr-platform
+spec:
+  podSelector:
+    matchLabels:
+      app: postgresql
+  policyTypes:
+  - Ingress
+  ingress:
+  # Allow all backend services to connect to PostgreSQL
+  - from:
+    - podSelector:
+        matchLabels:
+          component: backend
+    - podSelector:
+        matchLabels:
+          component: connector
+    - podSelector:
+        matchLabels:
+          app: teei-unified-profile
+    - podSelector:
+        matchLabels:
+          app: teei-q2q-ai
+    ports:
+    - protocol: TCP
+      port: 5432
+
+---
+# NATS Network Policy
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: nats-netpol
+  labels:
+    app: nats
+    part-of: teei-csr-platform
+spec:
+  podSelector:
+    matchLabels:
+      app: nats
+  policyTypes:
+  - Ingress
+  ingress:
+  # Allow all services to connect to NATS
+  - from:
+    - podSelector: {}
+    ports:
+    - protocol: TCP
+      port: 4222
+    - protocol: TCP
+      port: 6222
+    - protocol: TCP
+      port: 8222
+
+---
+# ClickHouse Network Policy
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: clickhouse-netpol
+  labels:
+    app: clickhouse
+    part-of: teei-csr-platform
+spec:
+  podSelector:
+    matchLabels:
+      app: clickhouse
+  policyTypes:
+  - Ingress
+  ingress:
+  # Allow analytics and reporting services to connect to ClickHouse
+  - from:
+    - podSelector:
+        matchLabels:
+          app: teei-analytics
+    - podSelector:
+        matchLabels:
+          app: teei-reporting
+    - podSelector:
+        matchLabels:
+          component: backend
+    ports:
+    - protocol: TCP
+      port: 8123  # HTTP interface
+    - protocol: TCP
+      port: 9000  # Native interface

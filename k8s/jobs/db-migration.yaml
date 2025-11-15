@@ -1,0 +1,291 @@
+---
+# Database Migration Job
+# Runs before service deployments to apply schema changes
+# Uses the shared-schema package with Drizzle ORM
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: db-migration
+  labels:
+    app: db-migration
+    component: database
+    part-of: teei-csr-platform
+    managed-by: kustomize
+  annotations:
+    description: "Applies database schema migrations before deployment"
+spec:
+  # Keep completed job pods for 1 hour for debugging
+  ttlSecondsAfterFinished: 3600
+
+  # Retry up to 3 times on failure
+  backoffLimit: 3
+
+  # Fail if not completed within 10 minutes
+  activeDeadlineSeconds: 600
+
+  template:
+    metadata:
+      labels:
+        app: db-migration
+        component: database
+      annotations:
+        sidecar.istio.io/inject: "false"  # No service mesh for batch jobs
+    spec:
+      # Don't restart on failure - let Job controller handle retries
+      restartPolicy: Never
+
+      # Security Context
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+
+      # Service Account (for Vault integration if needed)
+      serviceAccountName: teei-db-migration
+
+      # Init Container: Pre-flight checks
+      initContainers:
+      - name: pre-flight-check
+        image: postgres:16-alpine
+        imagePullPolicy: IfNotPresent
+
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities:
+            drop:
+            - ALL
+
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: teei-shared-db-secrets
+              key: DATABASE_URL
+
+        # Extract connection details for validation
+        - name: PGHOST
+          valueFrom:
+            secretKeyRef:
+              name: teei-shared-db-secrets
+              key: PGHOST
+              optional: true
+        - name: PGPORT
+          valueFrom:
+            secretKeyRef:
+              name: teei-shared-db-secrets
+              key: PGPORT
+              optional: true
+        - name: PGDATABASE
+          valueFrom:
+            secretKeyRef:
+              name: teei-shared-db-secrets
+              key: PGDATABASE
+              optional: true
+        - name: PGUSER
+          valueFrom:
+            secretKeyRef:
+              name: teei-shared-db-secrets
+              key: PGUSER
+              optional: true
+        - name: PGPASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: teei-shared-db-secrets
+              key: PGPASSWORD
+              optional: true
+
+        command:
+        - sh
+        - -c
+        - |
+          set -e
+          echo "=========================================="
+          echo "Pre-flight Database Connection Check"
+          echo "=========================================="
+
+          # Test database connectivity
+          echo "Testing database connection..."
+
+          if [ -n "$DATABASE_URL" ]; then
+            # Use DATABASE_URL if provided
+            psql "$DATABASE_URL" -c "SELECT version();" || {
+              echo "ERROR: Cannot connect to database using DATABASE_URL"
+              exit 1
+            }
+          elif [ -n "$PGHOST" ]; then
+            # Use individual connection parameters
+            psql -c "SELECT version();" || {
+              echo "ERROR: Cannot connect to database using PGHOST parameters"
+              exit 1
+            }
+          else
+            echo "ERROR: No database credentials provided"
+            exit 1
+          fi
+
+          echo "✓ Database connection successful"
+
+          # Check if schema_migrations table exists (created by Drizzle)
+          echo "Checking migration tracking table..."
+
+          TABLE_EXISTS=$(psql "$DATABASE_URL" -tAc "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = '__drizzle_migrations');")
+
+          if [ "$TABLE_EXISTS" = "f" ]; then
+            echo "⚠ Migration tracking table does not exist yet (first run)"
+          else
+            echo "✓ Migration tracking table exists"
+
+            # Show current migration status
+            echo ""
+            echo "Current applied migrations:"
+            psql "$DATABASE_URL" -c "SELECT id, hash, created_at FROM __drizzle_migrations ORDER BY created_at DESC LIMIT 5;" || true
+          fi
+
+          echo ""
+          echo "Pre-flight check complete. Ready to migrate."
+
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+
+      # Main Container: Run migrations
+      containers:
+      - name: migrate
+        # Use the shared-schema image with migration tools
+        # This should be built from packages/shared-schema with all dependencies
+        image: ghcr.io/henrigkroine/teei-shared-schema:latest
+        imagePullPolicy: Always
+
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities:
+            drop:
+            - ALL
+
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: teei-shared-db-secrets
+              key: DATABASE_URL
+        - name: DATABASE_POOL_MAX
+          value: "5"
+
+        # Migration specific settings
+        - name: MIGRATION_LOG_LEVEL
+          value: "info"
+
+        command:
+        - sh
+        - -c
+        - |
+          set -e
+          echo "=========================================="
+          echo "Running Database Migrations"
+          echo "=========================================="
+          echo "Timestamp: $(date -u +"%Y-%m-%d %H:%M:%S UTC")"
+          echo "Environment: ${NODE_ENV}"
+          echo ""
+
+          # Navigate to shared-schema package
+          cd /app/packages/shared-schema
+
+          # Record migration start
+          echo "Starting migrations..."
+          START_TIME=$(date +%s)
+
+          # Run the migration script
+          pnpm db:migrate
+
+          # Record migration end
+          END_TIME=$(date +%s)
+          DURATION=$((END_TIME - START_TIME))
+
+          echo ""
+          echo "=========================================="
+          echo "Migration Complete"
+          echo "=========================================="
+          echo "Duration: ${DURATION} seconds"
+          echo "Status: SUCCESS"
+          echo ""
+
+          # Verify migrations were applied
+          echo "Verifying applied migrations..."
+          psql "$DATABASE_URL" -c "SELECT COUNT(*) as total_migrations FROM __drizzle_migrations;" || echo "Could not verify migration count"
+
+          exit 0
+
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        - name: app-cache
+          mountPath: /app/.cache
+
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      - name: app-cache
+        emptyDir: {}
+
+---
+# Service Account for DB Migration Job
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: teei-db-migration
+  labels:
+    app: db-migration
+    component: database
+    part-of: teei-csr-platform
+
+---
+# Role for DB Migration Job (minimal permissions)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: teei-db-migration
+  labels:
+    app: db-migration
+    component: database
+spec:
+  rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get"]
+    resourceNames: ["teei-shared-db-secrets"]
+
+---
+# RoleBinding for DB Migration Job
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: teei-db-migration
+  labels:
+    app: db-migration
+    component: database
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: teei-db-migration
+subjects:
+- kind: ServiceAccount
+  name: teei-db-migration

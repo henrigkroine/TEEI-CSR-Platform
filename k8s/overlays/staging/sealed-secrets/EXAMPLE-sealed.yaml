@@ -1,0 +1,27 @@
+# Example Sealed Secret
+# This is an example of what a sealed secret looks like after encryption
+# DO NOT use this in production - create your own using kubeseal
+
+apiVersion: bitnami.com/v1alpha1
+kind: SealedSecret
+metadata:
+  name: teei-example-secrets
+  namespace: teei-staging
+spec:
+  encryptedData:
+    # These are example encrypted values (not real)
+    # Your actual sealed secrets will have different encrypted data
+    JWT_SECRET: AgA8V7EXAMPLE...ENCRYPTED...DATA...HERE...
+    REDIS_URL: AgBkW9EXAMPLE...ENCRYPTED...DATA...HERE...
+  template:
+    metadata:
+      name: teei-example-secrets
+      namespace: teei-staging
+    type: Opaque
+
+# To create real sealed secrets:
+# 1. Create a raw secret YAML file (with actual values)
+# 2. Use kubeseal to encrypt it:
+#    kubeseal --format=yaml --cert=pub-cert.pem < raw-secret.yaml > sealed-secret.yaml
+# 3. Commit the sealed secret to Git
+# 4. Apply to cluster: kubectl apply -f sealed-secret.yaml

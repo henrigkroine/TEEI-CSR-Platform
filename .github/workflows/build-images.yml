@@ -23,6 +23,7 @@ permissions:
   contents: read
   packages: write
   id-token: write
+  security-events: write
 
 jobs:
   detect-changes:
@@ -136,6 +137,7 @@ jobs:
           fi
 
       - name: Build and push Docker image
+        id: build
         uses: docker/build-push-action@v5
         with:
           context: ${{ steps.dockerfile.outputs.context }}
@@ -148,6 +150,46 @@ jobs:
           platforms: linux/amd64
           build-args: |
             BUILDKIT_INLINE_CACHE=1
+          load: ${{ github.event_name == 'pull_request' }}
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.IMAGE_PREFIX }}/teei-${{ matrix.service }}:${{ steps.meta.outputs.version }}
+          format: 'sarif'
+          output: 'trivy-results-${{ matrix.service }}.sarif'
+          severity: 'HIGH,CRITICAL'
+          exit-code: '1'
+          ignore-unfixed: true
+          scanners: 'vuln'
+          trivyignores: '.trivyignore'
+
+      - name: Upload Trivy results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results-${{ matrix.service }}.sarif'
+          category: 'trivy-${{ matrix.service }}'
+
+      - name: Run Trivy vulnerability scanner (table format)
+        uses: aquasecurity/trivy-action@master
+        if: always()
+        with:
+          image-ref: ${{ env.IMAGE_PREFIX }}/teei-${{ matrix.service }}:${{ steps.meta.outputs.version }}
+          format: 'table'
+          output: 'trivy-report-${{ matrix.service }}.txt'
+          severity: 'HIGH,CRITICAL'
+          ignore-unfixed: true
+          scanners: 'vuln'
+          trivyignores: '.trivyignore'
+
+      - name: Upload Trivy scan report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: trivy-report-${{ matrix.service }}
+          path: trivy-report-${{ matrix.service }}.txt
+          retention-days: 30
 
       - name: Generate SBOM with Syft
         if: github.event_name != 'pull_request'

@@ -1,0 +1,19 @@
+# Ignore raw (unsealed) secrets - NEVER commit these
+*-raw.yaml
+*-secret-raw.yaml
+*.secret
+
+# Ignore kubeseal public certificates (these can be fetched from cluster)
+*-pub-cert.pem
+*.pem
+
+# Ignore temporary files
+*.tmp
+
+# Allow sealed (encrypted) secrets - these are SAFE to commit
+!*-sealed.yaml
+
+# Allow example files
+!EXAMPLE-*.yaml
+!README.md
+!.gitkeep

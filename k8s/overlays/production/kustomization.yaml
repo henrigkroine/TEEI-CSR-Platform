@@ -27,6 +27,11 @@ resources:
 - ../../base/notifications
 - ../../base/reporting
 - ../../base/corp-cockpit-astro
+- ../../base/observability
+
+# Ingress and NetworkPolicies
+- ../../base/ingress.yaml
+- ../../base/network-policies.yaml
 
 # ConfigMap generator for production environment
 configMapGenerator:
@@ -41,6 +46,7 @@ patchesStrategicMerge:
 - replica-patch.yaml
 - resource-limits-patch.yaml
 - security-patch.yaml
+- ingress-patch.yaml
 
 # Image tags for production (use specific version tags)
 images:

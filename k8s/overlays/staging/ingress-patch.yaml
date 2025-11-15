@@ -1,0 +1,43 @@
+---
+# Ingress patch for staging environment
+# Overrides the host to use staging.teei.example.com
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: teei-platform-ingress
+  annotations:
+    # Staging-specific annotations
+    nginx.ingress.kubernetes.io/auth-type: basic
+    nginx.ingress.kubernetes.io/auth-secret: basic-auth
+    nginx.ingress.kubernetes.io/auth-realm: 'TEEI Staging - Authentication Required'
+spec:
+  tls:
+  - hosts:
+    - staging.teei.example.com
+    secretName: teei-platform-tls-staging
+
+  rules:
+  - host: staging.teei.example.com
+    http:
+      paths:
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: teei-api-gateway
+            port:
+              number: 80
+      - path: /grafana
+        pathType: Prefix
+        backend:
+          service:
+            name: grafana
+            port:
+              number: 3000
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: teei-corp-cockpit
+            port:
+              number: 80
