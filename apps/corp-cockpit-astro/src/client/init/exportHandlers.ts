@@ -16,7 +16,7 @@ function getCompanyId(): string {
   const cookies = document.cookie.split(';');
   for (const cookie of cookies) {
     const [name, value] = cookie.trim().split('=');
-    if (name === 'companyId') {
+    if (name === 'companyId' && value) {
       return decodeURIComponent(value);
     }
   }

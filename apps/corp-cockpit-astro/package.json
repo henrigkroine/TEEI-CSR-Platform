@@ -24,7 +24,8 @@
     "test:a11y:full": "playwright test tests/a11y && pa11y-ci",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx,.astro",
     "lint:fix": "eslint . --ext .js,.jsx,.ts,.tsx,.astro --fix",
-    "lighthouse": "lighthouse http://localhost:4321 --config-path=./lighthouserc.json --output=html --output-path=./lighthouse-report.html"
+    "lighthouse": "lighthouse http://localhost:4321 --config-path=./lighthouserc.json --output=html --output-path=./lighthouse-report.html",
+    "contrast:check": "node scripts/check-contrast.js"
   },
   "dependencies": {
     "@astrojs/node": "^8.0.0",
@@ -32,6 +33,7 @@
     "@astrojs/tailwind": "^5.0.0",
     "@tanstack/react-query": "^5.0.0",
     "@teei/shared-auth": "workspace:*",
+    "@teei/shared-types": "workspace:*",
     "astro": "^4.0.0",
     "chart.js": "^4.5.1",
     "clsx": "^2.0.0",
@@ -49,6 +51,8 @@
     "@axe-core/playwright": "^4.11.0",
     "@axe-core/react": "^4.11.0",
     "@playwright/test": "^1.40.0",
+    "@testing-library/jest-dom": "^6.1.0",
+    "@testing-library/react": "^14.0.0",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "@types/react-window": "^1.8.8",

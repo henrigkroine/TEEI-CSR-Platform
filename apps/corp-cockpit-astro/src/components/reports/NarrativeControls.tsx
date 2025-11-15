@@ -11,7 +11,6 @@
  * @module components/reports/NarrativeControls
  */
 
-import React from 'react';
 
 export interface NarrativeSettings {
   tone: 'formal' | 'conversational' | 'technical';

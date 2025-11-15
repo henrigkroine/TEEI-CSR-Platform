@@ -152,7 +152,7 @@ export class ReportingClient {
       }
     };
 
-    eventSource.onerror = (error) => {
+    eventSource.onerror = (_error) => {
       if (onError) {
         onError(new Error('Stream connection error'));
       }

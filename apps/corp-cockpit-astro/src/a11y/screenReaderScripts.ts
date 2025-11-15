@@ -238,7 +238,7 @@ export class ChartAnnouncer {
   /**
    * Announce chart update
    */
-  announceChartUpdate(chartId: string, newData: any): void {
+  announceChartUpdate(chartId: string, _newData: any): void {
     const message = `Chart ${chartId} updated with new data`;
     this.liveRegionManager.announce(message, 'polite');
   }
@@ -374,8 +374,6 @@ export class SSEUpdateAnnouncer {
    * Announce SSE update with debouncing
    */
   announceUpdate(metric: string, value: any, priority: 'low' | 'medium' | 'high' = 'low'): void {
-    const key = `${metric}-${value}`;
-
     // Clear existing timer
     const existingTimer = this.updateDebounceTimers.get(metric);
     if (existingTimer) {

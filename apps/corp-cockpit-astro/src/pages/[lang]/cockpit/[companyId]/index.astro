@@ -1,12 +1,12 @@
 ---
 import BaseLayout from '../../../../layouts/BaseLayout.astro';
 import { hasPermission } from '../../../../utils/rbac';
-import AtAGlance from '../../../../components/widgets/AtAGlance.tsx';
-import SROIPanel from '../../../../components/widgets/SROIPanel.tsx';
-import VISPanel from '../../../../components/widgets/VISPanel.tsx';
-import Q2QFeed from '../../../../components/widgets/Q2QFeed.tsx';
-import ExportButtons from '../../../../components/widgets/ExportButtons.tsx';
-import DashboardActions from '../../../../components/DashboardActions.tsx';
+import AtAGlance from '../../../../components/widgets/AtAGlance';
+import SROIPanel from '../../../../components/widgets/SROIPanel';
+import VISPanel from '../../../../components/widgets/VISPanel';
+import Q2QFeed from '../../../../components/widgets/Q2QFeed';
+import ExportButtons from '../../../../components/widgets/ExportButtons';
+import DashboardActions from '../../../../components/DashboardActions';
 
 // Extract route parameters
 const { lang, companyId } = Astro.params;

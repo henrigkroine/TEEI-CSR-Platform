@@ -1,10 +1,10 @@
 ---
 import BaseLayout from '../../../../../layouts/BaseLayout.astro';
 import { hasPermission } from '../../../../../utils/rbac';
-import ConsentManager from '../../../../../components/governance/ConsentManager.tsx';
-import DSARStatus from '../../../../../components/governance/DSARStatus.tsx';
-import ExportLogsViewer from '../../../../../components/governance/ExportLogsViewer.tsx';
-import RetentionPolicies from '../../../../../components/governance/RetentionPolicies.tsx';
+import ConsentManager from '../../../../../components/governance/ConsentManager';
+import DSARStatus from '../../../../../components/governance/DSARStatus';
+import ExportLogsViewer from '../../../../../components/governance/ExportLogsViewer';
+import RetentionPolicies from '../../../../../components/governance/RetentionPolicies';
 
 // Extract route parameters
 const { lang, companyId } = Astro.params;

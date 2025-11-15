@@ -2,7 +2,6 @@
 import Layout from '../layouts/Layout.astro';
 import KPICard from '../components/KPICard';
 import Chart from '../components/Chart';
-import LoadingSpinner from '../components/LoadingSpinner';
 import ErrorMessage from '../components/ErrorMessage';
 import { detectLanguage, t } from '../lib/i18n';
 import { createApiClient } from '../lib/api';
@@ -104,7 +103,7 @@ const historicalRoiData = historicalData.length > 0 ? {
     </div>
 
     {error && (
-      <ErrorMessage client:load message={error} onRetry={() => window.location.reload()} />
+      <ErrorMessage client:load message={error} />
     )}
 
     {!error && sroiData && (
@@ -253,4 +252,6 @@ const historicalRoiData = historicalData.length > 0 ? {
       </div>
     </div>
   </div>
+      </>
+    )}
 </Layout>

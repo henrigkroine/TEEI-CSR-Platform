@@ -1,10 +1,10 @@
 ---
 import BaseLayout from '../../../../../layouts/BaseLayout.astro';
 import { hasPermission } from '../../../../../utils/rbac';
-import CohortComparator from '../../../../../components/benchmarks/CohortComparator.tsx';
-import PercentileChart from '../../../../../components/benchmarks/PercentileChart.tsx';
-import BenchmarkFilters from '../../../../../components/benchmarks/BenchmarkFilters.tsx';
-import ExportBenchmarks from '../../../../../components/benchmarks/ExportBenchmarks.tsx';
+import CohortComparator from '../../../../../components/benchmarks/CohortComparator';
+import PercentileChart from '../../../../../components/benchmarks/PercentileChart';
+import BenchmarkFilters from '../../../../../components/benchmarks/BenchmarkFilters';
+import ExportBenchmarks from '../../../../../components/benchmarks/ExportBenchmarks';
 
 // Extract route parameters
 const { lang, companyId } = Astro.params;
@@ -238,7 +238,7 @@ if (!canViewBenchmarks) {
             // Render CohortComparator
             const cohortComparatorRoot = document.getElementById('cohort-comparator-root');
             if (cohortComparatorRoot) {
-              const { default: CohortComparator } = await import('../../../../../components/benchmarks/CohortComparator.tsx');
+              const { default: CohortComparator } = await import('../../../../../components/benchmarks/CohortComparator');
               const root = createRoot(cohortComparatorRoot);
               root.render(
                 createElement(CohortComparator, {
@@ -262,7 +262,7 @@ if (!canViewBenchmarks) {
 
               if (percentileResponse.ok) {
                 const percentileData = await percentileResponse.json();
-                const { default: PercentileChart } = await import('../../../../../components/benchmarks/PercentileChart.tsx');
+                const { default: PercentileChart } = await import('../../../../../components/benchmarks/PercentileChart');
                 const root = createRoot(percentileChartRoot);
                 root.render(
                   createElement(PercentileChart, {

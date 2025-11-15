@@ -7,6 +7,8 @@
  * WCAG 2.2 AAA Compliance
  */
 
+import React from 'react';
+
 /**
  * Keyboard shortcut configuration
  */
@@ -320,13 +322,13 @@ export class KeyboardShortcutRegistry {
 
     shortcuts.forEach(shortcut => {
       if (shortcut.description.includes('Go to')) {
-        categories['Navigation'].push(shortcut);
+        categories['Navigation']!.push(shortcut);
       } else if (shortcut.description.includes('help')) {
-        categories['Help'].push(shortcut);
+        categories['Help']!.push(shortcut);
       } else if (shortcut.scope === 'dashboard') {
-        categories['Dashboard'].push(shortcut);
+        categories['Dashboard']!.push(shortcut);
       } else {
-        categories['Actions'].push(shortcut);
+        categories['Actions']!.push(shortcut);
       }
     });
 

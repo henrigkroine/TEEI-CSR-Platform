@@ -19,80 +19,48 @@ type Story = StoryObj<typeof ApprovalWorkflowPanel>;
 
 export const Draft: Story = {
   args: {
+    companyId: 'company-123',
     reportId: 'report-123',
-    currentStatus: 'draft',
-    canSubmit: true,
-    canApprove: false,
-    canLock: false,
+    userRole: 'editor',
   },
 };
 
 export const InReview: Story = {
   args: {
+    companyId: 'company-123',
     reportId: 'report-123',
-    currentStatus: 'review',
-    canSubmit: false,
-    canApprove: true,
-    canLock: false,
-    reviewerName: 'Jane Smith',
+    userRole: 'reviewer',
   },
 };
 
 export const Approved: Story = {
   args: {
+    companyId: 'company-123',
     reportId: 'report-123',
-    currentStatus: 'approved',
-    canSubmit: false,
-    canApprove: false,
-    canLock: true,
-    approverName: 'John Doe',
-    approvedAt: new Date().toISOString(),
+    userRole: 'approver',
   },
 };
 
 export const Locked: Story = {
   args: {
+    companyId: 'company-123',
     reportId: 'report-123',
-    currentStatus: 'locked',
-    canSubmit: false,
-    canApprove: false,
-    canLock: false,
-    lockedBy: 'Admin User',
-    lockedAt: new Date().toISOString(),
+    userRole: 'viewer',
   },
 };
 
 export const WithComments: Story = {
   args: {
+    companyId: 'company-123',
     reportId: 'report-123',
-    currentStatus: 'review',
-    canSubmit: false,
-    canApprove: true,
-    canLock: false,
-    comments: [
-      {
-        id: '1',
-        author: 'Jane Smith',
-        content: 'Please update the Q1 metrics section.',
-        timestamp: new Date(Date.now() - 86400000).toISOString(),
-      },
-      {
-        id: '2',
-        author: 'John Doe',
-        content: 'Metrics updated as requested.',
-        timestamp: new Date().toISOString(),
-      },
-    ],
+    userRole: 'reviewer',
   },
 };
 
 export const ViewerRole: Story = {
   args: {
+    companyId: 'company-123',
     reportId: 'report-123',
-    currentStatus: 'review',
-    canSubmit: false,
-    canApprove: false,
-    canLock: false,
     userRole: 'VIEWER',
   },
 };

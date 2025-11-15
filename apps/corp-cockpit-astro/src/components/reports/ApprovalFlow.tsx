@@ -9,7 +9,6 @@
  * @module components/reports/ApprovalFlow
  */
 
-import React from 'react';
 import type { ApprovalStatus } from '../../../../../services/reporting/src/types/approvals.js';
 
 interface ApprovalFlowProps {

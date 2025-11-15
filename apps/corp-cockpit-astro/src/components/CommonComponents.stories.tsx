@@ -1,5 +1,4 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import React from 'react';
 
 /**
  * Common UI Components
@@ -79,12 +78,6 @@ const Input = ({ label, error, ...props }: any) => (
   </div>
 );
 
-const InputMeta: Meta<typeof Input> = {
-  title: 'Common/Input',
-  component: Input,
-  tags: ['autodocs'],
-};
-
 export const DefaultInput: StoryObj<typeof Input> = {
   args: { placeholder: 'Enter text...' },
 };
@@ -133,12 +126,6 @@ const Modal = ({ isOpen, title, children, onClose }: any) => {
   );
 };
 
-const ModalMeta: Meta<typeof Modal> = {
-  title: 'Common/Modal',
-  component: Modal,
-  tags: ['autodocs'],
-};
-
 export const OpenModal: StoryObj<typeof Modal> = {
   args: {
     isOpen: true,
@@ -175,12 +162,6 @@ const Toast = ({ message, type = 'info' }: any) => {
       {message}
     </div>
   );
-};
-
-const ToastMeta: Meta<typeof Toast> = {
-  title: 'Common/Toast',
-  component: Toast,
-  tags: ['autodocs'],
 };
 
 export const InfoToast: StoryObj<typeof Toast> = {
@@ -220,12 +201,6 @@ const Tooltip = ({ text, children }: any) => (
     </div>
   </div>
 );
-
-const TooltipMeta: Meta<typeof Tooltip> = {
-  title: 'Common/Tooltip',
-  component: Tooltip,
-  tags: ['autodocs'],
-};
 
 export const ButtonWithTooltip: StoryObj<typeof Tooltip> = {
   args: {

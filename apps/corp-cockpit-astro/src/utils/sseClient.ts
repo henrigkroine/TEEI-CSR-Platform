@@ -8,6 +8,15 @@
  * - Type-safe event handling
  */
 
+export type ConnectionState = 'connecting' | 'connected' | 'disconnected' | 'error' | 'reconnecting' | 'failed';
+
+export interface SSEError {
+  message: string;
+  code?: string;
+  timestamp: number;
+  retryable?: boolean;
+}
+
 export type SSEEventType =
   | 'metric_update'
   | 'report_generated'
