@@ -1761,9 +1761,6 @@ Polish Corporate Cockpit to production-grade with zero TypeScript debt, SSE resi
 **Orchestrator**: Tech Lead (Worker 3)
 **Next Review**: After Phase 1 (TS Zero-Debt) completion
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
 ---
 
 # Worker 3 Phase F: Executive UX & Reporting Finish
@@ -1774,7 +1771,6 @@ Polish Corporate Cockpit to production-grade with zero TypeScript debt, SSE resi
 **Completed**: 2025-11-15
 **Priority**: P0 - Executive Production Launch
 **Target**: Boardroom Mode, PPTX, Saved Views/Share Links, A11y/VRT/E2E, Dark/Brand Themes
-=======
 # Worker 4 Phase F: Production Pilot Execution & SRE
 
 **Status**: 🚀 Complete
@@ -1783,8 +1779,6 @@ Polish Corporate Cockpit to production-grade with zero TypeScript debt, SSE resi
 **Completed**: 2025-11-15
 **Priority**: P0 - Production Pilot SRE
 **Target**: Staged rollout to 5 tenants with chaos/SLO/cost controls
->>>>>>> origin/claude/phase-f-prod-pilot-sre-01N5KShxwW4m8hNkqEJpi8x2
-=======
 ---
 
 # Worker 1 Phase G: Global GA Rollout - Multi-Region Infrastructure
@@ -1795,8 +1789,6 @@ Polish Corporate Cockpit to production-grade with zero TypeScript debt, SSE resi
 **Completed**: 2025-11-15
 **Priority**: P0 - GA Launch Critical
 **Overall Readiness Score**: 94/100 (Excellent)
->>>>>>> origin/claude/phaseG-global-ga-multiregion-017uvLqAucExNFGykX9bSDSY
-=======
 ---
 
 # Worker 2 Phase G: Insights & Self-Serve (Benchmarking, Forecast v2, NLQ, Report Builder, HIL)
@@ -1806,15 +1798,11 @@ Polish Corporate Cockpit to production-grade with zero TypeScript debt, SSE resi
 **Started**: 2025-11-15
 **Priority**: P0 - Executive-Grade Analytics & Self-Service
 **Target Completion**: TBD
->>>>>>> origin/claude/worker2-phaseG-insights-selfserve-013ktPEUSZdeh7Gqn7vFSXtY
 
 ---
 
 ## Mission
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
 Finish Phase F executive UX features for Corporate Cockpit: boardroom mode for large displays, PowerPoint export with evidence lineage, secure share links, comprehensive dark mode, and production-grade testing infrastructure.
 
 ### Scope (All Delivered ✅)
@@ -2281,7 +2269,6 @@ Finish Phase F executive UX features for Corporate Cockpit: boardroom mode for l
    - Service worker for offline-first
    - Prefetching for predictable navigation
    - Image lazy-loading optimization
-=======
 Execute production pilot with blue/green deployments, chaos engineering, cost guardrails, DSAR live operations, SLO monitoring, and SOC-2 compliance prep—ready for staged 5-tenant rollout.
 
 ---
@@ -2519,8 +2506,6 @@ Execute production pilot with blue/green deployments, chaos engineering, cost gu
 | Burn-Rate Alerts | Multi-window | ✅ Complete |
 | Access Review Checklist | Quarterly | ✅ Complete |
 | Key Rotation Script | All secrets | ✅ Complete |
->>>>>>> origin/claude/phase-f-prod-pilot-sre-01N5KShxwW4m8hNkqEJpi8x2
-=======
 Deliver production-ready multi-region infrastructure with comprehensive data residency, disaster recovery, SOC2 compliance, and FinOps controls for December 1, 2025 GA launch.
 
 ### Scope Delivered
@@ -2795,7 +2780,6 @@ Deliver production-ready multi-region infrastructure with comprehensive data res
 ### Monitoring ⚠️
 
 - ⚠️ Real-time alerting configured but not fully tested in production (pending GA launch)
-=======
 Deliver executive-grade insights and self-serve capabilities that transform the TEEI platform into a complete analytics powerhouse:
 
 1. **Benchmarking Engine**: Tenant cohort comparisons with privacy-preserving k-anonymity and differential privacy
@@ -3306,13 +3290,11 @@ Based on comprehensive codebase exploration:
 - [ ] `/docs/analytics/HIL_Analytics.md`
 - [ ] `/reports/worker2_phaseG/INSIGHTS_SELF_SERVE_REPORT.md`
 - [ ] API documentation (OpenAPI) updated
->>>>>>> origin/claude/worker2-phaseG-insights-selfserve-013ktPEUSZdeh7Gqn7vFSXtY
 
 ---
 
 ## Progress Tracking
 
-<<<<<<< HEAD
 **Overall**: 6 / 6 slices complete (100%) ✅
 
 | Slice | Focus | Files | Lines | Status |
@@ -3447,8 +3429,6 @@ Based on comprehensive codebase exploration:
 2. **Quarterly FinOps Review**: Cost optimization opportunities
 3. **Bi-annual Gamedays**: Chaos engineering and failover drills
 4. **Weekly SLO Review**: Error budget consumption and burn rate analysis
->>>>>>> origin/claude/phaseG-global-ga-multiregion-017uvLqAucExNFGykX9bSDSY
-=======
 **Overall**: 0 / 80 tasks complete (0%)
 
 | Slice | Focus | Tasks | Complete | % | Status |
@@ -3500,15 +3480,11 @@ Week 4:
 ```
 
 **Estimated Duration**: 15 days (3 weeks)
->>>>>>> origin/claude/worker2-phaseG-insights-selfserve-013ktPEUSZdeh7Gqn7vFSXtY
 
 ---
 
 ## Integration Points
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
 ### With Worker 1 (IaC/Security/Observability)
 - ✅ OTel traces for web-vitals correlation
 - ✅ Secrets management for share link signing keys
@@ -3561,7 +3537,6 @@ Week 4:
 **Delivery Quality**: **Production-Ready**
 **Next Phase**: Deployment & User Acceptance Testing
 **Branch**: `claude/phase-f-boardroom-pptx-a11y-01GvaGy8W3FGnuPTTgeRH8vx`
-=======
 ### With Phase E (Observability)
 - ✅ SLO metrics use existing Prometheus infrastructure
 - ✅ Burn-rate alerts integrate with PagerDuty
@@ -3589,7 +3564,6 @@ Week 4:
 | DSAR compliance violations | Critical | 72-hour SLA monitoring, audit trails | ✅ Mitigated |
 | SLO burn-rate false positives | Medium | Multi-window alerts, tunable thresholds | ✅ Mitigated |
 | Key rotation service disruption | High | Rolling restarts, health validation | ✅ Mitigated |
-=======
 ### With Existing Services
 
 **Analytics Service** (services/analytics/):
@@ -3611,13 +3585,11 @@ Week 4:
 - Add benchmarking, forecast, NLQ, HIL routes
 - Reuse chart components for visualizations
 - Extend RBAC for new features
->>>>>>> origin/claude/worker2-phaseG-insights-selfserve-013ktPEUSZdeh7Gqn7vFSXtY
 
 ---
 
 ## Non-Negotiables
 
-<<<<<<< HEAD
 1. **RTO ≤60 minutes** for all chaos experiments
 2. **RPO ≤15 minutes** (no data loss beyond 15 minutes)
 3. **Cost budgets enforced** at 100% threshold (block requests)
@@ -3636,7 +3608,6 @@ Week 4:
 - Cross-region replication
 - DR drills and runbooks
 - Global load balancing
-=======
 1. **Privacy-first**: k-anonymity ≥5, DP noise for sensitive data, opt-in consent
 2. **No raw SQL**: NLQ uses parameterized templates only, no text-to-SQL
 3. **CSRD-traceable**: All outputs cite evidence IDs, lineage maintained
@@ -3662,18 +3633,14 @@ Week 4:
 | Test coverage (unit) | ≥80% | 0% | 🔴 |
 | Test coverage (E2E) | ≥60% | 0% | 🔴 |
 | A11y compliance | 0 critical/serious | Untested | 🔴 |
->>>>>>> origin/claude/worker2-phaseG-insights-selfserve-013ktPEUSZdeh7Gqn7vFSXtY
 
 ---
 
 **Version**: 1.0
-<<<<<<< HEAD
 **Orchestrator**: SRE/Release Lead (Worker 4)
 **Completion Date**: 2025-11-15
 **Files Created**: 26 artifacts
 **Total LOC**: ~4,500 lines (YAML, Bash, Markdown)
->>>>>>> origin/claude/phase-f-prod-pilot-sre-01N5KShxwW4m8hNkqEJpi8x2
-=======
 ### Worker 2 (Backend Services)
 - ✅ Data residency service integrated with API Gateway
 - ✅ AI budget service enforces token limits for reporting
@@ -3839,9 +3806,6 @@ BREAKING CHANGE: mTLS STRICT mode requires Istio sidecar injection
 
 **Status**: ✅ Implementation Complete | Branch Pushed | Ready for PR
 **Next**: Quality gates validation → PR creation with evidence bundle
->>>>>>> origin/claude/phaseG-global-ga-multiregion-017uvLqAucExNFGykX9bSDSY
-=======
 **Orchestrator**: Tech Lead (Worker 2 - insights-lead)
 **Next Review**: After Slice A (Benchmarking Engine) completion
->>>>>>> origin/claude/worker2-phaseG-insights-selfserve-013ktPEUSZdeh7Gqn7vFSXtY
 

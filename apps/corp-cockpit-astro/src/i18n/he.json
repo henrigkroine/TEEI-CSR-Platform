@@ -1,5 +1,4 @@
 {
-<<<<<<< HEAD
   "app": {
     "title": "תא הטייס הארגוני",
     "subtitle": "לוח ניתוח מנהלים"
@@ -15,6 +14,15 @@
     "boardroomLive": "חדר ישיבות חי",
     "adminStudio": "אולפן מנהל",
     "usage": "שימוש ואימוץ"
+  },
+  "navigation": {
+    "home": "בית",
+    "sroi": "תשואה חברתית על השקעה",
+    "vis": "ניקוד השפעת מתנדבים",
+    "q2q": "איכותי לכמותי",
+    "trends": "מגמות",
+    "governance": "ממשל תאגידי",
+    "sso": "כניסה אחת"
   },
   "boardroom": {
     "title": "מצב חדר ישיבות",
@@ -68,6 +76,19 @@
       "filterCritical": "קריטי",
       "live": "חי"
     }
+  },
+  "admin": {
+    "title": "קונסולת ניהול",
+    "api_keys": "מפתחות API",
+    "integrations": "אינטגרציות",
+    "users": "משתמשים",
+    "permissions": "הרשאות",
+    "audit_log": "יומן ביקורת",
+    "scheduler": "מתזמן",
+    "data_residency": "מיקום נתונים",
+    "sla_dashboard": "לוח רמת שירות",
+    "domain_allowlist": "רשימת דומיינים מורשים",
+    "embed_tokens": "אסימוני הטמעה"
   },
   "usage": {
     "title": "ניתוח שימוש ואימוץ",
@@ -126,50 +147,6 @@
       "noStuckUsers": "✅ לא זוהו משתמשים תקועים - כולם זורמים בצורה חלקה!"
     }
   },
-  "common": {
-    "loading": "טוען...",
-    "error": "שגיאה",
-    "noData": "אין נתונים זמינים",
-    "refresh": "רענן",
-    "save": "שמור",
-    "cancel": "בטל",
-    "confirm": "אשר",
-    "delete": "מחק",
-    "edit": "ערוך",
-    "close": "סגור",
-    "viewDetails": "הצג פרטים",
-    "viewAsTable": "הצג כטבלה (נגיש)"
-=======
-  "common": {
-    "app_name": "לוח בקרה תאגידי",
-    "welcome": "ברוך הבא",
-    "dashboard": "לוח בקרה",
-    "analytics": "ניתוח נתונים",
-    "reports": "דוחות",
-    "admin": "ניהול",
-    "settings": "הגדרות",
-    "logout": "התנתק",
-    "save": "שמור",
-    "cancel": "בטל",
-    "delete": "מחק",
-    "edit": "ערוך",
-    "back": "חזרה",
-    "next": "הבא",
-    "previous": "קודם",
-    "loading": "טוען...",
-    "error": "שגיאה",
-    "success": "הצלחה",
-    "warning": "אזהרה"
-  },
-  "navigation": {
-    "home": "בית",
-    "sroi": "תשואה חברתית על השקעה",
-    "vis": "ניקוד השפעת מתנדבים",
-    "q2q": "איכותי לכמותי",
-    "trends": "מגמות",
-    "governance": "ממשל תאגידי",
-    "sso": "כניסה אחת"
-  },
   "dashboard": {
     "title": "סקירת לוח הבקרה",
     "metrics": "מדדים",
@@ -178,19 +155,6 @@
     "filter_by_date": "סנן לפי תאריך",
     "export": "ייצא",
     "share": "שתף"
-  },
-  "admin": {
-    "title": "קונסולת ניהול",
-    "api_keys": "מפתחות API",
-    "integrations": "אינטגרציות",
-    "users": "משתמשים",
-    "permissions": "הרשאות",
-    "audit_log": "יומן ביקורת",
-    "scheduler": "מתזמן",
-    "data_residency": "מיקום נתונים",
-    "sla_dashboard": "לוח רמת שירות",
-    "domain_allowlist": "רשימת דומיינים מורשים",
-    "embed_tokens": "אסימוני הטמעה"
   },
   "scheduler": {
     "title": "מתזמן חבילת דירקטוריון",
@@ -214,6 +178,27 @@
     "dropoff": "נשירה",
     "active_users": "משתמשים פעילים"
   },
+  "common": {
+    "app_name": "לוח בקרה תאגידי",
+    "welcome": "ברוך הבא",
+    "loading": "טוען...",
+    "error": "שגיאה",
+    "success": "הצלחה",
+    "warning": "אזהרה",
+    "noData": "אין נתונים זמינים",
+    "refresh": "רענן",
+    "save": "שמור",
+    "cancel": "בטל",
+    "confirm": "אשר",
+    "delete": "מחק",
+    "edit": "ערוך",
+    "close": "סגור",
+    "back": "חזרה",
+    "next": "הבא",
+    "previous": "קודם",
+    "viewDetails": "הצג פרטים",
+    "viewAsTable": "הצג כטבלה (נגיש)"
+  },
   "errors": {
     "generic": "משהו השתבש. אנא נסה שוב.",
     "network": "שגיאת רשת. בדוק את החיבור שלך.",
@@ -231,6 +216,5 @@
     "theme": "ערכת נושא",
     "high_contrast": "ניגודיות גבוהה",
     "screen_reader_mode": "מצב קורא מסך"
->>>>>>> origin/claude/worker3-phaseH2-scheduler-admin-usage-aaa-0157u7VEQjoVVhqTBgYcuumh
   }
 }

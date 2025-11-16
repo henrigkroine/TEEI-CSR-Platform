@@ -66,7 +66,7 @@ export async function monitorDashboardLoad(
 ): Promise<DashboardMetrics> {
   return traceAsync(
     'synthetic.dashboard_load',
-    async (span) => {
+    async (_span) => {
       addSpanAttributes({
         'tenant.id': tenantId,
         'monitor.route': 'dashboard',

@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Boardroom Live Guide (Phase H3-A)
 
 ## Overview
@@ -260,7 +259,6 @@ const evidence: EvidenceItem[] = [
     lineage: ['SRC-001', 'PROC-002']
   }
 ]
-=======
 # Boardroom Live Guide
 
 **Phase H3-A: Corporate Cockpit GA+ Enhancement**
@@ -557,12 +555,10 @@ Arabic and Hebrew use right-to-left layout via `/src/styles/rtl.css`:
 [lang="ar"], [lang="he"] {
   direction: rtl;
 }
->>>>>>> origin/claude/cockpit-ga-plus-phase-h3-01L3aeNnzMnE4UBTwbp9tJXq
 ```
 
 ## Troubleshooting
 
-<<<<<<< HEAD
 ### SSE Connection Issues
 
 **Problem**: "Disconnected from live updates" banner
@@ -703,7 +699,6 @@ Planned for future phases:
 - [ ] Scheduled auto-updates
 - [ ] Custom branding per company
 - [ ] Accessibility enhancements (WCAG 2.2 AAA)
-=======
 ### SSE Not Connecting
 
 1. Check feature flag: `PUBLIC_FEATURE_COCKPIT_BOARDROOM_LIVE`
@@ -834,16 +829,13 @@ None - fully backward compatible.
 - [ ] Voice control integration
 - [ ] Recording/playback for presentations
 - [ ] Collaborative annotations
->>>>>>> origin/claude/cockpit-ga-plus-phase-h3-01L3aeNnzMnE4UBTwbp9tJXq
 
 ## Support
 
 For issues or questions:
-<<<<<<< HEAD
 - GitHub Issues: https://github.com/teei/cockpit/issues
 - Documentation: https://docs.teei.app/cockpit
 - Support Email: support@teei.app
-=======
 - Documentation: `/docs/cockpit/`
 - API Docs: `/docs/api/`
 - GitHub Issues: https://github.com/anthropics/claude-code/issues
@@ -853,4 +845,3 @@ For issues or questions:
 **Last Updated**: 2025-11-16
 **Phase**: H3-A
 **Version**: 1.0.0
->>>>>>> origin/claude/cockpit-ga-plus-phase-h3-01L3aeNnzMnE4UBTwbp9tJXq

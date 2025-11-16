@@ -428,7 +428,7 @@ export function createSummary(
  * Fastify metrics middleware
  */
 export function fastifyMetrics() {
-  return async (request: any, reply: any) => {
+  return async (_request: any, reply: any) => {
     const startTime = Date.now();
 
     // Track active connections

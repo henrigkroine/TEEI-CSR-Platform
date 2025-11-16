@@ -78,7 +78,7 @@ export async function monitorApprovalWorkflow(
 ): Promise<ApprovalWorkflowMetrics> {
   return traceAsync(
     'synthetic.approval_workflow',
-    async (span) => {
+    async (_span) => {
       addSpanAttributes({
         'tenant.id': tenantId,
         'monitor.route': 'approval-workflow',

@@ -14,7 +14,7 @@
 
 import * as Sentry from '@sentry/node';
 import { ProfilingIntegration } from '@sentry/profiling-node';
-import { Span } from '@opentelemetry/api';
+import type { Event, EventHint, Breadcrumb } from '@sentry/node';
 
 export interface SentryConfig {
   dsn: string;
@@ -89,7 +89,7 @@ export function initializeSentry(config: SentryConfig): void {
     maxBreadcrumbs: 50,
 
     // Before send hook for filtering/enrichment
-    beforeSend(event, hint) {
+    beforeSend(event: Event, hint: EventHint) {
       // Filter out certain errors in development
       if (environment === 'development') {
         const error = hint.originalException;
@@ -109,7 +109,7 @@ export function initializeSentry(config: SentryConfig): void {
     },
 
     // Before breadcrumb hook for filtering
-    beforeBreadcrumb(breadcrumb, hint) {
+    beforeBreadcrumb(breadcrumb: Breadcrumb, _hint?: any) {
       // Filter out noisy breadcrumbs
       if (breadcrumb.category === 'console' && breadcrumb.level === 'debug') {
         return null;

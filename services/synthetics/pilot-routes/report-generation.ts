@@ -70,7 +70,7 @@ export async function monitorReportGeneration(
 ): Promise<ReportGenerationMetrics> {
   return traceAsync(
     'synthetic.report_generation',
-    async (span) => {
+    async (_span) => {
       addSpanAttributes({
         'tenant.id': tenantId,
         'report.type': reportRequest.type,

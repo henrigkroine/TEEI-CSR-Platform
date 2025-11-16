@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # GA Cutover Runbook: Multi-Region Production Launch
 
 **Version:** 1.0.0
@@ -6,7 +5,6 @@
 **Owner:** Platform Engineering Team
 **RTO Target:** ≤ 15 minutes
 **RPO Target:** ≤ 10 seconds
-=======
 # GA Cutover Runbook - Phase I
 
 **Version:** 1.0.0
@@ -14,7 +12,6 @@
 **Status:** Production Ready
 **RTO:** 15 minutes
 **RPO:** 10 seconds
->>>>>>> origin/claude/ga-cutover-phase-one-0111mH9eWczXzBtpzUU5uUVU
 
 ---
 
@@ -22,25 +19,21 @@
 
 1. [Overview](#overview)
 2. [Pre-Cutover Checklist](#pre-cutover-checklist)
-<<<<<<< HEAD
 3. [Cutover Procedure](#cutover-procedure)
 4. [Rollback Procedure](#rollback-procedure)
 5. [Post-Cutover Validation](#post-cutover-validation)
 6. [Evidence Collection](#evidence-collection)
 7. [Troubleshooting](#troubleshooting)
-=======
 3. [Cutover Execution](#cutover-execution)
 4. [Validation & Smoke Tests](#validation--smoke-tests)
 5. [Rollback Procedures](#rollback-procedures)
 6. [Post-Cutover Tasks](#post-cutover-tasks)
 7. [Emergency Contacts](#emergency-contacts)
->>>>>>> origin/claude/ga-cutover-phase-one-0111mH9eWczXzBtpzUU5uUVU
 
 ---
 
 ## Overview
 
-<<<<<<< HEAD
 This runbook details the step-by-step procedure for executing the GA (General Availability) cutover to multi-region production deployment across US (us-east-1) and EU (eu-central-1) regions.
 
 **Key Objectives:**
@@ -58,7 +51,6 @@ This runbook details the step-by-step procedure for executing the GA (General Av
 - Regional PostgreSQL, ClickHouse, NATS
 - Route53 latency-based routing
 - CloudFront CDN with WAF
-=======
 ### Mission
 
 Execute zero-downtime production GA cutover with multi-region (US/EU) deployment, progressive delivery, mTLS STRICT enforcement, and evidence-grade telemetry for SOC2 compliance.
@@ -78,13 +70,11 @@ Execute zero-downtime production GA cutover with multi-region (US/EU) deployment
 ✅ Zero cross-region data residency violations
 ✅ Error budget burn < 0.1%
 ✅ All quality gates pass
->>>>>>> origin/claude/ga-cutover-phase-one-0111mH9eWczXzBtpzUU5uUVU
 
 ---
 
 ## Pre-Cutover Checklist
 
-<<<<<<< HEAD
 ### 1. Infrastructure Validation
 
 - [ ] **Kubernetes Clusters Ready**
@@ -723,7 +713,6 @@ EOF
 ---
 
 **END OF RUNBOOK**
-=======
 ### T-7 Days: Planning & Communication
 
 - [ ] **Stakeholder Notification**
@@ -1300,4 +1289,3 @@ SEV-2 (High):
 - [Disaster Recovery](./disaster-recovery.md)
 - [Rollback Procedures](./rollback.md)
 - [Deployment Guide](./deployment.md)
->>>>>>> origin/claude/ga-cutover-phase-one-0111mH9eWczXzBtpzUU5uUVU

@@ -1,11 +1,14 @@
-import type { MiddlewareHandler } from 'astro';
+import type { MiddlewareHandler, APIContext, MiddlewareNext } from 'astro';
 import { getAuthContext, isCompanyAdmin } from './session';
 
 /**
  * Astro middleware to protect dashboard routes
  * Use this in both apps to ensure consistent auth
  */
-export const authMiddleware: MiddlewareHandler = async ({ cookies, url, redirect }, next) => {
+export const authMiddleware: MiddlewareHandler = async (
+  { cookies, url, redirect }: APIContext,
+  next: MiddlewareNext
+) => {
   const auth = await getAuthContext(cookies);
 
   // Define protected routes
@@ -37,7 +40,7 @@ export const authMiddleware: MiddlewareHandler = async ({ cookies, url, redirect
  * Sequence middleware helper to combine with other middleware
  */
 export function sequence(...handlers: MiddlewareHandler[]): MiddlewareHandler {
-  return async (context, next) => {
+  return async (context: APIContext, next: MiddlewareNext) => {
     let index = 0;
 
     const runNext = async (): Promise<Response> => {
@@ -45,7 +48,15 @@ export function sequence(...handlers: MiddlewareHandler[]): MiddlewareHandler {
         return next();
       }
       const handler = handlers[index++];
-      return handler(context, runNext);
+      if (!handler) {
+        return next();
+      }
+      const result = await handler(context, runNext);
+      // Handle case where middleware doesn't return a response
+      if (result) {
+        return result;
+      }
+      return next();
     };
 
     return runNext();

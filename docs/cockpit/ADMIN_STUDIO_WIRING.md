@@ -1,169 +1,15 @@
-<<<<<<< HEAD
-# Admin Studio Wiring Guide (Phase H3-B)
-
-## Overview
-
-Admin Studio provides enterprise-grade administration capabilities for the TEEI Corporate Cockpit. Phase H3-B connects the UI components to backend APIs for data residency, embed tokens, and domain allowlisting.
-
-## Components
-
-### 1. Data Residency Selector
-
-**Purpose**: Configure where company data is stored and processed, with compliance framework support.
-
-**Location**: `src/components/admin/DataResidencySelector.tsx`
-
-#### Features
-
-- **Primary Region Selection**
-  - Choose data storage location
-  - View compliance badges (GDPR, ISO-27001, CCPA, etc.)
-  - See estimated latency per region
-
-- **Backup Regions**
-  - Configure redundancy across multiple regions
-  - Optional cross-border data transfer
-
-- **Compliance Controls**
-  - Enforce local processing
-  - Restrict cross-border transfers
-  - Track compliance frameworks
-
-- **Audit Trail**
-  - Last updated timestamp
-  - Updated by user
-  - Full audit log integration
-
-#### API Integration
-
-##### GET `/api/admin/residency/regions`
-
-Returns available data regions.
-
-**Response**:
-```json
-{
-  "regions": [
-    {
-      "id": "eu-west-1",
-      "name": "Europe (Ireland)",
-      "code": "eu-west-1",
-      "country": "Ireland",
-      "compliance": ["GDPR", "ISO-27001", "SOC2"],
-      "latency": 45,
-      "available": true
-    },
-    {
-      "id": "us-east-1",
-      "name": "US East (Virginia)",
-      "code": "us-east-1",
-      "country": "United States",
-      "compliance": ["SOC2", "ISO-27001", "HIPAA"],
-      "latency": 25,
-      "available": true
-    }
-  ]
-}
-```
-
-##### GET `/api/admin/residency?companyId={id}`
-
-Get current residency configuration for a company.
-
-**Response**:
-```json
-{
-  "primaryRegion": "eu-west-1",
-  "backupRegions": ["eu-central-1"],
-  "enforceLocalProcessing": true,
-  "allowCrossBorderTransfer": false,
-  "complianceFrameworks": ["GDPR", "ISO-27001"],
-  "lastUpdated": "2025-11-16T10:30:00Z",
-  "updatedBy": "admin@acme.com"
-}
-```
-
-##### PUT `/api/admin/residency`
-
-Update residency configuration.
-
-**Request**:
-```json
-{
-  "companyId": "acme-corp",
-  "primaryRegion": "eu-west-1",
-  "backupRegions": ["eu-central-1", "eu-west-2"],
-  "enforceLocalProcessing": true,
-  "allowCrossBorderTransfer": false
-}
-```
-
-**Response**: Same as GET response with updated values.
-
-#### RBAC
-
-Requires `MANAGE_DATA_RESIDENCY` permission.
-
-#### Usage
-
-```tsx
-<DataResidencySelector
-  companyId="acme-corp"
-  canEdit={hasPermission(user.role, 'MANAGE_DATA_RESIDENCY')}
-  onUpdate={(config) => {
-    console.log('Residency updated:', config);
-  }}
-/>
-```
-
----
-
-### 2. Embed Token Manager
-
-**Purpose**: Create and manage secure tokens for embedding cockpit dashboards in external applications.
-
-**Location**: `src/components/admin/EmbedTokenManager.tsx`
-
-#### Features
-
-- **Token Generation**
-  - Named tokens with expiration
-  - Configurable permissions
-  - Usage limits
-
-- **View Permissions**
-  - Granular access control per view
-  - Export permission toggle
-  - Evidence access toggle
-
-- **Token Management**
-  - List all tokens
-  - Revoke tokens
-  - View usage statistics
-
-- **Embed Code**
-  - Auto-generated iframe code
-  - One-click copy
-  - Sandbox attributes for security
-
-#### API Integration
-
-##### GET `/api/admin/embed-tokens?companyId={id}`
-
-List all embed tokens for a company.
-=======
 # Admin Studio Wiring Guide
 
 **Phase H3-B: Backend API Integration with RBAC**
 
 ## Overview
 
-Admin Studio provides advanced administrative configuration capabilities for the Corporate Cockpit. Phase H3-B wires four critical features to real backend APIs with full CRUD operations, RBAC enforcement, and comprehensive audit logging.
+Admin Studio provides enterprise-grade administration capabilities for the TEEI Corporate Cockpit. Phase H3-B connects the UI components to backend APIs for data residency, embed tokens, and domain allowlisting with full CRUD operations, RBAC enforcement, and comprehensive audit logging.
 
 ## Features
 
 ### 1. Data Residency Selector
-Manage where company data is stored and processed across global regions.
+Configure where company data is stored and processed across global regions, with compliance framework support.
 
 ### 2. Embed Token Manager
 Create and manage authentication tokens for embedding dashboards in external applications.
@@ -217,12 +63,16 @@ Allow administrators to configure where company data is stored and processed, en
 
 ### Component: `DataResidencySelector.tsx`
 
+**Location**: `src/components/admin/DataResidencySelector.tsx`
+
 ### Features
-- **List Available Regions**: Display all supported data center locations
-- **Current Configuration**: Show active residency region
+- **Primary Region Selection**: Choose data storage location
+- **Compliance Badges**: View compliance frameworks (GDPR, ISO-27001, SOC2, CCPA, HIPAA, etc.)
+- **Latency Information**: See estimated latency per region
+- **Backup Regions**: Configure redundancy across multiple regions
+- **Compliance Controls**: Enforce local processing, restrict cross-border transfers
 - **Change with Confirmation**: Warning dialog for region changes
-- **Compliance Frameworks**: Display supported frameworks per region
-- **Latency Information**: Show expected latency for each region
+- **Audit Trail**: Last updated timestamp, updated by user, full audit log integration
 
 ### Data Model
 
@@ -232,8 +82,10 @@ interface ResidencyRegion {
   name: string;            // "US East (Virginia)"
   code: string;            // "US-EAST"
   dataCenter: string;      // "AWS us-east-1"
+  country: string;         // "United States"
   complianceFrameworks: string[]; // ["SOC2", "GDPR", "HIPAA"]
   latencyMs: number;       // Expected latency
+  available: boolean;      // Region availability
 }
 ```
 
@@ -254,16 +106,20 @@ Authorization: Bearer {token}
     "name": "US East (Virginia)",
     "code": "US-EAST",
     "dataCenter": "AWS us-east-1",
-    "complianceFrameworks": ["SOC2", "HIPAA"],
-    "latencyMs": 50
+    "country": "United States",
+    "complianceFrameworks": ["SOC2", "HIPAA", "ISO-27001"],
+    "latencyMs": 50,
+    "available": true
   },
   {
     "id": "eu-west-1",
     "name": "Europe (Ireland)",
     "code": "EU-WEST",
     "dataCenter": "AWS eu-west-1",
-    "complianceFrameworks": ["GDPR", "SOC2"],
-    "latencyMs": 120
+    "country": "Ireland",
+    "complianceFrameworks": ["GDPR", "SOC2", "ISO-27001"],
+    "latencyMs": 120,
+    "available": true
   }
 ]
 ```
@@ -274,12 +130,10 @@ Authorization: Bearer {token}
 GET /api/admin-studio/residency/{companyId}
 Authorization: Bearer {token}
 ```
->>>>>>> origin/claude/cockpit-ga-plus-phase-h3-01L3aeNnzMnE4UBTwbp9tJXq
 
 **Response**:
 ```json
 {
-<<<<<<< HEAD
   "tokens": [
     {
       "id": "tok_abc123",
@@ -331,7 +185,6 @@ Create a new embed token.
 
 Revoke an embed token.
 
-=======
   "companyId": "comp-123",
   "regionId": "us-east-1",
   "updatedAt": "2025-11-15T10:30:00Z",
@@ -351,12 +204,10 @@ Content-Type: application/json
 }
 ```
 
->>>>>>> origin/claude/cockpit-ga-plus-phase-h3-01L3aeNnzMnE4UBTwbp9tJXq
 **Response**:
 ```json
 {
   "success": true,
-<<<<<<< HEAD
   "message": "Token revoked successfully"
 }
 ```
@@ -557,7 +408,6 @@ import DomainAllowlistManager from '@/components/admin/DomainAllowlistManager';
       className="mt-2 text-sm text-red-700 underline"
     >
       Retry
-=======
   "migrationId": "mig-456",
   "estimatedCompletionTime": "2025-11-16T14:00:00Z"
 }
@@ -743,13 +593,11 @@ Authorization: Bearer {token}
     <code className="token-code">{showToken}</code>
     <button onClick={() => setShowToken(null)}>
       I've saved the token
->>>>>>> origin/claude/cockpit-ga-plus-phase-h3-01L3aeNnzMnE4UBTwbp9tJXq
     </button>
   </div>
 )}
 ```
 
-<<<<<<< HEAD
 ### API Error Codes
 
 | Code | Message | Action |
@@ -932,7 +780,6 @@ Planned for future phases:
 - [ ] Automated compliance reporting
 - [ ] Multi-region failover testing
 - [ ] Token rotation automation
-=======
 ### Audit Logging
 
 ```json
@@ -1345,16 +1192,13 @@ Admin Studio is an enhancement to the existing Admin Console:
 - [ ] Advanced audit log search (full-text, date ranges)
 - [ ] Webhook notifications for critical events
 - [ ] Multi-region failover configuration
->>>>>>> origin/claude/cockpit-ga-plus-phase-h3-01L3aeNnzMnE4UBTwbp9tJXq
 
 ## Support
 
 For issues or questions:
-<<<<<<< HEAD
 - GitHub Issues: https://github.com/teei/cockpit/issues
 - Documentation: https://docs.teei.app/cockpit/admin-studio
 - Support Email: support@teei.app
-=======
 - Documentation: `/docs/cockpit/`
 - API Docs: `/docs/api/`
 - GitHub Issues: https://github.com/anthropics/claude-code/issues
@@ -1364,4 +1208,3 @@ For issues or questions:
 **Last Updated**: 2025-11-16
 **Phase**: H3-B
 **Version**: 1.0.0
->>>>>>> origin/claude/cockpit-ga-plus-phase-h3-01L3aeNnzMnE4UBTwbp9tJXq

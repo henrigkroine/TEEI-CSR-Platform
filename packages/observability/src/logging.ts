@@ -13,7 +13,14 @@
  */
 
 import pino from 'pino';
-import { getCorrelationId, getCausationId } from '@teei/shared-utils';
+
+// Correlation ID helpers (inline to avoid dependency issues)
+// These should be replaced with @teei/shared-utils when available
+let correlationId: string | undefined;
+let causationId: string | undefined;
+
+const getCorrelationId = (): string | undefined => correlationId;
+const getCausationId = (): string | undefined => causationId;
 
 export interface LoggerConfig {
   serviceName: string;
@@ -88,7 +95,7 @@ export function createLogger(config: LoggerConfig): pino.Logger {
 
     // Custom formatters
     formatters: {
-      level(label, number) {
+      level(label, _number) {
         return { level: label };
       },
       bindings(bindings) {
