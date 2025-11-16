@@ -1,6 +1,15 @@
+<<<<<<< HEAD
+=======
+---
+>>>>>>> origin/claude/phaseG-global-ga-multiregion-017uvLqAucExNFGykX9bSDSY
 apiVersion: v1
 kind: Namespace
 metadata:
   name: istio-system
   labels:
     name: istio-system
+<<<<<<< HEAD
+=======
+    part-of: teei-csr-platform
+    istio-injection: disabled  # Don't inject into control plane namespace
+>>>>>>> origin/claude/phaseG-global-ga-multiregion-017uvLqAucExNFGykX9bSDSY

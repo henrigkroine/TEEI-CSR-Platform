@@ -1,0 +1,603 @@
+# Traffic Splitting Configuration for TEEI Platform
+# Istio/Envoy Service Mesh - Canary Deployments, Blue/Green, Traffic Mirroring
+
+---
+# Istio VirtualService definitions for traffic routing
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: teei-api-virtualservice
+  namespace: teei-platform
+  labels:
+    app: teei-api
+    version: v1
+spec:
+  hosts:
+    - api.teei-platform.com
+    - api.us.teei-platform.com
+    - teei-api.teei-platform.svc.cluster.local
+  gateways:
+    - teei-gateway
+    - mesh  # Internal mesh traffic
+  http:
+    # ========================================================================
+    # Route 1: Canary Deployment - 95% stable, 5% canary
+    # ========================================================================
+    - match:
+        - headers:
+            x-canary:
+              exact: "true"
+      route:
+        - destination:
+            host: teei-api.teei-platform.svc.cluster.local
+            subset: canary
+          weight: 100
+      retries:
+        attempts: 3
+        perTryTimeout: 2s
+        retryOn: 5xx,reset,connect-failure,refused-stream
+
+    # Regular traffic split
+    - route:
+        # 95% to stable version
+        - destination:
+            host: teei-api.teei-platform.svc.cluster.local
+            subset: stable
+          weight: 95
+          headers:
+            request:
+              add:
+                x-version: stable
+        # 5% to canary version
+        - destination:
+            host: teei-api.teei-platform.svc.cluster.local
+            subset: canary
+          weight: 5
+          headers:
+            request:
+              add:
+                x-version: canary
+
+      # Traffic mirroring to staging for testing
+      mirror:
+        host: teei-api-staging.teei-platform.svc.cluster.local
+        subset: stable
+      mirrorPercentage:
+        value: 10  # Mirror 10% of production traffic to staging
+
+      # Timeout configuration
+      timeout: 30s
+      retries:
+        attempts: 3
+        perTryTimeout: 10s
+        retryOn: 5xx,reset,connect-failure,refused-stream
+
+      # Fault injection for chaos engineering (disabled in production)
+      # fault:
+      #   delay:
+      #     percentage:
+      #       value: 0.1
+      #     fixedDelay: 5s
+      #   abort:
+      #     percentage:
+      #       value: 0.1
+      #     httpStatus: 503
+
+---
+# ========================================================================
+# VirtualService for Reports Service - Blue/Green Deployment
+# ========================================================================
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: teei-reports-virtualservice
+  namespace: teei-platform
+  labels:
+    app: teei-reports
+    version: v1
+spec:
+  hosts:
+    - reports.teei-platform.com
+    - reports.us.teei-platform.com
+    - teei-reports.teei-platform.svc.cluster.local
+  gateways:
+    - teei-gateway
+    - mesh
+  http:
+    # ========================================================================
+    # Route 1: Blue/Green deployment - Header-based routing for testing
+    # ========================================================================
+    - match:
+        - headers:
+            x-version:
+              exact: green
+      route:
+        - destination:
+            host: teei-reports.teei-platform.svc.cluster.local
+            subset: green
+          weight: 100
+
+    # Regular traffic to blue (stable) version
+    - route:
+        - destination:
+            host: teei-reports.teei-platform.svc.cluster.local
+            subset: blue
+          weight: 100
+
+      timeout: 60s
+      retries:
+        attempts: 2
+        perTryTimeout: 30s
+        retryOn: 5xx,reset,connect-failure
+
+---
+# ========================================================================
+# VirtualService for WebSocket connections - Sticky routing
+# ========================================================================
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: teei-websocket-virtualservice
+  namespace: teei-platform
+  labels:
+    app: teei-websocket
+    version: v1
+spec:
+  hosts:
+    - ws.teei-platform.com
+    - teei-websocket.teei-platform.svc.cluster.local
+  gateways:
+    - teei-gateway
+    - mesh
+  http:
+    - match:
+        - headers:
+            upgrade:
+              exact: websocket
+      route:
+        - destination:
+            host: teei-websocket.teei-platform.svc.cluster.local
+            subset: stable
+          weight: 100
+
+      timeout: 3600s  # 1 hour for WebSocket connections
+      retries:
+        attempts: 0  # No retries for WebSocket
+
+---
+# ========================================================================
+# DestinationRule for API Service - Subsets and Traffic Policies
+# ========================================================================
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: teei-api-destinationrule
+  namespace: teei-platform
+  labels:
+    app: teei-api
+spec:
+  host: teei-api.teei-platform.svc.cluster.local
+
+  # Traffic Policy (applies to all subsets unless overridden)
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: 1000
+        connectTimeout: 10s
+        tcpKeepalive:
+          time: 7200s
+          interval: 75s
+      http:
+        http1MaxPendingRequests: 1024
+        http2MaxRequests: 1024
+        maxRequestsPerConnection: 10
+        maxRetries: 3
+
+    loadBalancer:
+      simple: LEAST_REQUEST  # Load balance based on least requests
+      # consistentHash:  # Alternative: sticky sessions based on header
+      #   httpHeaderName: x-user-id
+
+    outlierDetection:
+      consecutiveErrors: 5
+      interval: 30s
+      baseEjectionTime: 30s
+      maxEjectionPercent: 50
+      minHealthPercent: 50
+
+    tls:
+      mode: ISTIO_MUTUAL  # mTLS for service-to-service communication
+
+  # Subset definitions
+  subsets:
+    # Stable version
+    - name: stable
+      labels:
+        version: stable
+      trafficPolicy:
+        connectionPool:
+          tcp:
+            maxConnections: 1000
+          http:
+            http2MaxRequests: 1024
+
+    # Canary version
+    - name: canary
+      labels:
+        version: canary
+      trafficPolicy:
+        connectionPool:
+          tcp:
+            maxConnections: 100  # Lower limits for canary
+          http:
+            http2MaxRequests: 100
+
+---
+# ========================================================================
+# DestinationRule for Reports Service - Blue/Green Subsets
+# ========================================================================
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: teei-reports-destinationrule
+  namespace: teei-platform
+  labels:
+    app: teei-reports
+spec:
+  host: teei-reports.teei-platform.svc.cluster.local
+
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: 500
+        connectTimeout: 15s
+      http:
+        http1MaxPendingRequests: 512
+        http2MaxRequests: 512
+        maxRequestsPerConnection: 5
+
+    loadBalancer:
+      simple: ROUND_ROBIN
+
+    outlierDetection:
+      consecutiveErrors: 3
+      interval: 30s
+      baseEjectionTime: 60s
+      maxEjectionPercent: 30
+
+    tls:
+      mode: ISTIO_MUTUAL
+
+  subsets:
+    # Blue (current production)
+    - name: blue
+      labels:
+        version: blue
+        deployment: blue
+
+    # Green (new version for testing)
+    - name: green
+      labels:
+        version: green
+        deployment: green
+
+---
+# ========================================================================
+# DestinationRule for WebSocket Service - Sticky sessions
+# ========================================================================
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: teei-websocket-destinationrule
+  namespace: teei-platform
+  labels:
+    app: teei-websocket
+spec:
+  host: teei-websocket.teei-platform.svc.cluster.local
+
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: 5000  # Higher for WebSocket
+        connectTimeout: 30s
+        tcpKeepalive:
+          time: 3600s  # 1 hour
+          interval: 60s
+      http:
+        http1MaxPendingRequests: 2048
+        http2MaxRequests: 2048
+
+    loadBalancer:
+      consistentHash:
+        httpHeaderName: x-session-id  # Sticky sessions based on session ID
+
+    outlierDetection:
+      consecutiveErrors: 10
+      interval: 60s
+      baseEjectionTime: 120s
+      maxEjectionPercent: 20
+
+    tls:
+      mode: ISTIO_MUTUAL
+
+  subsets:
+    - name: stable
+      labels:
+        version: stable
+
+---
+# ========================================================================
+# Gateway Configuration - Ingress Gateway
+# ========================================================================
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: teei-gateway
+  namespace: teei-platform
+spec:
+  selector:
+    istio: ingressgateway  # Use Istio's default ingress gateway
+  servers:
+    # HTTPS for API
+    - port:
+        number: 443
+        name: https-api
+        protocol: HTTPS
+      hosts:
+        - api.teei-platform.com
+        - api.us.teei-platform.com
+        - api.eu.teei-platform.com
+      tls:
+        mode: SIMPLE
+        credentialName: teei-api-tls-cert  # K8s secret with TLS cert
+
+    # HTTPS for Reports
+    - port:
+        number: 443
+        name: https-reports
+        protocol: HTTPS
+      hosts:
+        - reports.teei-platform.com
+        - reports.us.teei-platform.com
+        - reports.eu.teei-platform.com
+      tls:
+        mode: SIMPLE
+        credentialName: teei-reports-tls-cert
+
+    # HTTPS for WebSocket
+    - port:
+        number: 443
+        name: https-websocket
+        protocol: HTTPS
+      hosts:
+        - ws.teei-platform.com
+      tls:
+        mode: SIMPLE
+        credentialName: teei-websocket-tls-cert
+
+    # HTTP redirect to HTTPS
+    - port:
+        number: 80
+        name: http
+        protocol: HTTP
+      hosts:
+        - "*"
+      tls:
+        httpsRedirect: true
+
+---
+# ========================================================================
+# ServiceEntry for External Services (e.g., third-party APIs)
+# ========================================================================
+apiVersion: networking.istio.io/v1beta1
+kind: ServiceEntry
+metadata:
+  name: external-apis
+  namespace: teei-platform
+spec:
+  hosts:
+    - api.example.com
+    - cdn.cloudflare.com
+  ports:
+    - number: 443
+      name: https
+      protocol: HTTPS
+  location: MESH_EXTERNAL
+  resolution: DNS
+
+---
+# ========================================================================
+# PeerAuthentication - Enable mTLS for all services
+# ========================================================================
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: default
+  namespace: teei-platform
+spec:
+  mtls:
+    mode: STRICT  # Require mTLS for all service-to-service communication
+
+---
+# ========================================================================
+# AuthorizationPolicy - RBAC for API access
+# ========================================================================
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: teei-api-authz
+  namespace: teei-platform
+spec:
+  selector:
+    matchLabels:
+      app: teei-api
+  action: ALLOW
+  rules:
+    # Allow GET requests from anywhere
+    - to:
+        - operation:
+            methods:
+              - GET
+              - HEAD
+              - OPTIONS
+
+    # Allow POST/PUT/DELETE with valid JWT
+    - to:
+        - operation:
+            methods:
+              - POST
+              - PUT
+              - DELETE
+              - PATCH
+      when:
+        - key: request.auth.claims[iss]
+          values:
+            - "https://auth.teei-platform.com"
+
+---
+# ========================================================================
+# Canary Deployment Strategy - Progressive Rollout
+# ========================================================================
+# Stage 1: 0% canary (internal testing only)
+# Stage 2: 5% canary (limited user exposure)
+# Stage 3: 25% canary (wider testing)
+# Stage 4: 50% canary (half traffic)
+# Stage 5: 100% canary (full rollout)
+#
+# Rollback criteria:
+# - Error rate > 1%
+# - Latency p99 > 2x baseline
+# - Customer complaints
+# - Failed health checks
+#
+# Monitoring during canary:
+# - Request success rate per version
+# - Latency distribution per version
+# - Error logs per version
+# - Business metrics (conversions, revenue)
+
+---
+# ========================================================================
+# Blue/Green Deployment Strategy
+# ========================================================================
+# Initial state: 100% blue, 0% green
+# Deploy green version
+# Test green with x-version: green header
+# Validate green (automated tests + manual QA)
+# Switch traffic: 0% blue, 100% green
+# Monitor for issues
+# Keep blue running for 24h for quick rollback
+# After validation period, decommission blue
+
+---
+# ========================================================================
+# Traffic Mirroring Configuration
+# ========================================================================
+# Purpose: Test new versions with real traffic without impacting users
+# - Mirror 10% of production traffic to staging
+# - Monitor staging for errors, crashes, performance issues
+# - No responses from staging affect production users
+# - Useful for:
+#   - Load testing with real traffic patterns
+#   - Validating fixes before full deployment
+#   - Shadow mode for new features
+
+---
+# ========================================================================
+# Regional Traffic Routing
+# ========================================================================
+# US region:
+# - Primary: us-east-1
+# - Secondary: us-west-2
+# - Latency-based routing via DNS (Route53)
+#
+# EU region:
+# - Primary: eu-central-1
+# - Secondary: eu-west-1
+# - GDPR compliance: EU data stays in EU
+#
+# Failover:
+# - Automatic health check-based failover
+# - RTO: 2 minutes
+# - RPO: 0 (active-active replication)
+
+---
+# ========================================================================
+# Circuit Breaker Configuration
+# ========================================================================
+# Prevents cascading failures by:
+# - Ejecting unhealthy pods from load balancer
+# - Consecutive errors threshold: 5
+# - Ejection duration: 30s (exponential backoff)
+# - Max ejection: 50% of pods
+# - Min healthy: 50% of pods required
+
+---
+# ========================================================================
+# Retry Policy
+# ========================================================================
+# Automatic retries for transient failures:
+# - Max attempts: 3
+# - Per-try timeout: 10s
+# - Retry on: 5xx, reset, connect-failure, refused-stream
+# - Exponential backoff: 25ms base, 250ms max
+#
+# Notes:
+# - Retries are idempotent (safe for GET, safe POST with idempotency key)
+# - No retries for WebSocket or streaming connections
+
+---
+# ========================================================================
+# Rate Limiting (Layer 7)
+# ========================================================================
+# Implemented via Envoy filter
+# - Global: 1000 req/5min per IP
+# - API: 300 req/min per user
+# - GenAI: 50 req/min per user
+# - Login: 10 req/5min per IP
+#
+# Response: 429 Too Many Requests
+# Headers: X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset
+
+---
+# ========================================================================
+# Observability - Distributed Tracing
+# ========================================================================
+# Trace headers:
+# - x-request-id: Unique request ID
+# - x-b3-traceid: Zipkin/Jaeger trace ID
+# - x-b3-spanid: Span ID
+# - x-b3-parentspanid: Parent span ID
+# - x-b3-sampled: Sampling decision (1 = sampled)
+#
+# Sampling rate: 1% (adjustable)
+# Backend: Jaeger or Zipkin
+# Retention: 7 days
+
+---
+# ========================================================================
+# Metrics Collection
+# ========================================================================
+# Istio exports metrics to Prometheus:
+# - istio_requests_total: Total requests
+# - istio_request_duration_milliseconds: Request duration
+# - istio_request_bytes: Request size
+# - istio_response_bytes: Response size
+#
+# Dimensions:
+# - source_workload, destination_workload
+# - source_version, destination_version
+# - response_code, response_flags
+# - connection_security_policy (mTLS)
+
+---
+# ========================================================================
+# Documentation
+# ========================================================================
+# For detailed information, see:
+# - /docs/Traffic_Management.md
+# - /docs/Canary_Deployment.md
+# - /docs/Blue_Green_Deployment.md
+# - /docs/Traffic_Mirroring.md
+# - /docs/Circuit_Breaker.md
+# - /docs/Istio_Best_Practices.md

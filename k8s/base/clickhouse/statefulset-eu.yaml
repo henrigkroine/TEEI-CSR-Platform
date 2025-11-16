@@ -1,0 +1,144 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: clickhouse-eu
+  namespace: teei-platform
+  labels:
+    app: clickhouse
+    region: eu-central-1
+    component: analytics
+spec:
+  serviceName: clickhouse-eu
+  replicas: 4  # 2 shards × 2 replicas
+  podManagementPolicy: Parallel
+  selector:
+    matchLabels:
+      app: clickhouse
+      region: eu-central-1
+  template:
+    metadata:
+      labels:
+        app: clickhouse
+        region: eu-central-1
+        component: analytics
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - clickhouse
+                topologyKey: kubernetes.io/hostname
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: region
+                    operator: In
+                    values:
+                      - eu-central-1
+      initContainers:
+        - name: init-config
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              ORDINAL=${HOSTNAME##*-}
+              SHARD=$((ORDINAL / 2 + 1))
+              REPLICA=$((ORDINAL % 2 + 1))
+              echo "Shard: $SHARD, Replica: $REPLICA"
+              mkdir -p /etc/clickhouse-server/config.d
+              cat > /etc/clickhouse-server/config.d/macros.xml <<EOF
+              <clickhouse>
+                <macros>
+                  <shard>$SHARD</shard>
+                  <replica>$REPLICA</replica>
+                  <region>eu-central-1</region>
+                  <cluster>teei_eu_cluster</cluster>
+                </macros>
+              </clickhouse>
+              EOF
+          volumeMounts:
+            - name: config
+              mountPath: /etc/clickhouse-server/config.d
+      containers:
+        - name: clickhouse
+          image: clickhouse/clickhouse-server:23.8
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8123
+              protocol: TCP
+            - name: native
+              containerPort: 9000
+              protocol: TCP
+            - name: interserver
+              containerPort: 9009
+              protocol: TCP
+          env:
+            - name: CLICKHOUSE_DB
+              value: "default"
+            - name: CLICKHOUSE_USER
+              value: "default"
+            - name: CLICKHOUSE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: clickhouse-credentials
+                  key: password
+            - name: CLICKHOUSE_INTERSERVER_HTTP_CREDENTIALS
+              valueFrom:
+                secretKeyRef:
+                  name: clickhouse-credentials
+                  key: interserver_credentials
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/clickhouse
+            - name: config
+              mountPath: /etc/clickhouse-server/config.d
+            - name: cluster-config
+              mountPath: /etc/clickhouse-server/config.d/clusters.xml
+              subPath: clusters.xml
+          livenessProbe:
+            httpGet:
+              path: /ping
+              port: 8123
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /ping
+              port: 8123
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+          resources:
+            requests:
+              cpu: "1.5"
+              memory: 6Gi
+            limits:
+              cpu: "3"
+              memory: 12Gi
+      volumes:
+        - name: config
+          emptyDir: {}
+        - name: cluster-config
+          configMap:
+            name: clickhouse-cluster-config
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: fast-ssd
+        resources:
+          requests:
+            storage: 200Gi

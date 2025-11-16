@@ -1,0 +1,152 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nats-config
+  labels:
+    app: nats
+    component: messaging
+data:
+  nats.conf: |
+    # NATS Server Configuration with JetStream
+    # Region: Set via environment variable NATS_REGION (us-east-1 or eu-central-1)
+
+    server_name: $POD_NAME
+
+    # Client port
+    port: 4222
+
+    # HTTP monitoring port
+    http_port: 8222
+
+    # Clustering configuration
+    cluster {
+      name: teei-nats-cluster
+      port: 6222
+
+      # Cluster routes - connect to all pods in StatefulSet
+      routes = [
+        nats://nats-0.nats-headless:6222
+        nats://nats-1.nats-headless:6222
+        nats://nats-2.nats-headless:6222
+      ]
+
+      # Cluster advertise address (set via env var)
+      cluster_advertise: $CLUSTER_ADVERTISE:6222
+
+      # Cluster authorization
+      authorization {
+        user: $NATS_CLUSTER_USER
+        password: $NATS_CLUSTER_PASSWORD
+        timeout: 2
+      }
+    }
+
+    # Leafnode configuration for cross-region connectivity
+    leafnodes {
+      port: 7422
+
+      # For US cluster: connect to EU as leafnode
+      # For EU cluster: connect to US as leafnode
+      # Set via region-specific overlays
+      include "/etc/nats-config/leafnodes.conf"
+    }
+
+    # JetStream configuration
+    jetstream {
+      # Enable JetStream
+      enabled: true
+
+      # Storage directory
+      store_dir: /data/jetstream
+
+      # Maximum memory for JetStream
+      max_memory_store: 4Gi
+
+      # Maximum file storage
+      max_file_store: 100Gi
+
+      # Domain for multi-region setup
+      # Set via region-specific overlays (us-east-1 or eu-central-1)
+      # domain: $NATS_DOMAIN
+    }
+
+    # System account for monitoring and management
+    system_account: SYS
+
+    # Accounts configuration
+    accounts {
+      SYS {
+        users = [
+          { user: "admin", password: "$NATS_ADMIN_PASSWORD" }
+        ]
+      }
+
+      # Default account for application services
+      APP {
+        jetstream: enabled
+        users = [
+          { user: "$NATS_APP_USER", password: "$NATS_APP_PASSWORD" }
+        ]
+
+        # Export subjects for cross-account communication if needed
+        exports = [
+          { service: "events.>" }
+          { service: "audit.>" }
+          { service: "metrics.>" }
+        ]
+      }
+    }
+
+    # Limits
+    max_connections: 10000
+    max_control_line: 4096
+    max_payload: 8MB
+    max_pending: 256MB
+
+    # Slow consumer handling
+    max_pending_size: 256MB
+    write_deadline: 10s
+
+    # Logging
+    debug: false
+    trace: false
+    logtime: true
+    log_file: "/dev/stdout"
+
+    # Lame duck mode for graceful shutdown
+    lame_duck_duration: 30s
+    lame_duck_grace_period: 10s
+
+    # TLS configuration (optional - enable for production)
+    # tls {
+    #   cert_file: "/etc/nats-tls/server-cert.pem"
+    #   key_file: "/etc/nats-tls/server-key.pem"
+    #   ca_file: "/etc/nats-tls/ca.pem"
+    #   verify: true
+    #   timeout: 5
+    # }
+
+  leafnodes.conf: |
+    # Leafnode configuration for cross-region connectivity
+    # This file is region-specific and should be overridden in kustomize overlays
+
+    # For US region - connect to EU cluster
+    # remotes = [
+    #   {
+    #     url: "nats-leaf://nats-lb.eu-central-1.example.com:7422"
+    #     account: "APP"
+    #     credentials: "/etc/nats-secret/leafnode.creds"
+    #   }
+    # ]
+
+    # For EU region - connect to US cluster
+    # remotes = [
+    #   {
+    #     url: "nats-leaf://nats-lb.us-east-1.example.com:7422"
+    #     account: "APP"
+    #     credentials: "/etc/nats-secret/leafnode.creds"
+    #   }
+    # ]
+
+    # Placeholder - will be configured via kustomize overlays
+    remotes = []

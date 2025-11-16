@@ -1,9 +1,17 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 # EU-Central-1 Production: Resource limits for critical services
 =======
 ---
 # Production resource limits for EU Central region
 >>>>>>> origin/claude/ga-cutover-phase-one-0111mH9eWczXzBtpzUU5uUVU
+=======
+---
+# EU Central 1 Region: Resource limits optimized for European traffic patterns
+# EU region handles ~40% of global traffic with stricter data residency requirements
+
+# API Gateway - increased for EU traffic
+>>>>>>> origin/claude/phaseG-global-ga-multiregion-017uvLqAucExNFGykX9bSDSY
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -16,12 +24,28 @@ spec:
         resources:
           requests:
 <<<<<<< HEAD
+<<<<<<< HEAD
             cpu: 500m
             memory: 512Mi
           limits:
             cpu: 2000m
             memory: 2Gi
 ---
+=======
+            cpu: 250m
+            memory: 384Mi
+          limits:
+            cpu: 1500m
+            memory: 1.5Gi
+        env:
+        - name: REGION
+          value: eu-central-1
+        - name: MAX_CONNECTIONS
+          value: "1000"
+
+---
+# Corporate Cockpit - higher resources for executive dashboards
+>>>>>>> origin/claude/phaseG-global-ga-multiregion-017uvLqAucExNFGykX9bSDSY
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -33,6 +57,7 @@ spec:
       - name: corp-cockpit
         resources:
           requests:
+<<<<<<< HEAD
             cpu: 500m
             memory: 1Gi
           limits:
@@ -47,6 +72,21 @@ spec:
 
 >>>>>>> origin/claude/ga-cutover-phase-one-0111mH9eWczXzBtpzUU5uUVU
 ---
+=======
+            cpu: 400m
+            memory: 768Mi
+          limits:
+            cpu: 2500m
+            memory: 3Gi
+        env:
+        - name: REGION
+          value: eu-central-1
+        - name: NODE_OPTIONS
+          value: "--max-old-space-size=2048"
+
+---
+# Reporting Service - increased for GenAI workloads
+>>>>>>> origin/claude/phaseG-global-ga-multiregion-017uvLqAucExNFGykX9bSDSY
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -58,6 +98,7 @@ spec:
       - name: reporting
         resources:
           requests:
+<<<<<<< HEAD
 <<<<<<< HEAD
             cpu: 400m
             memory: 512Mi
@@ -90,6 +131,21 @@ spec:
 
 >>>>>>> origin/claude/ga-cutover-phase-one-0111mH9eWczXzBtpzUU5uUVU
 ---
+=======
+            cpu: 500m
+            memory: 1Gi
+          limits:
+            cpu: 3000m
+            memory: 4Gi
+        env:
+        - name: REGION
+          value: eu-central-1
+        - name: ANTHROPIC_REGION_ENDPOINT
+          value: "https://api.anthropic.com"
+
+---
+# Q2Q AI Service - higher resources for AI processing
+>>>>>>> origin/claude/phaseG-global-ga-multiregion-017uvLqAucExNFGykX9bSDSY
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -101,6 +157,7 @@ spec:
       - name: q2q-ai
         resources:
           requests:
+<<<<<<< HEAD
 <<<<<<< HEAD
             cpu: 1000m
             memory: 2Gi
@@ -114,3 +171,57 @@ spec:
             memory: "4Gi"
             cpu: "4000m"
 >>>>>>> origin/claude/ga-cutover-phase-one-0111mH9eWczXzBtpzUU5uUVU
+=======
+            cpu: 600m
+            memory: 1.5Gi
+          limits:
+            cpu: 4000m
+            memory: 6Gi
+        env:
+        - name: REGION
+          value: eu-central-1
+
+---
+# Analytics Service - optimized for ClickHouse queries
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: teei-analytics
+spec:
+  template:
+    spec:
+      containers:
+      - name: analytics
+        resources:
+          requests:
+            cpu: 300m
+            memory: 512Mi
+          limits:
+            cpu: 2000m
+            memory: 2Gi
+        env:
+        - name: REGION
+          value: eu-central-1
+
+---
+# Unified Profile Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: teei-unified-profile
+spec:
+  template:
+    spec:
+      containers:
+      - name: unified-profile
+        resources:
+          requests:
+            cpu: 200m
+            memory: 256Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+        env:
+        - name: REGION
+          value: eu-central-1
+>>>>>>> origin/claude/phaseG-global-ga-multiregion-017uvLqAucExNFGykX9bSDSY

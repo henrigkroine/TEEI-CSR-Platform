@@ -3,4 +3,9 @@ kind: Namespace
 metadata:
   name: argo-rollouts
   labels:
+<<<<<<< HEAD
     name: argo-rollouts
+=======
+    app.kubernetes.io/name: argo-rollouts
+    app.kubernetes.io/part-of: teei-csr-platform
+>>>>>>> origin/claude/phaseG-global-ga-multiregion-017uvLqAucExNFGykX9bSDSY

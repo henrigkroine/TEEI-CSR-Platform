@@ -1,0 +1,521 @@
+{
+  "dashboard": {
+    "title": "TEEI Platform - ClickHouse Replication & Sharding",
+    "tags": ["teei", "clickhouse", "replication", "sharding", "multi-region"],
+    "timezone": "utc",
+    "editable": true,
+    "refresh": "30s",
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "Replica Lag (seconds)",
+        "type": "graph",
+        "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "clickhouse_replica_absolute_delay{database=\"default\"}",
+            "legendFormat": "{{table}} - {{replica}} ({{region}})",
+            "refId": "A"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Lag (seconds)",
+            "format": "s",
+            "logBase": 1
+          }
+        ],
+        "alert": {
+          "conditions": [
+            {
+              "evaluator": {
+                "params": [60],
+                "type": "gt"
+              },
+              "query": {
+                "params": ["A", "5m", "now"]
+              }
+            }
+          ],
+          "executionErrorState": "alerting",
+          "frequency": "60s",
+          "handler": 1,
+          "name": "Replica lag > 60 seconds",
+          "noDataState": "no_data",
+          "notifications": []
+        },
+        "thresholds": [
+          {
+            "value": 30,
+            "colorMode": "warning"
+          },
+          {
+            "value": 60,
+            "colorMode": "critical"
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Replication Queue Length",
+        "type": "graph",
+        "gridPos": {"x": 12, "y": 0, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "clickhouse_replica_queue_size{database=\"default\"}",
+            "legendFormat": "{{table}} - {{replica}} ({{region}})",
+            "refId": "A"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Queue Size",
+            "format": "short"
+          }
+        ],
+        "thresholds": [
+          {
+            "value": 100,
+            "colorMode": "warning"
+          },
+          {
+            "value": 500,
+            "colorMode": "critical"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Shard Health Status",
+        "type": "stat",
+        "gridPos": {"x": 0, "y": 8, "w": 6, "h": 4},
+        "targets": [
+          {
+            "expr": "count(up{job=\"clickhouse\", region=\"us-east-1\"})",
+            "legendFormat": "US Shards Online",
+            "refId": "A"
+          },
+          {
+            "expr": "count(up{job=\"clickhouse\", region=\"eu-central-1\"})",
+            "legendFormat": "EU Shards Online",
+            "refId": "B"
+          }
+        ],
+        "options": {
+          "orientation": "horizontal",
+          "colorMode": "value",
+          "graphMode": "none",
+          "justifyMode": "center"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "value": null,
+                  "color": "red"
+                },
+                {
+                  "value": 2,
+                  "color": "yellow"
+                },
+                {
+                  "value": 4,
+                  "color": "green"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 4,
+        "title": "Replica Readonly Status",
+        "type": "stat",
+        "gridPos": {"x": 6, "y": 8, "w": 6, "h": 4},
+        "targets": [
+          {
+            "expr": "sum(clickhouse_replica_is_readonly{database=\"default\"})",
+            "legendFormat": "Readonly Replicas",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "colorMode": "value",
+          "graphMode": "area",
+          "justifyMode": "center"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "value": null,
+                  "color": "green"
+                },
+                {
+                  "value": 1,
+                  "color": "red"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 5,
+        "title": "Disk Usage by Shard",
+        "type": "graph",
+        "gridPos": {"x": 12, "y": 8, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "clickhouse_disk_used_bytes{job=\"clickhouse\"} / clickhouse_disk_total_bytes{job=\"clickhouse\"} * 100",
+            "legendFormat": "{{instance}} - {{region}}",
+            "refId": "A"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Disk Usage %",
+            "format": "percent",
+            "max": 100,
+            "min": 0
+          }
+        ],
+        "alert": {
+          "conditions": [
+            {
+              "evaluator": {
+                "params": [80],
+                "type": "gt"
+              }
+            }
+          ],
+          "name": "Disk usage > 80%",
+          "frequency": "60s"
+        },
+        "thresholds": [
+          {
+            "value": 70,
+            "colorMode": "warning"
+          },
+          {
+            "value": 85,
+            "colorMode": "critical"
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Query Latency by Region (p95)",
+        "type": "graph",
+        "gridPos": {"x": 0, "y": 16, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(clickhouse_query_duration_seconds_bucket{region=\"us-east-1\"}[5m]))",
+            "legendFormat": "US p95",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(clickhouse_query_duration_seconds_bucket{region=\"eu-central-1\"}[5m]))",
+            "legendFormat": "EU p95",
+            "refId": "B"
+          },
+          {
+            "expr": "histogram_quantile(0.99, rate(clickhouse_query_duration_seconds_bucket{region=\"us-east-1\"}[5m]))",
+            "legendFormat": "US p99",
+            "refId": "C"
+          },
+          {
+            "expr": "histogram_quantile(0.99, rate(clickhouse_query_duration_seconds_bucket{region=\"eu-central-1\"}[5m]))",
+            "legendFormat": "EU p99",
+            "refId": "D"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Latency",
+            "format": "s"
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Inserts per Second by Region",
+        "type": "graph",
+        "gridPos": {"x": 12, "y": 16, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "rate(clickhouse_rows_written_total{region=\"us-east-1\"}[5m])",
+            "legendFormat": "US Inserts/sec",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(clickhouse_rows_written_total{region=\"eu-central-1\"}[5m])",
+            "legendFormat": "EU Inserts/sec",
+            "refId": "B"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Rows/sec",
+            "format": "short"
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "TTL Cleanup Jobs Status",
+        "type": "table",
+        "gridPos": {"x": 0, "y": 24, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "clickhouse_ttl_merges_in_queue",
+            "legendFormat": "{{table}} - {{shard}}",
+            "format": "table",
+            "instant": true,
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "showHeader": true
+        },
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "align": "auto",
+              "displayMode": "auto"
+            }
+          }
+        }
+      },
+      {
+        "id": 9,
+        "title": "Data Distribution Across Shards (Rows)",
+        "type": "bargauge",
+        "gridPos": {"x": 12, "y": 24, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "sum by (instance, table) (clickhouse_table_rows{database=\"default\", table=~\".*_local\"})",
+            "legendFormat": "{{instance}} - {{table}}",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "orientation": "horizontal",
+          "displayMode": "gradient",
+          "showUnfilled": true
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "unit": "short"
+          }
+        }
+      },
+      {
+        "id": 10,
+        "title": "Distributed Query Rate",
+        "type": "graph",
+        "gridPos": {"x": 0, "y": 32, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "rate(clickhouse_distributed_queries_total[5m])",
+            "legendFormat": "{{instance}} - {{table}}",
+            "refId": "A"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Queries/sec",
+            "format": "qps"
+          }
+        ]
+      },
+      {
+        "id": 11,
+        "title": "ZooKeeper Connection Status",
+        "type": "stat",
+        "gridPos": {"x": 12, "y": 32, "w": 6, "h": 4},
+        "targets": [
+          {
+            "expr": "clickhouse_zookeeper_session_state",
+            "legendFormat": "ZK Connection",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "colorMode": "value",
+          "graphMode": "none",
+          "justifyMode": "center"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [
+              {
+                "value": 1,
+                "text": "Connected",
+                "color": "green"
+              },
+              {
+                "value": 0,
+                "text": "Disconnected",
+                "color": "red"
+              }
+            ],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "value": null,
+                  "color": "red"
+                },
+                {
+                  "value": 1,
+                  "color": "green"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 12,
+        "title": "Memory Usage by Shard",
+        "type": "graph",
+        "gridPos": {"x": 18, "y": 32, "w": 6, "h": 8},
+        "targets": [
+          {
+            "expr": "clickhouse_memory_usage_bytes{job=\"clickhouse\"}",
+            "legendFormat": "{{instance}} - {{region}}",
+            "refId": "A"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Memory",
+            "format": "bytes"
+          }
+        ]
+      },
+      {
+        "id": 13,
+        "title": "Replication Errors (last 1h)",
+        "type": "stat",
+        "gridPos": {"x": 0, "y": 40, "w": 12, "h": 4},
+        "targets": [
+          {
+            "expr": "increase(clickhouse_replica_errors_total{database=\"default\"}[1h])",
+            "legendFormat": "{{table}} - {{replica}}",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "colorMode": "value",
+          "graphMode": "area"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "value": null,
+                  "color": "green"
+                },
+                {
+                  "value": 1,
+                  "color": "yellow"
+                },
+                {
+                  "value": 10,
+                  "color": "red"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 14,
+        "title": "Active Merges",
+        "type": "graph",
+        "gridPos": {"x": 12, "y": 40, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "clickhouse_background_merges_active",
+            "legendFormat": "{{instance}} - {{table}}",
+            "refId": "A"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Active Merges",
+            "format": "short"
+          }
+        ]
+      },
+      {
+        "id": 15,
+        "title": "Cross-Region Query Traffic",
+        "type": "graph",
+        "gridPos": {"x": 0, "y": 48, "w": 24, "h": 8},
+        "targets": [
+          {
+            "expr": "rate(clickhouse_distributed_connection_attempts_total{job=\"clickhouse\"}[5m])",
+            "legendFormat": "{{source_region}} → {{target_region}}",
+            "refId": "A"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Connections/sec",
+            "format": "short"
+          }
+        ]
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "region",
+          "type": "query",
+          "datasource": "Prometheus",
+          "query": "label_values(clickhouse_uptime_seconds, region)",
+          "multi": true,
+          "includeAll": true,
+          "refresh": 1
+        },
+        {
+          "name": "table",
+          "type": "query",
+          "datasource": "Prometheus",
+          "query": "label_values(clickhouse_table_rows{database=\"default\"}, table)",
+          "multi": true,
+          "includeAll": true,
+          "refresh": 1
+        }
+      ]
+    },
+    "annotations": {
+      "list": [
+        {
+          "datasource": "Prometheus",
+          "enable": true,
+          "expr": "changes(clickhouse_uptime_seconds[5m]) > 0",
+          "iconColor": "red",
+          "name": "ClickHouse Restart",
+          "tagKeys": "instance,region"
+        }
+      ]
+    }
+  }
+}

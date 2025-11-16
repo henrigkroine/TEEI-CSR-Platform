@@ -1,0 +1,423 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "finops-cloud-cost",
+    "title": "FinOps: Cloud Cost Tracking",
+    "description": "Multi-region AWS cost tracking, budget monitoring, and cost optimization insights",
+    "tags": ["finops", "aws", "costs", "budget"],
+    "timezone": "browser",
+    "schemaVersion": 38,
+    "version": 1,
+    "refresh": "5m",
+    "time": {
+      "from": "now-30d",
+      "to": "now"
+    },
+    "timepicker": {
+      "refresh_intervals": ["5m", "15m", "30m", "1h", "6h", "12h", "24h"]
+    },
+    "panels": [
+      {
+        "id": 1,
+        "type": "stat",
+        "title": "Monthly Spend (Current)",
+        "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 },
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": { "type": "prometheus", "uid": "prometheus" },
+            "expr": "sum(aws_cost_monthly_usd{month=\"current\"})",
+            "legendFormat": "Current Month"
+          }
+        ],
+        "options": {
+          "graphMode": "area",
+          "colorMode": "value",
+          "unit": "currencyUSD",
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"]
+          },
+          "textMode": "auto"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "value": 0, "color": "green" },
+                { "value": 80000, "color": "yellow" },
+                { "value": 100000, "color": "red" }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 2,
+        "type": "stat",
+        "title": "Monthly Budget",
+        "gridPos": { "x": 6, "y": 0, "w": 6, "h": 4 },
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": { "type": "prometheus", "uid": "prometheus" },
+            "expr": "sum(aws_budget_monthly_limit_usd)",
+            "legendFormat": "Budget Limit"
+          }
+        ],
+        "options": {
+          "graphMode": "none",
+          "colorMode": "value",
+          "unit": "currencyUSD",
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"]
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "value": 0, "color": "blue" }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 3,
+        "type": "gauge",
+        "title": "Budget Utilization %",
+        "gridPos": { "x": 12, "y": 0, "w": 6, "h": 4 },
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": { "type": "prometheus", "uid": "prometheus" },
+            "expr": "(sum(aws_cost_monthly_usd{month=\"current\"}) / sum(aws_budget_monthly_limit_usd)) * 100"
+          }
+        ],
+        "options": {
+          "showThresholdLabels": true,
+          "showThresholdMarkers": true
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "min": 0,
+            "max": 100,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "value": 0, "color": "green" },
+                { "value": 70, "color": "yellow" },
+                { "value": 80, "color": "orange" },
+                { "value": 90, "color": "red" }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 4,
+        "type": "stat",
+        "title": "Cost Per Customer",
+        "gridPos": { "x": 18, "y": 0, "w": 6, "h": 4 },
+        "description": "Total monthly cost / active tenants",
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": { "type": "prometheus", "uid": "prometheus" },
+            "expr": "sum(aws_cost_monthly_usd{month=\"current\"}) / count(count by (tenant_id) (http_requests_total))"
+          }
+        ],
+        "options": {
+          "graphMode": "area",
+          "colorMode": "value",
+          "unit": "currencyUSD"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "value": 0, "color": "green" },
+                { "value": 500, "color": "yellow" },
+                { "value": 1000, "color": "red" }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 5,
+        "type": "timeseries",
+        "title": "Monthly Spend Trend vs Budget",
+        "gridPos": { "x": 0, "y": 4, "w": 24, "h": 8 },
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": { "type": "prometheus", "uid": "prometheus" },
+            "expr": "sum(aws_cost_monthly_usd) by (month)",
+            "legendFormat": "Actual - {{month}}"
+          },
+          {
+            "refId": "B",
+            "datasource": { "type": "prometheus", "uid": "prometheus" },
+            "expr": "sum(aws_budget_monthly_limit_usd)",
+            "legendFormat": "Budget Limit"
+          },
+          {
+            "refId": "C",
+            "datasource": { "type": "prometheus", "uid": "prometheus" },
+            "expr": "sum(aws_cost_forecast_usd)",
+            "legendFormat": "Forecast (EOM)"
+          }
+        ],
+        "options": {
+          "tooltip": {
+            "mode": "multi",
+            "sort": "none"
+          },
+          "legend": {
+            "displayMode": "table",
+            "placement": "bottom",
+            "calcs": ["lastNotNull", "max"]
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 10
+            },
+            "unit": "currencyUSD"
+          },
+          "overrides": [
+            {
+              "matcher": { "id": "byName", "options": "Budget Limit" },
+              "properties": [
+                { "id": "custom.lineStyle", "value": { "dash": [10, 10] } },
+                { "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }
+              ]
+            },
+            {
+              "matcher": { "id": "byName", "options": "Forecast (EOM)" },
+              "properties": [
+                { "id": "custom.lineStyle", "value": { "dash": [5, 5] } },
+                { "id": "color", "value": { "mode": "fixed", "fixedColor": "orange" } }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": 6,
+        "type": "piechart",
+        "title": "Cost by Region",
+        "gridPos": { "x": 0, "y": 12, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": { "type": "prometheus", "uid": "prometheus" },
+            "expr": "sum(aws_cost_monthly_usd{month=\"current\"}) by (region)"
+          }
+        ],
+        "options": {
+          "displayLabels": ["name", "percent"],
+          "legend": {
+            "displayMode": "table",
+            "placement": "right",
+            "values": ["value", "percent"]
+          },
+          "pieType": "pie"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyUSD"
+          }
+        }
+      },
+      {
+        "id": 7,
+        "type": "piechart",
+        "title": "Cost by Service",
+        "gridPos": { "x": 12, "y": 12, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": { "type": "prometheus", "uid": "prometheus" },
+            "expr": "topk(10, sum(aws_cost_monthly_usd{month=\"current\"}) by (service))"
+          }
+        ],
+        "options": {
+          "displayLabels": ["name", "percent"],
+          "legend": {
+            "displayMode": "table",
+            "placement": "right",
+            "values": ["value", "percent"]
+          },
+          "pieType": "pie"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyUSD"
+          }
+        }
+      },
+      {
+        "id": 8,
+        "type": "table",
+        "title": "Top 10 Cost Drivers",
+        "gridPos": { "x": 0, "y": 20, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": { "type": "prometheus", "uid": "prometheus" },
+            "expr": "topk(10, sum(aws_cost_monthly_usd{month=\"current\"}) by (service, region))",
+            "format": "table",
+            "instant": true
+          }
+        ],
+        "options": {
+          "showHeader": true,
+          "sortBy": [
+            {
+              "displayName": "Value",
+              "desc": true
+            }
+          ]
+        },
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "align": "auto",
+              "displayMode": "auto"
+            }
+          },
+          "overrides": [
+            {
+              "matcher": { "id": "byName", "options": "Value" },
+              "properties": [
+                { "id": "unit", "value": "currencyUSD" },
+                { "id": "custom.displayMode", "value": "color-background" },
+                {
+                  "id": "thresholds",
+                  "value": {
+                    "mode": "absolute",
+                    "steps": [
+                      { "value": 0, "color": "green" },
+                      { "value": 5000, "color": "yellow" },
+                      { "value": 10000, "color": "red" }
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": 9,
+        "type": "timeseries",
+        "title": "Month-over-Month Growth %",
+        "gridPos": { "x": 12, "y": 20, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": { "type": "prometheus", "uid": "prometheus" },
+            "expr": "((sum(aws_cost_monthly_usd{month=\"current\"}) - sum(aws_cost_monthly_usd{month=\"previous\"})) / sum(aws_cost_monthly_usd{month=\"previous\"})) * 100"
+          }
+        ],
+        "options": {
+          "tooltip": {
+            "mode": "single"
+          },
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom"
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "drawStyle": "bars",
+              "fillOpacity": 80
+            },
+            "unit": "percent",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "value": -100, "color": "green" },
+                { "value": 0, "color": "yellow" },
+                { "value": 10, "color": "orange" },
+                { "value": 20, "color": "red" }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 10,
+        "type": "table",
+        "title": "Storage Costs (S3, EBS, RDS)",
+        "gridPos": { "x": 0, "y": 28, "w": 24, "h": 8 },
+        "description": "Storage costs by service and region with retention recommendations",
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": { "type": "prometheus", "uid": "prometheus" },
+            "expr": "sum(aws_cost_monthly_usd{service=~\"S3|EBS|RDS\"}) by (service, region, resource_id)",
+            "format": "table",
+            "instant": true
+          }
+        ],
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {},
+              "renameByName": {
+                "service": "Service",
+                "region": "Region",
+                "resource_id": "Resource",
+                "Value": "Monthly Cost"
+              }
+            }
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "align": "auto"
+            }
+          },
+          "overrides": [
+            {
+              "matcher": { "id": "byName", "options": "Monthly Cost" },
+              "properties": [
+                { "id": "unit", "value": "currencyUSD" },
+                { "id": "custom.displayMode", "value": "color-background-solid" }
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "annotations": {
+      "list": [
+        {
+          "name": "Budget Alerts",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "enable": true,
+          "expr": "ALERTS{alertname=~\"BudgetExceeded.*\"}",
+          "iconColor": "red",
+          "tagKeys": "alertname"
+        }
+      ]
+    }
+  }
+}

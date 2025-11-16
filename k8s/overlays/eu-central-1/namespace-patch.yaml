@@ -1,0 +1,18 @@
+---
+# Namespace definition for EU Central 1 region
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: teei-eu-central-1
+  labels:
+    name: teei-eu-central-1
+    teei.platform/region: eu-central-1
+    topology.kubernetes.io/region: eu-central-1
+    environment: production
+    data-residency: eu
+    gdpr-compliant: "true"
+  annotations:
+    teei.platform/region-code: eu-central-1
+    teei.platform/region-name: "Europe (Frankfurt)"
+    teei.platform/deployed-by: kustomize
+    teei.platform/data-classification: "sensitive"

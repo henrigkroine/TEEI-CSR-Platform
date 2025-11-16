@@ -2,6 +2,7 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 namespace: teei-production-eu-central-1
 =======
 namespace: teei-eu-central-1
@@ -170,3 +171,97 @@ replicas:
 - name: teei-analytics
   count: 3
 >>>>>>> origin/claude/ga-cutover-phase-one-0111mH9eWczXzBtpzUU5uUVU
+=======
+# EU Central 1 Region Overlay
+# Extends production overlay with EU-specific configurations
+
+namespace: teei-eu-central-1
+
+namePrefix: eu-
+
+# Common labels for all resources in this region
+commonLabels:
+  teei.platform/region: eu-central-1
+  topology.kubernetes.io/region: eu-central-1
+  topology.kubernetes.io/zone: eu-central-1a
+  environment: production
+  managed-by: kustomize
+  deployment-region: eu
+
+# Common annotations
+commonAnnotations:
+  teei.platform/region-code: eu-central-1
+  teei.platform/region-name: "Europe (Frankfurt)"
+  teei.platform/data-residency: eu
+  teei.platform/gdpr-compliant: "true"
+
+# Reference production overlay as base
+resources:
+- ../production
+- ../../base/postgres
+
+# ConfigMap generator for EU region-specific environment
+configMapGenerator:
+- name: region-config
+  literals:
+  - REGION=eu-central-1
+  - REGION_NAME=Europe (Frankfurt)
+  - DATA_RESIDENCY=eu
+  - TIMEZONE=Europe/Berlin
+  - LOCALE_DEFAULT=en-GB
+  - GDPR_MODE=strict
+  - CLOUDFRONT_DISTRIBUTION_ID=E1234567890ABC
+  - S3_BUCKET_REGION=eu-central-1
+
+# Region-specific patches
+patchesStrategicMerge:
+- namespace-patch.yaml
+- resource-limits-patch.yaml
+- ingress-patch.yaml
+- networkpolicy-patch.yaml
+- postgres-patch.yaml
+
+# Patches for adding region topology and affinity
+patches:
+- target:
+    kind: Deployment
+  patch: |-
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: not-important
+    spec:
+      template:
+        metadata:
+          labels:
+            teei.platform/region: eu-central-1
+        spec:
+          affinity:
+            nodeAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                - matchExpressions:
+                  - key: topology.kubernetes.io/region
+                    operator: In
+                    values:
+                    - eu-central-1
+            podAntiAffinity:
+              preferredDuringSchedulingIgnoredDuringExecution:
+              - weight: 100
+                podAffinityTerm:
+                  labelSelector:
+                    matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                      - teei-api-gateway
+                      - teei-corp-cockpit
+                  topologyKey: kubernetes.io/hostname
+          topologySpreadConstraints:
+          - maxSkew: 1
+            topologyKey: topology.kubernetes.io/zone
+            whenUnsatisfiable: DoNotSchedule
+            labelSelector:
+              matchLabels:
+                teei.platform/region: eu-central-1
+>>>>>>> origin/claude/phaseG-global-ga-multiregion-017uvLqAucExNFGykX9bSDSY

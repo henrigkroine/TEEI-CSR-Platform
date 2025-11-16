@@ -12,14 +12,14 @@ spec:
     kind: Deployment
     name: teei-q2q-ai
   minReplicas: 2
-  maxReplicas: 10
+  maxReplicas: 15  # FinOps: Increased for AI processing bursts
   metrics:
   - type: Resource
     resource:
       name: cpu
       target:
         type: Utilization
-        averageUtilization: 70
+        averageUtilization: 65  # FinOps: Balanced for AI workload efficiency
   - type: Resource
     resource:
       name: memory

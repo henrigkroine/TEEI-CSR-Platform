@@ -1,0 +1,19 @@
+---
+# Namespace definition for US East 1 region
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: teei-us-east-1
+  labels:
+    name: teei-us-east-1
+    teei.platform/region: us-east-1
+    topology.kubernetes.io/region: us-east-1
+    environment: production
+    data-residency: us
+    primary-region: "true"
+  annotations:
+    teei.platform/region-code: us-east-1
+    teei.platform/region-name: "US East (N. Virginia)"
+    teei.platform/deployed-by: kustomize
+    teei.platform/data-classification: "sensitive"
+    teei.platform/primary-region: "true"

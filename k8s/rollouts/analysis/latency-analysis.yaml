@@ -1,0 +1,88 @@
+---
+# AnalysisTemplate: Latency Analysis
+# Monitors HTTP request latency (p50, p95, p99)
+# Used by: All rollouts for performance validation
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: latency-analysis
+  labels:
+    analysis-type: latency
+    part-of: teei-csr-platform
+spec:
+  args:
+  - name: service-name
+    description: "Service name to monitor"
+  - name: latency-threshold
+    description: "Maximum p95 latency in milliseconds (e.g., '500')"
+    value: "500"
+  - name: baseline-service
+    description: "Baseline service for comparison (optional)"
+    value: ""
+
+  metrics:
+  - name: http-latency-p95
+    interval: 30s
+    successCondition: result < {{args.latency-threshold}}
+    failureLimit: 3
+    count: 10
+    provider:
+      prometheus:
+        address: http://prometheus-server.monitoring.svc.cluster.local:9090
+        query: |
+          # HTTP request latency p95 in milliseconds
+          histogram_quantile(0.95,
+            sum(rate(http_request_duration_ms_bucket{service="{{args.service-name}}"}[5m])) by (le)
+          )
+
+  - name: http-latency-p99
+    interval: 30s
+    successCondition: result < ({{args.latency-threshold}} * 2)
+    failureLimit: 2
+    count: 10
+    provider:
+      prometheus:
+        address: http://prometheus-server.monitoring.svc.cluster.local:9090
+        query: |
+          # HTTP request latency p99 in milliseconds
+          histogram_quantile(0.99,
+            sum(rate(http_request_duration_ms_bucket{service="{{args.service-name}}"}[5m])) by (le)
+          )
+
+  - name: http-latency-p50
+    interval: 30s
+    successCondition: result < ({{args.latency-threshold}} * 0.5)
+    failureLimit: 1
+    count: 10
+    provider:
+      prometheus:
+        address: http://prometheus-server.monitoring.svc.cluster.local:9090
+        query: |
+          # HTTP request latency p50 (median) in milliseconds
+          histogram_quantile(0.50,
+            sum(rate(http_request_duration_ms_bucket{service="{{args.service-name}}"}[5m])) by (le)
+          )
+
+  - name: latency-regression-check
+    interval: 60s
+    successCondition: result < 1.2  # <20% latency increase vs baseline
+    failureLimit: 2
+    count: 5
+    provider:
+      prometheus:
+        address: http://prometheus-server.monitoring.svc.cluster.local:9090
+        query: |
+          # Latency regression: canary p95 / baseline p95
+          # Returns ratio (1.0 = same, >1.0 = slower, <1.0 = faster)
+          (
+            histogram_quantile(0.95,
+              sum(rate(http_request_duration_ms_bucket{service="{{args.service-name}}"}[5m])) by (le)
+            )
+            /
+            histogram_quantile(0.95,
+              sum(rate(http_request_duration_ms_bucket{service="{{args.baseline-service}}"}[5m])) by (le)
+            )
+          )
+          or
+          # If baseline not provided, compare to self (always returns 1.0)
+          1.0

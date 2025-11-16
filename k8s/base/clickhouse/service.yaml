@@ -1,0 +1,124 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: clickhouse-us
+  namespace: teei-platform
+  labels:
+    app: clickhouse
+    region: us-east-1
+spec:
+  clusterIP: None
+  ports:
+    - name: http
+      port: 8123
+      targetPort: 8123
+      protocol: TCP
+    - name: native
+      port: 9000
+      targetPort: 9000
+      protocol: TCP
+    - name: interserver
+      port: 9009
+      targetPort: 9009
+      protocol: TCP
+  selector:
+    app: clickhouse
+    region: us-east-1
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: clickhouse-eu
+  namespace: teei-platform
+  labels:
+    app: clickhouse
+    region: eu-central-1
+spec:
+  clusterIP: None
+  ports:
+    - name: http
+      port: 8123
+      targetPort: 8123
+      protocol: TCP
+    - name: native
+      port: 9000
+      targetPort: 9000
+      protocol: TCP
+    - name: interserver
+      port: 9009
+      targetPort: 9009
+      protocol: TCP
+  selector:
+    app: clickhouse
+    region: eu-central-1
+---
+# Load balancer service for US cluster
+apiVersion: v1
+kind: Service
+metadata:
+  name: clickhouse-us-lb
+  namespace: teei-platform
+  labels:
+    app: clickhouse
+    region: us-east-1
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8123
+      targetPort: 8123
+      protocol: TCP
+    - name: native
+      port: 9000
+      targetPort: 9000
+      protocol: TCP
+  selector:
+    app: clickhouse
+    region: us-east-1
+---
+# Load balancer service for EU cluster
+apiVersion: v1
+kind: Service
+metadata:
+  name: clickhouse-eu-lb
+  namespace: teei-platform
+  labels:
+    app: clickhouse
+    region: eu-central-1
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8123
+      targetPort: 8123
+      protocol: TCP
+    - name: native
+      port: 9000
+      targetPort: 9000
+      protocol: TCP
+  selector:
+    app: clickhouse
+    region: eu-central-1
+---
+# Global service for cross-region queries
+apiVersion: v1
+kind: Service
+metadata:
+  name: clickhouse-global
+  namespace: teei-platform
+  labels:
+    app: clickhouse
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8123
+      targetPort: 8123
+      protocol: TCP
+    - name: native
+      port: 9000
+      targetPort: 9000
+      protocol: TCP
+  selector:
+    app: clickhouse

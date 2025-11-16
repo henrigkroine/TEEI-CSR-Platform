@@ -1,0 +1,343 @@
+# TEEI CSR Platform - SLO Gate Check Workflow
+# Ref: AGENTS.md § Phase G - slo-gatekeeper
+#
+# Purpose: Check SLOs before allowing deployment
+# Triggers: On PR to main, manual dispatch
+# Fail PR if SLOs are breaching
+
+name: SLO Gate Check
+
+on:
+  pull_request:
+    branches:
+      - main
+      - production
+  workflow_dispatch:
+    inputs:
+      override_reason:
+        description: 'Override reason (if gate is blocked)'
+        required: false
+        type: choice
+        options:
+          - ''
+          - security_vulnerability
+          - data_loss_prevention
+          - gdpr_compliance_fix
+          - production_outage_fix
+      approver_email:
+        description: 'Approver email (required for override)'
+        required: false
+        type: string
+      incident_id:
+        description: 'Incident ID (optional)'
+        required: false
+        type: string
+
+env:
+  PROMETHEUS_URL: ${{ secrets.PROMETHEUS_URL || 'http://prometheus.monitoring.svc.cluster.local:9090' }}
+  SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+  GRAFANA_URL: https://grafana.teei.io
+
+jobs:
+  # ============================================================================
+  # JOB 1: Check SLO Gate
+  # ============================================================================
+  slo-gate-check:
+    name: SLO Gate Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      gate_status: ${{ steps.gate_check.outputs.status }}
+      error_budget_api_gateway: ${{ steps.gate_check.outputs.api_gateway_budget }}
+      error_budget_reporting: ${{ steps.gate_check.outputs.reporting_budget }}
+      error_budget_data_residency: ${{ steps.gate_check.outputs.data_residency_budget }}
+      deployment_allowed: ${{ steps.gate_check.outputs.deployment_allowed }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y curl jq bc
+
+      - name: Run SLO gate check
+        id: gate_check
+        continue-on-error: true
+        run: |
+          # Make script executable
+          chmod +x ./scripts/infra/slo-gate.sh
+
+          # Run gate check
+          if ./scripts/infra/slo-gate.sh check; then
+            echo "status=ALLOWED" >> $GITHUB_OUTPUT
+            echo "deployment_allowed=true" >> $GITHUB_OUTPUT
+          else
+            echo "status=BLOCKED" >> $GITHUB_OUTPUT
+            echo "deployment_allowed=false" >> $GITHUB_OUTPUT
+          fi
+
+          # Extract error budgets for reporting
+          export PROMETHEUS_URL="${{ env.PROMETHEUS_URL }}"
+
+          API_GATEWAY_BUDGET=$(curl -s -G --data-urlencode "query=error_budget:api_gateway:remaining_ratio * 100" "$PROMETHEUS_URL/api/v1/query" | jq -r '.data.result[0].value[1] // "0"')
+          REPORTING_BUDGET=$(curl -s -G --data-urlencode "query=error_budget:reporting_service:remaining_ratio * 100" "$PROMETHEUS_URL/api/v1/query" | jq -r '.data.result[0].value[1] // "0"')
+          DATA_RESIDENCY_BUDGET=$(curl -s -G --data-urlencode "query=error_budget:data_residency:remaining_ratio * 100" "$PROMETHEUS_URL/api/v1/query" | jq -r '.data.result[0].value[1] // "0"')
+
+          echo "api_gateway_budget=$API_GATEWAY_BUDGET" >> $GITHUB_OUTPUT
+          echo "reporting_budget=$REPORTING_BUDGET" >> $GITHUB_OUTPUT
+          echo "data_residency_budget=$DATA_RESIDENCY_BUDGET" >> $GITHUB_OUTPUT
+
+      - name: Handle override (if requested)
+        if: github.event.inputs.override_reason != '' && steps.gate_check.outputs.deployment_allowed == 'false'
+        run: |
+          ./scripts/infra/slo-gate.sh override \
+            "${{ github.event.inputs.override_reason }}" \
+            "${{ github.event.inputs.approver_email }}" \
+            "${{ github.event.inputs.incident_id }}"
+
+          # Override approved, allow deployment
+          echo "deployment_allowed=true" >> $GITHUB_OUTPUT
+
+      - name: Post SLO status as PR comment
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const gateStatus = '${{ steps.gate_check.outputs.status }}';
+            const apiGatewayBudget = parseFloat('${{ steps.gate_check.outputs.api_gateway_budget }}').toFixed(2);
+            const reportingBudget = parseFloat('${{ steps.gate_check.outputs.reporting_budget }}').toFixed(2);
+            const dataResidencyBudget = parseFloat('${{ steps.gate_check.outputs.data_residency_budget }}').toFixed(2);
+            const grafanaUrl = '${{ env.GRAFANA_URL }}';
+
+            const getStatusEmoji = (budget) => {
+              if (budget >= 50) return '🟢';
+              if (budget >= 20) return '🟡';
+              if (budget >= 10) return '🟠';
+              return '🔴';
+            };
+
+            const getStatusText = (budget) => {
+              if (budget >= 50) return 'GREEN (Normal)';
+              if (budget >= 20) return 'YELLOW (Caution)';
+              if (budget >= 10) return 'ORANGE (Freeze)';
+              return 'RED (Incident)';
+            };
+
+            const comment = `## SLO Gate Check ${gateStatus === 'ALLOWED' ? '✅' : '🚫'}
+
+**Deployment Status**: ${gateStatus === 'ALLOWED' ? '✅ **ALLOWED**' : '🚫 **BLOCKED**'}
+
+### Error Budget Status
+
+| Service | Error Budget | Status |
+|---------|--------------|--------|
+| API Gateway | ${apiGatewayBudget}% | ${getStatusEmoji(apiGatewayBudget)} ${getStatusText(apiGatewayBudget)} |
+| Reporting Service | ${reportingBudget}% | ${getStatusEmoji(reportingBudget)} ${getStatusText(reportingBudget)} |
+| Data Residency (GDPR) | ${dataResidencyBudget}% | ${getStatusEmoji(dataResidencyBudget)} ${getStatusText(dataResidencyBudget)} |
+
+### Legend
+- 🟢 **Green** (>50%): Normal operations
+- 🟡 **Yellow** (20-50%): Require approval for deployments
+- 🟠 **Orange** (10-20%): Freeze deployments
+- 🔴 **Red** (<10%): Incident response mode
+
+${gateStatus === 'BLOCKED' ? `
+### ⚠️ Action Required
+
+Deployment is **BLOCKED** due to SLO breach. Please:
+
+1. **Fix SLO breach** before merging this PR
+2. Review [SLO Dashboard](${grafanaUrl}/d/slo-overview)
+3. Check [Error Budget Policy](/docs/Error_Budget_Policy.md)
+
+**Emergency Override**:
+If this is a critical hotfix, manually run workflow with override reason.
+` : ''}
+
+---
+📊 [View SLO Dashboard](${grafanaUrl}/d/slo-overview) | 📖 [Error Budget Policy](/docs/Error_Budget_Policy.md)
+
+*SLO Gate Check executed at ${new Date().toISOString()}*
+            `;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+      - name: Fail if deployment blocked
+        if: steps.gate_check.outputs.deployment_allowed == 'false'
+        run: |
+          echo "❌ Deployment BLOCKED due to SLO breach"
+          echo "View SLO Dashboard: ${{ env.GRAFANA_URL }}/d/slo-overview"
+          echo "Error Budget Policy: /docs/Error_Budget_Policy.md"
+          exit 1
+
+  # ============================================================================
+  # JOB 2: Send Slack Notification
+  # ============================================================================
+  notify-slack:
+    name: Notify Slack
+    runs-on: ubuntu-latest
+    needs: slo-gate-check
+    if: always() && github.event_name == 'pull_request'
+    steps:
+      - name: Send Slack notification
+        if: env.SLACK_WEBHOOK != ''
+        uses: slackapi/slack-github-action@v1.25.0
+        with:
+          payload: |
+            {
+              "text": "SLO Gate Check: ${{ needs.slo-gate-check.outputs.gate_status }}",
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "${{ needs.slo-gate-check.outputs.gate_status == 'ALLOWED' ? '✅' : '🚫' }} SLO Gate Check: ${{ needs.slo-gate-check.outputs.gate_status }}"
+                  }
+                },
+                {
+                  "type": "section",
+                  "fields": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "*PR:* <${{ github.event.pull_request.html_url }}|#${{ github.event.pull_request.number }}>"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Author:* ${{ github.event.pull_request.user.login }}"
+                    }
+                  ]
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Error Budget Status:*\n• API Gateway: ${{ needs.slo-gate-check.outputs.error_budget_api_gateway }}%\n• Reporting: ${{ needs.slo-gate-check.outputs.error_budget_reporting }}%\n• Data Residency: ${{ needs.slo-gate-check.outputs.error_budget_data_residency }}%"
+                  }
+                },
+                {
+                  "type": "actions",
+                  "elements": [
+                    {
+                      "type": "button",
+                      "text": {
+                        "type": "plain_text",
+                        "text": "View SLO Dashboard"
+                      },
+                      "url": "${{ env.GRAFANA_URL }}/d/slo-overview"
+                    },
+                    {
+                      "type": "button",
+                      "text": {
+                        "type": "plain_text",
+                        "text": "View PR"
+                      },
+                      "url": "${{ github.event.pull_request.html_url }}"
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+
+  # ============================================================================
+  # JOB 3: Audit Log (Emergency Overrides)
+  # ============================================================================
+  audit-override:
+    name: Audit Override
+    runs-on: ubuntu-latest
+    needs: slo-gate-check
+    if: github.event.inputs.override_reason != ''
+    steps:
+      - name: Log override to audit trail
+        run: |
+          echo "SLO Gate Override Audit Log"
+          echo "Timestamp: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          echo "Reason: ${{ github.event.inputs.override_reason }}"
+          echo "Approver: ${{ github.event.inputs.approver_email }}"
+          echo "Incident ID: ${{ github.event.inputs.incident_id }}"
+          echo "PR: ${{ github.event.pull_request.html_url }}"
+          echo "Workflow Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+      - name: Create issue for post-mortem
+        if: github.event.inputs.override_reason != ''
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issue = await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `[POST-MORTEM REQUIRED] SLO Gate Override: ${{ github.event.inputs.override_reason }}`,
+              body: `## SLO Gate Override Post-Mortem
+
+**Override Details:**
+- **Reason**: ${{ github.event.inputs.override_reason }}
+- **Approver**: ${{ github.event.inputs.approver_email }}
+- **Incident ID**: ${{ github.event.inputs.incident_id || 'N/A' }}
+- **PR**: ${{ github.event.pull_request.html_url || 'N/A' }}
+- **Workflow Run**: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+**Post-Mortem Requirements:**
+- [ ] Root cause identified
+- [ ] Timeline documented
+- [ ] Corrective actions defined
+- [ ] Blameless post-mortem completed
+
+**Due Date**: ${new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString().split('T')[0]} (48 hours)
+
+**Assignees**: @${{ github.event.pull_request.user.login || github.actor }}
+
+---
+Ref: [Error Budget Policy](/docs/Error_Budget_Policy.md) | [SLO Gates](/docs/SLO_Gates.md)
+              `,
+              labels: ['post-mortem', 'slo-override', 'incident'],
+              assignees: ['${{ github.event.pull_request.user.login || github.actor }}']
+            });
+
+            core.info(`Post-mortem issue created: ${issue.data.html_url}`);
+
+  # ============================================================================
+  # JOB 4: Error Budget Report (Weekly)
+  # ============================================================================
+  weekly-report:
+    name: Weekly SLO Report
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.override_reason == ''
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y curl jq bc
+
+      - name: Generate weekly report
+        run: |
+          chmod +x ./scripts/infra/slo-gate.sh
+          ./scripts/infra/slo-gate.sh report > weekly-slo-report.txt
+
+      - name: Upload report as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: weekly-slo-report
+          path: weekly-slo-report.txt
+          retention-days: 90
+
+      - name: Post report to Slack
+        if: env.SLACK_WEBHOOK != ''
+        run: |
+          REPORT=$(cat weekly-slo-report.txt)
+          curl -X POST -H 'Content-type: application/json' \
+            --data "{\"text\":\"📊 Weekly SLO Report\n\`\`\`\n$REPORT\n\`\`\`\"}" \
+            "${{ secrets.SLACK_WEBHOOK }}"

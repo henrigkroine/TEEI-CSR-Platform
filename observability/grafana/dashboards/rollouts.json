@@ -1,0 +1,611 @@
+{
+  "dashboard": {
+    "title": "Argo Rollouts - Blue/Green & Canary Deployments",
+    "description": "Monitor rollout status, canary analysis, traffic splits, and deployment health",
+    "tags": ["argo-rollouts", "deployments", "canary", "blue-green"],
+    "timezone": "utc",
+    "editable": true,
+    "graphTooltip": 1,
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "refresh": "30s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Rollout Status Overview",
+        "type": "stat",
+        "gridPos": {"x": 0, "y": 0, "w": 24, "h": 4},
+        "targets": [
+          {
+            "expr": "count(argo_rollout_info) by (status)",
+            "legendFormat": "{{status}}",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "colorMode": "value",
+          "graphMode": "area",
+          "justifyMode": "center",
+          "orientation": "horizontal"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "red", "value": null},
+                {"color": "yellow", "value": 0},
+                {"color": "green", "value": 1}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "Active Rollouts by Phase",
+        "type": "bargauge",
+        "gridPos": {"x": 0, "y": 4, "w": 12, "h": 6},
+        "targets": [
+          {
+            "expr": "count(argo_rollout_phase{phase!=\"Healthy\"}) by (name, phase)",
+            "legendFormat": "{{name}} - {{phase}}",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "displayMode": "gradient",
+          "orientation": "horizontal",
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"]
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 1},
+                {"color": "red", "value": 3}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 3,
+        "title": "Rollout Timeline (Recent Events)",
+        "type": "table",
+        "gridPos": {"x": 12, "y": 4, "w": 12, "h": 6},
+        "targets": [
+          {
+            "expr": "argo_rollout_phase",
+            "legendFormat": "{{name}} - {{phase}}",
+            "refId": "A",
+            "instant": false
+          }
+        ],
+        "options": {
+          "showHeader": true,
+          "sortBy": [{"displayName": "Time", "desc": true}]
+        },
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {},
+              "renameByName": {
+                "name": "Rollout",
+                "phase": "Phase",
+                "namespace": "Namespace"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Canary Traffic Split (%)",
+        "type": "graph",
+        "gridPos": {"x": 0, "y": 10, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "argo_rollout_canary_weight_percentage",
+            "legendFormat": "{{name}} - Canary %",
+            "refId": "A"
+          },
+          {
+            "expr": "100 - argo_rollout_canary_weight_percentage",
+            "legendFormat": "{{name}} - Stable %",
+            "refId": "B"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "percent",
+            "label": "Traffic %",
+            "logBase": 1,
+            "max": 100,
+            "min": 0
+          }
+        ],
+        "xaxis": {
+          "mode": "time",
+          "show": true
+        },
+        "lines": true,
+        "fill": 2,
+        "linewidth": 2,
+        "pointradius": 3,
+        "steppedLine": true,
+        "tooltip": {
+          "shared": true,
+          "sort": 0,
+          "value_type": "individual"
+        }
+      },
+      {
+        "id": 5,
+        "title": "Analysis Run Status",
+        "type": "timeseries",
+        "gridPos": {"x": 12, "y": 10, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "count(argo_rollout_analysis_run_phase) by (name, phase)",
+            "legendFormat": "{{name}} - {{phase}}",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "legend": {
+            "displayMode": "table",
+            "placement": "right",
+            "calcs": ["last"]
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "custom": {
+              "lineInterpolation": "stepAfter",
+              "fillOpacity": 10
+            }
+          },
+          "overrides": [
+            {
+              "matcher": {"id": "byRegex", "options": ".*Successful.*"},
+              "properties": [{"id": "color", "value": {"fixedColor": "green", "mode": "fixed"}}]
+            },
+            {
+              "matcher": {"id": "byRegex", "options": ".*Failed.*"},
+              "properties": [{"id": "color", "value": {"fixedColor": "red", "mode": "fixed"}}]
+            },
+            {
+              "matcher": {"id": "byRegex", "options": ".*Running.*"},
+              "properties": [{"id": "color", "value": {"fixedColor": "yellow", "mode": "fixed"}}]
+            }
+          ]
+        }
+      },
+      {
+        "id": 6,
+        "title": "Rollout Error Rate (During Deployment)",
+        "type": "graph",
+        "gridPos": {"x": 0, "y": 18, "w": 12, "h": 7},
+        "targets": [
+          {
+            "expr": "sum(rate(http_requests_total{status=~\"5..\"}[5m])) by (service) / sum(rate(http_requests_total[5m])) by (service) * 100",
+            "legendFormat": "{{service}} - Error %",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "percent",
+            "label": "Error Rate",
+            "logBase": 1,
+            "max": null,
+            "min": 0
+          }
+        ],
+        "alert": {
+          "name": "High Error Rate During Rollout",
+          "conditions": [
+            {
+              "evaluator": {
+                "params": [2],
+                "type": "gt"
+              },
+              "operator": {
+                "type": "and"
+              },
+              "query": {
+                "params": ["A", "5m", "now"]
+              },
+              "reducer": {
+                "params": [],
+                "type": "avg"
+              },
+              "type": "query"
+            }
+          ],
+          "executionErrorState": "alerting",
+          "for": "2m",
+          "frequency": "1m",
+          "message": "Error rate exceeded 2% during rollout",
+          "noDataState": "no_data",
+          "notifications": []
+        },
+        "lines": true,
+        "fill": 1,
+        "linewidth": 2,
+        "thresholds": [
+          {
+            "value": 1,
+            "colorMode": "critical",
+            "op": "gt",
+            "fill": true,
+            "line": true
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Rollout Latency (p95) During Deployment",
+        "type": "graph",
+        "gridPos": {"x": 12, "y": 18, "w": 12, "h": 7},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_ms_bucket[5m])) by (service, le))",
+            "legendFormat": "{{service}} - p95 Latency",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "ms",
+            "label": "Latency",
+            "logBase": 1,
+            "max": null,
+            "min": 0
+          }
+        ],
+        "alert": {
+          "name": "High Latency During Rollout",
+          "conditions": [
+            {
+              "evaluator": {
+                "params": [1000],
+                "type": "gt"
+              },
+              "operator": {
+                "type": "and"
+              },
+              "query": {
+                "params": ["A", "5m", "now"]
+              },
+              "reducer": {
+                "params": [],
+                "type": "avg"
+              },
+              "type": "query"
+            }
+          ],
+          "executionErrorState": "alerting",
+          "for": "3m",
+          "frequency": "1m",
+          "message": "p95 latency exceeded 1000ms during rollout",
+          "noDataState": "no_data"
+        },
+        "lines": true,
+        "fill": 1,
+        "linewidth": 2,
+        "thresholds": [
+          {
+            "value": 500,
+            "colorMode": "warning",
+            "op": "gt",
+            "fill": false,
+            "line": true
+          },
+          {
+            "value": 1000,
+            "colorMode": "critical",
+            "op": "gt",
+            "fill": true,
+            "line": true
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Blue/Green Preview vs Active Traffic",
+        "type": "piechart",
+        "gridPos": {"x": 0, "y": 25, "w": 8, "h": 7},
+        "targets": [
+          {
+            "expr": "sum(rate(http_requests_total{service_type=\"active\"}[5m]))",
+            "legendFormat": "Active (Blue)",
+            "refId": "A"
+          },
+          {
+            "expr": "sum(rate(http_requests_total{service_type=\"preview\"}[5m]))",
+            "legendFormat": "Preview (Green)",
+            "refId": "B"
+          }
+        ],
+        "options": {
+          "legend": {
+            "displayMode": "table",
+            "placement": "right",
+            "values": ["value", "percent"]
+          },
+          "pieType": "donut",
+          "displayLabels": ["name", "percent"]
+        }
+      },
+      {
+        "id": 9,
+        "title": "Canary Analysis Pass/Fail Rate",
+        "type": "stat",
+        "gridPos": {"x": 8, "y": 25, "w": 8, "h": 7},
+        "targets": [
+          {
+            "expr": "sum(argo_rollout_analysis_run_phase{phase=\"Successful\"}) / sum(argo_rollout_analysis_run_phase) * 100",
+            "legendFormat": "Success Rate",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "colorMode": "value",
+          "graphMode": "area",
+          "justifyMode": "center",
+          "orientation": "auto",
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"],
+            "fields": ""
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "red", "value": null},
+                {"color": "yellow", "value": 80},
+                {"color": "green", "value": 95}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 10,
+        "title": "Regional Rollout Coordination Status",
+        "type": "table",
+        "gridPos": {"x": 16, "y": 25, "w": 8, "h": 7},
+        "targets": [
+          {
+            "expr": "argo_rollout_phase",
+            "legendFormat": "{{name}} - {{namespace}} - {{region}}",
+            "refId": "A",
+            "instant": true
+          }
+        ],
+        "options": {
+          "showHeader": true,
+          "sortBy": [{"displayName": "Region", "desc": false}]
+        },
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {},
+              "renameByName": {
+                "name": "Rollout",
+                "phase": "Status",
+                "region": "Region",
+                "namespace": "Namespace"
+              }
+            }
+          }
+        ],
+        "fieldConfig": {
+          "overrides": [
+            {
+              "matcher": {"id": "byName", "options": "Status"},
+              "properties": [
+                {
+                  "id": "custom.cellOptions",
+                  "value": {
+                    "type": "color-background",
+                    "mode": "basic"
+                  }
+                },
+                {
+                  "id": "mappings",
+                  "value": [
+                    {"type": "value", "options": {"Healthy": {"color": "green", "text": "Healthy"}}},
+                    {"type": "value", "options": {"Progressing": {"color": "yellow", "text": "Progressing"}}},
+                    {"type": "value", "options": {"Degraded": {"color": "red", "text": "Degraded"}}},
+                    {"type": "value", "options": {"Paused": {"color": "blue", "text": "Paused"}}}
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": 11,
+        "title": "GenAI Token Consumption (During Rollout)",
+        "type": "graph",
+        "gridPos": {"x": 0, "y": 32, "w": 12, "h": 7},
+        "targets": [
+          {
+            "expr": "sum(rate(genai_tokens_consumed_total{service=~\"teei-reporting|teei-q2q-ai\"}[5m])) by (service)",
+            "legendFormat": "{{service}} - Tokens/s",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "short",
+            "label": "Tokens per second",
+            "logBase": 1
+          }
+        ],
+        "lines": true,
+        "fill": 1,
+        "linewidth": 2
+      },
+      {
+        "id": 12,
+        "title": "GDPR Compliance Violations (Zero Tolerance)",
+        "type": "stat",
+        "gridPos": {"x": 12, "y": 32, "w": 12, "h": 7},
+        "targets": [
+          {
+            "expr": "sum(increase(data_residency_violations_total[5m]))",
+            "legendFormat": "Residency Violations",
+            "refId": "A"
+          },
+          {
+            "expr": "sum(increase(pii_exposure_incidents_total[5m]))",
+            "legendFormat": "PII Exposures",
+            "refId": "B"
+          }
+        ],
+        "options": {
+          "colorMode": "background",
+          "graphMode": "area",
+          "justifyMode": "center",
+          "orientation": "horizontal",
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"]
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "red", "value": 0.01}
+              ]
+            }
+          }
+        },
+        "alert": {
+          "name": "GDPR Violation Detected During Rollout",
+          "conditions": [
+            {
+              "evaluator": {
+                "params": [0],
+                "type": "gt"
+              },
+              "operator": {
+                "type": "or"
+              },
+              "query": {
+                "params": ["A", "5m", "now"]
+              },
+              "reducer": {
+                "params": [],
+                "type": "sum"
+              },
+              "type": "query"
+            }
+          ],
+          "executionErrorState": "alerting",
+          "for": "0m",
+          "frequency": "30s",
+          "message": "CRITICAL: GDPR violation detected - immediate rollback required",
+          "noDataState": "ok",
+          "notifications": []
+        }
+      },
+      {
+        "id": 13,
+        "title": "Rollout Duration History",
+        "type": "graph",
+        "gridPos": {"x": 0, "y": 39, "w": 24, "h": 6},
+        "targets": [
+          {
+            "expr": "argo_rollout_duration_seconds",
+            "legendFormat": "{{name}} - Duration",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "s",
+            "label": "Duration",
+            "logBase": 1
+          }
+        ],
+        "bars": true,
+        "lines": false
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "namespace",
+          "type": "query",
+          "datasource": "Prometheus",
+          "query": "label_values(argo_rollout_info, namespace)",
+          "multi": true,
+          "includeAll": true,
+          "refresh": 1
+        },
+        {
+          "name": "rollout",
+          "type": "query",
+          "datasource": "Prometheus",
+          "query": "label_values(argo_rollout_info{namespace=~\"$namespace\"}, name)",
+          "multi": true,
+          "includeAll": true,
+          "refresh": 1
+        },
+        {
+          "name": "region",
+          "type": "custom",
+          "options": [
+            {"text": "All", "value": "$__all"},
+            {"text": "US West", "value": "us-west"},
+            {"text": "US East", "value": "us-east"},
+            {"text": "EU West", "value": "eu-west"},
+            {"text": "EU Central", "value": "eu-central"}
+          ],
+          "multi": true,
+          "includeAll": true
+        }
+      ]
+    },
+    "annotations": {
+      "list": [
+        {
+          "datasource": "Prometheus",
+          "enable": true,
+          "expr": "changes(argo_rollout_phase[1m]) > 0",
+          "iconColor": "blue",
+          "name": "Rollout Phase Changes",
+          "tagKeys": "name,phase"
+        }
+      ]
+    }
+  },
+  "overwrite": true
+}

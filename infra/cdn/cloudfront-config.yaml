@@ -1,0 +1,648 @@
+# CloudFront CDN Configuration for TEEI Platform
+# Multi-region edge caching with origin failover and security headers
+
+---
+# Terraform configuration for AWS CloudFront
+terraform:
+  required_providers:
+    aws:
+      source: hashicorp/aws
+      version: ~> 5.0
+
+# CloudFront Distributions
+distributions:
+  # ========================================================================
+  # US Distribution - Primary for US/Americas traffic
+  # ========================================================================
+  - id: us-distribution
+    comment: "TEEI Platform US Distribution - Americas Edge Caching"
+    enabled: true
+    is_ipv6_enabled: true
+    http_version: http2and3  # HTTP/2 and HTTP/3 (QUIC)
+    price_class: PriceClass_100  # US, Canada, Europe
+
+    # Origins
+    origins:
+      # Primary origin - US ALB
+      - id: us-alb-primary
+        domain_name: teei-api-us-alb-1234567890.us-east-1.elb.amazonaws.com
+        origin_path: ""
+        custom_origin_config:
+          http_port: 80
+          https_port: 443
+          origin_protocol_policy: https-only
+          origin_ssl_protocols:
+            - TLSv1.2
+          origin_read_timeout: 60
+          origin_keepalive_timeout: 5
+        custom_headers:
+          - header_name: X-Origin-Verify
+            header_value: ${random_secret_us}  # Secret for origin verification
+
+      # Failover origin - EU ALB
+      - id: eu-alb-failover
+        domain_name: teei-api-eu-alb-0987654321.eu-central-1.elb.amazonaws.com
+        origin_path: ""
+        custom_origin_config:
+          http_port: 80
+          https_port: 443
+          origin_protocol_policy: https-only
+          origin_ssl_protocols:
+            - TLSv1.2
+          origin_read_timeout: 60
+          origin_keepalive_timeout: 5
+        custom_headers:
+          - header_name: X-Origin-Verify
+            header_value: ${random_secret_eu}
+
+      # S3 origin for static assets
+      - id: us-static-assets
+        domain_name: teei-static-assets-us.s3.us-east-1.amazonaws.com
+        origin_path: ""
+        s3_origin_config:
+          origin_access_identity: origin-access-identity/cloudfront/ABCDEFG1234567
+        origin_shield:
+          enabled: true
+          origin_shield_region: us-east-1
+
+    # Origin Groups (for failover)
+    origin_groups:
+      - id: us-origin-group-with-failover
+        failover_criteria:
+          status_codes:
+            - 500
+            - 502
+            - 503
+            - 504
+            - 404
+        members:
+          - origin_id: us-alb-primary
+          - origin_id: eu-alb-failover
+
+    # Default Cache Behavior (API endpoints - no cache)
+    default_cache_behavior:
+      target_origin_id: us-origin-group-with-failover
+      viewer_protocol_policy: redirect-to-https
+      allowed_methods:
+        - GET
+        - HEAD
+        - OPTIONS
+        - PUT
+        - POST
+        - PATCH
+        - DELETE
+      cached_methods:
+        - GET
+        - HEAD
+        - OPTIONS
+      compress: true
+      smooth_streaming: false
+
+      # Cache Policy - No cache for API
+      cache_policy_id: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad  # Managed-CachingDisabled
+
+      # Origin Request Policy - Forward all headers
+      origin_request_policy_id: 216adef6-5c7f-47e4-b989-5492eafa07d3  # Managed-AllViewer
+
+      # Response Headers Policy - Security headers
+      response_headers_policy_id: ${aws_cloudfront_response_headers_policy.security_headers.id}
+
+      # Lambda@Edge / CloudFront Functions
+      function_associations:
+        - event_type: viewer-request
+          function_arn: ${aws_cloudfront_function.security_headers.arn}
+
+      # WAF Web ACL Association
+      web_acl_id: ${aws_wafv2_web_acl.teei_platform_global_waf.arn}
+
+    # Ordered Cache Behaviors (specific path patterns)
+    ordered_cache_behaviors:
+      # Static assets - long TTL
+      - path_pattern: /assets/*
+        target_origin_id: us-static-assets
+        viewer_protocol_policy: redirect-to-https
+        allowed_methods:
+          - GET
+          - HEAD
+          - OPTIONS
+        cached_methods:
+          - GET
+          - HEAD
+          - OPTIONS
+        compress: true
+        cache_policy_id: 658327ea-f89d-4fab-a63d-7e88639e58f6  # Managed-CachingOptimized
+        origin_request_policy_id: 88a5eaf4-2fd4-4709-b370-b4c650ea3fcf  # Managed-CORS-S3Origin
+
+      # Reports - short TTL with stale-while-revalidate
+      - path_pattern: /api/v1/reports/*
+        target_origin_id: us-origin-group-with-failover
+        viewer_protocol_policy: redirect-to-https
+        allowed_methods:
+          - GET
+          - HEAD
+          - OPTIONS
+        cached_methods:
+          - GET
+          - HEAD
+          - OPTIONS
+        compress: true
+        min_ttl: 0
+        default_ttl: 300  # 5 minutes
+        max_ttl: 600  # 10 minutes
+        cache_policy_id: ${aws_cloudfront_cache_policy.reports_cache.id}
+        origin_request_policy_id: ${aws_cloudfront_origin_request_policy.api_forward.id}
+
+      # Health checks - no cache
+      - path_pattern: /health/*
+        target_origin_id: us-origin-group-with-failover
+        viewer_protocol_policy: redirect-to-https
+        allowed_methods:
+          - GET
+          - HEAD
+        cached_methods:
+          - GET
+          - HEAD
+        compress: false
+        cache_policy_id: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad  # Managed-CachingDisabled
+
+    # Custom Error Responses
+    custom_error_responses:
+      - error_code: 403
+        response_code: 404
+        response_page_path: /errors/404.html
+        error_caching_min_ttl: 300
+      - error_code: 404
+        response_code: 404
+        response_page_path: /errors/404.html
+        error_caching_min_ttl: 300
+      - error_code: 500
+        response_code: 500
+        response_page_path: /errors/500.html
+        error_caching_min_ttl: 60
+      - error_code: 502
+        response_code: 502
+        response_page_path: /errors/502.html
+        error_caching_min_ttl: 60
+      - error_code: 503
+        response_code: 503
+        response_page_path: /errors/503.html
+        error_caching_min_ttl: 10
+      - error_code: 504
+        response_code: 504
+        response_page_path: /errors/504.html
+        error_caching_min_ttl: 10
+
+    # SSL/TLS Configuration
+    viewer_certificate:
+      acm_certificate_arn: arn:aws:acm:us-east-1:ACCOUNT_ID:certificate/us-cert-id
+      ssl_support_method: sni-only
+      minimum_protocol_version: TLSv1.2_2021
+      cloudfront_default_certificate: false
+
+    # Aliases (CNAMEs)
+    aliases:
+      - cdn.teei-platform.com
+      - us.cdn.teei-platform.com
+      - api.teei-platform.com
+
+    # Logging
+    logging_config:
+      include_cookies: false
+      bucket: teei-cloudfront-logs-us.s3.amazonaws.com
+      prefix: us-distribution/
+      enabled: true
+
+    # Geo Restriction
+    restrictions:
+      geo_restriction:
+        restriction_type: none  # No geo restrictions (handled by WAF)
+        locations: []
+
+    # Tags
+    tags:
+      Environment: production
+      Region: us-east-1
+      ManagedBy: terraform
+      Distribution: us-primary
+
+  # ========================================================================
+  # EU Distribution - Primary for EU/APAC traffic
+  # ========================================================================
+  - id: eu-distribution
+    comment: "TEEI Platform EU Distribution - Europe/APAC Edge Caching (GDPR Compliant)"
+    enabled: true
+    is_ipv6_enabled: true
+    http_version: http2and3
+    price_class: PriceClass_200  # US, Canada, Europe, Asia, Africa
+
+    # Origins
+    origins:
+      # Primary origin - EU ALB
+      - id: eu-alb-primary
+        domain_name: teei-api-eu-alb-0987654321.eu-central-1.elb.amazonaws.com
+        origin_path: ""
+        custom_origin_config:
+          http_port: 80
+          https_port: 443
+          origin_protocol_policy: https-only
+          origin_ssl_protocols:
+            - TLSv1.2
+          origin_read_timeout: 60
+          origin_keepalive_timeout: 5
+        custom_headers:
+          - header_name: X-Origin-Verify
+            header_value: ${random_secret_eu}
+
+      # Failover origin - US ALB (limited for GDPR)
+      - id: us-alb-failover
+        domain_name: teei-api-us-alb-1234567890.us-east-1.elb.amazonaws.com
+        origin_path: ""
+        custom_origin_config:
+          http_port: 80
+          https_port: 443
+          origin_protocol_policy: https-only
+          origin_ssl_protocols:
+            - TLSv1.2
+          origin_read_timeout: 60
+          origin_keepalive_timeout: 5
+        custom_headers:
+          - header_name: X-Origin-Verify
+            header_value: ${random_secret_us}
+
+      # S3 origin for static assets
+      - id: eu-static-assets
+        domain_name: teei-static-assets-eu.s3.eu-central-1.amazonaws.com
+        origin_path: ""
+        s3_origin_config:
+          origin_access_identity: origin-access-identity/cloudfront/HIJKLMN7890123
+        origin_shield:
+          enabled: true
+          origin_shield_region: eu-central-1
+
+    # Origin Groups (for failover)
+    origin_groups:
+      - id: eu-origin-group-with-failover
+        failover_criteria:
+          status_codes:
+            - 500
+            - 502
+            - 503
+            - 504
+            - 404
+        members:
+          - origin_id: eu-alb-primary
+          - origin_id: us-alb-failover
+
+    # Default Cache Behavior (same as US)
+    default_cache_behavior:
+      target_origin_id: eu-origin-group-with-failover
+      viewer_protocol_policy: redirect-to-https
+      allowed_methods:
+        - GET
+        - HEAD
+        - OPTIONS
+        - PUT
+        - POST
+        - PATCH
+        - DELETE
+      cached_methods:
+        - GET
+        - HEAD
+        - OPTIONS
+      compress: true
+      cache_policy_id: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad  # Managed-CachingDisabled
+      origin_request_policy_id: 216adef6-5c7f-47e4-b989-5492eafa07d3  # Managed-AllViewer
+      response_headers_policy_id: ${aws_cloudfront_response_headers_policy.security_headers.id}
+      function_associations:
+        - event_type: viewer-request
+          function_arn: ${aws_cloudfront_function.security_headers.arn}
+      web_acl_id: ${aws_wafv2_web_acl.teei_platform_global_waf.arn}
+
+    # Ordered Cache Behaviors (same as US)
+    ordered_cache_behaviors:
+      - path_pattern: /assets/*
+        target_origin_id: eu-static-assets
+        viewer_protocol_policy: redirect-to-https
+        allowed_methods:
+          - GET
+          - HEAD
+          - OPTIONS
+        cached_methods:
+          - GET
+          - HEAD
+          - OPTIONS
+        compress: true
+        cache_policy_id: 658327ea-f89d-4fab-a63d-7e88639e58f6  # Managed-CachingOptimized
+        origin_request_policy_id: 88a5eaf4-2fd4-4709-b370-b4c650ea3fcf  # Managed-CORS-S3Origin
+
+      - path_pattern: /api/v1/reports/*
+        target_origin_id: eu-origin-group-with-failover
+        viewer_protocol_policy: redirect-to-https
+        allowed_methods:
+          - GET
+          - HEAD
+          - OPTIONS
+        cached_methods:
+          - GET
+          - HEAD
+          - OPTIONS
+        compress: true
+        cache_policy_id: ${aws_cloudfront_cache_policy.reports_cache.id}
+        origin_request_policy_id: ${aws_cloudfront_origin_request_policy.api_forward.id}
+
+      - path_pattern: /health/*
+        target_origin_id: eu-origin-group-with-failover
+        viewer_protocol_policy: redirect-to-https
+        allowed_methods:
+          - GET
+          - HEAD
+        cached_methods:
+          - GET
+          - HEAD
+        compress: false
+        cache_policy_id: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad  # Managed-CachingDisabled
+
+    # Custom Error Responses (same as US)
+    custom_error_responses:
+      - error_code: 403
+        response_code: 404
+        response_page_path: /errors/404.html
+        error_caching_min_ttl: 300
+      - error_code: 404
+        response_code: 404
+        response_page_path: /errors/404.html
+        error_caching_min_ttl: 300
+      - error_code: 500
+        response_code: 500
+        response_page_path: /errors/500.html
+        error_caching_min_ttl: 60
+      - error_code: 502
+        response_code: 502
+        response_page_path: /errors/502.html
+        error_caching_min_ttl: 60
+      - error_code: 503
+        response_code: 503
+        response_page_path: /errors/503.html
+        error_caching_min_ttl: 10
+      - error_code: 504
+        response_code: 504
+        response_page_path: /errors/504.html
+        error_caching_min_ttl: 10
+
+    # SSL/TLS Configuration
+    viewer_certificate:
+      acm_certificate_arn: arn:aws:acm:us-east-1:ACCOUNT_ID:certificate/eu-cert-id
+      ssl_support_method: sni-only
+      minimum_protocol_version: TLSv1.2_2021
+      cloudfront_default_certificate: false
+
+    # Aliases (CNAMEs)
+    aliases:
+      - eu.cdn.teei-platform.com
+      - eu.api.teei-platform.com
+
+    # Logging
+    logging_config:
+      include_cookies: false
+      bucket: teei-cloudfront-logs-eu.s3.eu-central-1.amazonaws.com
+      prefix: eu-distribution/
+      enabled: true
+
+    # Geo Restriction (GDPR enforcement)
+    restrictions:
+      geo_restriction:
+        restriction_type: none  # Handled by Route53 geolocation routing
+
+    # Tags
+    tags:
+      Environment: production
+      Region: eu-central-1
+      ManagedBy: terraform
+      Distribution: eu-primary
+      GDPRCompliant: "true"
+
+# Custom Cache Policies
+cache_policies:
+  - name: reports-cache-policy
+    comment: "Cache policy for reports with stale-while-revalidate"
+    default_ttl: 300  # 5 minutes
+    max_ttl: 600  # 10 minutes
+    min_ttl: 0
+    parameters_in_cache_key_and_forwarded_to_origin:
+      enable_accept_encoding_brotli: true
+      enable_accept_encoding_gzip: true
+      query_strings_config:
+        query_string_behavior: whitelist
+        query_strings:
+          - report_id
+          - start_date
+          - end_date
+          - tenant_id
+      headers_config:
+        header_behavior: whitelist
+        headers:
+          - Authorization
+          - Accept-Language
+      cookies_config:
+        cookie_behavior: none
+
+# Custom Origin Request Policies
+origin_request_policies:
+  - name: api-forward-policy
+    comment: "Forward specific headers/cookies to API origin"
+    query_strings_config:
+      query_string_behavior: all
+    headers_config:
+      header_behavior: whitelist
+      headers:
+        - Authorization
+        - X-CSRF-Token
+        - Accept-Language
+        - User-Agent
+        - CloudFront-Viewer-Country
+        - CloudFront-Viewer-City
+    cookies_config:
+      cookie_behavior: whitelist
+      cookies:
+        - session_id
+        - csrf_token
+
+# Response Headers Policies
+response_headers_policies:
+  - name: security-headers-policy
+    comment: "Security headers for TEEI Platform"
+    security_headers_config:
+      strict_transport_security:
+        access_control_max_age_sec: 63072000  # 2 years
+        include_subdomains: true
+        preload: true
+        override: true
+      content_type_options:
+        override: true
+      frame_options:
+        frame_option: DENY
+        override: true
+      xss_protection:
+        mode_block: true
+        protection: true
+        override: true
+      referrer_policy:
+        referrer_policy: strict-origin-when-cross-origin
+        override: true
+      content_security_policy:
+        content_security_policy: "default-src 'self'; script-src 'self' 'nonce-{NONCE}'; style-src 'self' 'nonce-{NONCE}'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' https://api.teei-platform.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+        override: true
+
+    custom_headers_config:
+      - header: X-Content-Type-Options
+        value: nosniff
+        override: true
+      - header: X-Frame-Options
+        value: DENY
+        override: true
+      - header: X-XSS-Protection
+        value: "1; mode=block"
+        override: true
+      - header: Permissions-Policy
+        value: "geolocation=(), microphone=(), camera=()"
+        override: true
+
+    cors_config:
+      access_control_allow_origins:
+        items:
+          - https://teei-platform.com
+          - https://*.teei-platform.com
+      access_control_allow_headers:
+        items:
+          - Authorization
+          - Content-Type
+          - X-CSRF-Token
+      access_control_allow_methods:
+        items:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - OPTIONS
+      access_control_max_age_sec: 3600
+      access_control_allow_credentials: true
+      origin_override: true
+
+# CloudFront Functions
+cloudfront_functions:
+  - name: security-headers-function
+    comment: "Add security headers to viewer requests"
+    runtime: cloudfront-js-1.0
+    code: |
+      function handler(event) {
+        var request = event.request;
+        var headers = request.headers;
+
+        // Add security headers
+        headers['x-content-type-options'] = { value: 'nosniff' };
+        headers['x-frame-options'] = { value: 'DENY' };
+        headers['x-xss-protection'] = { value: '1; mode=block' };
+        headers['strict-transport-security'] = { value: 'max-age=63072000; includeSubDomains; preload' };
+
+        return request;
+      }
+
+  - name: url-rewrite-function
+    comment: "Rewrite URLs for SPA routing"
+    runtime: cloudfront-js-1.0
+    code: |
+      function handler(event) {
+        var request = event.request;
+        var uri = request.uri;
+
+        // Check if URI has a file extension
+        if (!uri.includes('.')) {
+          request.uri = '/index.html';
+        }
+
+        return request;
+      }
+
+# Monitoring & Alerts
+monitoring:
+  cloudwatch_metrics:
+    enabled: true
+    namespace: AWS/CloudFront
+    metrics:
+      - Requests
+      - BytesDownloaded
+      - BytesUploaded
+      - 4xxErrorRate
+      - 5xxErrorRate
+      - TotalErrorRate
+      - OriginLatency
+      - CacheHitRate
+
+  cloudwatch_alarms:
+    - name: CloudFront5xxErrorRateHigh
+      metric: 5xxErrorRate
+      threshold: 5  # 5% error rate
+      comparison: GreaterThanThreshold
+      evaluation_periods: 2
+      period: 300
+      statistic: Average
+      actions:
+        - arn:aws:sns:us-east-1:ACCOUNT_ID:cloudfront-alerts
+
+    - name: CloudFrontCacheHitRateLow
+      metric: CacheHitRate
+      threshold: 70  # 70% cache hit rate
+      comparison: LessThanThreshold
+      evaluation_periods: 3
+      period: 300
+      statistic: Average
+      actions:
+        - arn:aws:sns:us-east-1:ACCOUNT_ID:cloudfront-alerts
+
+# Cost Optimization
+cost_optimization:
+  # Enable compression to reduce bandwidth
+  compression_enabled: true
+  # Use Origin Shield to reduce origin load
+  origin_shield_enabled: true
+  # Use appropriate price class
+  price_class: PriceClass_100  # US
+  # Cache static assets for long periods
+  static_asset_ttl: 31536000  # 1 year
+
+# Performance Optimization
+performance:
+  # Enable HTTP/3 (QUIC)
+  http_version: http2and3
+  # Enable Brotli compression
+  compression_formats:
+    - gzip
+    - br
+  # Use Origin Shield
+  origin_shield:
+    enabled: true
+    region: us-east-1
+  # Enable smooth streaming
+  smooth_streaming: false
+  # Real-time logs (optional, higher cost)
+  real_time_logs:
+    enabled: false
+    sampling_rate: 1  # 1% of requests
+
+# Compliance & Auditing
+compliance:
+  gdpr:
+    enabled: true
+    data_residency: eu-central-1
+    logging_region: eu-central-1
+  pci_dss:
+    enabled: false
+  hipaa:
+    enabled: false
+
+# Documentation
+documentation:
+  architecture: /docs/CDN_Architecture.md
+  cache_strategy: /docs/CDN_Cache_Strategy.md
+  troubleshooting: /docs/CDN_Troubleshooting.md
+  monitoring: /docs/CDN_Monitoring.md

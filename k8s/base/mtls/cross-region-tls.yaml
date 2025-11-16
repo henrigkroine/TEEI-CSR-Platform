@@ -1,0 +1,205 @@
+---
+# Cross-Region mTLS Configuration
+# Enables secure service-to-service communication between US and EU regions
+
+# ServiceEntry for EU region services (from US region perspective)
+apiVersion: networking.istio.io/v1beta1
+kind: ServiceEntry
+metadata:
+  name: eu-region-services
+  namespace: istio-system
+  labels:
+    part-of: teei-csr-platform
+    region: eu
+spec:
+  hosts:
+  - "*.eu.cluster.local"  # All services in EU region
+  location: MESH_INTERNAL  # Part of service mesh
+  ports:
+  - number: 80
+    name: http
+    protocol: HTTP
+  - number: 443
+    name: https
+    protocol: HTTPS
+  - number: 15443
+    name: tls
+    protocol: TLS
+  resolution: DNS
+  endpoints:
+  - address: istio-ingressgateway.eu-region.example.com  # EU region gateway
+    ports:
+      tls: 15443
+---
+# ServiceEntry for US region services (from EU region perspective)
+apiVersion: networking.istio.io/v1beta1
+kind: ServiceEntry
+metadata:
+  name: us-region-services
+  namespace: istio-system
+  labels:
+    part-of: teei-csr-platform
+    region: us
+spec:
+  hosts:
+  - "*.us.cluster.local"  # All services in US region
+  location: MESH_INTERNAL
+  ports:
+  - number: 80
+    name: http
+    protocol: HTTP
+  - number: 443
+    name: https
+    protocol: HTTPS
+  - number: 15443
+    name: tls
+    protocol: TLS
+  resolution: DNS
+  endpoints:
+  - address: istio-ingressgateway.us-region.example.com  # US region gateway
+    ports:
+      tls: 15443
+---
+# DestinationRule for cross-region mTLS (EU)
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: cross-region-eu-mtls
+  namespace: istio-system
+spec:
+  host: "*.eu.cluster.local"
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL
+      sni: "*.eu.cluster.local"  # SNI for cross-region routing
+    portLevelSettings:
+    - port:
+        number: 15443
+      tls:
+        mode: ISTIO_MUTUAL
+        sni: "*.eu.cluster.local"
+---
+# DestinationRule for cross-region mTLS (US)
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: cross-region-us-mtls
+  namespace: istio-system
+spec:
+  host: "*.us.cluster.local"
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL
+      sni: "*.us.cluster.local"
+    portLevelSettings:
+    - port:
+        number: 15443
+      tls:
+        mode: ISTIO_MUTUAL
+        sni: "*.us.cluster.local"
+---
+# Gateway for cross-region traffic (expose port 15443)
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: cross-region-gateway
+  namespace: istio-system
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - port:
+      number: 15443
+      name: tls-cross-region
+      protocol: TLS
+    tls:
+      mode: AUTO_PASSTHROUGH  # Don't terminate, forward to service
+    hosts:
+    - "*.cluster.local"
+    - "*.us.cluster.local"
+    - "*.eu.cluster.local"
+---
+# EnvoyFilter for cross-region certificate validation
+# Ensures remote region certificates are validated against trust bundle
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: cross-region-cert-validation
+  namespace: istio-system
+spec:
+  configPatches:
+  - applyTo: CLUSTER
+    match:
+      context: SIDECAR_OUTBOUND
+      cluster:
+        service: "*.eu.cluster.local"
+    patch:
+      operation: MERGE
+      value:
+        transport_socket:
+          name: envoy.transport_sockets.tls
+          typed_config:
+            "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+            common_tls_context:
+              validation_context:
+                trusted_ca:
+                  filename: /etc/certs/trust-bundle.pem  # Combined CA bundle
+              tls_certificates:
+              - certificate_chain:
+                  filename: /etc/certs/cert-chain.pem
+                private_key:
+                  filename: /etc/certs/key.pem
+  - applyTo: CLUSTER
+    match:
+      context: SIDECAR_OUTBOUND
+      cluster:
+        service: "*.us.cluster.local"
+    patch:
+      operation: MERGE
+      value:
+        transport_socket:
+          name: envoy.transport_sockets.tls
+          typed_config:
+            "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+            common_tls_context:
+              validation_context:
+                trusted_ca:
+                  filename: /etc/certs/trust-bundle.pem
+              tls_certificates:
+              - certificate_chain:
+                  filename: /etc/certs/cert-chain.pem
+                private_key:
+                  filename: /etc/certs/key.pem
+---
+# VirtualService for cross-region routing
+# Route requests to remote regions through cross-region gateway
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: cross-region-routing
+  namespace: default
+spec:
+  hosts:
+  - "*.eu.cluster.local"
+  - "*.us.cluster.local"
+  gateways:
+  - mesh  # Internal mesh traffic
+  tls:
+  - match:
+    - port: 15443
+      sniHosts:
+      - "*.eu.cluster.local"
+    route:
+    - destination:
+        host: istio-ingressgateway.istio-system.svc.cluster.local
+        port:
+          number: 15443
+  - match:
+    - port: 15443
+      sniHosts:
+      - "*.us.cluster.local"
+    route:
+    - destination:
+        host: istio-ingressgateway.istio-system.svc.cluster.local
+        port:
+          number: 15443

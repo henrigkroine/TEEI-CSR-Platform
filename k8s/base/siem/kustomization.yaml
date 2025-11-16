@@ -1,0 +1,34 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: siem
+
+resources:
+  - opensearch-deployment.yaml
+  - opensearch-dashboards.yaml
+  - vector-aggregator.yaml
+
+secretGenerator:
+  - name: opensearch-credentials
+    literals:
+      - username=admin
+      - password=ChangeMe123!  # REPLACE with actual password from Vault
+  - name: opensearch-certs
+    files:
+      - tls.crt=certs/tls.crt
+      - tls.key=certs/tls.key
+      - ca.crt=certs/ca.crt
+
+configMapGenerator:
+  - name: siem-config
+    literals:
+      - retention_hot_days=90
+      - retention_archive_years=2
+      - correlation_threshold=0.95
+      - alert_batch_size=50
+
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: siem
+      app.kubernetes.io/managed-by: kustomize
+      security: high

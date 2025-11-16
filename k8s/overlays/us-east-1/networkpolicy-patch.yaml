@@ -1,0 +1,184 @@
+---
+# Network Policy patches for US East 1 region
+# Adds cross-region communication policies for multi-region deployments
+
+# Allow cross-region traffic from EU region (for failover scenarios)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-cross-region-eu-to-us
+  labels:
+    teei.platform/region: us-east-1
+    part-of: teei-csr-platform
+spec:
+  podSelector:
+    matchLabels:
+      app: teei-api-gateway
+  policyTypes:
+  - Ingress
+  ingress:
+  # Allow traffic from EU region API gateway (for cross-region failover)
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: teei-eu-central-1
+      podSelector:
+        matchLabels:
+          app: teei-api-gateway
+    ports:
+    - protocol: TCP
+      port: 80
+
+---
+# Allow US services to reach EU region (for data replication)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-cross-region-us-to-eu
+  labels:
+    teei.platform/region: us-east-1
+    part-of: teei-csr-platform
+spec:
+  podSelector:
+    matchLabels:
+      component: backend
+  policyTypes:
+  - Egress
+  egress:
+  # Allow backend services to replicate data to EU region
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: teei-eu-central-1
+    ports:
+    - protocol: TCP
+      port: 5432  # PostgreSQL replication
+    - protocol: TCP
+      port: 4222  # NATS cross-region messaging
+
+---
+# Enhanced API Gateway policy for US region
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: teei-api-gateway-netpol-us
+  labels:
+    app: teei-api-gateway
+    teei.platform/region: us-east-1
+    part-of: teei-csr-platform
+spec:
+  podSelector:
+    matchLabels:
+      app: teei-api-gateway
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Allow traffic from NGINX Ingress Controller
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    - podSelector: {}  # Allow from any pod in same namespace
+    ports:
+    - protocol: TCP
+      port: 3000
+  # Allow health check probes from Kubernetes
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: kube-system
+    ports:
+    - protocol: TCP
+      port: 3000
+  egress:
+  # Allow api-gateway to call all backend services
+  - to:
+    - podSelector:
+        matchLabels:
+          component: backend
+    ports:
+    - protocol: TCP
+      port: 80
+  # Allow api-gateway to call NATS
+  - to:
+    - podSelector:
+        matchLabels:
+          app: nats
+    ports:
+    - protocol: TCP
+      port: 4222
+  # Allow external HTTPS for partner APIs and cross-region communication
+  - to:
+    - namespaceSelector: {}
+    ports:
+    - protocol: TCP
+      port: 443
+    - protocol: TCP
+      port: 80
+
+---
+# US-specific reporting service network policy (for GenAI API calls)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: teei-reporting-netpol-us
+  labels:
+    app: teei-reporting
+    teei.platform/region: us-east-1
+    part-of: teei-csr-platform
+spec:
+  podSelector:
+    matchLabels:
+      app: teei-reporting
+  policyTypes:
+  - Egress
+  egress:
+  # Allow reporting to call Anthropic Claude API (US endpoints)
+  - to:
+    - namespaceSelector: {}
+    ports:
+    - protocol: TCP
+      port: 443
+  # Allow reporting to access PostgreSQL
+  - to:
+    - podSelector:
+        matchLabels:
+          app: postgresql
+    ports:
+    - protocol: TCP
+      port: 5432
+  # Allow reporting to access ClickHouse
+  - to:
+    - podSelector:
+        matchLabels:
+          app: clickhouse
+    ports:
+    - protocol: TCP
+      port: 8123
+    - protocol: TCP
+      port: 9000
+
+---
+# Regional load balancer health check policy
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-health-checks-us
+  labels:
+    teei.platform/region: us-east-1
+    part-of: teei-csr-platform
+spec:
+  podSelector:
+    matchLabels:
+      environment: production
+  policyTypes:
+  - Ingress
+  ingress:
+  # Allow health checks from AWS ELB/ALB IP ranges (US region)
+  - from:
+    - ipBlock:
+        cidr: 0.0.0.0/0  # In production, restrict to AWS US ELB CIDR ranges
+    ports:
+    - protocol: TCP
+      port: 8080  # Health check port

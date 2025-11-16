@@ -1,0 +1,969 @@
+{
+  "dashboard": {
+    "title": "SOC2 Compliance Dashboard",
+    "tags": ["soc2", "compliance", "audit"],
+    "timezone": "utc",
+    "editable": true,
+    "graphTooltip": 1,
+    "time": {
+      "from": "now-90d",
+      "to": "now"
+    },
+    "refresh": "5m",
+    "schemaVersion": 38,
+    "version": 1,
+    "panels": [
+      {
+        "id": 1,
+        "type": "stat",
+        "title": "SOC2 Compliance Score",
+        "description": "Overall SOC2 Type II compliance score (0-100%)",
+        "gridPos": {"h": 8, "w": 6, "x": 0, "y": 0},
+        "targets": [
+          {
+            "datasource": "Prometheus",
+            "expr": "(\n  (soc2_access_control_score + \n   soc2_change_management_score + \n   soc2_availability_score + \n   soc2_security_monitoring_score) / 4\n)",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 70, "color": "orange"},
+                {"value": 85, "color": "yellow"},
+                {"value": 95, "color": "green"}
+              ]
+            },
+            "unit": "percent",
+            "min": 0,
+            "max": 100,
+            "decimals": 1
+          }
+        },
+        "options": {
+          "orientation": "auto",
+          "textMode": "value_and_name",
+          "colorMode": "background",
+          "graphMode": "area",
+          "justifyMode": "center"
+        }
+      },
+      {
+        "id": 2,
+        "type": "bargauge",
+        "title": "SOC2 Control Categories",
+        "gridPos": {"h": 8, "w": 9, "x": 6, "y": 0},
+        "targets": [
+          {
+            "datasource": "Prometheus",
+            "expr": "soc2_access_control_score",
+            "refId": "A",
+            "legendFormat": "CC6: Access Control"
+          },
+          {
+            "datasource": "Prometheus",
+            "expr": "soc2_change_management_score",
+            "refId": "B",
+            "legendFormat": "CC8: Change Management"
+          },
+          {
+            "datasource": "Prometheus",
+            "expr": "soc2_availability_score",
+            "refId": "C",
+            "legendFormat": "CC9: Availability"
+          },
+          {
+            "datasource": "Prometheus",
+            "expr": "soc2_security_monitoring_score",
+            "refId": "D",
+            "legendFormat": "CC7: Security Monitoring"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 85, "color": "yellow"},
+                {"value": 95, "color": "green"}
+              ]
+            },
+            "unit": "percent",
+            "min": 0,
+            "max": 100
+          }
+        },
+        "options": {
+          "orientation": "horizontal",
+          "displayMode": "gradient",
+          "showUnfilled": true
+        }
+      },
+      {
+        "id": 3,
+        "type": "table",
+        "title": "Evidence Collection Status",
+        "gridPos": {"h": 8, "w": 9, "x": 15, "y": 0},
+        "targets": [
+          {
+            "datasource": "Prometheus",
+            "expr": "soc2_evidence_collected",
+            "refId": "A",
+            "format": "table",
+            "instant": true
+          }
+        ],
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {},
+              "renameByName": {
+                "evidence_type": "Evidence Type",
+                "quarter": "Quarter",
+                "collected": "Collected",
+                "signed": "Signed",
+                "uploaded": "Uploaded"
+              }
+            }
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "align": "center"
+            }
+          },
+          "overrides": [
+            {
+              "matcher": {"id": "byName", "options": "Collected"},
+              "properties": [
+                {
+                  "id": "custom.cellOptions",
+                  "value": {"type": "color-background"}
+                },
+                {
+                  "id": "mappings",
+                  "value": [
+                    {"type": "value", "options": {"1": {"text": "✓", "color": "green"}}},
+                    {"type": "value", "options": {"0": {"text": "✗", "color": "red"}}}
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": 4,
+        "type": "stat",
+        "title": "Users with Admin Access (CC6.1)",
+        "description": "Total users with administrative privileges",
+        "gridPos": {"h": 4, "w": 3, "x": 0, "y": 8},
+        "targets": [
+          {
+            "datasource": "OpenSearch",
+            "query": "event_type:rbac AND role:(admin OR cluster-admin)",
+            "aggregation": {
+              "type": "cardinality",
+              "field": "user"
+            },
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 10, "color": "yellow"},
+                {"value": 20, "color": "red"}
+              ]
+            },
+            "unit": "short"
+          }
+        }
+      },
+      {
+        "id": 5,
+        "type": "stat",
+        "title": "Last Access Review Date (CC6.2)",
+        "gridPos": {"h": 4, "w": 3, "x": 3, "y": 8},
+        "targets": [
+          {
+            "datasource": "Prometheus",
+            "expr": "time() - soc2_last_access_review_timestamp",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 2592000, "color": "yellow"},
+                {"value": 7776000, "color": "red"}
+              ]
+            },
+            "unit": "dtdurations",
+            "mappings": [
+              {
+                "type": "range",
+                "options": {
+                  "from": 0,
+                  "to": 2592000,
+                  "result": {"text": "Recent", "color": "green"}
+                }
+              },
+              {
+                "type": "range",
+                "options": {
+                  "from": 2592000,
+                  "to": 7776000,
+                  "result": {"text": "Due Soon", "color": "yellow"}
+                }
+              },
+              {
+                "type": "range",
+                "options": {
+                  "from": 7776000,
+                  "to": 999999999,
+                  "result": {"text": "OVERDUE", "color": "red"}
+                }
+              }
+            ]
+          }
+        },
+        "options": {
+          "colorMode": "background"
+        }
+      },
+      {
+        "id": 6,
+        "type": "stat",
+        "title": "Orphaned Accounts (CC6.3)",
+        "description": "Users with no login >90 days",
+        "gridPos": {"h": 4, "w": 3, "x": 6, "y": 8},
+        "targets": [
+          {
+            "datasource": "OpenSearch",
+            "query": "event_type:authentication AND success:true AND @timestamp:<now-90d",
+            "aggregation": {
+              "type": "cardinality",
+              "field": "user",
+              "filter": {
+                "bool": {
+                  "must_not": {
+                    "range": {
+                      "@timestamp": {"gte": "now-90d"}
+                    }
+                  }
+                }
+              }
+            },
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 1, "color": "orange"},
+                {"value": 5, "color": "red"}
+              ]
+            },
+            "unit": "short"
+          }
+        }
+      },
+      {
+        "id": 7,
+        "type": "stat",
+        "title": "ServiceAccounts Active",
+        "gridPos": {"h": 4, "w": 3, "x": 9, "y": 8},
+        "targets": [
+          {
+            "datasource": "Prometheus",
+            "expr": "count(kube_serviceaccount_info)",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short"
+          }
+        }
+      },
+      {
+        "id": 8,
+        "type": "stat",
+        "title": "Deployments with PR Approval (CC8.1)",
+        "description": "% of deployments with linked PR approval",
+        "gridPos": {"h": 4, "w": 4, "x": 12, "y": 8},
+        "targets": [
+          {
+            "datasource": "OpenSearch",
+            "query": "event_type:change_management AND environment:production",
+            "aggregation": {
+              "type": "filters",
+              "filters": [
+                {"label": "with_approval", "query": "EXISTS(pr_approval)"},
+                {"label": "total", "query": "*"}
+              ]
+            },
+            "refId": "A",
+            "calculation": "(with_approval / total) * 100"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 95, "color": "yellow"},
+                {"value": 99, "color": "green"}
+              ]
+            },
+            "unit": "percent"
+          }
+        },
+        "options": {
+          "colorMode": "background"
+        }
+      },
+      {
+        "id": 9,
+        "type": "stat",
+        "title": "Emergency Changes (Override)",
+        "gridPos": {"h": 4, "w": 4, "x": 16, "y": 8},
+        "targets": [
+          {
+            "datasource": "OpenSearch",
+            "query": "event_type:change_management AND emergency:true AND @timestamp:>now-30d",
+            "aggregation": {
+              "type": "count"
+            },
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 3, "color": "yellow"},
+                {"value": 10, "color": "red"}
+              ]
+            },
+            "unit": "short"
+          }
+        }
+      },
+      {
+        "id": 10,
+        "type": "stat",
+        "title": "Rollback Rate (CC8.1)",
+        "gridPos": {"h": 4, "w": 4, "x": 20, "y": 8},
+        "targets": [
+          {
+            "datasource": "OpenSearch",
+            "query": "event_type:change_management AND environment:production AND @timestamp:>now-30d",
+            "aggregation": {
+              "type": "filters",
+              "filters": [
+                {"label": "rollbacks", "query": "action:rollback"},
+                {"label": "total", "query": "*"}
+              ]
+            },
+            "refId": "A",
+            "calculation": "(rollbacks / total) * 100"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 5, "color": "yellow"},
+                {"value": 10, "color": "red"}
+              ]
+            },
+            "unit": "percent",
+            "decimals": 1
+          }
+        }
+      },
+      {
+        "id": 11,
+        "type": "timeseries",
+        "title": "Access Control Violations (CC6)",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12},
+        "targets": [
+          {
+            "datasource": "OpenSearch",
+            "query": "event_type:authorization AND status_code:(401 OR 403)",
+            "aggregation": {
+              "type": "date_histogram",
+              "field": "@timestamp",
+              "interval": "1d"
+            },
+            "refId": "A",
+            "legendFormat": "Authorization Failures"
+          },
+          {
+            "datasource": "OpenSearch",
+            "query": "event_type:authentication AND success:false",
+            "aggregation": {
+              "type": "date_histogram",
+              "field": "@timestamp",
+              "interval": "1d"
+            },
+            "refId": "B",
+            "legendFormat": "Failed Logins"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 20
+            },
+            "unit": "short"
+          }
+        },
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom"
+          }
+        }
+      },
+      {
+        "id": 12,
+        "type": "timeseries",
+        "title": "Change Management Activity (CC8)",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12},
+        "targets": [
+          {
+            "datasource": "OpenSearch",
+            "query": "event_type:change_management",
+            "aggregation": {
+              "type": "date_histogram",
+              "field": "@timestamp",
+              "interval": "1d",
+              "terms": {
+                "field": "environment",
+                "size": 3
+              }
+            },
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "drawStyle": "bars",
+              "barAlignment": 0,
+              "fillOpacity": 80,
+              "stacking": {"mode": "normal"}
+            },
+            "unit": "short"
+          },
+          "overrides": [
+            {
+              "matcher": {"id": "byName", "options": "production"},
+              "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "red"}}]
+            },
+            {
+              "matcher": {"id": "byName", "options": "staging"},
+              "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "yellow"}}]
+            },
+            {
+              "matcher": {"id": "byName", "options": "development"},
+              "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "green"}}]
+            }
+          ]
+        }
+      },
+      {
+        "id": 13,
+        "type": "stat",
+        "title": "Uptime SLA Compliance (CC9.1)",
+        "description": "99.9% SLA target",
+        "gridPos": {"h": 6, "w": 4, "x": 0, "y": 20},
+        "targets": [
+          {
+            "datasource": "Prometheus",
+            "expr": "(\n  sum(up{job=~\".*\"}) / \n  count(up{job=~\".*\"})\n) * 100",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 99, "color": "yellow"},
+                {"value": 99.9, "color": "green"}
+              ]
+            },
+            "unit": "percent",
+            "decimals": 3,
+            "min": 99,
+            "max": 100
+          }
+        },
+        "options": {
+          "colorMode": "background",
+          "graphMode": "area"
+        }
+      },
+      {
+        "id": 14,
+        "type": "stat",
+        "title": "Incident Count (Last 30d)",
+        "gridPos": {"h": 6, "w": 4, "x": 4, "y": 20},
+        "targets": [
+          {
+            "datasource": "OpenSearch",
+            "query": "severity:critical AND @timestamp:>now-30d",
+            "aggregation": {
+              "type": "count"
+            },
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 5, "color": "yellow"},
+                {"value": 10, "color": "red"}
+              ]
+            },
+            "unit": "short"
+          }
+        }
+      },
+      {
+        "id": 15,
+        "type": "stat",
+        "title": "MTTR (Mean Time to Recovery)",
+        "gridPos": {"h": 6, "w": 4, "x": 8, "y": 20},
+        "targets": [
+          {
+            "datasource": "Prometheus",
+            "expr": "avg(soc2_incident_recovery_duration_seconds{severity=\"critical\"}) / 60",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 30, "color": "yellow"},
+                {"value": 60, "color": "red"}
+              ]
+            },
+            "unit": "m",
+            "decimals": 1
+          }
+        }
+      },
+      {
+        "id": 16,
+        "type": "stat",
+        "title": "Backup Success Rate (CC9.1)",
+        "gridPos": {"h": 6, "w": 4, "x": 12, "y": 20},
+        "targets": [
+          {
+            "datasource": "Prometheus",
+            "expr": "(sum(soc2_backup_success_total) / sum(soc2_backup_total)) * 100",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 95, "color": "yellow"},
+                {"value": 99, "color": "green"}
+              ]
+            },
+            "unit": "percent",
+            "decimals": 1
+          }
+        },
+        "options": {
+          "colorMode": "background"
+        }
+      },
+      {
+        "id": 17,
+        "type": "stat",
+        "title": "Active Security Alerts (CC7.2)",
+        "gridPos": {"h": 6, "w": 4, "x": 16, "y": 20},
+        "targets": [
+          {
+            "datasource": "Prometheus",
+            "expr": "sum(siem_security_anomalies_total{severity=~\"critical|high\"})",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 3, "color": "yellow"},
+                {"value": 10, "color": "red"}
+              ]
+            },
+            "unit": "short"
+          }
+        }
+      },
+      {
+        "id": 18,
+        "type": "stat",
+        "title": "Log Coverage (CC7.2)",
+        "description": "% of services shipping logs to SIEM",
+        "gridPos": {"h": 6, "w": 4, "x": 20, "y": 20},
+        "targets": [
+          {
+            "datasource": "Prometheus",
+            "expr": "(count(count by (service) (siem_auth_events_total)) / 15) * 100",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 90, "color": "yellow"},
+                {"value": 95, "color": "green"}
+              ]
+            },
+            "unit": "percent"
+          }
+        },
+        "options": {
+          "colorMode": "background"
+        }
+      },
+      {
+        "id": 19,
+        "type": "table",
+        "title": "Access Review Status by User",
+        "gridPos": {"h": 10, "w": 12, "x": 0, "y": 26},
+        "targets": [
+          {
+            "datasource": "Prometheus",
+            "expr": "soc2_user_access_review",
+            "refId": "A",
+            "format": "table",
+            "instant": true
+          }
+        ],
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "renameByName": {
+                "user": "User",
+                "role": "Role",
+                "last_used": "Last Used",
+                "review_date": "Review Date",
+                "reviewer": "Reviewer"
+              }
+            }
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "align": "left",
+              "filterable": true
+            }
+          },
+          "overrides": [
+            {
+              "matcher": {"id": "byName", "options": "Last Used"},
+              "properties": [
+                {
+                  "id": "unit",
+                  "value": "dateTimeAsIso"
+                },
+                {
+                  "id": "custom.cellOptions",
+                  "value": {"type": "color-background"}
+                },
+                {
+                  "id": "thresholds",
+                  "value": {
+                    "mode": "absolute",
+                    "steps": [
+                      {"value": 0, "color": "green"},
+                      {"value": 2592000, "color": "yellow"},
+                      {"value": 7776000, "color": "red"}
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "options": {
+          "showHeader": true,
+          "sortBy": [{"displayName": "Last Used", "desc": false}]
+        }
+      },
+      {
+        "id": 20,
+        "type": "table",
+        "title": "Key Rotation Evidence",
+        "gridPos": {"h": 10, "w": 12, "x": 12, "y": 26},
+        "targets": [
+          {
+            "datasource": "OpenSearch",
+            "query": "event_type:key_rotation AND @timestamp:>now-90d",
+            "aggregation": {
+              "type": "top_hits",
+              "size": 20,
+              "sort": [{"@timestamp": {"order": "desc"}}],
+              "fields": ["@timestamp", "key_name", "service", "rotation_type", "rotated_by"]
+            },
+            "refId": "A"
+          }
+        ],
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "renameByName": {
+                "@timestamp": "Date",
+                "key_name": "Key/Secret Name",
+                "service": "Service",
+                "rotation_type": "Type",
+                "rotated_by": "Rotated By"
+              }
+            }
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "align": "left"
+            }
+          }
+        },
+        "options": {
+          "showHeader": true,
+          "sortBy": [{"displayName": "Date", "desc": true}]
+        }
+      },
+      {
+        "id": 21,
+        "type": "table",
+        "title": "Production Changes (Last 30 Days)",
+        "gridPos": {"h": 10, "w": 24, "x": 0, "y": 36},
+        "targets": [
+          {
+            "datasource": "OpenSearch",
+            "query": "event_type:change_management AND environment:production AND @timestamp:>now-30d",
+            "aggregation": {
+              "type": "top_hits",
+              "size": 50,
+              "sort": [{"@timestamp": {"order": "desc"}}],
+              "fields": ["@timestamp", "service", "change_type", "deployer", "pr_approval", "jira_ticket", "status"]
+            },
+            "refId": "A"
+          }
+        ],
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "renameByName": {
+                "@timestamp": "Timestamp",
+                "service": "Service",
+                "change_type": "Change Type",
+                "deployer": "Deployer",
+                "pr_approval": "PR Approved",
+                "jira_ticket": "JIRA Ticket",
+                "status": "Status"
+              }
+            }
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "align": "left",
+              "filterable": true
+            }
+          },
+          "overrides": [
+            {
+              "matcher": {"id": "byName", "options": "PR Approved"},
+              "properties": [
+                {
+                  "id": "custom.cellOptions",
+                  "value": {"type": "color-background"}
+                },
+                {
+                  "id": "mappings",
+                  "value": [
+                    {"type": "value", "options": {"true": {"text": "✓", "color": "green"}}},
+                    {"type": "value", "options": {"false": {"text": "✗", "color": "red"}}}
+                  ]
+                }
+              ]
+            },
+            {
+              "matcher": {"id": "byName", "options": "Status"},
+              "properties": [
+                {
+                  "id": "custom.cellOptions",
+                  "value": {"type": "color-text"}
+                },
+                {
+                  "id": "mappings",
+                  "value": [
+                    {"type": "value", "options": {"success": {"color": "green"}}},
+                    {"type": "value", "options": {"failed": {"color": "red"}}},
+                    {"type": "value", "options": {"rollback": {"color": "orange"}}}
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "options": {
+          "showHeader": true,
+          "sortBy": [{"displayName": "Timestamp", "desc": true}]
+        }
+      },
+      {
+        "id": 22,
+        "type": "timeseries",
+        "title": "Quarterly Evidence Collection Timeline",
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 46},
+        "targets": [
+          {
+            "datasource": "Prometheus",
+            "expr": "soc2_evidence_collected{quarter=~\"2025-Q.*\"}",
+            "refId": "A",
+            "legendFormat": "{{evidence_type}} - {{quarter}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "drawStyle": "bars",
+              "barAlignment": 0,
+              "fillOpacity": 100,
+              "stacking": {"mode": "none"}
+            },
+            "unit": "short",
+            "mappings": [
+              {"type": "value", "options": {"0": {"text": "Not Collected", "color": "red"}}},
+              {"type": "value", "options": {"1": {"text": "Collected", "color": "green"}}}
+            ]
+          }
+        },
+        "options": {
+          "legend": {
+            "displayMode": "table",
+            "placement": "right",
+            "values": ["value"]
+          }
+        }
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "quarter",
+          "type": "custom",
+          "options": [
+            {"text": "2025-Q1", "value": "2025-Q1"},
+            {"text": "2025-Q2", "value": "2025-Q2"},
+            {"text": "2025-Q3", "value": "2025-Q3"},
+            {"text": "2025-Q4", "value": "2025-Q4"}
+          ],
+          "current": {
+            "text": "2025-Q1",
+            "value": "2025-Q1"
+          }
+        },
+        {
+          "name": "environment",
+          "type": "custom",
+          "options": [
+            {"text": "All", "value": ".*"},
+            {"text": "Production", "value": "production"},
+            {"text": "Staging", "value": "staging"}
+          ],
+          "multi": false,
+          "includeAll": false
+        }
+      ]
+    },
+    "annotations": {
+      "list": [
+        {
+          "name": "Access Reviews",
+          "datasource": "Prometheus",
+          "enable": true,
+          "iconColor": "blue",
+          "expr": "soc2_access_review_completed",
+          "tagKeys": "reviewer",
+          "titleFormat": "Access Review Completed",
+          "textFormat": "Reviewed by {{reviewer}}"
+        },
+        {
+          "name": "Evidence Collection",
+          "datasource": "Prometheus",
+          "enable": true,
+          "iconColor": "green",
+          "expr": "soc2_evidence_collected",
+          "tagKeys": "evidence_type,quarter",
+          "titleFormat": "Evidence Collected: {{evidence_type}}",
+          "textFormat": "Quarter: {{quarter}}"
+        },
+        {
+          "name": "Audit Events",
+          "datasource": "OpenSearch",
+          "enable": true,
+          "iconColor": "purple",
+          "query": "event_type:audit AND action:soc2_review",
+          "textField": "message"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,46 @@
+---
+# Namespace configuration for Istio sidecar injection
+# Apply istio-injection=enabled to activate automatic mTLS
+
+# Default namespace (production workloads)
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: default
+  labels:
+    istio-injection: enabled  # Enable automatic sidecar injection
+    mtls-mode: STRICT  # Enforce mTLS
+    name: default
+    part-of: teei-csr-platform
+---
+# Staging namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: staging
+  labels:
+    istio-injection: enabled
+    mtls-mode: PERMISSIVE  # Allow plaintext for debugging
+    name: staging
+    part-of: teei-csr-platform
+---
+# Development namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: development
+  labels:
+    istio-injection: enabled
+    mtls-mode: PERMISSIVE  # Allow plaintext for debugging
+    name: development
+    part-of: teei-csr-platform
+---
+# Observability namespace (no injection, monitored services only)
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: observability
+  labels:
+    istio-injection: disabled
+    name: observability
+    part-of: teei-csr-platform

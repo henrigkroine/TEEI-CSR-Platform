@@ -1,0 +1,250 @@
+---
+# Canary Rollout for Analytics Service
+# Strategy: Progressive rollout with ClickHouse query performance validation
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: teei-analytics
+  labels:
+    app: teei-analytics
+    component: backend
+    part-of: teei-csr-platform
+    deployment-strategy: canary
+spec:
+  replicas: 3
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app: teei-analytics
+
+  template:
+    metadata:
+      labels:
+        app: teei-analytics
+        component: backend
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3011"
+        prometheus.io/path: "/metrics"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+
+      serviceAccountName: teei-analytics
+
+      containers:
+      - name: analytics
+        image: ghcr.io/henrigkroine/teei-analytics:latest
+        imagePullPolicy: Always
+
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities:
+            drop:
+            - ALL
+
+        ports:
+        - name: http
+          containerPort: 3011
+          protocol: TCP
+
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: PORT
+          value: "3011"
+
+        resources:
+          requests:
+            cpu: 150m
+            memory: 192Mi
+          limits:
+            cpu: 800m
+            memory: 768Mi
+
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3011
+          initialDelaySeconds: 10
+          periodSeconds: 10
+
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3011
+          initialDelaySeconds: 5
+          periodSeconds: 5
+
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+
+      volumes:
+      - name: tmp
+        emptyDir: {}
+
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - teei-analytics
+              topologyKey: kubernetes.io/hostname
+
+  # Canary Strategy: Conservative rollout for analytics
+  strategy:
+    canary:
+      canaryService: teei-analytics-canary
+      stableService: teei-analytics
+
+      # Progressive traffic steps (slower for analytics)
+      steps:
+      # Step 1: 5% traffic
+      - setWeight: 5
+      - pause:
+          duration: 10m
+      - analysis:
+          templates:
+          - templateName: success-rate-analysis
+          - templateName: latency-analysis
+          - templateName: clickhouse-query-analysis
+          args:
+          - name: service-name
+            value: teei-analytics-canary
+          - name: error-threshold
+            value: "0.5"
+          - name: latency-threshold
+            value: "2000"  # <2s for analytics queries
+
+      # Step 2: 20% traffic
+      - setWeight: 20
+      - pause:
+          duration: 10m
+      - analysis:
+          templates:
+          - templateName: success-rate-analysis
+          - templateName: latency-analysis
+          - templateName: clickhouse-query-analysis
+          args:
+          - name: service-name
+            value: teei-analytics-canary
+          - name: error-threshold
+            value: "0.5"
+          - name: latency-threshold
+            value: "2000"
+
+      # Step 3: 50% traffic
+      - setWeight: 50
+      - pause:
+          duration: 15m
+      - analysis:
+          templates:
+          - templateName: success-rate-analysis
+          - templateName: latency-analysis
+          - templateName: clickhouse-query-analysis
+          args:
+          - name: service-name
+            value: teei-analytics-canary
+          - name: error-threshold
+            value: "0.3"
+          - name: latency-threshold
+            value: "1800"
+
+      # Step 4: 100% traffic
+      - setWeight: 100
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: teei-analytics
+  labels:
+    app: teei-analytics
+    service-type: stable
+spec:
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 3011
+    targetPort: http
+  selector:
+    app: teei-analytics
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: teei-analytics-canary
+  labels:
+    app: teei-analytics
+    service-type: canary
+spec:
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 3011
+    targetPort: http
+  selector:
+    app: teei-analytics
+
+---
+# AnalysisTemplate: ClickHouse Query Performance
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: clickhouse-query-analysis
+spec:
+  metrics:
+  - name: clickhouse-query-latency
+    interval: 30s
+    successCondition: result < {{args.latency-threshold}}
+    failureLimit: 3
+    count: 10
+    provider:
+      prometheus:
+        address: http://prometheus-server.monitoring.svc.cluster.local:9090
+        query: |
+          # ClickHouse query latency p95
+          histogram_quantile(0.95,
+            sum(rate(clickhouse_query_duration_ms_bucket{service="{{args.service-name}}"}[5m])) by (le)
+          )
+
+  - name: clickhouse-connection-pool
+    interval: 30s
+    successCondition: result < 80  # <80% pool utilization
+    failureLimit: 2
+    provider:
+      prometheus:
+        address: http://prometheus-server.monitoring.svc.cluster.local:9090
+        query: |
+          # Connection pool utilization
+          (clickhouse_connection_pool_active{service="{{args.service-name}}"}
+          /
+          clickhouse_connection_pool_max{service="{{args.service-name}}"}) * 100
+
+  - name: query-error-rate
+    interval: 30s
+    successCondition: result < 0.01  # <1% query errors
+    failureLimit: 2
+    provider:
+      prometheus:
+        address: http://prometheus-server.monitoring.svc.cluster.local:9090
+        query: |
+          sum(rate(clickhouse_query_errors_total{service="{{args.service-name}}"}[5m]))
+          /
+          sum(rate(clickhouse_queries_total{service="{{args.service-name}}"}[5m]))

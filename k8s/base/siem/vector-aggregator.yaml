@@ -1,0 +1,436 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vector-config
+  namespace: siem
+data:
+  vector.toml: |
+    # Vector configuration for SIEM log aggregation
+
+    # Data directory
+    data_dir = "/var/lib/vector"
+
+    # Sources - receive logs from all clusters
+
+    [sources.kubernetes_logs]
+    type = "kubernetes_logs"
+    auto_partial_merge = true
+
+    [sources.nats_logs]
+    type = "nats"
+    connection_name = "vector-siem"
+    subject = "logs.>"
+    url = "nats://nats.nats.svc.cluster.local:4222"
+
+    [sources.syslog_tcp]
+    type = "syslog"
+    mode = "tcp"
+    address = "0.0.0.0:514"
+
+    [sources.syslog_udp]
+    type = "syslog"
+    mode = "udp"
+    address = "0.0.0.0:514"
+
+    # Transforms - parse and enrich logs
+
+    [transforms.parse_security_events]
+    type = "remap"
+    inputs = ["kubernetes_logs"]
+    source = '''
+      . = parse_json!(.message)
+
+      # Extract common fields
+      .event_type = .event_type ?? "unknown"
+      .severity = .severity ?? "info"
+      .region = .kubernetes.namespace_labels.region ?? "unknown"
+
+      # Extract service name
+      .service = .kubernetes.container_name
+      .namespace = .kubernetes.namespace_name
+
+      # Add ingestion timestamp
+      .ingested_at = now()
+    '''
+
+    [transforms.filter_security_events]
+    type = "filter"
+    inputs = ["parse_security_events"]
+    condition = '''
+      includes(["authentication", "authorization", "data_access", "security_alert", "change_management"], .event_type)
+    '''
+
+    [transforms.enrich_auth_events]
+    type = "remap"
+    inputs = ["filter_security_events"]
+    source = '''
+      if .event_type == "authentication" {
+        .index_prefix = "auth-events"
+        .retention_days = 90
+      } else if .event_type == "data_access" {
+        .index_prefix = "data-access"
+        .retention_days = 730  # 2 years for compliance
+      } else {
+        .index_prefix = "security-events"
+        .retention_days = 90
+      }
+    '''
+
+    [transforms.extract_pii_markers]
+    type = "remap"
+    inputs = ["enrich_auth_events"]
+    source = '''
+      # Detect PII access patterns
+      if exists(.query) {
+        pii_fields = ["email", "ssn", "phone", "address", "name"]
+        .pii_accessed = any(array!(pii_fields)) -> |field| {
+          contains(downcase(.query), field)
+        }
+      }
+
+      # Tag GDPR-relevant events
+      if .region == "eu" && .pii_accessed == true {
+        .compliance_tags = push(.compliance_tags ?? [], "gdpr")
+      }
+    '''
+
+    [transforms.detect_anomalies]
+    type = "remap"
+    inputs = ["extract_pii_markers"]
+    source = '''
+      # Detect failed login patterns
+      if .event_type == "authentication" && .success == false {
+        .anomaly_type = "failed_login"
+        .severity = "medium"
+      }
+
+      # Detect large data exports
+      if .event_type == "data_access" && .export_size_bytes > 1073741824 {  # 1GB
+        .anomaly_type = "large_export"
+        .severity = "high"
+      }
+
+      # Detect cross-region PII access
+      if contains(.compliance_tags ?? [], "gdpr") && .source_region == "us" {
+        .anomaly_type = "gdpr_violation"
+        .severity = "critical"
+      }
+
+      # Detect privilege escalation patterns
+      if .event_type == "authorization" && .action == "role_change" {
+        .anomaly_type = "privilege_change"
+        .severity = "high"
+      }
+    '''
+
+    [transforms.route_by_type]
+    type = "route"
+    inputs = ["detect_anomalies"]
+
+    [transforms.route_by_type.route.auth]
+    type = "check_fields"
+    "event_type.eq" = "authentication"
+
+    [transforms.route_by_type.route.data_access]
+    type = "check_fields"
+    "event_type.eq" = "data_access"
+
+    [transforms.route_by_type.route.security]
+    type = "check_fields"
+    "event_type.in" = ["authorization", "security_alert", "change_management"]
+
+    [transforms.route_by_type.route.anomaly]
+    type = "exists"
+    "anomaly_type.exists" = true
+
+    # Metrics - count events by type
+
+    [transforms.metrics_auth]
+    type = "log_to_metric"
+    inputs = ["route_by_type.auth"]
+
+    [[transforms.metrics_auth.metrics]]
+    type = "counter"
+    field = "event_type"
+    name = "auth_events_total"
+    namespace = "siem"
+    tags.event_type = "{{event_type}}"
+    tags.success = "{{success}}"
+
+    [[transforms.metrics_auth.metrics]]
+    type = "histogram"
+    field = "duration_ms"
+    name = "auth_duration_ms"
+    namespace = "siem"
+
+    [transforms.metrics_data_access]
+    type = "log_to_metric"
+    inputs = ["route_by_type.data_access"]
+
+    [[transforms.metrics_data_access.metrics]]
+    type = "counter"
+    field = "pii_accessed"
+    name = "data_access_total"
+    namespace = "siem"
+    tags.pii_accessed = "{{pii_accessed}}"
+    tags.region = "{{region}}"
+
+    [[transforms.metrics_data_access.metrics]]
+    type = "histogram"
+    field = "export_size_bytes"
+    name = "data_export_size_bytes"
+    namespace = "siem"
+
+    [transforms.metrics_anomalies]
+    type = "log_to_metric"
+    inputs = ["route_by_type.anomaly"]
+
+    [[transforms.metrics_anomalies.metrics]]
+    type = "counter"
+    field = "anomaly_type"
+    name = "security_anomalies_total"
+    namespace = "siem"
+    tags.anomaly_type = "{{anomaly_type}}"
+    tags.severity = "{{severity}}"
+
+    # Sinks - send to OpenSearch and other destinations
+
+    [sinks.opensearch_auth]
+    type = "elasticsearch"
+    inputs = ["route_by_type.auth"]
+    endpoint = "https://opensearch.siem.svc.cluster.local:9200"
+    mode = "bulk"
+    compression = "gzip"
+
+    [sinks.opensearch_auth.auth]
+    strategy = "basic"
+    user = "${OPENSEARCH_USER}"
+    password = "${OPENSEARCH_PASSWORD}"
+
+    [sinks.opensearch_auth.tls]
+    verify_certificate = true
+    ca_file = "/etc/vector/certs/ca.crt"
+
+    [sinks.opensearch_auth.bulk]
+    index = "auth-events-%Y.%m.%d"
+    action = "create"
+
+    [sinks.opensearch_data_access]
+    type = "elasticsearch"
+    inputs = ["route_by_type.data_access"]
+    endpoint = "https://opensearch.siem.svc.cluster.local:9200"
+    mode = "bulk"
+    compression = "gzip"
+
+    [sinks.opensearch_data_access.auth]
+    strategy = "basic"
+    user = "${OPENSEARCH_USER}"
+    password = "${OPENSEARCH_PASSWORD}"
+
+    [sinks.opensearch_data_access.tls]
+    verify_certificate = true
+    ca_file = "/etc/vector/certs/ca.crt"
+
+    [sinks.opensearch_data_access.bulk]
+    index = "data-access-%Y.%m.%d"
+    action = "create"
+
+    [sinks.opensearch_security]
+    type = "elasticsearch"
+    inputs = ["route_by_type.security"]
+    endpoint = "https://opensearch.siem.svc.cluster.local:9200"
+    mode = "bulk"
+    compression = "gzip"
+
+    [sinks.opensearch_security.auth]
+    strategy = "basic"
+    user = "${OPENSEARCH_USER}"
+    password = "${OPENSEARCH_PASSWORD}"
+
+    [sinks.opensearch_security.tls]
+    verify_certificate = true
+    ca_file = "/etc/vector/certs/ca.crt"
+
+    [sinks.opensearch_security.bulk]
+    index = "security-events-%Y.%m.%d"
+    action = "create"
+
+    # Archive to S3 for long-term retention
+    [sinks.s3_archive]
+    type = "aws_s3"
+    inputs = ["route_by_type.*"]
+    bucket = "teei-siem-archive-${AWS_REGION}"
+    region = "${AWS_REGION}"
+    compression = "gzip"
+    encoding.codec = "json"
+
+    [sinks.s3_archive.batch]
+    max_bytes = 10485760  # 10MB
+    timeout_secs = 300
+
+    key_prefix = "siem-logs/%Y/%m/%d/"
+
+    [sinks.s3_archive.storage_class]
+    class = "GLACIER_IR"  # Instant Retrieval for 90-day hot storage
+
+    # Send anomalies to alerting pipeline
+    [sinks.nats_alerts]
+    type = "nats"
+    inputs = ["route_by_type.anomaly"]
+    url = "nats://nats.nats.svc.cluster.local:4222"
+    subject = "alerts.security.{{ anomaly_type }}"
+    encoding.codec = "json"
+
+    # Prometheus metrics export
+    [sinks.prometheus_metrics]
+    type = "prometheus_exporter"
+    inputs = ["metrics_auth", "metrics_data_access", "metrics_anomalies"]
+    address = "0.0.0.0:9090"
+    default_namespace = "siem"
+
+    # Console output for debugging (disable in production)
+    [sinks.console]
+    type = "console"
+    inputs = ["route_by_type.anomaly"]
+    encoding.codec = "json"
+    target = "stdout"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vector-aggregator
+  namespace: siem
+  labels:
+    app: vector-aggregator
+spec:
+  type: ClusterIP
+  ports:
+    - port: 514
+      name: syslog-tcp
+      protocol: TCP
+      targetPort: 514
+    - port: 514
+      name: syslog-udp
+      protocol: UDP
+      targetPort: 514
+    - port: 9090
+      name: metrics
+      targetPort: 9090
+  selector:
+    app: vector-aggregator
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vector-aggregator
+  namespace: siem
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: vector-aggregator
+  template:
+    metadata:
+      labels:
+        app: vector-aggregator
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: vector
+      containers:
+        - name: vector
+          image: timberio/vector:0.34.1-distroless-libc
+          env:
+            - name: OPENSEARCH_USER
+              valueFrom:
+                secretKeyRef:
+                  name: opensearch-credentials
+                  key: username
+            - name: OPENSEARCH_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: opensearch-credentials
+                  key: password
+            - name: AWS_REGION
+              value: "us-east-1"
+            - name: VECTOR_LOG
+              value: "info"
+          ports:
+            - containerPort: 514
+              name: syslog-tcp
+              protocol: TCP
+            - containerPort: 514
+              name: syslog-udp
+              protocol: UDP
+            - containerPort: 9090
+              name: metrics
+          resources:
+            requests:
+              cpu: "1"
+              memory: "2Gi"
+            limits:
+              cpu: "2"
+              memory: "4Gi"
+          volumeMounts:
+            - name: config
+              mountPath: /etc/vector
+              readOnly: true
+            - name: certs
+              mountPath: /etc/vector/certs
+              readOnly: true
+            - name: data
+              mountPath: /var/lib/vector
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8686
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8686
+            initialDelaySeconds: 10
+            periodSeconds: 5
+      volumes:
+        - name: config
+          configMap:
+            name: vector-config
+        - name: certs
+          secret:
+            secretName: opensearch-certs
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vector
+  namespace: siem
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: vector
+rules:
+  - apiGroups: [""]
+    resources:
+      - namespaces
+      - pods
+      - nodes
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: vector
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: vector
+subjects:
+  - kind: ServiceAccount
+    name: vector
+    namespace: siem

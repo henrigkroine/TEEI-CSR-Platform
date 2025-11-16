@@ -1,0 +1,158 @@
+{
+  "Comment": "GeoDNS routing configuration for TEEI CSR Platform - Multi-region GA",
+  "HostedZoneId": "Z1234567890ABC",
+  "HostedZoneName": "teei.io",
+  "Changes": [
+    {
+      "Action": "UPSERT",
+      "ResourceRecordSet": {
+        "Name": "platform.teei.io",
+        "Type": "A",
+        "SetIdentifier": "US-EAST-1-Primary",
+        "GeoLocation": {
+          "ContinentCode": "NA"
+        },
+        "AliasTarget": {
+          "HostedZoneId": "Z35SXDOTRQ7X7K",
+          "DNSName": "us-east-1-alb-123456.us-east-1.elb.amazonaws.com",
+          "EvaluateTargetHealth": true
+        },
+        "HealthCheckId": "a1b2c3d4-5678-90ab-cdef-EXAMPLE11111"
+      }
+    },
+    {
+      "Action": "UPSERT",
+      "ResourceRecordSet": {
+        "Name": "platform.teei.io",
+        "Type": "A",
+        "SetIdentifier": "EU-CENTRAL-1-Primary",
+        "GeoLocation": {
+          "ContinentCode": "EU"
+        },
+        "AliasTarget": {
+          "HostedZoneId": "Z215JYRZR1TBD5",
+          "DNSName": "eu-central-1-alb-789012.eu-central-1.elb.amazonaws.com",
+          "EvaluateTargetHealth": true
+        },
+        "HealthCheckId": "a1b2c3d4-5678-90ab-cdef-EXAMPLE22222"
+      }
+    },
+    {
+      "Action": "UPSERT",
+      "ResourceRecordSet": {
+        "Name": "platform.teei.io",
+        "Type": "A",
+        "SetIdentifier": "DEFAULT-Fallback",
+        "GeoLocation": {
+          "CountryCode": "*"
+        },
+        "AliasTarget": {
+          "HostedZoneId": "Z35SXDOTRQ7X7K",
+          "DNSName": "us-east-1-alb-123456.us-east-1.elb.amazonaws.com",
+          "EvaluateTargetHealth": true
+        },
+        "HealthCheckId": "a1b2c3d4-5678-90ab-cdef-EXAMPLE11111"
+      }
+    }
+  ],
+  "HealthChecks": [
+    {
+      "Id": "a1b2c3d4-5678-90ab-cdef-EXAMPLE11111",
+      "CallerReference": "us-east-1-health-check-2025-11-01",
+      "HealthCheckConfig": {
+        "IPAddress": "34.200.123.45",
+        "Port": 443,
+        "Type": "HTTPS",
+        "ResourcePath": "/health",
+        "FullyQualifiedDomainName": "us-east-1-alb-123456.us-east-1.elb.amazonaws.com",
+        "RequestInterval": 30,
+        "FailureThreshold": 3,
+        "MeasureLatency": true,
+        "Inverted": false,
+        "Disabled": false,
+        "EnableSNI": true
+      },
+      "HealthCheckVersion": 1,
+      "HealthCheckTags": [
+        {
+          "Key": "Name",
+          "Value": "US-EAST-1-Platform-Health"
+        },
+        {
+          "Key": "Environment",
+          "Value": "production"
+        },
+        {
+          "Key": "Region",
+          "Value": "us-east-1"
+        }
+      ]
+    },
+    {
+      "Id": "a1b2c3d4-5678-90ab-cdef-EXAMPLE22222",
+      "CallerReference": "eu-central-1-health-check-2025-11-01",
+      "HealthCheckConfig": {
+        "IPAddress": "3.120.45.67",
+        "Port": 443,
+        "Type": "HTTPS",
+        "ResourcePath": "/health",
+        "FullyQualifiedDomainName": "eu-central-1-alb-789012.eu-central-1.elb.amazonaws.com",
+        "RequestInterval": 30,
+        "FailureThreshold": 3,
+        "MeasureLatency": true,
+        "Inverted": false,
+        "Disabled": false,
+        "EnableSNI": true
+      },
+      "HealthCheckVersion": 1,
+      "HealthCheckTags": [
+        {
+          "Key": "Name",
+          "Value": "EU-CENTRAL-1-Platform-Health"
+        },
+        {
+          "Key": "Environment",
+          "Value": "production"
+        },
+        {
+          "Key": "Region",
+          "Value": "eu-central-1"
+        }
+      ]
+    }
+  ],
+  "RoutingPolicy": {
+    "Type": "Geolocation",
+    "Description": "Route traffic based on user location for optimal latency and data residency compliance",
+    "GeolocationRules": {
+      "North America (NA)": "us-east-1",
+      "Europe (EU)": "eu-central-1",
+      "South America (SA)": "us-east-1 (fallback)",
+      "Asia (AS)": "us-east-1 (fallback, AP-SOUTHEAST-1 planned Q2 2026)",
+      "Africa (AF)": "eu-central-1 (fallback)",
+      "Oceania (OC)": "us-east-1 (fallback)",
+      "Antarctica (AN)": "us-east-1 (fallback)"
+    }
+  },
+  "Failover": {
+    "Enabled": true,
+    "Method": "Health-Check-Based",
+    "HealthCheckIntervalSeconds": 30,
+    "FailureThresholdCount": 3,
+    "TTL": 60,
+    "Description": "If primary region health check fails, Route53 automatically routes traffic to healthy region"
+  },
+  "TLS": {
+    "Certificate": "arn:aws:acm:us-east-1:123456789012:certificate/abcd1234-5678-90ef-ghij-klmnopqrstuv",
+    "Protocol": "TLS 1.3",
+    "Cipher": "ECDHE-RSA-AES256-GCM-SHA384",
+    "ValidUntil": "2026-10-15T23:59:59Z"
+  },
+  "Metadata": {
+    "CreatedDate": "2025-11-01T00:00:00Z",
+    "LastModified": "2025-11-15T10:00:00Z",
+    "CreatedBy": "platform-engineering-team",
+    "Version": "1.2.0",
+    "GAReadiness": true
+  }
+}

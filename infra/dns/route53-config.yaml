@@ -1,0 +1,503 @@
+# Route53 DNS Configuration for TEEI Platform
+# Multi-region latency-based routing with GDPR geolocation enforcement
+
+---
+# Terraform configuration for AWS Route53
+terraform:
+  required_providers:
+    aws:
+      source: hashicorp/aws
+      version: ~> 5.0
+
+  backend:
+    s3:
+      bucket: teei-terraform-state
+      key: dns/route53.tfstate
+      region: us-east-1
+      encrypt: true
+      dynamodb_table: teei-terraform-locks
+
+# Provider configurations for multi-region
+providers:
+  - alias: us_east_1
+    region: us-east-1
+  - alias: eu_central_1
+    region: eu-central-1
+
+# Hosted Zones
+hosted_zones:
+  # Global domain
+  - name: teei-platform.com
+    comment: "TEEI Platform Global Domain"
+    tags:
+      Environment: production
+      ManagedBy: terraform
+      Team: platform-ops
+      CostCenter: infrastructure
+
+    # DNSSEC configuration
+    dnssec:
+      enabled: true
+      signing_algorithm: ECDSAP256SHA256
+      ksk_key_length: 2048
+
+  # US regional subdomain
+  - name: us.teei-platform.com
+    comment: "TEEI Platform US Region"
+    tags:
+      Environment: production
+      Region: us-east-1
+      ManagedBy: terraform
+
+  # EU regional subdomain
+  - name: eu.teei-platform.com
+    comment: "TEEI Platform EU Region"
+    tags:
+      Environment: production
+      Region: eu-central-1
+      ManagedBy: terraform
+      GDPRCompliant: "true"
+
+# Health Checks
+health_checks:
+  # US region health check
+  - id: us-api-health
+    type: HTTPS
+    resource_path: /health/ready
+    fqdn: api.us.teei-platform.com
+    port: 443
+    interval: 30  # seconds
+    failure_threshold: 3
+    measure_latency: true
+    enable_sni: true
+    request_headers:
+      - name: Host
+        value: api.us.teei-platform.com
+      - name: User-Agent
+        value: Route53-HealthCheck
+    alarm_notification:
+      sns_topic: arn:aws:sns:us-east-1:ACCOUNT_ID:route53-health-alerts
+    tags:
+      Region: us-east-1
+      Service: api
+
+  # EU region health check
+  - id: eu-api-health
+    type: HTTPS
+    resource_path: /health/ready
+    fqdn: api.eu.teei-platform.com
+    port: 443
+    interval: 30  # seconds
+    failure_threshold: 3
+    measure_latency: true
+    enable_sni: true
+    request_headers:
+      - name: Host
+        value: api.eu.teei-platform.com
+      - name: User-Agent
+        value: Route53-HealthCheck
+    alarm_notification:
+      sns_topic: arn:aws:sns:eu-central-1:ACCOUNT_ID:route53-health-alerts-eu
+    tags:
+      Region: eu-central-1
+      Service: api
+      GDPRCompliant: "true"
+
+  # US reporting service health check
+  - id: us-reports-health
+    type: HTTPS
+    resource_path: /health/ready
+    fqdn: reports.us.teei-platform.com
+    port: 443
+    interval: 30
+    failure_threshold: 3
+    measure_latency: true
+    enable_sni: true
+    tags:
+      Region: us-east-1
+      Service: reporting
+
+  # EU reporting service health check
+  - id: eu-reports-health
+    type: HTTPS
+    resource_path: /health/ready
+    fqdn: reports.eu.teei-platform.com
+    port: 443
+    interval: 30
+    failure_threshold: 3
+    measure_latency: true
+    enable_sni: true
+    tags:
+      Region: eu-central-1
+      Service: reporting
+      GDPRCompliant: "true"
+
+# DNS Records
+records:
+  # ============================================================================
+  # API Endpoint - Latency-based routing with geolocation override for EU
+  # ============================================================================
+  - name: api.teei-platform.com
+    type: A
+    routing_policy: latency
+    set_identifier: us-api-latency
+    region: us-east-1
+    health_check_id: us-api-health
+    alias:
+      zone_id: Z1234567890ABC  # ALB hosted zone ID
+      dns_name: teei-api-us-alb-1234567890.us-east-1.elb.amazonaws.com
+      evaluate_target_health: true
+    ttl: 60
+    weight: null  # Not used for latency routing
+
+  - name: api.teei-platform.com
+    type: A
+    routing_policy: latency
+    set_identifier: eu-api-latency
+    region: eu-central-1
+    health_check_id: eu-api-health
+    alias:
+      zone_id: Z0987654321DEF  # ALB hosted zone ID
+      dns_name: teei-api-eu-alb-0987654321.eu-central-1.elb.amazonaws.com
+      evaluate_target_health: true
+    ttl: 60
+    weight: null
+
+  # ============================================================================
+  # API Endpoint - Geolocation override for GDPR (EU users → EU region)
+  # ============================================================================
+  - name: api.teei-platform.com
+    type: A
+    routing_policy: geolocation
+    set_identifier: eu-gdpr-override
+    geolocation:
+      continent: EU
+    health_check_id: eu-api-health
+    alias:
+      zone_id: Z0987654321DEF
+      dns_name: teei-api-eu-alb-0987654321.eu-central-1.elb.amazonaws.com
+      evaluate_target_health: true
+    ttl: 60
+    # Priority: Geolocation takes precedence over latency
+
+  # Individual EU countries (explicit GDPR compliance)
+  - name: api.teei-platform.com
+    type: A
+    routing_policy: geolocation
+    set_identifier: eu-country-de
+    geolocation:
+      country: DE
+    health_check_id: eu-api-health
+    alias:
+      zone_id: Z0987654321DEF
+      dns_name: teei-api-eu-alb-0987654321.eu-central-1.elb.amazonaws.com
+      evaluate_target_health: true
+    ttl: 60
+
+  - name: api.teei-platform.com
+    type: A
+    routing_policy: geolocation
+    set_identifier: eu-country-fr
+    geolocation:
+      country: FR
+    health_check_id: eu-api-health
+    alias:
+      zone_id: Z0987654321DEF
+      dns_name: teei-api-eu-alb-0987654321.eu-central-1.elb.amazonaws.com
+      evaluate_target_health: true
+    ttl: 60
+
+  - name: api.teei-platform.com
+    type: A
+    routing_policy: geolocation
+    set_identifier: eu-country-gb
+    geolocation:
+      country: GB
+    health_check_id: eu-api-health
+    alias:
+      zone_id: Z0987654321DEF
+      dns_name: teei-api-eu-alb-0987654321.eu-central-1.elb.amazonaws.com
+      evaluate_target_health: true
+    ttl: 60
+
+  - name: api.teei-platform.com
+    type: A
+    routing_policy: geolocation
+    set_identifier: eu-country-no
+    geolocation:
+      country: "NO"
+    health_check_id: eu-api-health
+    alias:
+      zone_id: Z0987654321DEF
+      dns_name: teei-api-eu-alb-0987654321.eu-central-1.elb.amazonaws.com
+      evaluate_target_health: true
+    ttl: 60
+
+  # ============================================================================
+  # Reports Endpoint - Region-specific with weighted routing
+  # ============================================================================
+  - name: reports.teei-platform.com
+    type: A
+    routing_policy: weighted
+    set_identifier: us-reports-60pct
+    weight: 60  # 60% traffic to US
+    health_check_id: us-reports-health
+    alias:
+      zone_id: Z1234567890ABC
+      dns_name: teei-reports-us-alb-1234567890.us-east-1.elb.amazonaws.com
+      evaluate_target_health: true
+    ttl: 60
+
+  - name: reports.teei-platform.com
+    type: A
+    routing_policy: weighted
+    set_identifier: eu-reports-40pct
+    weight: 40  # 40% traffic to EU
+    health_check_id: eu-reports-health
+    alias:
+      zone_id: Z0987654321DEF
+      dns_name: teei-reports-eu-alb-0987654321.eu-central-1.elb.amazonaws.com
+      evaluate_target_health: true
+    ttl: 60
+
+  # ============================================================================
+  # WebSocket Endpoint - Latency-based with sticky routing
+  # ============================================================================
+  - name: ws.teei-platform.com
+    type: A
+    routing_policy: latency
+    set_identifier: us-websocket-latency
+    region: us-east-1
+    health_check_id: us-api-health
+    alias:
+      zone_id: Z1234567890ABC
+      dns_name: teei-ws-us-nlb-1234567890.us-east-1.elb.amazonaws.com
+      evaluate_target_health: true
+    ttl: 300  # Longer TTL for sticky sessions
+
+  - name: ws.teei-platform.com
+    type: A
+    routing_policy: latency
+    set_identifier: eu-websocket-latency
+    region: eu-central-1
+    health_check_id: eu-api-health
+    alias:
+      zone_id: Z0987654321DEF
+      dns_name: teei-ws-eu-nlb-0987654321.eu-central-1.elb.amazonaws.com
+      evaluate_target_health: true
+    ttl: 300
+
+  # ============================================================================
+  # Regional Subdomains - Direct regional access
+  # ============================================================================
+  - name: us.teei-platform.com
+    type: A
+    routing_policy: simple
+    set_identifier: null
+    health_check_id: us-api-health
+    alias:
+      zone_id: Z1234567890ABC
+      dns_name: teei-api-us-alb-1234567890.us-east-1.elb.amazonaws.com
+      evaluate_target_health: true
+    ttl: 60
+
+  - name: eu.teei-platform.com
+    type: A
+    routing_policy: simple
+    set_identifier: null
+    health_check_id: eu-api-health
+    alias:
+      zone_id: Z0987654321DEF
+      dns_name: teei-api-eu-alb-0987654321.eu-central-1.elb.amazonaws.com
+      evaluate_target_health: true
+    ttl: 60
+
+  # ============================================================================
+  # CloudFront Distributions
+  # ============================================================================
+  - name: cdn.teei-platform.com
+    type: A
+    routing_policy: latency
+    set_identifier: us-cdn-latency
+    region: us-east-1
+    alias:
+      zone_id: Z2FDTNDATAQYW2  # CloudFront hosted zone ID
+      dns_name: d1234567890.cloudfront.net
+      evaluate_target_health: false
+    ttl: 300
+
+  - name: cdn.teei-platform.com
+    type: A
+    routing_policy: latency
+    set_identifier: eu-cdn-latency
+    region: eu-central-1
+    alias:
+      zone_id: Z2FDTNDATAQYW2
+      dns_name: d0987654321.cloudfront.net
+      evaluate_target_health: false
+    ttl: 300
+
+  # ============================================================================
+  # Monitoring & Observability
+  # ============================================================================
+  - name: grafana.teei-platform.com
+    type: CNAME
+    routing_policy: simple
+    set_identifier: null
+    value: teei-grafana-us-alb-1234567890.us-east-1.elb.amazonaws.com
+    ttl: 300
+
+  # ============================================================================
+  # MX Records for Email (optional)
+  # ============================================================================
+  - name: teei-platform.com
+    type: MX
+    routing_policy: simple
+    set_identifier: null
+    value:
+      - priority: 10
+        value: mail.teei-platform.com
+    ttl: 3600
+
+  # ============================================================================
+  # TXT Records - SPF, DKIM, DMARC
+  # ============================================================================
+  - name: teei-platform.com
+    type: TXT
+    routing_policy: simple
+    set_identifier: null
+    value:
+      - "v=spf1 include:_spf.google.com ~all"
+      - "google-site-verification=VERIFICATION_CODE"
+    ttl: 3600
+
+  - name: _dmarc.teei-platform.com
+    type: TXT
+    routing_policy: simple
+    set_identifier: null
+    value:
+      - "v=DMARC1; p=quarantine; rua=mailto:dmarc@teei-platform.com; pct=100"
+    ttl: 3600
+
+# Traffic Policies (for reusable routing configurations)
+traffic_policies:
+  - name: api-latency-geo-policy
+    version: 1
+    type: A
+    description: "Latency-based with GDPR geolocation override"
+    rules:
+      - order: 1
+        type: geolocation
+        location: eu
+        endpoint:
+          type: elastic_load_balancer
+          region: eu-central-1
+          value: teei-api-eu-alb-0987654321.eu-central-1.elb.amazonaws.com
+      - order: 2
+        type: latency
+        endpoints:
+          - region: us-east-1
+            value: teei-api-us-alb-1234567890.us-east-1.elb.amazonaws.com
+          - region: eu-central-1
+            value: teei-api-eu-alb-0987654321.eu-central-1.elb.amazonaws.com
+
+# Logging Configuration
+logging:
+  query_logging:
+    enabled: true
+    cloudwatch_log_group: /aws/route53/teei-platform.com
+    retention_days: 90
+  health_check_logging:
+    enabled: true
+    cloudwatch_log_group: /aws/route53/health-checks
+    retention_days: 30
+
+# Alerts and Notifications
+alerts:
+  - name: HealthCheckFailed
+    metric: HealthCheckStatus
+    threshold: 0  # 0 = unhealthy
+    comparison: LessThanThreshold
+    evaluation_periods: 3
+    period: 60  # seconds
+    statistic: Minimum
+    actions:
+      - arn:aws:sns:us-east-1:ACCOUNT_ID:route53-health-alerts
+
+  - name: HealthCheckPercentageHealthy
+    metric: HealthCheckPercentageHealthy
+    threshold: 50
+    comparison: LessThanThreshold
+    evaluation_periods: 2
+    period: 60
+    statistic: Average
+    actions:
+      - arn:aws:sns:us-east-1:ACCOUNT_ID:route53-health-alerts
+
+# Cost Optimization
+cost_optimization:
+  # Delete unused hosted zones
+  cleanup_unused_zones: true
+  # Use alias records instead of CNAME when possible (no charge)
+  prefer_alias_records: true
+  # Monitor query count for unexpected spikes
+  query_count_alarm_threshold: 1000000  # per day
+
+# Disaster Recovery
+disaster_recovery:
+  # Automated failover configuration
+  failover:
+    rto_target: 120  # seconds (2 minutes)
+    rpo_target: 0  # DNS records are replicated in real-time
+    health_check_interval: 30  # seconds
+    health_check_failure_threshold: 3
+
+  # Backup configuration
+  backup:
+    enabled: true
+    schedule: "0 0 * * *"  # Daily at midnight UTC
+    retention: 30  # days
+    s3_bucket: teei-route53-backups
+
+  # Cross-region replication
+  replication:
+    enabled: true
+    regions:
+      - us-east-1
+      - eu-central-1
+
+# Compliance & Auditing
+compliance:
+  gdpr:
+    enabled: true
+    data_residency_enforcement: true
+    geo_restriction_countries:
+      - DE
+      - FR
+      - GB
+      - NO
+      - SE
+      - DK
+      - FI
+      - IT
+      - ES
+      - NL
+      - BE
+      - AT
+      - IE
+      - PT
+
+  audit_logging:
+    enabled: true
+    log_dns_queries: true
+    log_config_changes: true
+    cloudtrail_integration: true
+
+# Tags for all resources
+global_tags:
+  Project: TEEI-CSR-Platform
+  ManagedBy: terraform
+  Environment: production
+  Team: platform-ops
+  CostCenter: infrastructure
+  Compliance: GDPR

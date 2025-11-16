@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-data
+  labels:
+    app: postgres
+    component: database
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Gi
+  storageClassName: gp3  # AWS EBS gp3 for production, adjust per cloud provider
+---
+# Storage class configuration for reference
+# For AWS:
+# storageClassName: gp3
+#
+# For GCP:
+# storageClassName: pd-ssd
+#
+# For Azure:
+# storageClassName: managed-premium
+#
+# For local development:
+# storageClassName: standard

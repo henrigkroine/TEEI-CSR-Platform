@@ -1,0 +1,223 @@
+---
+# Canary Rollout for Data Residency Service
+# Strategy: Zero-tolerance GDPR compliance validation during rollout
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: teei-data-residency
+  labels:
+    app: teei-data-residency
+    component: backend
+    part-of: teei-csr-platform
+    deployment-strategy: canary
+    compliance: gdpr-critical
+spec:
+  replicas: 3
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app: teei-data-residency
+
+  template:
+    metadata:
+      labels:
+        app: teei-data-residency
+        component: backend
+        version: v1
+        compliance: gdpr-critical
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3013"
+        prometheus.io/path: "/metrics"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+
+      serviceAccountName: teei-data-residency
+
+      containers:
+      - name: data-residency
+        image: ghcr.io/henrigkroine/teei-data-residency:latest
+        imagePullPolicy: Always
+
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities:
+            drop:
+            - ALL
+
+        ports:
+        - name: http
+          containerPort: 3013
+          protocol: TCP
+
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: PORT
+          value: "3013"
+        - name: COMPLIANCE_MODE
+          value: "strict"
+
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3013
+          initialDelaySeconds: 10
+          periodSeconds: 10
+
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3013
+          initialDelaySeconds: 5
+          periodSeconds: 5
+
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+
+      volumes:
+      - name: tmp
+        emptyDir: {}
+
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - teei-data-residency
+              topologyKey: kubernetes.io/hostname
+
+  # Canary Strategy: Extremely conservative for GDPR compliance
+  strategy:
+    canary:
+      canaryService: teei-data-residency-canary
+      stableService: teei-data-residency
+
+      # Very conservative traffic steps
+      steps:
+      # Step 1: 5% traffic - GDPR validation critical
+      - setWeight: 5
+      - pause:
+          duration: 15m
+      - analysis:
+          templates:
+          - templateName: gdpr-compliance-analysis
+          - templateName: success-rate-analysis
+          - templateName: latency-analysis
+          args:
+          - name: service-name
+            value: teei-data-residency-canary
+          - name: error-threshold
+            value: "0.1"  # <0.1% errors (very strict)
+          - name: latency-threshold
+            value: "300"  # <300ms
+
+      # Step 2: 15% traffic - continue validation
+      - setWeight: 15
+      - pause:
+          duration: 15m
+      - analysis:
+          templates:
+          - templateName: gdpr-compliance-analysis
+          - templateName: success-rate-analysis
+          args:
+          - name: service-name
+            value: teei-data-residency-canary
+          - name: error-threshold
+            value: "0.1"
+
+      # Step 3: 30% traffic
+      - setWeight: 30
+      - pause:
+          duration: 20m
+      - analysis:
+          templates:
+          - templateName: gdpr-compliance-analysis
+          - templateName: success-rate-analysis
+          args:
+          - name: service-name
+            value: teei-data-residency-canary
+          - name: error-threshold
+            value: "0.05"  # Even stricter
+
+      # Step 4: 60% traffic
+      - setWeight: 60
+      - pause:
+          duration: 20m
+      - analysis:
+          templates:
+          - templateName: gdpr-compliance-analysis
+          args:
+          - name: service-name
+            value: teei-data-residency-canary
+
+      # Step 5: 100% traffic
+      - setWeight: 100
+
+      # Background analysis throughout rollout
+      analysis:
+        templates:
+        - templateName: gdpr-compliance-analysis
+        startingStep: 1
+        args:
+        - name: service-name
+          value: teei-data-residency-canary
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: teei-data-residency
+  labels:
+    app: teei-data-residency
+    service-type: stable
+    compliance: gdpr-critical
+spec:
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 3013
+    targetPort: http
+  selector:
+    app: teei-data-residency
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: teei-data-residency-canary
+  labels:
+    app: teei-data-residency
+    service-type: canary
+    compliance: gdpr-critical
+spec:
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 3013
+    targetPort: http
+  selector:
+    app: teei-data-residency

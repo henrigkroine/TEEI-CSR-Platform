@@ -12,14 +12,14 @@ spec:
     kind: Deployment
     name: teei-reporting
   minReplicas: 2
-  maxReplicas: 10
+  maxReplicas: 20  # FinOps: Increased for GenAI spiky workloads
   metrics:
   - type: Resource
     resource:
       name: cpu
       target:
         type: Utilization
-        averageUtilization: 70
+        averageUtilization: 60  # FinOps: Lowered for GenAI workload (spiky pattern)
   - type: Resource
     resource:
       name: memory

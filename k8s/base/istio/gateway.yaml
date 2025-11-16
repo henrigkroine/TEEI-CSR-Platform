@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Istio Gateway for ingress traffic
 apiVersion: networking.istio.io/v1beta1
 kind: Gateway
@@ -48,11 +49,142 @@ spec:
     - "*.eu.teei.cloud"
     - "api.eu.teei.cloud"
     - "cockpit.eu.teei.cloud"
+=======
+---
+# Istio Gateway for TEEI Platform
+# This replaces the NGINX ingress for mTLS-enabled services
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: teei-gateway
+  namespace: istio-system
+  labels:
+    part-of: teei-csr-platform
+spec:
+  selector:
+    istio: ingressgateway  # Use default istio ingress gateway
+  servers:
+  # HTTP (redirect to HTTPS)
+>>>>>>> origin/claude/phaseG-global-ga-multiregion-017uvLqAucExNFGykX9bSDSY
   - port:
       number: 80
       name: http
       protocol: HTTP
     hosts:
+<<<<<<< HEAD
     - "*.eu.teei.cloud"
     tls:
       httpsRedirect: true
+=======
+    - "teei.example.com"  # Will be patched per environment
+    - "*.teei.example.com"
+    tls:
+      httpsRedirect: true
+
+  # HTTPS with TLS termination
+  - port:
+      number: 443
+      name: https
+      protocol: HTTPS
+    hosts:
+    - "teei.example.com"
+    - "*.teei.example.com"
+    tls:
+      mode: SIMPLE  # TLS termination at gateway
+      credentialName: teei-platform-tls  # From cert-manager
+      minProtocolVersion: TLSV1_3
+      cipherSuites:
+        - ECDHE-ECDSA-AES256-GCM-SHA384
+        - ECDHE-RSA-AES256-GCM-SHA384
+        - ECDHE-ECDSA-AES128-GCM-SHA256
+        - ECDHE-RSA-AES128-GCM-SHA256
+
+  # Cross-region mTLS (for service mesh federation)
+  - port:
+      number: 15443
+      name: tls-cross-region
+      protocol: TLS
+    hosts:
+    - "*.cluster.local"
+    - "*.us.cluster.local"
+    - "*.eu.cluster.local"
+    tls:
+      mode: AUTO_PASSTHROUGH  # Don't terminate, pass through to service
+---
+# Virtual Service for API Gateway
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: teei-api-gateway
+  namespace: default
+  labels:
+    part-of: teei-csr-platform
+spec:
+  hosts:
+  - "teei.example.com"
+  gateways:
+  - istio-system/teei-gateway
+  http:
+  - match:
+    - uri:
+        prefix: /api
+    route:
+    - destination:
+        host: teei-api-gateway.default.svc.cluster.local
+        port:
+          number: 80
+    timeout: 30s
+    retries:
+      attempts: 3
+      perTryTimeout: 10s
+      retryOn: 5xx,reset,connect-failure,refused-stream
+---
+# Virtual Service for Corporate Cockpit
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: teei-corp-cockpit
+  namespace: default
+  labels:
+    part-of: teei-csr-platform
+spec:
+  hosts:
+  - "teei.example.com"
+  gateways:
+  - istio-system/teei-gateway
+  http:
+  - match:
+    - uri:
+        prefix: /
+    route:
+    - destination:
+        host: teei-corp-cockpit.default.svc.cluster.local
+        port:
+          number: 80
+    timeout: 30s
+---
+# Egress Gateway for External APIs
+# This controls all outbound traffic with mTLS
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: teei-egress-gateway
+  namespace: istio-system
+  labels:
+    part-of: teei-csr-platform
+spec:
+  selector:
+    istio: egressgateway
+  servers:
+  - port:
+      number: 443
+      name: tls
+      protocol: TLS
+    hosts:
+    - "*.anthropic.com"
+    - "*.openai.com"
+    - "discord.com"
+    - "*.discord.com"
+    tls:
+      mode: PASSTHROUGH  # Don't decrypt external traffic
+>>>>>>> origin/claude/phaseG-global-ga-multiregion-017uvLqAucExNFGykX9bSDSY

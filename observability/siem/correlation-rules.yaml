@@ -1,0 +1,504 @@
+# SIEM Correlation Rules for Security Event Detection
+# These rules are processed by OpenSearch alerting plugin and Vector transforms
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: siem-correlation-rules
+  namespace: siem
+  labels:
+    app: siem
+    component: correlation-engine
+data:
+  # Rule 1: Brute Force Detection
+  brute-force-detection.json: |
+    {
+      "name": "Brute Force Attack Detection",
+      "description": "Detects >10 failed login attempts from same IP within 5 minutes",
+      "severity": "high",
+      "enabled": true,
+      "query": {
+        "bool": {
+          "must": [
+            {"term": {"event_type": "authentication"}},
+            {"term": {"success": false}},
+            {"range": {"@timestamp": {"gte": "now-5m"}}}
+          ]
+        }
+      },
+      "aggregation": {
+        "terms": {
+          "field": "source_ip",
+          "min_doc_count": 10
+        }
+      },
+      "actions": [
+        {
+          "type": "alert",
+          "severity": "high",
+          "pagerduty_integration": "security-oncall",
+          "slack_channel": "#security-alerts",
+          "message": "Brute force attack detected from IP {{source_ip}}. {{count}} failed login attempts in 5 minutes."
+        },
+        {
+          "type": "block_ip",
+          "duration": "1h",
+          "target": "waf"
+        }
+      ],
+      "false_positive_reduction": {
+        "whitelist_ips": ["10.0.0.0/8", "172.16.0.0/12"],
+        "known_scanners": ["security-scanner.internal"]
+      }
+    }
+
+  # Rule 2: Privilege Escalation
+  privilege-escalation.json: |
+    {
+      "name": "Privilege Escalation Detection",
+      "description": "Detects ServiceAccount role changes followed by pod exec within 10 minutes",
+      "severity": "critical",
+      "enabled": true,
+      "correlation": {
+        "events": [
+          {
+            "name": "role_change",
+            "query": {
+              "bool": {
+                "must": [
+                  {"term": {"event_type": "authorization"}},
+                  {"term": {"action": "role_change"}},
+                  {"exists": {"field": "service_account"}}
+                ]
+              }
+            }
+          },
+          {
+            "name": "pod_exec",
+            "query": {
+              "bool": {
+                "must": [
+                  {"term": {"event_type": "security_alert"}},
+                  {"term": {"action": "pod_exec"}},
+                  {"match": {"service_account": "{{role_change.service_account}}"}}
+                ]
+              }
+            }
+          }
+        ],
+        "time_window": "10m",
+        "sequence": ["role_change", "pod_exec"]
+      },
+      "actions": [
+        {
+          "type": "alert",
+          "severity": "critical",
+          "pagerduty_integration": "security-oncall",
+          "priority": "P1",
+          "slack_channel": "#security-incidents",
+          "message": "CRITICAL: Privilege escalation detected. ServiceAccount {{service_account}} role changed then executed in pod {{pod_name}}."
+        },
+        {
+          "type": "create_incident",
+          "jira_project": "SEC",
+          "issue_type": "Security Incident",
+          "labels": ["privilege-escalation", "automated"]
+        },
+        {
+          "type": "revoke_access",
+          "target": "service_account",
+          "rollback": true
+        }
+      ]
+    }
+
+  # Rule 3: Data Exfiltration
+  data-exfiltration.json: |
+    {
+      "name": "Large Data Export Outside Business Hours",
+      "description": "Detects exports >1GB outside 9am-5pm EST",
+      "severity": "high",
+      "enabled": true,
+      "query": {
+        "bool": {
+          "must": [
+            {"term": {"event_type": "data_access"}},
+            {"range": {"export_size_bytes": {"gte": 1073741824}}}
+          ],
+          "must_not": [
+            {"range": {"@timestamp": {"gte": "now/d+9h", "lte": "now/d+17h"}}}
+          ]
+        }
+      },
+      "actions": [
+        {
+          "type": "alert",
+          "severity": "high",
+          "pagerduty_integration": "security-oncall",
+          "slack_channel": "#security-alerts",
+          "message": "Large data export ({{export_size_bytes | bytes}}) by user {{user}} outside business hours. Table: {{table}}"
+        },
+        {
+          "type": "notify_dpo",
+          "email": "dpo@teei-csr.com",
+          "subject": "Data Exfiltration Alert"
+        }
+      ],
+      "context_enrichment": {
+        "user_history": {
+          "query": "event_type:data_access AND user:{{user}}",
+          "time_range": "30d",
+          "baseline": "avg(export_size_bytes)"
+        }
+      }
+    }
+
+  # Rule 4: GDPR Violation
+  gdpr-violation.json: |
+    {
+      "name": "EU PII Accessed from US Region",
+      "description": "Detects EU PII data accessed from US-based services",
+      "severity": "critical",
+      "enabled": true,
+      "query": {
+        "bool": {
+          "must": [
+            {"term": {"event_type": "data_access"}},
+            {"term": {"pii_accessed": true}},
+            {"term": {"data_region": "eu"}},
+            {"term": {"source_region": "us"}}
+          ]
+        }
+      },
+      "actions": [
+        {
+          "type": "alert",
+          "severity": "critical",
+          "pagerduty_integration": "compliance-team",
+          "priority": "P1",
+          "slack_channel": "#compliance-alerts",
+          "message": "GDPR VIOLATION: EU PII accessed from US region. User: {{user}}, Service: {{service}}, Records: {{row_count}}"
+        },
+        {
+          "type": "create_incident",
+          "jira_project": "COMPLIANCE",
+          "issue_type": "GDPR Violation",
+          "labels": ["gdpr", "data-residency", "automated"],
+          "assignee": "dpo"
+        },
+        {
+          "type": "block_request",
+          "immediate": true
+        },
+        {
+          "type": "notify_legal",
+          "email": "legal@teei-csr.com"
+        }
+      ],
+      "compliance_tags": ["gdpr", "article-32", "data-residency"]
+    }
+
+  # Rule 5: Anomalous Access Pattern
+  anomalous-access.json: |
+    {
+      "name": "Anomalous Access Pattern Detection",
+      "description": "Detects access patterns deviating >3 sigma from baseline (ML-based)",
+      "severity": "medium",
+      "enabled": true,
+      "ml_model": {
+        "type": "anomaly_detection",
+        "detector": "opensearch-anomaly-detector",
+        "feature": "access_pattern",
+        "aggregation": {
+          "user_access_rate": {
+            "terms": {"field": "user"},
+            "aggs": {
+              "requests_per_hour": {
+                "date_histogram": {"field": "@timestamp", "interval": "1h"},
+                "aggs": {"count": {"value_count": {"field": "_id"}}}
+              }
+            }
+          }
+        },
+        "threshold": 3.0,
+        "min_samples": 100
+      },
+      "actions": [
+        {
+          "type": "alert",
+          "severity": "medium",
+          "slack_channel": "#security-alerts",
+          "message": "Anomalous access pattern detected for user {{user}}. Current rate: {{current_rate}}, Baseline: {{baseline_rate}}, Deviation: {{deviation_sigma}}σ"
+        }
+      ],
+      "learning_window": "30d",
+      "min_confidence": 0.85
+    }
+
+  # Rule 6: Certificate Expiry + Failed Rotation
+  cert-rotation-failure.json: |
+    {
+      "name": "Certificate Rotation Failure",
+      "description": "Detects certificate expiring within 6h with failed rotation attempts",
+      "severity": "critical",
+      "enabled": true,
+      "correlation": {
+        "events": [
+          {
+            "name": "cert_expiring",
+            "query": {
+              "bool": {
+                "must": [
+                  {"term": {"event_type": "security_alert"}},
+                  {"term": {"alert_type": "cert_expiring"}},
+                  {"range": {"cert_expires_in_hours": {"lte": 6}}}
+                ]
+              }
+            }
+          },
+          {
+            "name": "rotation_failed",
+            "query": {
+              "bool": {
+                "must": [
+                  {"term": {"event_type": "change_management"}},
+                  {"term": {"action": "cert_rotation"}},
+                  {"term": {"status": "failed"}},
+                  {"match": {"cert_name": "{{cert_expiring.cert_name}}"}}
+                ]
+              }
+            }
+          }
+        ],
+        "time_window": "1h",
+        "sequence": ["cert_expiring", "rotation_failed"]
+      },
+      "actions": [
+        {
+          "type": "alert",
+          "severity": "critical",
+          "pagerduty_integration": "sre-oncall",
+          "priority": "P1",
+          "slack_channel": "#sre-incidents",
+          "message": "CRITICAL: Certificate {{cert_name}} expires in {{cert_expires_in_hours}}h and rotation failed. Service: {{service}}"
+        },
+        {
+          "type": "run_playbook",
+          "playbook": "cert-emergency-rotation",
+          "params": {"cert_name": "{{cert_name}}", "service": "{{service}}"}
+        }
+      ]
+    }
+
+  # Rule 7: Excessive Authorization Failures
+  excessive-authz-failures.json: |
+    {
+      "name": "Excessive Authorization Failures",
+      "description": "Detects >20 403/RBAC denials from same user in 10 minutes",
+      "severity": "medium",
+      "enabled": true,
+      "query": {
+        "bool": {
+          "must": [
+            {"term": {"event_type": "authorization"}},
+            {"terms": {"status_code": [403, 401]}},
+            {"range": {"@timestamp": {"gte": "now-10m"}}}
+          ]
+        }
+      },
+      "aggregation": {
+        "terms": {
+          "field": "user",
+          "min_doc_count": 20
+        }
+      },
+      "actions": [
+        {
+          "type": "alert",
+          "severity": "medium",
+          "slack_channel": "#security-alerts",
+          "message": "User {{user}} has {{count}} authorization failures in 10 minutes. Possible misconfiguration or attack."
+        }
+      ],
+      "auto_remediation": {
+        "action": "suggest_role_review",
+        "notify": ["user", "manager"]
+      }
+    }
+
+  # Rule 8: Suspicious ServiceAccount Activity
+  suspicious-serviceaccount.json: |
+    {
+      "name": "ServiceAccount Used from External IP",
+      "description": "Detects ServiceAccount authentication from non-cluster IP",
+      "severity": "high",
+      "enabled": true,
+      "query": {
+        "bool": {
+          "must": [
+            {"term": {"event_type": "authentication"}},
+            {"wildcard": {"user": "*serviceaccount*"}},
+            {"term": {"success": true}}
+          ],
+          "must_not": [
+            {"terms": {"source_ip": ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"]}}
+          ]
+        }
+      },
+      "actions": [
+        {
+          "type": "alert",
+          "severity": "high",
+          "pagerduty_integration": "security-oncall",
+          "slack_channel": "#security-incidents",
+          "message": "SUSPICIOUS: ServiceAccount {{user}} authenticated from external IP {{source_ip}}. This should only happen from cluster IPs."
+        },
+        {
+          "type": "revoke_token",
+          "immediate": true
+        }
+      ]
+    }
+
+  # Rule 9: Concurrent Sessions Across Regions
+  concurrent-sessions.json: |
+    {
+      "name": "Concurrent Sessions Across Geographic Regions",
+      "description": "Detects same user logged in from 2+ regions within 5 minutes (impossible travel)",
+      "severity": "high",
+      "enabled": true,
+      "query": {
+        "bool": {
+          "must": [
+            {"term": {"event_type": "authentication"}},
+            {"term": {"success": true}},
+            {"range": {"@timestamp": {"gte": "now-5m"}}}
+          ]
+        }
+      },
+      "aggregation": {
+        "terms": {
+          "field": "user",
+          "aggs": {
+            "regions": {
+              "cardinality": {"field": "region"}
+            }
+          }
+        },
+        "bucket_selector": {
+          "buckets_path": {"regionCount": "regions"},
+          "script": "params.regionCount >= 2"
+        }
+      },
+      "actions": [
+        {
+          "type": "alert",
+          "severity": "high",
+          "pagerduty_integration": "security-oncall",
+          "slack_channel": "#security-alerts",
+          "message": "User {{user}} logged in from multiple regions within 5 minutes: {{regions}}. Possible account compromise."
+        },
+        {
+          "type": "force_mfa",
+          "user": "{{user}}",
+          "all_sessions": true
+        }
+      ]
+    }
+
+  # Rule 10: Database Schema Changes in Production
+  production-schema-change.json: |
+    {
+      "name": "Production Database Schema Change Without Approval",
+      "description": "Detects DDL operations in production without linked JIRA ticket",
+      "severity": "high",
+      "enabled": true,
+      "query": {
+        "bool": {
+          "must": [
+            {"term": {"event_type": "change_management"}},
+            {"terms": {"operation": ["CREATE", "ALTER", "DROP"]}},
+            {"term": {"environment": "production"}}
+          ],
+          "must_not": [
+            {"exists": {"field": "jira_ticket"}}
+          ]
+        }
+      },
+      "actions": [
+        {
+          "type": "alert",
+          "severity": "high",
+          "pagerduty_integration": "sre-oncall",
+          "slack_channel": "#change-management",
+          "message": "UNAUTHORIZED: Production schema change by {{user}} without JIRA ticket. Operation: {{operation}}, Table: {{table}}"
+        },
+        {
+          "type": "create_incident",
+          "jira_project": "OPS",
+          "issue_type": "Unauthorized Change",
+          "labels": ["production", "schema-change", "unauthorized"]
+        }
+      ],
+      "compliance_tags": ["soc2-cc8.1", "change-management"]
+    }
+
+---
+# Correlation Engine Configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: correlation-engine-config
+  namespace: siem
+data:
+  config.yaml: |
+    # Correlation engine settings
+    engine:
+      enabled: true
+      workers: 4
+      batch_size: 100
+      flush_interval: 30s
+
+    # Rule processing
+    rules:
+      directory: /etc/siem/rules
+      reload_interval: 60s
+      validation: strict
+
+    # Performance tuning
+    performance:
+      max_events_per_second: 10000
+      correlation_window_max: 1h
+      state_retention: 24h
+
+    # False positive reduction
+    false_positive_reduction:
+      enabled: true
+      ml_model: /etc/siem/models/fp-reduction.model
+      confidence_threshold: 0.85
+      learning_enabled: true
+
+    # Alerting
+    alerting:
+      deduplicate_window: 5m
+      max_alerts_per_rule: 10
+      throttle_period: 15m
+
+    # Integrations
+    integrations:
+      opensearch:
+        endpoint: https://opensearch.siem.svc.cluster.local:9200
+        index_pattern: security-events-*
+        scroll_size: 1000
+      nats:
+        url: nats://nats.nats.svc.cluster.local:4222
+        subject_prefix: alerts.security
+      prometheus:
+        enabled: true
+        port: 9091
+
+    # Logging
+    logging:
+      level: info
+      format: json
+      output: stdout

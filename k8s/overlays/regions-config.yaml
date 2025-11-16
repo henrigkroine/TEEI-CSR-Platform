@@ -1,0 +1,313 @@
+---
+# Multi-Region Configuration for TEEI CSR Platform
+# Defines regional metadata, endpoints, and routing rules
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: multi-region-config
+  namespace: kube-system
+  labels:
+    app: teei-platform
+    component: multi-region-config
+  annotations:
+    description: "Global multi-region configuration for TEEI CSR Platform"
+data:
+  # ============================================================================
+  # Region Registry
+  # ============================================================================
+  regions.yaml: |
+    regions:
+      - code: us-east-1
+        name: "US East (N. Virginia)"
+        display_name: "North America"
+        continent: NA
+        country: US
+        timezone: America/New_York
+        locale: en-US
+        primary: true
+        active: true
+        gdpr_compliant: false
+        data_residency: us
+        latency_zone: 0
+        capacity_weight: 60
+        endpoints:
+          api: https://api.us.teei-platform.com
+          web: https://us.teei-platform.com
+          reports: https://reports.us.teei-platform.com
+          websocket: wss://ws.us.teei-platform.com
+        dns:
+          zone_id: Z1234567890ABC
+          cloudfront_distribution: E0987654321XYZ
+        infrastructure:
+          cluster_name: teei-us-east-1
+          vpc_id: vpc-us-12345678
+          availability_zones:
+            - us-east-1a
+            - us-east-1b
+            - us-east-1c
+          nat_gateway_ips:
+            - 54.123.45.67
+            - 54.123.45.68
+
+      - code: eu-central-1
+        name: "Europe (Frankfurt)"
+        display_name: "Europe"
+        continent: EU
+        country: DE
+        timezone: Europe/Berlin
+        locale: en-GB
+        primary: false
+        active: true
+        gdpr_compliant: true
+        data_residency: eu
+        latency_zone: 1
+        capacity_weight: 40
+        endpoints:
+          api: https://api.eu.teei-platform.com
+          web: https://eu.teei-platform.com
+          reports: https://reports.eu.teei-platform.com
+          websocket: wss://ws.eu.teei-platform.com
+        dns:
+          zone_id: Z9876543210XYZ
+          cloudfront_distribution: E1234567890ABC
+        infrastructure:
+          cluster_name: teei-eu-central-1
+          vpc_id: vpc-eu-87654321
+          availability_zones:
+            - eu-central-1a
+            - eu-central-1b
+            - eu-central-1c
+          nat_gateway_ips:
+            - 18.234.56.78
+            - 18.234.56.79
+
+  # ============================================================================
+  # Latency-Based Routing Configuration
+  # ============================================================================
+  routing.yaml: |
+    routing:
+      # Geo-proximity routing rules
+      geo_routing:
+        # North America routes to US
+        - regions: [US, CA, MX]
+          target: us-east-1
+
+        # Europe routes to EU
+        - regions: [DE, FR, GB, ES, IT, NL, SE, NO, DK, FI, BE, AT, CH, IE, PL, PT, CZ]
+          target: eu-central-1
+
+        # Asia-Pacific routes to US (until APAC region deployed)
+        - regions: [JP, SG, AU, NZ, IN, KR, HK]
+          target: us-east-1
+
+        # Default fallback
+        - regions: ["*"]
+          target: us-east-1
+
+      # Health-based failover
+      failover:
+        enabled: true
+        health_check_interval: 30s
+        unhealthy_threshold: 3
+        healthy_threshold: 2
+
+        # Primary region failover
+        us-east-1:
+          failover_target: eu-central-1
+          failover_priority: 1
+
+        # Secondary region failover
+        eu-central-1:
+          failover_target: us-east-1
+          failover_priority: 2
+
+  # ============================================================================
+  # Cross-Region Data Replication
+  # ============================================================================
+  replication.yaml: |
+    replication:
+      # PostgreSQL replication configuration
+      postgresql:
+        mode: async
+        replication_lag_threshold: 10s
+
+        primary:
+          region: us-east-1
+          endpoint: postgresql-primary.teei-us-east-1.svc.cluster.local
+
+        replicas:
+          - region: eu-central-1
+            endpoint: postgresql-replica.teei-eu-central-1.svc.cluster.local
+            read_only: false
+            promote_on_failure: true
+
+      # ClickHouse replication configuration
+      clickhouse:
+        mode: async
+        sharding_enabled: true
+
+        clusters:
+          - region: us-east-1
+            endpoint: clickhouse.teei-us-east-1.svc.cluster.local
+            shards: 3
+            replicas: 2
+
+          - region: eu-central-1
+            endpoint: clickhouse.teei-eu-central-1.svc.cluster.local
+            shards: 2
+            replicas: 2
+
+      # NATS cross-region messaging
+      nats:
+        mode: sync
+        leafnode_connections:
+          - from: us-east-1
+            to: eu-central-1
+            url: nats://nats.teei-eu-central-1.svc.cluster.local:7422
+
+          - from: eu-central-1
+            to: us-east-1
+            url: nats://nats.teei-us-east-1.svc.cluster.local:7422
+
+  # ============================================================================
+  # Traffic Splitting Configuration
+  # ============================================================================
+  traffic.yaml: |
+    traffic:
+      # Global traffic distribution
+      distribution:
+        us-east-1: 60  # 60% to primary region
+        eu-central-1: 40  # 40% to EU region
+
+      # Sticky sessions (route users to same region)
+      sticky_sessions:
+        enabled: true
+        cookie_name: teei-region
+        ttl: 86400  # 24 hours
+
+      # A/B testing regions
+      ab_testing:
+        enabled: false
+        experiments: []
+
+  # ============================================================================
+  # Compliance & Data Residency
+  # ============================================================================
+  compliance.yaml: |
+    compliance:
+      # GDPR data residency enforcement
+      gdpr:
+        enabled: true
+
+        # EU users MUST use EU region
+        enforce_eu_residency: true
+        eu_countries: [DE, FR, GB, ES, IT, NL, SE, NO, DK, FI, BE, AT, CH, IE, PL, PT, CZ, GR, RO, HU, SK, HR, SI, EE, LV, LT, LU, MT, CY, BG]
+
+        # Cross-border data transfer restrictions
+        cross_border_transfers:
+          eu_to_us:
+            allowed: false
+            require_consent: true
+          us_to_eu:
+            allowed: true
+            anonymize: true
+
+      # Data retention policies (region-specific)
+      retention:
+        us-east-1:
+          personal_data: 2555  # 7 years in days
+          analytics_data: 1095  # 3 years
+          audit_logs: 2555  # 7 years
+
+        eu-central-1:
+          personal_data: 730  # 2 years (GDPR default)
+          analytics_data: 730  # 2 years
+          audit_logs: 2555  # 7 years
+
+  # ============================================================================
+  # Regional Affinity Rules
+  # ============================================================================
+  affinity.yaml: |
+    affinity:
+      # Node affinity for regional workloads
+      node_affinity:
+        required:
+          - key: topology.kubernetes.io/region
+            operator: In
+            values:
+              - us-east-1
+              - eu-central-1
+
+      # Pod anti-affinity for high availability
+      pod_anti_affinity:
+        preferred:
+          - weight: 100
+            topology_key: kubernetes.io/hostname
+          - weight: 50
+            topology_key: topology.kubernetes.io/zone
+
+      # Topology spread constraints
+      topology_spread:
+        max_skew: 1
+        topology_key: topology.kubernetes.io/zone
+        when_unsatisfiable: DoNotSchedule
+
+  # ============================================================================
+  # Regional Resource Quotas
+  # ============================================================================
+  quotas.yaml: |
+    quotas:
+      us-east-1:
+        cpu: "100"
+        memory: 200Gi
+        pods: 500
+        services: 100
+        persistent_volume_claims: 50
+
+      eu-central-1:
+        cpu: "80"
+        memory: 160Gi
+        pods: 400
+        services: 80
+        persistent_volume_claims: 40
+
+---
+# Regional Service Discovery ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: service-discovery
+  namespace: kube-system
+  labels:
+    app: teei-platform
+    component: service-discovery
+data:
+  # DNS-based service discovery for cross-region communication
+  services.json: |
+    {
+      "api-gateway": {
+        "us-east-1": "us-teei-api-gateway.teei-us-east-1.svc.cluster.local",
+        "eu-central-1": "eu-teei-api-gateway.teei-eu-central-1.svc.cluster.local"
+      },
+      "reporting": {
+        "us-east-1": "us-teei-reporting.teei-us-east-1.svc.cluster.local",
+        "eu-central-1": "eu-teei-reporting.teei-eu-central-1.svc.cluster.local"
+      },
+      "analytics": {
+        "us-east-1": "us-teei-analytics.teei-us-east-1.svc.cluster.local",
+        "eu-central-1": "eu-teei-analytics.teei-eu-central-1.svc.cluster.local"
+      },
+      "postgresql": {
+        "us-east-1": "postgresql-primary.teei-us-east-1.svc.cluster.local",
+        "eu-central-1": "postgresql-replica.teei-eu-central-1.svc.cluster.local"
+      },
+      "clickhouse": {
+        "us-east-1": "clickhouse.teei-us-east-1.svc.cluster.local",
+        "eu-central-1": "clickhouse.teei-eu-central-1.svc.cluster.local"
+      },
+      "nats": {
+        "us-east-1": "nats.teei-us-east-1.svc.cluster.local",
+        "eu-central-1": "nats.teei-eu-central-1.svc.cluster.local"
+      }
+    }

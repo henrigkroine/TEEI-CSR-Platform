@@ -1,0 +1,44 @@
+# Argo Rollouts CRDs
+# NOTE: In production, install CRDs separately using:
+# kubectl apply -f https://github.com/argoproj/argo-rollouts/releases/latest/download/install.yaml
+# This file serves as a reference for the CRDs required
+
+# The following CRDs are required:
+# - rollouts.argoproj.io
+# - analysisruns.argoproj.io
+# - analysistemplates.argoproj.io
+# - clusteranalysistemplates.argoproj.io
+# - experiments.argoproj.io
+
+# Installation command:
+# kubectl apply -n argo-rollouts -f https://github.com/argoproj/argo-rollouts/releases/download/v1.6.0/install.yaml
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argo-rollouts-crds-info
+  namespace: argo-rollouts
+  labels:
+    app.kubernetes.io/name: argo-rollouts
+data:
+  install-command: |
+    # Install Argo Rollouts CRDs and controller
+    kubectl create namespace argo-rollouts || true
+    kubectl apply -n argo-rollouts -f https://github.com/argoproj/argo-rollouts/releases/download/v1.6.0/install.yaml
+
+    # Verify installation
+    kubectl -n argo-rollouts get pods
+    kubectl -n argo-rollouts get crd | grep argoproj
+
+  kubectl-plugin: |
+    # Install kubectl argo rollouts plugin (for CLI management)
+    # macOS (Homebrew)
+    brew install argoproj/tap/kubectl-argo-rollouts
+
+    # Linux
+    curl -LO https://github.com/argoproj/argo-rollouts/releases/latest/download/kubectl-argo-rollouts-linux-amd64
+    chmod +x kubectl-argo-rollouts-linux-amd64
+    sudo mv kubectl-argo-rollouts-linux-amd64 /usr/local/bin/kubectl-argo-rollouts
+
+    # Verify
+    kubectl argo rollouts version

@@ -1,0 +1,148 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-exporter-queries
+  labels:
+    app: postgres
+    component: database
+data:
+  queries.yaml: |
+    # Replication lag metrics
+    pg_replication_lag:
+      query: |
+        SELECT
+          client_addr,
+          application_name,
+          state,
+          sync_state,
+          COALESCE(EXTRACT(EPOCH FROM (now() - pg_last_xact_replay_timestamp())), 0) AS lag_seconds,
+          pg_wal_lsn_diff(pg_current_wal_lsn(), replay_lsn) AS lag_bytes
+        FROM pg_stat_replication
+        WHERE application_name != 'pg_basebackup'
+      metrics:
+        - client_addr:
+            usage: "LABEL"
+            description: "Client IP address"
+        - application_name:
+            usage: "LABEL"
+            description: "Application name"
+        - state:
+            usage: "LABEL"
+            description: "Replication state"
+        - sync_state:
+            usage: "LABEL"
+            description: "Sync state (async/sync)"
+        - lag_seconds:
+            usage: "GAUGE"
+            description: "Replication lag in seconds"
+        - lag_bytes:
+            usage: "GAUGE"
+            description: "Replication lag in bytes"
+
+    # Replication slots
+    pg_replication_slots:
+      query: |
+        SELECT
+          slot_name,
+          slot_type,
+          database,
+          active::int,
+          pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn) AS retained_bytes
+        FROM pg_replication_slots
+      metrics:
+        - slot_name:
+            usage: "LABEL"
+            description: "Replication slot name"
+        - slot_type:
+            usage: "LABEL"
+            description: "Slot type (logical/physical)"
+        - database:
+            usage: "LABEL"
+            description: "Database name"
+        - active:
+            usage: "GAUGE"
+            description: "Whether slot is active"
+        - retained_bytes:
+            usage: "GAUGE"
+            description: "WAL bytes retained by slot"
+
+    # Subscription status (for replicas)
+    pg_subscription_status:
+      query: |
+        SELECT
+          subname,
+          subenabled::int AS enabled,
+          CASE
+            WHEN sr.srsubstate = 'r' THEN 1
+            WHEN sr.srsubstate = 'd' THEN 0
+            ELSE 0
+          END AS streaming
+        FROM pg_subscription sub
+        LEFT JOIN pg_subscription_rel sr ON sub.oid = sr.srsubid
+        WHERE sr.srrelid IS NULL OR sr.srrelid = (SELECT MIN(srrelid) FROM pg_subscription_rel WHERE srsubid = sub.oid)
+      metrics:
+        - subname:
+            usage: "LABEL"
+            description: "Subscription name"
+        - enabled:
+            usage: "GAUGE"
+            description: "Whether subscription is enabled"
+        - streaming:
+            usage: "GAUGE"
+            description: "Whether subscription is streaming"
+      master: true
+      cache_seconds: 30
+
+    # WAL generation rate
+    pg_wal_generation:
+      query: |
+        SELECT
+          pg_wal_lsn_diff(pg_current_wal_lsn(), '0/0') AS wal_bytes_generated
+      metrics:
+        - wal_bytes_generated:
+            usage: "COUNTER"
+            description: "Total WAL bytes generated"
+
+    # Database size by region (for data residency monitoring)
+    pg_database_size_by_region:
+      query: |
+        SELECT
+          COALESCE((SELECT setting FROM pg_settings WHERE name = 'cluster.region'), 'unknown') AS region,
+          pg_database_size(current_database()) AS size_bytes
+      metrics:
+        - region:
+            usage: "LABEL"
+            description: "Database region"
+        - size_bytes:
+            usage: "GAUGE"
+            description: "Database size in bytes"
+
+    # Table sizes (for monitoring data growth per table)
+    pg_table_sizes:
+      query: |
+        SELECT
+          schemaname,
+          tablename,
+          pg_total_relation_size(schemaname||'.'||tablename) AS total_bytes,
+          pg_relation_size(schemaname||'.'||tablename) AS table_bytes,
+          pg_indexes_size(schemaname||'.'||tablename) AS index_bytes
+        FROM pg_tables
+        WHERE schemaname NOT IN ('pg_catalog', 'information_schema')
+        ORDER BY total_bytes DESC
+        LIMIT 20
+      metrics:
+        - schemaname:
+            usage: "LABEL"
+            description: "Schema name"
+        - tablename:
+            usage: "LABEL"
+            description: "Table name"
+        - total_bytes:
+            usage: "GAUGE"
+            description: "Total table size including indexes"
+        - table_bytes:
+            usage: "GAUGE"
+            description: "Table size excluding indexes"
+        - index_bytes:
+            usage: "GAUGE"
+            description: "Index size"

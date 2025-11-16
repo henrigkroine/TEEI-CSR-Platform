@@ -1,0 +1,122 @@
+---
+# Certificate resources for services requiring custom certificates
+# Most services use Istio's automatic certificate provisioning
+# These are for special cases requiring specific certificate properties
+
+# Istio Pilot certificate (control plane)
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: istio-pilot-cert
+  namespace: istio-system
+spec:
+  secretName: dns.istio-cert
+  duration: 24h  # 24 hour lifetime
+  renewBefore: 12h  # Renew at 50% lifetime
+  commonName: istio-pilot.istio-system.svc
+  dnsNames:
+  - istio-pilot.istio-system.svc
+  - istio-pilot.istio-system
+  - istiod.istio-system.svc
+  - istiod.istio-system
+  - istiod.istio-system.svc.cluster.local
+  issuerRef:
+    name: istio-ca
+    kind: ClusterIssuer
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+    rotationPolicy: Always  # Force rotation on renewal
+---
+# Gateway certificate (public TLS)
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: teei-platform-tls
+  namespace: istio-system
+spec:
+  secretName: teei-platform-tls
+  duration: 2160h  # 90 days
+  renewBefore: 720h  # Renew 30 days before expiry
+  commonName: teei.example.com
+  dnsNames:
+  - teei.example.com
+  - "*.teei.example.com"
+  - api.teei.example.com
+  - cockpit.teei.example.com
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  privateKey:
+    algorithm: RSA
+    size: 2048
+    rotationPolicy: Always
+---
+# Cross-region gateway certificate (for mesh federation)
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: istio-cross-region-cert
+  namespace: istio-system
+spec:
+  secretName: istio-cross-region-cert
+  duration: 24h
+  renewBefore: 12h
+  commonName: "*.cluster.local"
+  dnsNames:
+  - "*.cluster.local"
+  - "*.us.cluster.local"
+  - "*.eu.cluster.local"
+  - "*.default.svc.cluster.local"
+  - "*.default.svc.us.cluster.local"
+  - "*.default.svc.eu.cluster.local"
+  issuerRef:
+    name: istio-ca
+    kind: ClusterIssuer
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+    rotationPolicy: Always
+---
+# Egress gateway certificate (for outbound mTLS)
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: istio-egressgateway-cert
+  namespace: istio-system
+spec:
+  secretName: istio-egressgateway-cert
+  duration: 24h
+  renewBefore: 12h
+  commonName: istio-egressgateway.istio-system.svc
+  dnsNames:
+  - istio-egressgateway.istio-system.svc
+  - istio-egressgateway.istio-system.svc.cluster.local
+  issuerRef:
+    name: istio-ca
+    kind: ClusterIssuer
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+    rotationPolicy: Always
+---
+# Webhook certificate for Istio sidecar injector
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: istio-sidecar-injector-cert
+  namespace: istio-system
+spec:
+  secretName: istio-sidecar-injector-cert
+  duration: 24h
+  renewBefore: 12h
+  commonName: istio-sidecar-injector.istio-system.svc
+  dnsNames:
+  - istio-sidecar-injector.istio-system.svc
+  - istio-sidecar-injector.istio-system.svc.cluster.local
+  issuerRef:
+    name: istio-ca
+    kind: ClusterIssuer
+  privateKey:
+    algorithm: ECDSA
+    size: 256

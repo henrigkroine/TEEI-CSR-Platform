@@ -1,0 +1,87 @@
+---
+# Global mTLS Policy - Default STRICT mode for production
+# This enforces mutual TLS for ALL service-to-service communication
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: default-mtls-strict
+  namespace: istio-system  # Applied globally across all namespaces
+  labels:
+    part-of: teei-csr-platform
+    security-tier: global
+spec:
+  mtls:
+    mode: STRICT  # Reject all plaintext connections
+---
+# Production namespace - STRICT mode (override global if needed)
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: production-mtls-strict
+  namespace: default
+  labels:
+    part-of: teei-csr-platform
+    security-tier: production
+spec:
+  mtls:
+    mode: STRICT  # Production must use encrypted connections only
+---
+# Staging namespace - PERMISSIVE mode for debugging
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: staging-mtls-permissive
+  namespace: staging
+  labels:
+    part-of: teei-csr-platform
+    security-tier: staging
+spec:
+  mtls:
+    mode: PERMISSIVE  # Accept both plaintext and mTLS (for debugging)
+---
+# Development namespace - PERMISSIVE mode
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: development-mtls-permissive
+  namespace: development
+  labels:
+    part-of: teei-csr-platform
+    security-tier: development
+spec:
+  mtls:
+    mode: PERMISSIVE  # Accept both plaintext and mTLS
+---
+# Per-service override example: disable mTLS for specific port
+# Uncomment and customize if needed for legacy services
+# apiVersion: security.istio.io/v1beta1
+# kind: PeerAuthentication
+# metadata:
+#   name: legacy-service-mtls
+#   namespace: default
+# spec:
+#   selector:
+#     matchLabels:
+#       app: legacy-service
+#   mtls:
+#     mode: PERMISSIVE
+#   portLevelMtls:
+#     8080:
+#       mode: DISABLE  # Disable mTLS only for port 8080
+---
+# Database services - STRICT mTLS
+# Even infrastructure should use encrypted connections
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: database-mtls-strict
+  namespace: default
+  labels:
+    part-of: teei-csr-platform
+    security-tier: infrastructure
+spec:
+  selector:
+    matchLabels:
+      component: database  # Applied to postgres, clickhouse
+  mtls:
+    mode: STRICT

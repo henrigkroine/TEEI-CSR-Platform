@@ -1,0 +1,496 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "finops-ai-budget",
+    "title": "FinOps: AI Token Budget & Spend",
+    "description": "Claude API token usage tracking, per-tenant budget enforcement, and cost optimization",
+    "tags": ["finops", "ai", "claude", "tokens", "budget"],
+    "timezone": "browser",
+    "schemaVersion": 38,
+    "version": 1,
+    "refresh": "1m",
+    "time": {
+      "from": "now-7d",
+      "to": "now"
+    },
+    "timepicker": {
+      "refresh_intervals": ["30s", "1m", "5m", "15m", "30m", "1h"]
+    },
+    "panels": [
+      {
+        "id": 1,
+        "type": "stat",
+        "title": "Total AI Spend (MTD)",
+        "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 },
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": { "type": "postgres", "uid": "postgres" },
+            "rawSql": "SELECT COALESCE(SUM(cost_usd), 0) AS total_cost FROM ai_token_usage WHERE timestamp >= DATE_TRUNC('month', NOW())",
+            "format": "table"
+          }
+        ],
+        "options": {
+          "graphMode": "area",
+          "colorMode": "value",
+          "unit": "currencyUSD",
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"]
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "value": 0, "color": "green" },
+                { "value": 8000, "color": "yellow" },
+                { "value": 10000, "color": "red" }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 2,
+        "type": "stat",
+        "title": "Total Tokens (MTD)",
+        "gridPos": { "x": 6, "y": 0, "w": 6, "h": 4 },
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": { "type": "postgres", "uid": "postgres" },
+            "rawSql": "SELECT COALESCE(SUM(prompt_tokens + completion_tokens), 0) AS total_tokens FROM ai_token_usage WHERE timestamp >= DATE_TRUNC('month', NOW())",
+            "format": "table"
+          }
+        ],
+        "options": {
+          "graphMode": "area",
+          "colorMode": "value",
+          "unit": "short",
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"]
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "value": 0, "color": "blue" }
+              ]
+            },
+            "decimals": 0
+          }
+        }
+      },
+      {
+        "id": 3,
+        "type": "stat",
+        "title": "Avg Cost Per Report",
+        "gridPos": { "x": 12, "y": 0, "w": 6, "h": 4 },
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": { "type": "postgres", "uid": "postgres" },
+            "rawSql": "SELECT COALESCE(AVG(cost_usd), 0) AS avg_cost FROM ai_token_usage WHERE timestamp >= DATE_TRUNC('month', NOW())",
+            "format": "table"
+          }
+        ],
+        "options": {
+          "graphMode": "none",
+          "colorMode": "value",
+          "unit": "currencyUSD",
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"]
+          }
+        }
+      },
+      {
+        "id": 4,
+        "type": "stat",
+        "title": "Tenants Over Budget",
+        "gridPos": { "x": 18, "y": 0, "w": 6, "h": 4 },
+        "description": "Number of tenants that have exceeded their monthly AI budget",
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": { "type": "postgres", "uid": "postgres" },
+            "rawSql": "SELECT COUNT(*) AS over_budget FROM ai_token_budgets WHERE hard_limit_reached = TRUE",
+            "format": "table"
+          }
+        ],
+        "options": {
+          "graphMode": "none",
+          "colorMode": "value",
+          "unit": "short"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "value": 0, "color": "green" },
+                { "value": 1, "color": "yellow" },
+                { "value": 5, "color": "red" }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 5,
+        "type": "timeseries",
+        "title": "AI Spend Trend (Daily)",
+        "gridPos": { "x": 0, "y": 4, "w": 24, "h": 8 },
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": { "type": "postgres", "uid": "postgres" },
+            "rawSql": "SELECT DATE_TRUNC('day', timestamp) AS time, SUM(cost_usd) AS cost FROM ai_token_usage WHERE timestamp >= NOW() - INTERVAL '30 days' GROUP BY time ORDER BY time",
+            "format": "time_series"
+          }
+        ],
+        "options": {
+          "tooltip": {
+            "mode": "multi",
+            "sort": "none"
+          },
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom"
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 20
+            },
+            "unit": "currencyUSD"
+          }
+        }
+      },
+      {
+        "id": 6,
+        "type": "table",
+        "title": "Top 10 Token Consumers",
+        "gridPos": { "x": 0, "y": 12, "w": 12, "h": 10 },
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": { "type": "postgres", "uid": "postgres" },
+            "rawSql": "SELECT tenant_id, SUM(cost_usd) AS total_cost, SUM(prompt_tokens) AS input_tokens, SUM(completion_tokens) AS output_tokens, COUNT(*) AS requests FROM ai_token_usage WHERE timestamp >= DATE_TRUNC('month', NOW()) GROUP BY tenant_id ORDER BY total_cost DESC LIMIT 10",
+            "format": "table"
+          }
+        ],
+        "options": {
+          "showHeader": true,
+          "sortBy": [
+            {
+              "displayName": "total_cost",
+              "desc": true
+            }
+          ]
+        },
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "renameByName": {
+                "tenant_id": "Tenant",
+                "total_cost": "Cost (MTD)",
+                "input_tokens": "Input Tokens",
+                "output_tokens": "Output Tokens",
+                "requests": "Requests"
+              }
+            }
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "align": "auto"
+            }
+          },
+          "overrides": [
+            {
+              "matcher": { "id": "byName", "options": "Cost (MTD)" },
+              "properties": [
+                { "id": "unit", "value": "currencyUSD" },
+                { "id": "custom.displayMode", "value": "color-background" },
+                {
+                  "id": "thresholds",
+                  "value": {
+                    "mode": "absolute",
+                    "steps": [
+                      { "value": 0, "color": "green" },
+                      { "value": 500, "color": "yellow" },
+                      { "value": 1000, "color": "red" }
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": 7,
+        "type": "piechart",
+        "title": "Cost by Model",
+        "gridPos": { "x": 12, "y": 12, "w": 12, "h": 10 },
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": { "type": "postgres", "uid": "postgres" },
+            "rawSql": "SELECT model, SUM(cost_usd) AS cost FROM ai_token_usage WHERE timestamp >= DATE_TRUNC('month', NOW()) GROUP BY model",
+            "format": "table"
+          }
+        ],
+        "options": {
+          "displayLabels": ["name", "percent"],
+          "legend": {
+            "displayMode": "table",
+            "placement": "right",
+            "values": ["value", "percent"]
+          },
+          "pieType": "donut"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyUSD"
+          }
+        }
+      },
+      {
+        "id": 8,
+        "type": "table",
+        "title": "Tenant Budget Status (At Risk)",
+        "gridPos": { "x": 0, "y": 22, "w": 24, "h": 10 },
+        "description": "Tenants at 80%+ of their monthly budget",
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": { "type": "postgres", "uid": "postgres" },
+            "rawSql": "SELECT tenant_id, model, monthly_limit_usd, current_usage_usd, ROUND((current_usage_usd / monthly_limit_usd * 100)::numeric, 2) AS percentage_used, reset_date, soft_limit_notified, hard_limit_reached FROM ai_token_budgets WHERE current_usage_usd >= monthly_limit_usd * 0.8 ORDER BY percentage_used DESC",
+            "format": "table"
+          }
+        ],
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "renameByName": {
+                "tenant_id": "Tenant",
+                "model": "Model",
+                "monthly_limit_usd": "Budget",
+                "current_usage_usd": "Usage",
+                "percentage_used": "% Used",
+                "reset_date": "Reset Date",
+                "soft_limit_notified": "Notified",
+                "hard_limit_reached": "Blocked"
+              }
+            }
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "align": "auto"
+            }
+          },
+          "overrides": [
+            {
+              "matcher": { "id": "byName", "options": "Budget" },
+              "properties": [
+                { "id": "unit", "value": "currencyUSD" }
+              ]
+            },
+            {
+              "matcher": { "id": "byName", "options": "Usage" },
+              "properties": [
+                { "id": "unit", "value": "currencyUSD" }
+              ]
+            },
+            {
+              "matcher": { "id": "byName", "options": "% Used" },
+              "properties": [
+                { "id": "unit", "value": "percent" },
+                { "id": "custom.displayMode", "value": "color-background" },
+                {
+                  "id": "thresholds",
+                  "value": {
+                    "mode": "absolute",
+                    "steps": [
+                      { "value": 0, "color": "green" },
+                      { "value": 80, "color": "yellow" },
+                      { "value": 90, "color": "orange" },
+                      { "value": 100, "color": "red" }
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "matcher": { "id": "byName", "options": "Blocked" },
+              "properties": [
+                { "id": "custom.displayMode", "value": "color-text" },
+                {
+                  "id": "mappings",
+                  "value": [
+                    { "type": "value", "value": "true", "text": "YES", "color": "red" },
+                    { "type": "value", "value": "false", "text": "No", "color": "green" }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": 9,
+        "type": "timeseries",
+        "title": "Token Efficiency (Cost per 1M tokens)",
+        "gridPos": { "x": 0, "y": 32, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": { "type": "postgres", "uid": "postgres" },
+            "rawSql": "SELECT DATE_TRUNC('day', timestamp) AS time, model, (SUM(cost_usd) / NULLIF(SUM(prompt_tokens + completion_tokens), 0) * 1000000) AS cost_per_million FROM ai_token_usage WHERE timestamp >= NOW() - INTERVAL '30 days' GROUP BY time, model ORDER BY time",
+            "format": "time_series"
+          }
+        ],
+        "options": {
+          "tooltip": {
+            "mode": "multi"
+          },
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom"
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth"
+            },
+            "unit": "currencyUSD"
+          }
+        }
+      },
+      {
+        "id": 10,
+        "type": "timeseries",
+        "title": "Anomaly Detection: Token Spikes",
+        "gridPos": { "x": 12, "y": 32, "w": 12, "h": 8 },
+        "description": "Detect unusual token consumption patterns (>3x average)",
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": { "type": "postgres", "uid": "postgres" },
+            "rawSql": "WITH daily_avg AS (SELECT tenant_id, AVG(total_tokens) AS avg_tokens FROM (SELECT tenant_id, DATE_TRUNC('day', timestamp) AS day, SUM(prompt_tokens + completion_tokens) AS total_tokens FROM ai_token_usage WHERE timestamp >= NOW() - INTERVAL '30 days' GROUP BY tenant_id, day) t GROUP BY tenant_id) SELECT DATE_TRUNC('hour', u.timestamp) AS time, u.tenant_id, SUM(u.prompt_tokens + u.completion_tokens) AS hourly_tokens FROM ai_token_usage u INNER JOIN daily_avg da ON u.tenant_id = da.tenant_id WHERE u.timestamp >= NOW() - INTERVAL '7 days' AND SUM(u.prompt_tokens + u.completion_tokens) > da.avg_tokens * 3 GROUP BY time, u.tenant_id ORDER BY time",
+            "format": "time_series"
+          }
+        ],
+        "options": {
+          "tooltip": {
+            "mode": "multi"
+          },
+          "legend": {
+            "displayMode": "table",
+            "placement": "bottom"
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "drawStyle": "bars",
+              "fillOpacity": 80
+            },
+            "unit": "short",
+            "color": {
+              "mode": "fixed",
+              "fixedColor": "red"
+            }
+          }
+        }
+      },
+      {
+        "id": 11,
+        "type": "table",
+        "title": "Recent High-Cost Requests",
+        "gridPos": { "x": 0, "y": 40, "w": 24, "h": 8 },
+        "description": "Individual requests that cost >$1",
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": { "type": "postgres", "uid": "postgres" },
+            "rawSql": "SELECT timestamp, tenant_id, model, prompt_tokens, completion_tokens, cost_usd, report_type FROM ai_token_usage WHERE cost_usd > 1.0 AND timestamp >= NOW() - INTERVAL '7 days' ORDER BY timestamp DESC LIMIT 100",
+            "format": "table"
+          }
+        ],
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "renameByName": {
+                "timestamp": "Time",
+                "tenant_id": "Tenant",
+                "model": "Model",
+                "prompt_tokens": "Input",
+                "completion_tokens": "Output",
+                "cost_usd": "Cost",
+                "report_type": "Report Type"
+              }
+            }
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "align": "auto"
+            }
+          },
+          "overrides": [
+            {
+              "matcher": { "id": "byName", "options": "Cost" },
+              "properties": [
+                { "id": "unit", "value": "currencyUSD" },
+                { "id": "custom.displayMode", "value": "color-background" },
+                {
+                  "id": "thresholds",
+                  "value": {
+                    "mode": "absolute",
+                    "steps": [
+                      { "value": 0, "color": "green" },
+                      { "value": 2, "color": "yellow" },
+                      { "value": 5, "color": "red" }
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "annotations": {
+      "list": [
+        {
+          "name": "Budget Alerts",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "enable": true,
+          "expr": "ALERTS{alertname=~\"AIBudget.*\"}",
+          "iconColor": "orange",
+          "tagKeys": "alertname,tenant_id"
+        }
+      ]
+    }
+  }
+}

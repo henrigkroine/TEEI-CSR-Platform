@@ -1,0 +1,133 @@
+---
+# cert-manager installation for automated certificate management
+# Install cert-manager first: kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.yaml
+
+# Namespace for cert-manager
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cert-manager
+  labels:
+    name: cert-manager
+    part-of: teei-csr-platform
+---
+# ClusterIssuer for Istio internal CA (self-signed for mTLS)
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: istio-ca
+  labels:
+    part-of: teei-csr-platform
+spec:
+  ca:
+    secretName: istio-ca-secret  # Root CA certificate
+---
+# Self-signed root CA for Istio (bootstrap)
+# This creates the initial root CA certificate
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: istio-ca-root
+  namespace: istio-system
+spec:
+  isCA: true
+  commonName: istio-ca
+  secretName: istio-ca-secret
+  duration: 87600h  # 10 years
+  renewBefore: 43800h  # Renew at 50% lifetime
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: selfsigned-issuer
+    kind: ClusterIssuer
+    group: cert-manager.io
+---
+# Self-signed issuer for bootstrapping
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: selfsigned-issuer
+spec:
+  selfSigned: {}
+---
+# ClusterIssuer for Let's Encrypt (public TLS certificates)
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+  labels:
+    part-of: teei-csr-platform
+spec:
+  acme:
+    # Production Let's Encrypt server
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: ops@teei.example.com  # CHANGE THIS
+    privateKeySecretRef:
+      name: letsencrypt-prod-key
+    solvers:
+    # HTTP-01 challenge (for public ingress)
+    - http01:
+        ingress:
+          class: istio
+    # DNS-01 challenge (for wildcard certs)
+    - dns01:
+        cloudDNS:  # CHANGE TO YOUR DNS PROVIDER
+          project: teei-project  # GCP project
+          serviceAccountSecretRef:
+            name: clouddns-dns01-solver-sa
+            key: key.json
+      selector:
+        dnsZones:
+        - "teei.example.com"
+---
+# ClusterIssuer for Let's Encrypt Staging (testing)
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-staging
+  labels:
+    part-of: teei-csr-platform
+spec:
+  acme:
+    # Staging Let's Encrypt server (higher rate limits)
+    server: https://acme-staging-v02.api.letsencrypt.org/directory
+    email: ops@teei.example.com  # CHANGE THIS
+    privateKeySecretRef:
+      name: letsencrypt-staging-key
+    solvers:
+    - http01:
+        ingress:
+          class: istio
+---
+# Certificate rotation settings (via annotations on Certificate resources)
+# Default settings for automatic rotation
+# - duration: 24h (certificate lifetime)
+# - renewBefore: 12h (renew when 50% lifetime remains)
+# - rotationPolicy: Always (force rotation even if key is reused)
+---
+# Trust bundle for cross-region mTLS
+# This ConfigMap contains CA certificates from all regions
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: trust-bundle
+  namespace: istio-system
+  labels:
+    part-of: teei-csr-platform
+data:
+  # Primary region CA (us.cluster.local)
+  us-ca.pem: |
+    # PASTE US REGION CA CERTIFICATE HERE
+    # Generated during initial Istio installation
+    # Get with: kubectl get secret istio-ca-secret -n istio-system -o jsonpath='{.data.ca\.crt}' | base64 -d
+
+  # Secondary region CA (eu.cluster.local)
+  eu-ca.pem: |
+    # PASTE EU REGION CA CERTIFICATE HERE
+    # Get from EU cluster: kubectl get secret istio-ca-secret -n istio-system -o jsonpath='{.data.ca\.crt}' | base64 -d
+
+  # Combined trust bundle (all CAs)
+  combined-ca.pem: |
+    # CONCATENATE ALL CA CERTIFICATES HERE
+    # This is used for cross-region trust
