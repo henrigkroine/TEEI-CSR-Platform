@@ -1,0 +1,54 @@
+---
+# Production resource limits for US East region
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: teei-api-gateway
+spec:
+  template:
+    spec:
+      containers:
+      - name: api-gateway
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "2000m"
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: teei-reporting
+spec:
+  template:
+    spec:
+      containers:
+      - name: reporting
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "1000m"
+          limits:
+            memory: "4Gi"
+            cpu: "4000m"
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: teei-q2q-ai
+spec:
+  template:
+    spec:
+      containers:
+      - name: q2q-ai
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "1000m"
+          limits:
+            memory: "4Gi"
+            cpu: "4000m"

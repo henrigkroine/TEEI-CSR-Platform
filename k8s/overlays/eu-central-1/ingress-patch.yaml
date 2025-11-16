@@ -1,0 +1,77 @@
+---
+# Ingress configuration for EU Central region with WAF and GDPR compliance
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: teei-ingress
+  annotations:
+    # AWS ALB annotations for EU region
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/backend-protocol: HTTP
+    alb.ingress.kubernetes.io/healthcheck-path: /health
+    alb.ingress.kubernetes.io/healthcheck-interval-seconds: "15"
+    alb.ingress.kubernetes.io/healthcheck-timeout-seconds: "5"
+    alb.ingress.kubernetes.io/healthy-threshold-count: "2"
+    alb.ingress.kubernetes.io/unhealthy-threshold-count: "3"
+
+    # TLS/SSL - GDPR requires TLS 1.2 minimum
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:eu-central-1:ACCOUNT_ID:certificate/CERT_ID
+    alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS-1-2-Ext-2018-06
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+
+    # WAF for EU region
+    alb.ingress.kubernetes.io/wafv2-acl-arn: arn:aws:wafv2:eu-central-1:ACCOUNT_ID:regional/webacl/teei-eu-waf/WAF_ID
+
+    # GDPR-compliant rate limiting (stricter for EU)
+    nginx.ingress.kubernetes.io/rate-limit: "80"
+    nginx.ingress.kubernetes.io/rate-limit-burst: "150"
+
+    # GDPR-compliant CORS and security headers
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "https://teei.example.com"
+    nginx.ingress.kubernetes.io/cors-allow-credentials: "true"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "X-Frame-Options: DENY";
+      more_set_headers "X-Content-Type-Options: nosniff";
+      more_set_headers "X-XSS-Protection: 1; mode=block";
+      more_set_headers "Strict-Transport-Security: max-age=63072000; includeSubDomains; preload";
+      more_set_headers "Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'";
+      more_set_headers "Referrer-Policy: strict-origin-when-cross-origin";
+      more_set_headers "Permissions-Policy: geolocation=(), microphone=(), camera=()";
+
+    # Region and compliance tags
+    region: eu-central-1
+    data-residency: eu
+    cost-center: eu-operations
+    gdpr-compliant: "true"
+    compliance: "gdpr,soc2"
+spec:
+  rules:
+  - host: eu.api.teei.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: teei-api-gateway
+            port:
+              number: 3000
+  - host: eu.cockpit.teei.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: teei-corp-cockpit
+            port:
+              number: 4321
+  tls:
+  - hosts:
+    - eu.api.teei.example.com
+    - eu.cockpit.teei.example.com
+    secretName: teei-eu-tls-cert

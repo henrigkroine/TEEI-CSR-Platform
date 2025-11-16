@@ -1,0 +1,48 @@
+---
+# Security hardening for all deployments in EU region
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: "*"
+spec:
+  template:
+    metadata:
+      labels:
+        security-tier: hardened
+        mtls-enabled: "true"
+        gdpr-compliant: "true"
+      annotations:
+        seccomp.security.alpha.kubernetes.io/pod: runtime/default
+        container.apparmor.security.beta.kubernetes.io/app: runtime/default
+        gdpr.pii-encryption: "aes-256-gcm"
+        gdpr.audit-logging: "enabled"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      automountServiceAccountToken: false
+      containers:
+      - name: "*"
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 10001
+          capabilities:
+            drop:
+            - ALL
+          seccompProfile:
+            type: RuntimeDefault
+        livenessProbe:
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3

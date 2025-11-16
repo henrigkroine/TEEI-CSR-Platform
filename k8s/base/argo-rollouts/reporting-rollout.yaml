@@ -1,0 +1,62 @@
+---
+# Argo Rollout for Reporting Service
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: teei-reporting
+  labels:
+    app: teei-reporting
+    component: backend
+spec:
+  replicas: 3
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app: teei-reporting
+  template:
+    metadata:
+      labels:
+        app: teei-reporting
+        component: backend
+    spec:
+      serviceAccountName: reporting
+      containers:
+      - name: reporting
+        image: ghcr.io/henrigkroine/teei-reporting:v1.0.0
+        ports:
+        - containerPort: 3014
+          name: http
+          protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3014
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 3014
+          initialDelaySeconds: 10
+          periodSeconds: 5
+  strategy:
+    canary:
+      maxSurge: "25%"
+      maxUnavailable: 0
+      steps:
+      - setWeight: 5
+      - pause:
+          duration: 5m
+      - analysis:
+          templates:
+          - templateName: success-rate
+          args:
+          - name: service-name
+            value: teei-reporting
+      - setWeight: 20
+      - pause:
+          duration: 10m
+      - setWeight: 50
+      - pause:
+          duration: 15m
+      - setWeight: 100

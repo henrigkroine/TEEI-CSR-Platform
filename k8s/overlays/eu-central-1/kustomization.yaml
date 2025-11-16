@@ -1,0 +1,120 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: teei-eu-central-1
+
+namePrefix: eu-
+
+commonLabels:
+  environment: production
+  region: eu-central-1
+  managed-by: kustomize
+  data-residency: eu
+  gdpr-zone: "true"
+
+commonAnnotations:
+  gdpr-region: "true"
+  cost-center: "eu-operations"
+  sla-tier: "platinum"
+  compliance: "gdpr,soc2"
+
+# Reference all base services
+resources:
+- ../../base/api-gateway
+- ../../base/unified-profile
+- ../../base/kintell-connector
+- ../../base/buddy-service
+- ../../base/upskilling-connector
+- ../../base/q2q-ai
+- ../../base/safety-moderation
+- ../../base/analytics
+- ../../base/buddy-connector
+- ../../base/discord-bot
+- ../../base/impact-calculator
+- ../../base/impact-in
+- ../../base/journey-engine
+- ../../base/notifications
+- ../../base/reporting
+- ../../base/corp-cockpit-astro
+- ../../base/observability
+
+# Ingress and NetworkPolicies
+- ../../base/ingress.yaml
+- ../../base/network-policies.yaml
+
+# Regional security policies
+- mtls-strict.yaml
+- admission-policies.yaml
+- gdpr-policies.yaml
+
+# ConfigMap generator for EU Central region
+configMapGenerator:
+- name: env-config
+  literals:
+  - ENVIRONMENT=production
+  - REGION=eu-central-1
+  - LOG_LEVEL=warn
+  - ENABLE_DEBUG=false
+  - DATA_RESIDENCY=eu
+  - GDPR_ENABLED=true
+  - DATA_RETENTION_DAYS=365
+  - PII_ENCRYPTION_REQUIRED=true
+  - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector.observability.svc.cluster.local:4317
+  - POSTGRES_REGION=eu-central-1
+  - CLICKHOUSE_REGION=eu-central-1
+  - NATS_REGION=eu-central-1
+
+# Patches for production EU region
+patchesStrategicMerge:
+- replica-patch.yaml
+- resource-limits-patch.yaml
+- security-patch.yaml
+- ingress-patch.yaml
+- residency-patch.yaml
+- gdpr-patch.yaml
+
+# Image tags for production (use specific version tags with digest)
+images:
+- name: ghcr.io/henrigkroine/teei-api-gateway
+  newTag: v1.0.0
+- name: ghcr.io/henrigkroine/teei-unified-profile
+  newTag: v1.0.0
+- name: ghcr.io/henrigkroine/teei-kintell-connector
+  newTag: v1.0.0
+- name: ghcr.io/henrigkroine/teei-buddy-service
+  newTag: v1.0.0
+- name: ghcr.io/henrigkroine/teei-upskilling-connector
+  newTag: v1.0.0
+- name: ghcr.io/henrigkroine/teei-q2q-ai
+  newTag: v1.0.0
+- name: ghcr.io/henrigkroine/teei-safety-moderation
+  newTag: v1.0.0
+- name: ghcr.io/henrigkroine/teei-analytics
+  newTag: v1.0.0
+- name: ghcr.io/henrigkroine/teei-buddy-connector
+  newTag: v1.0.0
+- name: ghcr.io/henrigkroine/teei-discord-bot
+  newTag: v1.0.0
+- name: ghcr.io/henrigkroine/teei-impact-calculator
+  newTag: v1.0.0
+- name: ghcr.io/henrigkroine/teei-impact-in
+  newTag: v1.0.0
+- name: ghcr.io/henrigkroine/teei-journey-engine
+  newTag: v1.0.0
+- name: ghcr.io/henrigkroine/teei-notifications
+  newTag: v1.0.0
+- name: ghcr.io/henrigkroine/teei-reporting
+  newTag: v1.0.0
+- name: ghcr.io/henrigkroine/teei-corp-cockpit
+  newTag: v1.0.0
+
+# Replica configuration for EU region
+replicas:
+- name: teei-api-gateway
+  count: 4
+- name: teei-unified-profile
+  count: 3
+- name: teei-reporting
+  count: 3
+- name: teei-analytics
+  count: 3

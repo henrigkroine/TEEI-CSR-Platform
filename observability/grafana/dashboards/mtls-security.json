@@ -1,0 +1,331 @@
+{
+  "dashboard": {
+    "title": "mTLS Security & Service Mesh Metrics",
+    "tags": ["security", "mtls", "istio", "soc2"],
+    "timezone": "utc",
+    "schemaVersion": 38,
+    "version": 1,
+    "refresh": "30s",
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "mTLS Enforcement Status",
+        "type": "stat",
+        "gridPos": {"x": 0, "y": 0, "w": 6, "h": 4},
+        "targets": [
+          {
+            "datasource": "Prometheus",
+            "expr": "count(istio_tcp_connections_closed_total{response_flags=~\".*mutual_tls.*\"}) / count(istio_tcp_connections_closed_total) * 100",
+            "legendFormat": "mTLS Coverage %"
+          }
+        ],
+        "options": {
+          "graphMode": "area",
+          "colorMode": "value",
+          "unit": "percent"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 95, "color": "yellow"},
+                {"value": 99.9, "color": "green"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "Certificate Expiry (Days)",
+        "type": "gauge",
+        "gridPos": {"x": 6, "y": 0, "w": 6, "h": 4},
+        "targets": [
+          {
+            "datasource": "Prometheus",
+            "expr": "(x509_cert_expiry - time()) / 86400",
+            "legendFormat": "Days until expiry"
+          }
+        ],
+        "options": {
+          "showThresholdLabels": true,
+          "showThresholdMarkers": true
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "days",
+            "min": 0,
+            "max": 90,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 7, "color": "yellow"},
+                {"value": 30, "color": "green"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 3,
+        "title": "Unauthorized Access Attempts",
+        "type": "stat",
+        "gridPos": {"x": 12, "y": 0, "w": 6, "h": 4},
+        "targets": [
+          {
+            "datasource": "Prometheus",
+            "expr": "sum(rate(istio_requests_total{response_code=\"403\"}[5m])) * 300",
+            "legendFormat": "Blocked Requests (5m)"
+          }
+        ],
+        "options": {
+          "graphMode": "area",
+          "colorMode": "value"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 10, "color": "yellow"},
+                {"value": 50, "color": "red"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 4,
+        "title": "TLS Handshake Success Rate",
+        "type": "stat",
+        "gridPos": {"x": 18, "y": 0, "w": 6, "h": 4},
+        "targets": [
+          {
+            "datasource": "Prometheus",
+            "expr": "sum(rate(envoy_cluster_ssl_connection_error[5m])) / sum(rate(envoy_cluster_ssl_handshake[5m])) * 100",
+            "legendFormat": "Handshake Success %"
+          }
+        ],
+        "options": {
+          "graphMode": "none",
+          "colorMode": "value",
+          "unit": "percent"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 99, "color": "yellow"},
+                {"value": 99.9, "color": "green"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 5,
+        "title": "mTLS Connections by Service",
+        "type": "timeseries",
+        "gridPos": {"x": 0, "y": 4, "w": 12, "h": 8},
+        "targets": [
+          {
+            "datasource": "Prometheus",
+            "expr": "sum by (destination_service_name) (rate(istio_tcp_connections_opened_total{security_policy=\"mutual_tls\"}[5m]))",
+            "legendFormat": "{{destination_service_name}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "reqps",
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 10
+            }
+          }
+        }
+      },
+      {
+        "id": 6,
+        "title": "Policy Violations",
+        "type": "timeseries",
+        "gridPos": {"x": 12, "y": 4, "w": 12, "h": 8},
+        "targets": [
+          {
+            "datasource": "Prometheus",
+            "expr": "sum by (policy) (rate(kyverno_policy_results_total{result=\"fail\"}[5m]))",
+            "legendFormat": "{{policy}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "custom": {
+              "drawStyle": "bars",
+              "fillOpacity": 80
+            },
+            "color": {"mode": "palette-classic"}
+          }
+        }
+      },
+      {
+        "id": 7,
+        "title": "Service-to-Service mTLS Matrix",
+        "type": "table",
+        "gridPos": {"x": 0, "y": 12, "w": 12, "h": 8},
+        "targets": [
+          {
+            "datasource": "Prometheus",
+            "expr": "sum by (source_workload, destination_service_name, connection_security_policy) (istio_tcp_connections_opened_total)",
+            "format": "table",
+            "instant": true
+          }
+        ],
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {"Time": true},
+              "indexByName": {
+                "source_workload": 0,
+                "destination_service_name": 1,
+                "connection_security_policy": 2,
+                "Value": 3
+              },
+              "renameByName": {
+                "source_workload": "Source",
+                "destination_service_name": "Destination",
+                "connection_security_policy": "Security Policy",
+                "Value": "Connections"
+              }
+            }
+          }
+        ],
+        "fieldConfig": {
+          "overrides": [
+            {
+              "matcher": {"id": "byName", "options": "Security Policy"},
+              "properties": [
+                {
+                  "id": "custom.cellOptions",
+                  "value": {"type": "color-background"}
+                },
+                {
+                  "id": "mappings",
+                  "value": [
+                    {"type": "value", "options": {"mutual_tls": {"color": "green", "index": 0}}},
+                    {"type": "value", "options": {"none": {"color": "red", "index": 1}}}
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": 8,
+        "title": "Certificate Rotation Events",
+        "type": "table",
+        "gridPos": {"x": 12, "y": 12, "w": 12, "h": 8},
+        "targets": [
+          {
+            "datasource": "Prometheus",
+            "expr": "changes(x509_cert_not_before[24h]) > 0",
+            "format": "table",
+            "instant": true
+          }
+        ],
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "renameByName": {
+                "pod": "Pod",
+                "namespace": "Namespace",
+                "Value": "Rotations (24h)"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": 9,
+        "title": "Istio Proxy Resource Usage",
+        "type": "timeseries",
+        "gridPos": {"x": 0, "y": 20, "w": 12, "h": 6},
+        "targets": [
+          {
+            "datasource": "Prometheus",
+            "expr": "sum by (pod) (container_memory_working_set_bytes{container=\"istio-proxy\"})",
+            "legendFormat": "{{pod}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "bytes",
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "linear"
+            }
+          }
+        }
+      },
+      {
+        "id": 10,
+        "title": "Security Policy Compliance",
+        "type": "stat",
+        "gridPos": {"x": 12, "y": 20, "w": 12, "h": 6},
+        "targets": [
+          {
+            "datasource": "Prometheus",
+            "expr": "(sum(kyverno_policy_results_total{result=\"pass\"}) / sum(kyverno_policy_results_total)) * 100",
+            "legendFormat": "Policy Compliance %"
+          }
+        ],
+        "options": {
+          "graphMode": "area",
+          "colorMode": "value",
+          "unit": "percent"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 95, "color": "yellow"},
+                {"value": 99, "color": "green"}
+              ]
+            }
+          }
+        }
+      }
+    ],
+    "annotations": {
+      "list": [
+        {
+          "name": "Policy Changes",
+          "datasource": "Prometheus",
+          "expr": "changes(kyverno_policy_changes_total[5m]) > 0",
+          "tagKeys": "policy"
+        },
+        {
+          "name": "Certificate Rotations",
+          "datasource": "Prometheus",
+          "expr": "changes(x509_cert_not_before[5m]) > 0",
+          "tagKeys": "pod,namespace"
+        }
+      ]
+    }
+  }
+}
