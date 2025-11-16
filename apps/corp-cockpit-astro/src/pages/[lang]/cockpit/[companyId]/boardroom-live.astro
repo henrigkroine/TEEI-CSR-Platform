@@ -1,0 +1,120 @@
+---
+/**
+ * Boardroom Live - Executive Presentation Mode (Phase H3-A)
+ *
+ * Full-featured presentation interface for corporate cockpit data.
+ * Optimized for large displays, boardroom presentations, and executive reviews.
+ *
+ * Features:
+ * - Full-screen presentation mode with SSE live updates
+ * - Evidence overlay with citation details
+ * - Offline snapshot export (static HTML)
+ * - Enhanced keyboard/remote control navigation
+ * - Auto-refresh and slide cycling
+ * - PDF watermarking on export
+ * - Presenter controls with timer
+ *
+ * Performance Targets (AC):
+ * - View switch: < 100ms
+ * - SSE reconnect: < 5s (p95)
+ * - Offline snapshot load: < 2.0s
+ *
+ * @route /[lang]/cockpit/[companyId]/boardroom-live
+ */
+
+import BaseLayout from '../../../../layouts/BaseLayout.astro';
+import { hasPermission } from '../../../../types/roles';
+import BoardroomLiveView from '../../../../components/boardroom/BoardroomLiveView';
+
+// Extract route parameters
+const { lang, companyId } = Astro.params;
+const user = Astro.locals.user;
+const tenantContext = Astro.locals.tenantContext;
+
+// Middleware handles auth/tenant validation
+if (!user || !tenantContext) {
+  return Astro.redirect('/login');
+}
+
+// Verify user has boardroom access
+if (!hasPermission(user.role, 'VIEW_DASHBOARD')) {
+  return Astro.redirect(`/${lang}/cockpit/401?reason=insufficient_permissions`);
+}
+
+// Check feature flag
+const featureFlagsRaw = import.meta.env.PUBLIC_FEATURE_FLAGS || '';
+const featureFlags = featureFlagsRaw.split(',').map((f: string) => f.trim());
+const boardroomLiveEnabled = featureFlags.includes('COCKPIT_BOARDROOM_LIVE');
+
+if (!boardroomLiveEnabled) {
+  return Astro.redirect(`/${lang}/cockpit/${companyId}?feature=boardroom_live_disabled`);
+}
+
+// SSE endpoint configuration
+const sseEndpoint = import.meta.env.PUBLIC_SSE_ENDPOINT || '/api/sse/dashboard';
+---
+
+<BaseLayout
+  title="Boardroom Live - TEEI Corporate Cockpit"
+  lang={lang}
+  fullWidth={true}
+>
+  <div class="boardroom-live-container">
+    <!-- Boardroom Live View (React component) -->
+    <BoardroomLiveView
+      companyId={companyId}
+      lang={lang}
+      sseEndpoint={sseEndpoint}
+      user={{
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+      }}
+      client:only="react"
+    />
+  </div>
+
+  <!-- Preload critical resources -->
+  <link rel="preconnect" href={sseEndpoint} />
+
+  <!-- Feature flag data attribute for client-side logic -->
+  <div id="feature-flags" data-flags={featureFlagsRaw} style="display: none;"></div>
+</BaseLayout>
+
+<style>
+  .boardroom-live-container {
+    /* Remove default padding/margins for full-screen experience */
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    min-height: 100vh;
+    background: var(--color-bg);
+  }
+
+  /* Optimize for large displays */
+  @media (min-width: 1920px) {
+    .boardroom-live-container {
+      font-size: 1.25rem; /* Scale up for 4K displays */
+    }
+  }
+
+  /* Print styles for PDF export */
+  @media print {
+    .boardroom-live-container {
+      background: white;
+      color: black;
+    }
+
+    @page {
+      size: A4 landscape;
+      margin: 1cm;
+    }
+
+    /* Preserve colors in PDF */
+    * {
+      print-color-adjust: exact;
+      -webkit-print-color-adjust: exact;
+    }
+  }
+</style>
