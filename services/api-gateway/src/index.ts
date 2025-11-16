@@ -189,7 +189,7 @@ async function initializeGateway() {
     fastify.log.info('All routes and plugins registered successfully');
 
   } catch (error) {
-    fastify.log.error('Failed to initialize gateway:', error);
+    fastify.log.error({ error }, 'Failed to initialize gateway');
     throw error;
   }
 }
@@ -216,7 +216,7 @@ async function start() {
     fastify.log.info(`🏥 Health Check: http://${HOST}:${PORT}/health`);
 
   } catch (error) {
-    fastify.log.error('Failed to start server:', error);
+    fastify.log.error({ error }, 'Failed to start server');
     process.exit(1);
   }
 }
@@ -235,7 +235,7 @@ async function shutdown(signal: string) {
     fastify.log.info('Server closed successfully');
     process.exit(0);
   } catch (error) {
-    fastify.log.error('Error during shutdown:', error);
+    fastify.log.error({ error }, 'Error during shutdown');
     process.exit(1);
   }
 }
@@ -246,12 +246,12 @@ process.on('SIGTERM', () => shutdown('SIGTERM'));
 
 // Handle uncaught errors
 process.on('uncaughtException', (error) => {
-  fastify.log.error('Uncaught Exception:', error);
+  fastify.log.error({ error }, 'Uncaught Exception');
   process.exit(1);
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-  fastify.log.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  fastify.log.error({ promise, reason }, 'Unhandled Rejection');
   process.exit(1);
 });
 

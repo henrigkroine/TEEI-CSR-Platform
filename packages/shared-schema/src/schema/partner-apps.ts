@@ -3,7 +3,7 @@
  * Slack, Teams, and other third-party app integrations
  */
 
-import { pgTable, uuid, varchar, timestamp, jsonb, pgEnum, text, index, boolean } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, timestamp, jsonb, pgEnum, text, index, boolean, integer } from 'drizzle-orm/pg-core';
 import { companies, users } from './users.js';
 
 // Enums

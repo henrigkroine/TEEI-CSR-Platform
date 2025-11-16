@@ -17,7 +17,7 @@ export class InvoiceGenerator {
    */
   async generate(
     tenantId: string,
-    tenantName: string,
+    _tenantName: string,
     usage: UsageMetric[],
     billingPeriodStart: Date,
     billingPeriodEnd: Date,

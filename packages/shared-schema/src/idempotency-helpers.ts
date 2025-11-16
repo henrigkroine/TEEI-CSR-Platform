@@ -13,7 +13,7 @@ import {
   type NewWebhookDeduplication,
   type NewApiRequestDeduplication,
 } from './schema/idempotency.js';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, lt } from 'drizzle-orm';
 
 /**
  * Check if an event has already been processed by a consumer
@@ -143,7 +143,7 @@ export async function updateWebhookDeliveryStatus(
  */
 export async function getIdempotentRequest(
   idempotencyKey: string,
-  userId?: string
+  userId?: string | null
 ) {
   const conditions = userId
     ? and(
@@ -238,8 +238,7 @@ export async function cleanupOldDeduplicationRecords(
     .where(
       and(
         eq(eventDeduplication.success, true),
-        // Only use timestamp comparison without lt import
-        eventDeduplication.processedAt < cutoffDate
+        lt(eventDeduplication.processedAt, cutoffDate)
       )
     );
 
@@ -249,14 +248,14 @@ export async function cleanupOldDeduplicationRecords(
     .where(
       and(
         eq(webhookDeduplication.success, true),
-        webhookDeduplication.receivedAt < cutoffDate
+        lt(webhookDeduplication.receivedAt, cutoffDate)
       )
     );
 
   // Clean up expired API request deduplication records
   await db
     .delete(apiRequestDeduplication)
-    .where(apiRequestDeduplication.expiresAt < new Date());
+    .where(lt(apiRequestDeduplication.expiresAt, new Date()));
 }
 
 /**

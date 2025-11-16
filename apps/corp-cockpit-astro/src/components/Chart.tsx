@@ -13,13 +13,8 @@ import {
   type ChartOptions,
 } from 'chart.js';
 import { Line, Bar, Pie, Doughnut } from 'react-chartjs-2';
-<<<<<<< HEAD
 import { useEffect, useState } from 'react';
 import { applyChartThemeDefaults, generateChartColors } from '../lib/themes/chartColors';
-=======
-import { useTheme } from './theme/ThemeProvider';
-import { applyThemeToChartOptions } from '../utils/chartThemes';
->>>>>>> origin/claude/worker3-phaseE-cockpit-polish-01DEt2S7UMEooTBJBivWKcpD
 
 // Register Chart.js components
 ChartJS.register(
@@ -45,7 +40,6 @@ export interface ChartProps {
 }
 
 export default function Chart({ type, data, options, className = '', height = 300 }: ChartProps) {
-<<<<<<< HEAD
   const [isDark, setIsDark] = useState(false);
 
   // Detect current theme
@@ -97,28 +91,6 @@ export default function Chart({ type, data, options, className = '', height = 30
       return dataset;
     }),
   };
-=======
-  const { resolvedTheme } = useTheme();
-
-  const defaultOptions: ChartOptions<any> = useMemo(() => {
-    const baseOptions: ChartOptions<any> = {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          position: 'bottom' as const,
-        },
-        tooltip: {
-          mode: 'index',
-          intersect: false,
-        },
-      },
-      ...options,
-    };
-
-    return applyThemeToChartOptions(resolvedTheme === 'dark', baseOptions);
-  }, [resolvedTheme, options]);
->>>>>>> origin/claude/worker3-phaseE-cockpit-polish-01DEt2S7UMEooTBJBivWKcpD
 
   // Apply theme-aware defaults to options
   const themedOptions = applyChartThemeDefaults(

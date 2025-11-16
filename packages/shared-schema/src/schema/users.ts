@@ -14,7 +14,7 @@ export const users = pgTable('users', {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 }, (table) => ({
-  journeyFlagsIdx: index('idx_users_journey_flags').using('gin', table.journeyFlags),
+  journeyFlagsIdx: index('idx_users_journey_flags').on(table.journeyFlags),
 }));
 
 export const companies = pgTable('companies', {

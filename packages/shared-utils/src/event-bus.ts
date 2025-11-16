@@ -141,7 +141,7 @@ export class EventBus {
       causationId: options?.causationId,
       metadata: options?.metadata,
       data,
-    } as Omit<T, 'data'> & { data: T['data'] };
+    } as unknown as Omit<T, 'data'> & { data: T['data'] };
   }
 }
 

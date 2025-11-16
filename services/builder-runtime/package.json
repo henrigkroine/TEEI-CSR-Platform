@@ -1,25 +1,15 @@
 {
   "name": "@teei/builder-runtime",
-<<<<<<< HEAD
   "version": "2.0.0",
   "type": "module",
   "private": true,
   "description": "Query builder runtime with canvas, versioning, and export capabilities",
-=======
-  "version": "1.0.0",
-  "type": "module",
-  "private": true,
->>>>>>> origin/claude/worker2-phaseG-nlq-builder-hil-013afuWXrNQq3R3P2SRcTM9M
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
     "test": "vitest",
-<<<<<<< HEAD
     "test:cov": "vitest --coverage",
-=======
-    "test:coverage": "vitest --coverage",
->>>>>>> origin/claude/worker2-phaseG-nlq-builder-hil-013afuWXrNQq3R3P2SRcTM9M
     "clean": "rm -rf dist"
   },
   "dependencies": {
@@ -27,32 +17,22 @@
     "@teei/shared-schema": "workspace:*",
     "@teei/shared-utils": "workspace:*",
     "@teei/shared-auth": "workspace:*",
-<<<<<<< HEAD
+    "@teei/observability": "workspace:*",
+    "@clickhouse/client": "^0.2.5",
     "fastify": "^4.25.2",
     "ioredis": "^5.3.2",
     "pg": "^8.11.3",
     "pptxgenjs": "^3.12.0",
     "puppeteer": "^21.9.0",
     "yaml": "^2.3.4",
-    "zod": "^3.22.4"
+    "zod": "^3.22.4",
+    "drizzle-orm": "^0.29.3",
+    "postgres": "^3.4.3"
   },
   "devDependencies": {
     "@types/node": "^20.11.5",
     "@types/pg": "^8.11.0",
     "@vitest/coverage-v8": "^1.2.1",
-=======
-    "@teei/observability": "workspace:*",
-    "@clickhouse/client": "^0.2.5",
-    "fastify": "^4.25.2",
-    "ioredis": "^5.3.2",
-    "zod": "^3.22.4",
-    "drizzle-orm": "^0.29.3",
-    "postgres": "^3.4.3",
-    "yaml": "^2.3.4"
-  },
-  "devDependencies": {
-    "@types/node": "^20.11.5",
->>>>>>> origin/claude/worker2-phaseG-nlq-builder-hil-013afuWXrNQq3R3P2SRcTM9M
     "tsx": "^4.7.0",
     "typescript": "^5.3.3",
     "vitest": "^1.2.1"

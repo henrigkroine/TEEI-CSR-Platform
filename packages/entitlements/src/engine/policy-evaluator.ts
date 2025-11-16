@@ -4,28 +4,26 @@
  */
 
 import { createServiceLogger } from '@teei/shared-utils';
-import { getDb } from '@teei/shared-schema';
 import {
+  db,
   entitlementPolicies,
   entitlementGrants,
   entitlementChecks,
   usageQuotas,
   billingSubscriptions,
-  billingPlanFeatures,
 } from '@teei/shared-schema';
 import { eq, and, lte, gte, or, isNull } from 'drizzle-orm';
 import {
   EntitlementCheckRequest,
   EntitlementDecision,
   Feature,
-  Action,
   DEFAULT_PLAN_FEATURES,
 } from '../types/index.js';
 
 const logger = createServiceLogger('entitlements:evaluator');
 
 export class PolicyEvaluator {
-  private db = getDb();
+  private db = db;
 
   /**
    * Check if a user/company has access to a feature
@@ -82,40 +80,39 @@ export class PolicyEvaluator {
   ): Promise<EntitlementDecision | null> {
     const now = new Date();
 
-    const query = this.db
-      .select()
-      .from(entitlementGrants)
-      .where(
-        and(
-          eq(entitlementGrants.feature, request.feature),
-          eq(entitlementGrants.revoked, false),
-          or(
-            isNull(entitlementGrants.validFrom),
-            lte(entitlementGrants.validFrom, now)
-          ),
-          or(
-            isNull(entitlementGrants.validUntil),
-            gte(entitlementGrants.validUntil, now)
-          )
-        )
-      );
+    // Build where conditions
+    const conditions = [
+      eq(entitlementGrants.feature, request.feature),
+      eq(entitlementGrants.revoked, false),
+      or(
+        isNull(entitlementGrants.validFrom),
+        lte(entitlementGrants.validFrom, now)
+      ),
+      or(
+        isNull(entitlementGrants.validUntil),
+        gte(entitlementGrants.validUntil, now)
+      ),
+    ];
 
     // Add company or user filter
     if (request.companyId) {
-      query.where(eq(entitlementGrants.companyId, request.companyId));
+      conditions.push(eq(entitlementGrants.companyId, request.companyId));
     }
     if (request.userId) {
-      query.where(eq(entitlementGrants.userId, request.userId));
+      conditions.push(eq(entitlementGrants.userId, request.userId));
     }
 
-    const grants = await query;
+    const grants = await this.db
+      .select()
+      .from(entitlementGrants)
+      .where(and(...conditions));
 
     if (grants.length === 0) {
       return null;
     }
 
     // Use the first active grant
-    const grant = grants[0];
+    const grant = grants[0]!;
 
     // Check quota if present
     if (grant.quota) {
@@ -169,7 +166,7 @@ export class PolicyEvaluator {
     }
 
     // Get plan features
-    const planFeatures = DEFAULT_PLAN_FEATURES[subscription.plan];
+    const planFeatures = DEFAULT_PLAN_FEATURES[subscription.plan as keyof typeof DEFAULT_PLAN_FEATURES];
     if (!planFeatures) {
       logger.warn('Unknown subscription plan', { plan: subscription.plan });
       return null;
@@ -184,7 +181,7 @@ export class PolicyEvaluator {
     }
 
     // Check usage quotas if applicable
-    const quotaCheck = await this.checkUsageQuota(request, planFeatures);
+    const quotaCheck = await this.checkUsageQuota(request);
     if (!quotaCheck.allowed) {
       return quotaCheck;
     }
@@ -199,8 +196,7 @@ export class PolicyEvaluator {
    * Check usage quotas
    */
   private async checkUsageQuota(
-    request: EntitlementCheckRequest,
-    planFeatures: any
+    request: EntitlementCheckRequest
   ): Promise<EntitlementDecision> {
     // Map features to quota types
     const featureQuotaMap: Record<string, string> = {

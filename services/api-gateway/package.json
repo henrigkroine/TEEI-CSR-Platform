@@ -12,6 +12,7 @@
     "clean": "rm -rf dist node_modules"
   },
   "dependencies": {
+    "@teei/entitlements": "workspace:*",
     "@teei/shared-utils": "workspace:*",
     "fastify": "^4.28.1",
     "@fastify/jwt": "^8.0.1",

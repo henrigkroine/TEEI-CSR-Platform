@@ -1,5 +1,4 @@
 {
-<<<<<<< HEAD
   "app": {
     "title": "תא הטייס הארגוני",
     "subtitle": "לוח ניתוח מנהלים"
@@ -139,98 +138,5 @@
     "close": "סגור",
     "viewDetails": "הצג פרטים",
     "viewAsTable": "הצג כטבלה (נגיש)"
-=======
-  "common": {
-    "app_name": "לוח בקרה תאגידי",
-    "welcome": "ברוך הבא",
-    "dashboard": "לוח בקרה",
-    "analytics": "ניתוח נתונים",
-    "reports": "דוחות",
-    "admin": "ניהול",
-    "settings": "הגדרות",
-    "logout": "התנתק",
-    "save": "שמור",
-    "cancel": "בטל",
-    "delete": "מחק",
-    "edit": "ערוך",
-    "back": "חזרה",
-    "next": "הבא",
-    "previous": "קודם",
-    "loading": "טוען...",
-    "error": "שגיאה",
-    "success": "הצלחה",
-    "warning": "אזהרה"
-  },
-  "navigation": {
-    "home": "בית",
-    "sroi": "תשואה חברתית על השקעה",
-    "vis": "ניקוד השפעת מתנדבים",
-    "q2q": "איכותי לכמותי",
-    "trends": "מגמות",
-    "governance": "ממשל תאגידי",
-    "sso": "כניסה אחת"
-  },
-  "dashboard": {
-    "title": "סקירת לוח הבקרה",
-    "metrics": "מדדים",
-    "charts": "תרשימים",
-    "recent_activity": "פעילות אחרונה",
-    "filter_by_date": "סנן לפי תאריך",
-    "export": "ייצא",
-    "share": "שתף"
-  },
-  "admin": {
-    "title": "קונסולת ניהול",
-    "api_keys": "מפתחות API",
-    "integrations": "אינטגרציות",
-    "users": "משתמשים",
-    "permissions": "הרשאות",
-    "audit_log": "יומן ביקורת",
-    "scheduler": "מתזמן",
-    "data_residency": "מיקום נתונים",
-    "sla_dashboard": "לוח רמת שירות",
-    "domain_allowlist": "רשימת דומיינים מורשים",
-    "embed_tokens": "אסימוני הטמעה"
-  },
-  "scheduler": {
-    "title": "מתזמן חבילת דירקטוריון",
-    "new_schedule": "לוח זמנים חדש",
-    "edit_schedule": "ערוך לוח זמנים",
-    "execution_history": "היסטוריית ביצוע",
-    "recipients": "נמענים",
-    "frequency": "תדירות",
-    "next_run": "הרצה הבאה",
-    "status": "סטטוס",
-    "enabled": "פעיל",
-    "disabled": "כבוי"
-  },
-  "analytics": {
-    "funnel": "משפך המרה",
-    "retention": "שימור",
-    "engagement": "מעורבות",
-    "nps": "ציון נטו מקדם",
-    "cohorts": "קבוצות",
-    "conversion_rate": "שיעור המרה",
-    "dropoff": "נשירה",
-    "active_users": "משתמשים פעילים"
-  },
-  "errors": {
-    "generic": "משהו השתבש. אנא נסה שוב.",
-    "network": "שגיאת רשת. בדוק את החיבור שלך.",
-    "unauthorized": "לא מורשה. אנא התחבר.",
-    "forbidden": "אסור. אין לך הרשאה.",
-    "not_found": "לא נמצא. הדף לא קיים.",
-    "server_error": "שגיאת שרת. אנא נסה שוב מאוחר יותר."
-  },
-  "accessibility": {
-    "skip_to_content": "דלג לתוכן",
-    "toggle_menu": "החלף תפריט",
-    "close": "סגור",
-    "open": "פתח",
-    "language": "שפה",
-    "theme": "ערכת נושא",
-    "high_contrast": "ניגודיות גבוהה",
-    "screen_reader_mode": "מצב קורא מסך"
->>>>>>> origin/claude/worker3-phaseH2-scheduler-admin-usage-aaa-0157u7VEQjoVVhqTBgYcuumh
   }
 }

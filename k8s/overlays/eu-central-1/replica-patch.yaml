@@ -1,15 +1,9 @@
-<<<<<<< HEAD
 # EU-Central-1 Production: High availability replica counts
-=======
----
-# High availability replica configuration for EU Central region
->>>>>>> origin/claude/ga-cutover-phase-one-0111mH9eWczXzBtpzUU5uUVU
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: teei-api-gateway
 spec:
-<<<<<<< HEAD
   replicas: 5
 ---
 apiVersion: apps/v1
@@ -25,30 +19,13 @@ metadata:
   name: teei-reporting
 spec:
   replicas: 4
-=======
-  replicas: 4
-
->>>>>>> origin/claude/ga-cutover-phase-one-0111mH9eWczXzBtpzUU5uUVU
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: teei-unified-profile
 spec:
-<<<<<<< HEAD
   replicas: 4
-=======
-  replicas: 3
-
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: teei-reporting
-spec:
-  replicas: 3
-
->>>>>>> origin/claude/ga-cutover-phase-one-0111mH9eWczXzBtpzUU5uUVU
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -56,10 +33,8 @@ metadata:
   name: teei-analytics
 spec:
   replicas: 3
-<<<<<<< HEAD
 =======
 
->>>>>>> origin/claude/ga-cutover-phase-one-0111mH9eWczXzBtpzUU5uUVU
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -67,15 +42,10 @@ metadata:
   name: teei-q2q-ai
 spec:
   replicas: 3
-<<<<<<< HEAD
-=======
-
->>>>>>> origin/claude/ga-cutover-phase-one-0111mH9eWczXzBtpzUU5uUVU
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-<<<<<<< HEAD
   name: teei-impact-calculator
 spec:
   replicas: 3
@@ -142,8 +112,3 @@ metadata:
   name: teei-impact-in
 spec:
   replicas: 2
-=======
-  name: teei-corp-cockpit
-spec:
-  replicas: 3
->>>>>>> origin/claude/ga-cutover-phase-one-0111mH9eWczXzBtpzUU5uUVU

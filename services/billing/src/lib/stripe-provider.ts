@@ -21,7 +21,7 @@ export class StripeProvider implements PaymentProvider {
 
   constructor(apiKey?: string) {
     if (apiKey && apiKey !== 'stub') {
-      this.stripe = new Stripe(apiKey, { apiVersion: '2024-12-18.acacia' });
+      this.stripe = new Stripe(apiKey, { apiVersion: '2023-10-16' });
       this.stubMode = false;
     } else {
       this.stubMode = true;
@@ -47,16 +47,12 @@ export class StripeProvider implements PaymentProvider {
 
     // Create or get customer
     const customers = await this.stripe.customers.list({ email: customerEmail, limit: 1 });
-    let customer: Stripe.Customer;
-
-    if (customers.data.length > 0) {
-      customer = customers.data[0];
-    } else {
-      customer = await this.stripe.customers.create({
-        email: customerEmail,
-        metadata: { tenantId: invoice.tenantId },
-      });
-    }
+    const customer: Stripe.Customer = customers.data.length > 0
+      ? customers.data[0]!
+      : await this.stripe.customers.create({
+          email: customerEmail,
+          metadata: { tenantId: invoice.tenantId },
+        });
 
     // Create invoice
     const stripeInvoice = await this.stripe.invoices.create({
@@ -98,7 +94,7 @@ export class StripeProvider implements PaymentProvider {
     if (this.stubMode) {
       // Stub: randomly return status
       const statuses: Array<'draft' | 'pending' | 'paid' | 'overdue' | 'void'> = ['draft', 'pending', 'paid', 'overdue', 'void'];
-      return statuses[Math.floor(Math.random() * statuses.length)];
+      return statuses[Math.floor(Math.random() * statuses.length)]!;
     }
 
     if (!this.stripe) throw new Error('Stripe not initialized');

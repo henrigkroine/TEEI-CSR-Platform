@@ -5,6 +5,7 @@ import { companies } from './users.js';
  * NLQ Query Log - Complete audit trail for natural language queries
  * Tracks intent classification, query generation, safety checks, and lineage
  */
+// @ts-ignore - Drizzle circular reference type inference limitation
 export const nlqQueries = pgTable('nlq_queries', {
   id: uuid('id').defaultRandom().primaryKey(),
   companyId: uuid('company_id').notNull().references(() => companies.id),
@@ -20,7 +21,7 @@ export const nlqQueries = pgTable('nlq_queries', {
   intentConfidence: decimal('intent_confidence', { precision: 4, scale: 3 }), // 0.000-1.000
 
   // Template matching
-  templateId: uuid('template_id').references(() => nlqTemplates.id),
+  templateId: uuid('template_id').references((): any => nlqTemplates.id),
   templateName: varchar('template_name', { length: 100 }), // e.g., sroi_quarterly, vis_monthly
 
   // Generated query
@@ -29,7 +30,7 @@ export const nlqQueries = pgTable('nlq_queries', {
   queryPreview: text('query_preview'), // Human-readable query explanation
 
   // Safety validation
-  safetyCheckId: uuid('safety_check_id').references(() => nlqSafetyChecks.id),
+  safetyCheckId: uuid('safety_check_id').references((): any => nlqSafetyChecks.id),
   safetyPassed: boolean('safety_passed').notNull().default(false),
   safetyViolations: jsonb('safety_violations'), // Array of violation codes
 
@@ -114,6 +115,7 @@ export const nlqTemplates = pgTable('nlq_templates', {
  * NLQ Safety Checks - 12-point validation audit trail
  * Records all safety checks performed on queries before execution
  */
+// @ts-ignore - Drizzle circular reference type inference limitation
 export const nlqSafetyChecks = pgTable('nlq_safety_checks', {
   id: uuid('id').defaultRandom().primaryKey(),
   queryId: uuid('query_id').references(() => nlqQueries.id),

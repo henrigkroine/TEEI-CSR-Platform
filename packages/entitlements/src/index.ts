@@ -10,8 +10,6 @@ import {
   EntitlementDecision,
   EntitlementEngineConfig,
   Feature,
-  Action,
-  DEFAULT_PLAN_FEATURES,
 } from './types/index.js';
 import { createServiceLogger } from '@teei/shared-utils';
 
@@ -24,11 +22,9 @@ const logger = createServiceLogger('entitlements');
 export class EntitlementEngine {
   private evaluator: PolicyEvaluator;
   private cache?: DecisionCache;
-  private enableAuditLog: boolean;
 
   constructor(config: EntitlementEngineConfig = {}) {
     this.evaluator = new PolicyEvaluator();
-    this.enableAuditLog = config.enableAuditLog ?? true;
 
     if (config.cache) {
       this.cache = new DecisionCache(config.cache);

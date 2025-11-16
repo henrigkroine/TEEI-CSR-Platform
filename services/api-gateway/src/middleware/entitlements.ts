@@ -236,7 +236,7 @@ export function trackUsage(feature: Feature, quotaType: string, amountFn?: (requ
 
       // Increment usage asynchronously (don't block request)
       engine.incrementUsage(tenantContext.companyId, feature, quotaType, amount).catch((error) => {
-        request.log.error('Failed to track usage:', { error, feature, quotaType });
+        request.log.error({ error, feature, quotaType }, 'Failed to track usage');
       });
     } catch (error) {
       request.log.error('Usage tracking error:', error);

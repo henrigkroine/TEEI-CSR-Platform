@@ -130,7 +130,7 @@ export class AWSSecretsManagerBackend extends SecretsVaultBackend {
 
     // Lazy-load AWS SDK to avoid requiring it if not used
     try {
-      const { SecretsManagerClient, GetSecretValueCommand } = require('@aws-sdk/client-secrets-manager');
+      const { SecretsManagerClient } = require('@aws-sdk/client-secrets-manager');
       this.secretsManagerClient = new SecretsManagerClient({
         region: config.awsRegion || process.env.AWS_REGION || 'us-east-1',
       });
@@ -211,15 +211,16 @@ export class HashiCorpVaultBackend extends SecretsVaultBackend {
         throw new Error(`Vault API error: ${response.status} ${response.statusText}`);
       }
 
-      const data = await response.json();
+      const data = await response.json() as { data?: { data?: unknown; metadata?: { version?: string; created_time?: string } } };
 
       logger.info({ secretName, version: data.data?.metadata?.version }, 'Secret retrieved from Vault');
 
+      const vaultData = data.data;
       return {
-        value: JSON.stringify(data.data?.data || {}),
-        version: data.data?.metadata?.version?.toString(),
-        lastRotated: data.data?.metadata?.created_time
-          ? new Date(data.data.metadata.created_time)
+        value: JSON.stringify((vaultData?.data as Record<string, unknown>) || {}),
+        version: vaultData?.metadata?.version?.toString(),
+        lastRotated: vaultData?.metadata?.created_time
+          ? new Date(vaultData.metadata.created_time)
           : undefined,
       };
     } catch (error: any) {

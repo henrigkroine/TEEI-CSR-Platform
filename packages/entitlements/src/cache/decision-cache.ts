@@ -193,7 +193,7 @@ export class DecisionCache {
       const info = await this.redis.info('memory');
 
       const memoryMatch = info.match(/used_memory_human:(.+)/);
-      const memoryUsage = memoryMatch ? memoryMatch[1] : 'unknown';
+      const memoryUsage = memoryMatch?.[1] ?? 'unknown';
 
       return {
         totalKeys: keys.length,

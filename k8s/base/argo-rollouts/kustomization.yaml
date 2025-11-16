@@ -1,30 +1,7 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-<<<<<<< HEAD
 resources:
-<<<<<<< HEAD
 - namespace.yaml
 - api-gateway-rollout.yaml
 - corp-cockpit-rollout.yaml
-=======
-- api-gateway-rollout.yaml
-- reporting-rollout.yaml
-
-commonLabels:
-  managed-by: argo-rollouts
-  progressive-delivery: enabled
->>>>>>> origin/claude/ga-cutover-phase-one-0111mH9eWczXzBtpzUU5uUVU
-=======
-namespace: argo-rollouts
-
-resources:
-- namespace.yaml
-- install.yaml
-- dashboard.yaml
-- crds.yaml
-
-commonLabels:
-  app.kubernetes.io/part-of: teei-csr-platform
-  managed-by: kustomize
->>>>>>> origin/claude/phaseG-global-ga-multiregion-017uvLqAucExNFGykX9bSDSY

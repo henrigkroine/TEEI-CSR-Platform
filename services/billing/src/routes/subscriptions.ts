@@ -6,24 +6,24 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import Stripe from 'stripe';
-import { getDb } from '@teei/shared-schema';
+import { db } from '@teei/shared-schema';
 import {
   billingCustomers,
   billingSubscriptions,
-  billingPlanFeatures,
   entitlementPolicies,
 } from '@teei/shared-schema';
-import { eq, and } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2024-11-20.acacia',
+  apiVersion: '2023-10-16',
 });
 
 // Stripe Price IDs (configure these in env)
-const STRIPE_PRICE_IDS = {
+const STRIPE_PRICE_IDS: Record<string, string> = {
   starter: process.env.STRIPE_PRICE_ID_STARTER || 'price_starter',
   pro: process.env.STRIPE_PRICE_ID_PRO || 'price_pro',
   enterprise: process.env.STRIPE_PRICE_ID_ENTERPRISE || 'price_enterprise',
+  custom: process.env.STRIPE_PRICE_ID_CUSTOM || 'price_custom',
 };
 
 /**
@@ -47,7 +47,6 @@ const UpdateSubscriptionSchema = z.object({
 });
 
 export async function subscriptionRoutes(fastify: FastifyInstance) {
-  const db = getDb();
 
   /**
    * POST /api/billing/subscriptions
@@ -87,7 +86,7 @@ export async function subscriptionRoutes(fastify: FastifyInstance) {
 
         // Create Stripe subscription
         const subscriptionData: Stripe.SubscriptionCreateParams = {
-          customer: customer.stripeCustomerId,
+          customer: customer!.stripeCustomerId,
           items: [
             {
               price: STRIPE_PRICE_IDS[plan],
@@ -115,7 +114,7 @@ export async function subscriptionRoutes(fastify: FastifyInstance) {
           .insert(billingSubscriptions)
           .values({
             companyId,
-            customerId: customer.id,
+            customerId: customer!.id,
             stripeSubscriptionId: stripeSubscription.id,
             stripePriceId: STRIPE_PRICE_IDS[plan],
             plan,
@@ -133,7 +132,7 @@ export async function subscriptionRoutes(fastify: FastifyInstance) {
           .returning();
 
         // Create entitlement policies based on plan
-        await createPlanPolicies(companyId, plan, subscription.id);
+        await createPlanPolicies(companyId, plan, subscription!.id);
 
         return {
           success: true,
@@ -219,7 +218,7 @@ export async function subscriptionRoutes(fastify: FastifyInstance) {
             {
               id: (
                 await stripe.subscriptions.retrieve(subscription.stripeSubscriptionId)
-              ).items.data[0].id,
+              ).items.data[0]!.id,
               quantity: updates.seatCount,
             },
           ];
@@ -230,7 +229,7 @@ export async function subscriptionRoutes(fastify: FastifyInstance) {
             {
               id: (
                 await stripe.subscriptions.retrieve(subscription.stripeSubscriptionId)
-              ).items.data[0].id,
+              ).items.data[0]!.id,
               price: STRIPE_PRICE_IDS[updates.plan],
             },
           ];
@@ -246,7 +245,7 @@ export async function subscriptionRoutes(fastify: FastifyInstance) {
         );
 
         // Update database
-        const [updated] = await db
+        const [updated] = await db!
           .update(billingSubscriptions)
           .set({
             seatCount: updates.seatCount || subscription.seatCount,
@@ -372,7 +371,6 @@ export async function subscriptionRoutes(fastify: FastifyInstance) {
  * Create entitlement policies based on subscription plan
  */
 async function createPlanPolicies(companyId: string, plan: string, subscriptionId: string): Promise<void> {
-  const db = getDb();
 
   const featuresByPlan: Record<string, string[]> = {
     starter: ['report_builder', 'export_pdf', 'export_csv'],

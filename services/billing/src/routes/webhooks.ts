@@ -5,7 +5,7 @@
 
 import type { FastifyInstance } from 'fastify';
 import Stripe from 'stripe';
-import { getDb } from '@teei/shared-schema';
+import { db } from '@teei/shared-schema';
 import {
   billingSubscriptions,
   billingInvoices,
@@ -15,13 +15,12 @@ import {
 import { eq } from 'drizzle-orm';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2024-11-20.acacia',
+  apiVersion: '2023-10-16',
 });
 
 const WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || '';
 
 export async function webhookRoutes(fastify: FastifyInstance) {
-  const db = getDb();
 
   /**
    * POST /api/billing/webhooks/stripe
@@ -48,8 +47,9 @@ export async function webhookRoutes(fastify: FastifyInstance) {
 
       try {
         // Verify webhook signature
+        const rawBody = (request as any).rawBody || JSON.stringify(request.body);
         event = stripe.webhooks.constructEvent(
-          request.rawBody || JSON.stringify(request.body),
+          rawBody,
           sig,
           WEBHOOK_SECRET
         );
@@ -62,10 +62,10 @@ export async function webhookRoutes(fastify: FastifyInstance) {
         });
       }
 
-      request.log.info(`Received Stripe webhook: ${event.type}`, {
+      request.log.info({
         eventId: event.id,
         type: event.type,
-      });
+      }, `Received Stripe webhook: ${event.type}`);
 
       // Check for duplicate events (idempotency)
       const [existingEvent] = await db
@@ -74,9 +74,9 @@ export async function webhookRoutes(fastify: FastifyInstance) {
         .where(eq(billingEvents.stripeEventId, event.id));
 
       if (existingEvent && existingEvent.processed) {
-        request.log.info('Event already processed (idempotency)', {
+        request.log.info({
           eventId: event.id,
-        });
+        }, 'Event already processed (idempotency)');
         return { received: true, alreadyProcessed: true };
       }
 
@@ -156,7 +156,6 @@ export async function webhookRoutes(fastify: FastifyInstance) {
  * Handle subscription created/updated
  */
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription): Promise<void> {
-  const db = getDb();
   const companyId = subscription.metadata.companyId;
 
   if (!companyId) {
@@ -219,7 +218,6 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription): Pro
  * Handle subscription deleted
  */
 async function handleSubscriptionDeleted(subscription: Stripe.Subscription): Promise<void> {
-  const db = getDb();
 
   const [existing] = await db
     .select()
@@ -242,7 +240,6 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription): Pro
  * Handle invoice paid
  */
 async function handleInvoicePaid(invoice: Stripe.Invoice): Promise<void> {
-  const db = getDb();
 
   const [customer] = await db
     .select()
@@ -280,7 +277,6 @@ async function handleInvoicePaid(invoice: Stripe.Invoice): Promise<void> {
  * Handle invoice payment failed
  */
 async function handleInvoicePaymentFailed(invoice: Stripe.Invoice): Promise<void> {
-  const db = getDb();
 
   const [existing] = await db
     .select()
@@ -304,7 +300,6 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice): Promise<void
  * Handle invoice finalized
  */
 async function handleInvoiceFinalized(invoice: Stripe.Invoice): Promise<void> {
-  const db = getDb();
 
   const [customer] = await db
     .select()
@@ -322,7 +317,6 @@ async function handleInvoiceFinalized(invoice: Stripe.Invoice): Promise<void> {
  * Handle customer updated
  */
 async function handleCustomerUpdated(customer: Stripe.Customer): Promise<void> {
-  const db = getDb();
 
   const [existing] = await db
     .select()
@@ -349,7 +343,6 @@ async function createInvoiceRecord(
   customerId: string,
   companyId: string
 ): Promise<void> {
-  const db = getDb();
 
   // Get subscription if exists
   const [subscription] = invoice.subscription
@@ -403,7 +396,6 @@ async function createInvoiceRecord(
  * Extract companyId from Stripe event
  */
 async function getCompanyIdFromEvent(event: Stripe.Event): Promise<string | null> {
-  const db = getDb();
 
   // Try to extract from metadata
   const metadata = (event.data.object as any).metadata;

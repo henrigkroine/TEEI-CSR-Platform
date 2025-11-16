@@ -194,7 +194,7 @@ export const billingInvoices = pgTable('billing_invoices', {
  */
 export const billingEvents = pgTable('billing_events', {
   id: uuid('id').defaultRandom().primaryKey(),
-  companyId: uuid('company_id').notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  companyId: uuid('company_id').references(() => companies.id, { onDelete: 'cascade' }),
 
   // Event details
   eventType: varchar('event_type', { length: 100 }).notNull(),

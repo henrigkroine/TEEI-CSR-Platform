@@ -1,5 +1,4 @@
 {
-<<<<<<< HEAD
   "app": {
     "title": "لوحة القيادة المؤسسية",
     "subtitle": "لوحة تحليلات تنفيذية"
@@ -139,98 +138,5 @@
     "close": "إغلاق",
     "viewDetails": "عرض التفاصيل",
     "viewAsTable": "عرض كجدول (يمكن الوصول إليه)"
-=======
-  "common": {
-    "app_name": "لوحة تحكم الشركات",
-    "welcome": "مرحباً",
-    "dashboard": "لوحة القيادة",
-    "analytics": "التحليلات",
-    "reports": "التقارير",
-    "admin": "الإدارة",
-    "settings": "الإعدادات",
-    "logout": "تسجيل الخروج",
-    "save": "حفظ",
-    "cancel": "إلغاء",
-    "delete": "حذف",
-    "edit": "تعديل",
-    "back": "رجوع",
-    "next": "التالي",
-    "previous": "السابق",
-    "loading": "جاري التحميل...",
-    "error": "خطأ",
-    "success": "نجح",
-    "warning": "تحذير"
-  },
-  "navigation": {
-    "home": "الرئيسية",
-    "sroi": "العائد الاجتماعي على الاستثمار",
-    "vis": "نقاط تأثير المتطوعين",
-    "q2q": "النوعي إلى الكمي",
-    "trends": "الاتجاهات",
-    "governance": "الحوكمة",
-    "sso": "تسجيل الدخول الموحد"
-  },
-  "dashboard": {
-    "title": "نظرة عامة على لوحة القيادة",
-    "metrics": "المقاييس",
-    "charts": "الرسوم البيانية",
-    "recent_activity": "النشاط الأخير",
-    "filter_by_date": "تصفية حسب التاريخ",
-    "export": "تصدير",
-    "share": "مشاركة"
-  },
-  "admin": {
-    "title": "وحدة تحكم الإدارة",
-    "api_keys": "مفاتيح واجهة برمجة التطبيقات",
-    "integrations": "التكاملات",
-    "users": "المستخدمون",
-    "permissions": "الأذونات",
-    "audit_log": "سجل التدقيق",
-    "scheduler": "المجدول",
-    "data_residency": "إقامة البيانات",
-    "sla_dashboard": "لوحة مستوى الخدمة",
-    "domain_allowlist": "قائمة النطاقات المسموح بها",
-    "embed_tokens": "رموز التضمين"
-  },
-  "scheduler": {
-    "title": "مجدول حزمة مجلس الإدارة",
-    "new_schedule": "جدول جديد",
-    "edit_schedule": "تعديل الجدول",
-    "execution_history": "سجل التنفيذ",
-    "recipients": "المستلمون",
-    "frequency": "التكرار",
-    "next_run": "التشغيل التالي",
-    "status": "الحالة",
-    "enabled": "مفعل",
-    "disabled": "معطل"
-  },
-  "analytics": {
-    "funnel": "مسار التحويل",
-    "retention": "الاحتفاظ",
-    "engagement": "المشاركة",
-    "nps": "صافي نقاط الترويج",
-    "cohorts": "المجموعات",
-    "conversion_rate": "معدل التحويل",
-    "dropoff": "الانقطاع",
-    "active_users": "المستخدمون النشطون"
-  },
-  "errors": {
-    "generic": "حدث خطأ ما. يرجى المحاولة مرة أخرى.",
-    "network": "خطأ في الشبكة. تحقق من اتصالك.",
-    "unauthorized": "غير مصرح. يرجى تسجيل الدخول.",
-    "forbidden": "ممنوع. ليس لديك إذن.",
-    "not_found": "غير موجود. الصفحة غير موجودة.",
-    "server_error": "خطأ في الخادم. يرجى المحاولة لاحقاً."
-  },
-  "accessibility": {
-    "skip_to_content": "الانتقال إلى المحتوى",
-    "toggle_menu": "تبديل القائمة",
-    "close": "إغلاق",
-    "open": "فتح",
-    "language": "اللغة",
-    "theme": "المظهر",
-    "high_contrast": "تباين عالي",
-    "screen_reader_mode": "وضع قارئ الشاشة"
->>>>>>> origin/claude/worker3-phaseH2-scheduler-admin-usage-aaa-0157u7VEQjoVVhqTBgYcuumh
   }
 }

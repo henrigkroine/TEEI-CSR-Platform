@@ -4,7 +4,7 @@
  */
 
 import type { FastifyInstance } from 'fastify';
-import { UsageCollector, createUsageCollector } from '../lib/usage-collector.js';
+import { createUsageCollector } from '../lib/usage-collector.js';
 import {
   BudgetManager,
   InMemoryBudgetStore,
@@ -13,7 +13,7 @@ import {
 } from '../lib/budget-manager.js';
 import { InvoiceGenerator } from '../lib/invoice-generator.js';
 import { createPaymentProvider } from '../lib/stripe-provider.js';
-import { BudgetConfigSchema, UsageMetricSchema } from '../types/index.js';
+import { BudgetConfigSchema } from '../types/index.js';
 
 export async function billingRoutes(fastify: FastifyInstance) {
   // Initialize services
@@ -37,7 +37,7 @@ export async function billingRoutes(fastify: FastifyInstance) {
         querystring: { type: 'object', properties: { period: { type: 'string', enum: ['hourly', 'daily', 'monthly'] } } },
       },
     },
-    async (request, reply) => {
+    async (request, _reply) => {
       const { tenantId } = request.params;
       const { period = 'daily' } = request.query;
 
@@ -69,7 +69,7 @@ export async function billingRoutes(fastify: FastifyInstance) {
         body: BudgetConfigSchema.omit({ createdAt: true, updatedAt: true }),
       },
     },
-    async (request, reply) => {
+    async (request, _reply) => {
       const budget = await budgetManager.setBudget(request.body);
       return { budget };
     },
@@ -86,12 +86,12 @@ export async function billingRoutes(fastify: FastifyInstance) {
         params: { type: 'object', properties: { tenantId: { type: 'string', format: 'uuid' } } },
       },
     },
-    async (request, reply) => {
+    async (request, _reply) => {
       const { tenantId } = request.params;
       const report = await budgetManager.getUtilizationReport(tenantId);
 
       if (!report) {
-        return reply.status(404).send({ error: 'Budget not found' });
+        return _reply.status(404).send({ error: 'Budget not found' });
       }
 
       return report;
@@ -109,7 +109,7 @@ export async function billingRoutes(fastify: FastifyInstance) {
         params: { type: 'object', properties: { tenantId: { type: 'string', format: 'uuid' } } },
       },
     },
-    async (request, reply) => {
+    async (request, _reply) => {
       const { tenantId } = request.params;
 
       // Get current month usage
@@ -146,7 +146,7 @@ export async function billingRoutes(fastify: FastifyInstance) {
         },
       },
     },
-    async (request, reply) => {
+    async (request, _reply) => {
       const { tenantId, tenantName, year, month } = request.body;
 
       // Collect monthly usage
@@ -174,11 +174,10 @@ export async function billingRoutes(fastify: FastifyInstance) {
         querystring: { type: 'object', properties: { tenantName: { type: 'string' } } },
       },
     },
-    async (request, reply) => {
+    async (_request, reply) => {
       // In production, fetch invoice from database
       // For now, generate sample invoice
-      const { invoiceId } = request.params;
-      const { tenantName } = request.query;
+      const { tenantName } = _request.query;
 
       const now = new Date();
       const usage = await usageCollector.collectMonthly('00000000-0000-0000-0000-000000000000', now.getFullYear(), now.getMonth() + 1);
@@ -214,7 +213,7 @@ export async function billingRoutes(fastify: FastifyInstance) {
         params: { type: 'object', properties: { invoiceId: { type: 'string', format: 'uuid' } } },
       },
     },
-    async (request, reply) => {
+    async (_request, reply) => {
       // Simplified - in production, fetch from DB
       const now = new Date();
       const usage = await usageCollector.collectMonthly('00000000-0000-0000-0000-000000000000', now.getFullYear(), now.getMonth() + 1);
@@ -258,7 +257,7 @@ export async function billingRoutes(fastify: FastifyInstance) {
         },
       },
     },
-    async (request, reply) => {
+    async (request, _reply) => {
       const { tenantId, email, name } = request.body;
       const result = await paymentProvider.createCustomer(tenantId, email, name);
       return result;
@@ -276,7 +275,7 @@ export async function billingRoutes(fastify: FastifyInstance) {
         params: { type: 'object', properties: { customerId: { type: 'string' } } },
       },
     },
-    async (request, reply) => {
+    async (request, _reply) => {
       const { customerId } = request.params;
       const result = await paymentProvider.setupBillingPortal(customerId);
       return result;
@@ -287,7 +286,7 @@ export async function billingRoutes(fastify: FastifyInstance) {
    * GET /api/billing/health
    * Health check endpoint
    */
-  fastify.get('/api/billing/health', async (request, reply) => {
+  fastify.get('/api/billing/health', async (_request, _reply) => {
     return {
       status: 'healthy',
       service: 'billing',

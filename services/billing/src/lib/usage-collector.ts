@@ -110,6 +110,7 @@ export class UsageCollector {
   /**
    * Collect usage for all active tenants (batch job)
    */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async collectAllTenants(
     tenantIds: string[],
     periodStart: Date,
@@ -126,9 +127,9 @@ export class UsageCollector {
  * Queries Prometheus for compute, storage, bandwidth, DB metrics
  */
 export class PrometheusInfraSource implements InfraMetricsSource {
-  constructor(private prometheusUrl: string) {}
+  constructor(_prometheusUrl: string) {}
 
-  async getComputeHours(tenantId: string, start: Date, end: Date): Promise<number> {
+  async getComputeHours(_tenantId: string, start: Date, end: Date): Promise<number> {
     // Query: sum(rate(container_cpu_usage_seconds_total{tenant_id="..."}[1h])) * duration_hours
     const durationHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
 
@@ -139,20 +140,20 @@ export class PrometheusInfraSource implements InfraMetricsSource {
     return avgPods * avgCPUCores * durationHours;
   }
 
-  async getStorageGB(tenantId: string, timestamp: Date): Promise<number> {
+  async getStorageGB(_tenantId: string, _timestamp: Date): Promise<number> {
     // Query: sum(container_fs_usage_bytes{tenant_id="..."}) / (1024^3)
     // Simplified: estimate based on data volume
     return 10.0; // 10 GB default
   }
 
-  async getBandwidthGB(tenantId: string, start: Date, end: Date): Promise<number> {
+  async getBandwidthGB(_tenantId: string, start: Date, end: Date): Promise<number> {
     // Query: sum(rate(container_network_transmit_bytes_total{tenant_id="..."}[1h])) * duration_seconds / (1024^3)
     const durationHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
     const avgMbpsPerHour = 0.5; // 0.5 Mbps average
     return (avgMbpsPerHour * durationHours * 3600) / 8 / 1024; // Convert to GB
   }
 
-  async getDbQueries(tenantId: string, start: Date, end: Date): Promise<number> {
+  async getDbQueries(_tenantId: string, start: Date, end: Date): Promise<number> {
     // Query: sum(increase(pg_stat_statements_calls{tenant_id="..."}[duration]))
     const durationHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
     const avgQueriesPerHour = 1000;
@@ -165,7 +166,7 @@ export class PrometheusInfraSource implements InfraMetricsSource {
  * Integrates with existing @teei/observability/ai-costs.ts
  */
 export class ObservabilityAISource implements AIMetricsSource {
-  async getTokenUsage(tenantId: string, start: Date, end: Date) {
+  async getTokenUsage(_tenantId: string, _start: Date, _end: Date) {
     // Integration point with @teei/observability/src/ai-costs.ts
     // Real implementation would query Prometheus metrics:
     //   - ai_tokens_total{tenant_id, model, type="input"}

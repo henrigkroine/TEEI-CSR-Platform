@@ -1,97 +1,46 @@
 {
   "name": "@teei/insights-nlq",
-<<<<<<< HEAD
-<<<<<<< HEAD
   "version": "2.0.0",
   "type": "module",
   "private": true,
   "description": "Natural Language Query service with RLS, multilingual support, and safety guardrails",
-=======
-  "version": "1.0.0",
-  "type": "module",
-  "private": true,
->>>>>>> origin/claude/worker2-phaseG-nlq-builder-hil-013afuWXrNQq3R3P2SRcTM9M
-=======
-  "version": "1.0.0",
-  "type": "module",
-  "private": true,
-  "description": "Natural Language Query service with guard-railed NL→SQL/CHQL conversion",
->>>>>>> origin/claude/worker2-phaseG2-insights-ga-01FXrGnKtHgmcZG2d8jpPRMf
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
     "test": "vitest",
-<<<<<<< HEAD
-<<<<<<< HEAD
     "test:cov": "vitest --coverage",
     "eval": "tsx scripts/eval.ts",
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.30.0",
-    "@google/generative-ai": "^0.21.0",
-=======
-    "test:coverage": "vitest --coverage",
-    "clean": "rm -rf dist"
-  },
-  "dependencies": {
->>>>>>> origin/claude/worker2-phaseG-nlq-builder-hil-013afuWXrNQq3R3P2SRcTM9M
     "@teei/event-contracts": "workspace:*",
     "@teei/shared-schema": "workspace:*",
     "@teei/shared-utils": "workspace:*",
     "@teei/shared-auth": "workspace:*",
-<<<<<<< HEAD
-    "fastify": "^4.25.2",
-    "ioredis": "^5.3.2",
-    "openai": "^4.75.0",
-    "pg": "^8.11.3",
-    "sql-formatter": "^15.3.0",
-    "yaml": "^2.3.4",
-=======
-    "clean": "rm -rf dist"
-  },
-  "dependencies": {
-    "@teei/shared-schema": "workspace:*",
-    "@teei/shared-utils": "workspace:*",
-    "@teei/event-contracts": "workspace:*",
+    "@teei/observability": "workspace:*",
     "@anthropic-ai/sdk": "^0.32.1",
     "@clickhouse/client": "^0.2.5",
     "@fastify/cors": "^8.4.2",
     "@fastify/jwt": "^7.2.3",
     "@fastify/rate-limit": "^9.1.0",
+    "@google/generative-ai": "^0.21.0",
     "drizzle-orm": "^0.29.3",
     "fastify": "^4.25.2",
     "ioredis": "^5.3.2",
     "nats": "^2.19.0",
-    "openai": "^4.28.0",
+    "openai": "^4.75.0",
+    "pg": "^8.11.3",
     "postgres": "^3.4.3",
->>>>>>> origin/claude/worker2-phaseG2-insights-ga-01FXrGnKtHgmcZG2d8jpPRMf
+    "sql-formatter": "^15.3.0",
+    "yaml": "^2.3.4",
     "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@fast-check/vitest": "^0.1.0",
     "@types/node": "^20.11.5",
-<<<<<<< HEAD
     "@types/pg": "^8.11.0",
     "@vitest/coverage-v8": "^1.2.1",
-=======
-    "@teei/observability": "workspace:*",
-    "@anthropic-ai/sdk": "^0.30.0",
-    "@clickhouse/client": "^0.2.5",
-    "fastify": "^4.25.2",
-    "ioredis": "^5.3.2",
-    "zod": "^3.22.4",
-    "drizzle-orm": "^0.29.3",
-    "postgres": "^3.4.3",
-    "openai": "^4.75.0",
-    "yaml": "^2.3.4"
-  },
-  "devDependencies": {
-    "@types/node": "^20.11.5",
-    "@fast-check/vitest": "^0.1.0",
->>>>>>> origin/claude/worker2-phaseG-nlq-builder-hil-013afuWXrNQq3R3P2SRcTM9M
-=======
->>>>>>> origin/claude/worker2-phaseG2-insights-ga-01FXrGnKtHgmcZG2d8jpPRMf
     "tsx": "^4.7.0",
     "typescript": "^5.3.3",
     "vitest": "^1.2.1"
