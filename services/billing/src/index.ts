@@ -7,6 +7,8 @@ import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import { billingRoutes } from './routes/billing.js';
+import { subscriptionRoutes } from './routes/subscriptions.js';
+import { webhookRoutes } from './routes/webhooks.js';
 
 const fastify = Fastify({
   logger: true,
@@ -30,6 +32,8 @@ await fastify.register(cors, {
 
 // Register routes
 await fastify.register(billingRoutes);
+await fastify.register(subscriptionRoutes);
+await fastify.register(webhookRoutes);
 
 // Start server
 const start = async () => {

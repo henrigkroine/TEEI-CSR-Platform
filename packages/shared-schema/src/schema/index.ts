@@ -15,3 +15,6 @@ export * from './pii.js';
 export * from './impact-metrics.js';
 export * from './lineage.js';
 export * from './nlq.js';
+export * from './billing.js';
+export * from './entitlements.js';
+export * from './partner-apps.js';
