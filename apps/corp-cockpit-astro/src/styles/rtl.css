@@ -1,4 +1,5 @@
 /**
+<<<<<<< HEAD
  * RTL (Right-to-Left) Support - Phase H3-D
  *
  * CSS overrides for Arabic and Hebrew languages.
@@ -8,11 +9,20 @@
 /* RTL Language Detection */
 [lang="ar"],
 [lang="he"],
+=======
+ * RTL (Right-to-Left) Styles
+ *
+ * Styles for Arabic and Hebrew language support
+ */
+
+/* Apply RTL direction when html has dir="rtl" */
+>>>>>>> origin/claude/worker3-phaseH2-scheduler-admin-usage-aaa-0157u7VEQjoVVhqTBgYcuumh
 [dir="rtl"] {
   direction: rtl;
   text-align: right;
 }
 
+<<<<<<< HEAD
 /* Logical Property Overrides */
 [lang="ar"] *,
 [lang="he"] *,
@@ -80,10 +90,112 @@
 /* Tables */
 [lang="ar"] table,
 [lang="he"] table,
+=======
+/* Flip margins and padding */
+[dir="rtl"] .ml-1 { margin-left: 0; margin-right: 0.25rem; }
+[dir="rtl"] .ml-2 { margin-left: 0; margin-right: 0.5rem; }
+[dir="rtl"] .ml-3 { margin-left: 0; margin-right: 0.75rem; }
+[dir="rtl"] .ml-4 { margin-left: 0; margin-right: 1rem; }
+[dir="rtl"] .ml-6 { margin-left: 0; margin-right: 1.5rem; }
+[dir="rtl"] .ml-8 { margin-left: 0; margin-right: 2rem; }
+
+[dir="rtl"] .mr-1 { margin-right: 0; margin-left: 0.25rem; }
+[dir="rtl"] .mr-2 { margin-right: 0; margin-left: 0.5rem; }
+[dir="rtl"] .mr-3 { margin-right: 0; margin-left: 0.75rem; }
+[dir="rtl"] .mr-4 { margin-right: 0; margin-left: 1rem; }
+[dir="rtl"] .mr-6 { margin-right: 0; margin-left: 1.5rem; }
+[dir="rtl"] .mr-8 { margin-right: 0; margin-left: 2rem; }
+
+[dir="rtl"] .pl-1 { padding-left: 0; padding-right: 0.25rem; }
+[dir="rtl"] .pl-2 { padding-left: 0; padding-right: 0.5rem; }
+[dir="rtl"] .pl-3 { padding-left: 0; padding-right: 0.75rem; }
+[dir="rtl"] .pl-4 { padding-left: 0; padding-right: 1rem; }
+[dir="rtl"] .pl-6 { padding-left: 0; padding-right: 1.5rem; }
+[dir="rtl"] .pl-8 { padding-left: 0; padding-right: 2rem; }
+
+[dir="rtl"] .pr-1 { padding-right: 0; padding-left: 0.25rem; }
+[dir="rtl"] .pr-2 { padding-right: 0; padding-left: 0.5rem; }
+[dir="rtl"] .pr-3 { padding-right: 0; padding-left: 0.75rem; }
+[dir="rtl"] .pr-4 { padding-right: 0; padding-left: 1rem; }
+[dir="rtl"] .pr-6 { padding-right: 0; padding-left: 1.5rem; }
+[dir="rtl"] .pr-8 { padding-right: 0; padding-left: 2rem; }
+
+/* Flip border radius */
+[dir="rtl"] .rounded-l { border-radius: 0 0.25rem 0.25rem 0; }
+[dir="rtl"] .rounded-r { border-radius: 0.25rem 0 0 0.25rem; }
+[dir="rtl"] .rounded-tl { border-top-left-radius: 0; border-top-right-radius: 0.25rem; }
+[dir="rtl"] .rounded-tr { border-top-right-radius: 0; border-top-left-radius: 0.25rem; }
+[dir="rtl"] .rounded-bl { border-bottom-left-radius: 0; border-bottom-right-radius: 0.25rem; }
+[dir="rtl"] .rounded-br { border-bottom-right-radius: 0; border-bottom-left-radius: 0.25rem; }
+
+/* Flip text alignment */
+[dir="rtl"] .text-left { text-align: right; }
+[dir="rtl"] .text-right { text-align: left; }
+
+/* Flip float */
+[dir="rtl"] .float-left { float: right; }
+[dir="rtl"] .float-right { float: left; }
+
+/* Flip flexbox */
+[dir="rtl"] .flex-row { flex-direction: row-reverse; }
+[dir="rtl"] .items-start { align-items: flex-end; }
+[dir="rtl"] .items-end { align-items: flex-start; }
+[dir="rtl"] .justify-start { justify-content: flex-end; }
+[dir="rtl"] .justify-end { justify-content: flex-start; }
+
+/* Flip grid */
+[dir="rtl"] .grid {
+  direction: rtl;
+}
+
+/* Flip transform */
+[dir="rtl"] .rotate-90 { transform: rotate(-90deg); }
+[dir="rtl"] .rotate-180 { transform: rotate(180deg); }
+[dir="rtl"] .rotate-270 { transform: rotate(-270deg); }
+
+/* Flip icons and arrows */
+[dir="rtl"] .icon-chevron-right::before { content: "‹"; }
+[dir="rtl"] .icon-chevron-left::before { content: "›"; }
+[dir="rtl"] .icon-arrow-right::before { content: "←"; }
+[dir="rtl"] .icon-arrow-left::before { content: "→"; }
+
+/* Navigation menu RTL */
+[dir="rtl"] nav ul {
+  padding-right: 0;
+  padding-left: 0;
+}
+
+[dir="rtl"] nav li {
+  margin-right: 0;
+  margin-left: 1rem;
+}
+
+/* Form inputs RTL */
+[dir="rtl"] input[type="text"],
+[dir="rtl"] input[type="email"],
+[dir="rtl"] input[type="password"],
+[dir="rtl"] input[type="search"],
+[dir="rtl"] textarea,
+[dir="rtl"] select {
+  text-align: right;
+  padding-right: 0.75rem;
+  padding-left: 0.75rem;
+}
+
+/* Checkbox and radio RTL */
+[dir="rtl"] input[type="checkbox"],
+[dir="rtl"] input[type="radio"] {
+  margin-right: 0;
+  margin-left: 0.5rem;
+}
+
+/* Table RTL */
+>>>>>>> origin/claude/worker3-phaseH2-scheduler-admin-usage-aaa-0157u7VEQjoVVhqTBgYcuumh
 [dir="rtl"] table {
   direction: rtl;
 }
 
+<<<<<<< HEAD
 [lang="ar"] th,
 [lang="he"] th,
 [dir="rtl"] th {
@@ -92,10 +204,14 @@
 
 [lang="ar"] td,
 [lang="he"] td,
+=======
+[dir="rtl"] th,
+>>>>>>> origin/claude/worker3-phaseH2-scheduler-admin-usage-aaa-0157u7VEQjoVVhqTBgYcuumh
 [dir="rtl"] td {
   text-align: right;
 }
 
+<<<<<<< HEAD
 /* Forms */
 [lang="ar"] .form-group,
 [lang="he"] .form-group,
@@ -147,10 +263,30 @@
 /* Tooltips & Popovers */
 [lang="ar"] .tooltip,
 [lang="he"] .tooltip,
+=======
+/* Breadcrumb RTL */
+[dir="rtl"] .breadcrumb {
+  direction: rtl;
+}
+
+[dir="rtl"] .breadcrumb .separator::before {
+  content: "‹";
+  margin: 0 0.5rem;
+}
+
+/* Dropdown RTL */
+[dir="rtl"] .dropdown-menu {
+  right: auto;
+  left: 0;
+}
+
+/* Tooltips RTL */
+>>>>>>> origin/claude/worker3-phaseH2-scheduler-admin-usage-aaa-0157u7VEQjoVVhqTBgYcuumh
 [dir="rtl"] .tooltip {
   text-align: right;
 }
 
+<<<<<<< HEAD
 /* Charts & Visualizations */
 [lang="ar"] .chart-legend,
 [lang="he"] .chart-legend,
@@ -329,4 +465,81 @@
   [dir="rtl"] {
     direction: rtl;
   }
+=======
+/* Modal RTL */
+[dir="rtl"] .modal {
+  direction: rtl;
+}
+
+/* Chart labels RTL */
+[dir="rtl"] .chart-label {
+  text-align: right;
+}
+
+/* Dashboard grid RTL */
+[dir="rtl"] .dashboard-grid {
+  direction: rtl;
+}
+
+/* Admin console RTL */
+[dir="rtl"] .admin-section {
+  text-align: right;
+}
+
+/* Specific component adjustments */
+[dir="rtl"] .logo {
+  transform: scaleX(-1); /* Flip logos that are directional */
+}
+
+/* Preserve numbers and dates in LTR */
+[dir="rtl"] .number,
+[dir="rtl"] .date,
+[dir="rtl"] time {
+  direction: ltr;
+  unicode-bidi: embed;
+}
+
+/* Code blocks stay LTR */
+[dir="rtl"] code,
+[dir="rtl"] pre {
+  direction: ltr;
+  text-align: left;
+  unicode-bidi: embed;
+}
+
+/* URL and email stay LTR */
+[dir="rtl"] a[href^="http"],
+[dir="rtl"] a[href^="mailto:"] {
+  direction: ltr;
+  unicode-bidi: embed;
+}
+
+/* Tailwind utility overrides for RTL */
+@layer utilities {
+  [dir="rtl"] .rtl\:mr-auto { margin-right: auto; margin-left: 0; }
+  [dir="rtl"] .rtl\:ml-auto { margin-left: auto; margin-right: 0; }
+  [dir="rtl"] .rtl\:pr-0 { padding-right: 0; }
+  [dir="rtl"] .rtl\:pl-0 { padding-left: 0; }
+  [dir="rtl"] .rtl\:text-right { text-align: right; }
+  [dir="rtl"] .rtl\:text-left { text-align: left; }
+  [dir="rtl"] .rtl\:flex-row-reverse { flex-direction: row-reverse; }
+}
+
+/* Print styles for RTL */
+@media print {
+  [dir="rtl"] {
+    direction: rtl;
+  }
+
+  [dir="rtl"] * {
+    text-align: right !important;
+  }
+
+  [dir="rtl"] code,
+  [dir="rtl"] pre,
+  [dir="rtl"] .number {
+    direction: ltr !important;
+    text-align: left !important;
+  }
+>>>>>>> origin/claude/worker3-phaseH2-scheduler-admin-usage-aaa-0157u7VEQjoVVhqTBgYcuumh
 }
