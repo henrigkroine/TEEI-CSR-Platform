@@ -1,0 +1,193 @@
+# Multi-Region Failover Drill Configuration
+# Agent: failover-drill-captain
+
+global:
+  # Primary and failover regions
+  regions:
+    primary: us-east-1
+    secondary: eu-west-1
+    tertiary: ap-southeast-1
+
+  # DNS configuration
+  dns:
+    provider: route53  # or cloudflare, cloudflare-lb
+    hostedZoneId: Z0123456789ABCDEFGHIJ
+    recordName: teei.example.com
+    ttl: 60  # Low TTL for faster failover
+
+  # Health check configuration
+  healthChecks:
+    interval: 30s
+    timeout: 10s
+    unhealthyThreshold: 3
+    healthyThreshold: 2
+    endpoints:
+      - /health
+      - /api/v1/health
+      - /ready
+
+  # Datastore replication
+  databases:
+    postgres:
+      primary: us-east-1
+      replicas:
+        - eu-west-1
+        - ap-southeast-1
+      replicationLag:
+        warning: 5s
+        critical: 30s
+
+  # Status page integration
+  statusPage:
+    provider: statuspage.io  # or instatus, statuspal
+    pageId: ${STATUS_PAGE_ID}
+    componentIds:
+      api: cmp_api_gateway
+      frontend: cmp_corp_cockpit
+      reporting: cmp_reporting
+      database: cmp_postgres
+
+# Drill scenarios
+drills:
+  - name: planned_regional_failover
+    description: Simulate planned maintenance failover
+    type: manual
+    steps:
+      - name: update_status_page
+        action: post_incident
+        message: "Scheduled maintenance: US-EAST-1 region failover"
+        impact: maintenance
+
+      - name: verify_replica_lag
+        action: check_db_lag
+        maxLag: 5s
+
+      - name: switch_dns_primary
+        action: update_dns
+        from: us-east-1
+        to: eu-west-1
+
+      - name: wait_dns_propagation
+        action: sleep
+        duration: 120s
+
+      - name: verify_traffic
+        action: check_traffic
+        region: eu-west-1
+        minPercentage: 80
+
+      - name: update_status_resolved
+        action: update_incident
+        status: resolved
+
+  - name: emergency_failover
+    description: Simulate region outage
+    type: automatic
+    triggers:
+      - metric: region_availability
+        threshold: 0.5  # < 50% availability
+        duration: 5m
+
+    steps:
+      - name: post_incident
+        action: post_incident
+        message: "US-EAST-1 experiencing degraded performance"
+        impact: major_outage
+
+      - name: immediate_dns_switch
+        action: update_dns
+        from: us-east-1
+        to: eu-west-1
+        ttl: 30  # Even lower TTL for emergency
+
+      - name: notify_oncall
+        action: pagerduty_alert
+        severity: critical
+
+      - name: verify_failover
+        action: check_traffic
+        region: eu-west-1
+        minPercentage: 70
+        timeout: 5m
+
+      - name: update_status
+        action: update_incident
+        message: "Traffic failed over to EU-WEST-1"
+
+  - name: failback_to_primary
+    description: Return traffic to primary region
+    type: manual
+    steps:
+      - name: verify_primary_health
+        action: check_health
+        region: us-east-1
+        duration: 10m  # Ensure sustained health
+
+      - name: sync_databases
+        action: verify_db_sync
+        from: eu-west-1
+        to: us-east-1
+
+      - name: gradual_dns_shift
+        action: weighted_dns_update
+        weights:
+          us-east-1: 50
+          eu-west-1: 50
+
+      - name: monitor_metrics
+        action: sleep
+        duration: 300s
+
+      - name: complete_failback
+        action: weighted_dns_update
+        weights:
+          us-east-1: 100
+          eu-west-1: 0
+
+      - name: resolve_incident
+        action: update_incident
+        status: resolved
+        message: "Failback to US-EAST-1 completed successfully"
+
+# Monitoring & validation
+validation:
+  slos:
+    - name: api_latency
+      metric: http_request_duration_p95
+      threshold: 1000ms
+
+    - name: error_rate
+      metric: http_errors_rate
+      threshold: 0.01  # < 1%
+
+    - name: availability
+      metric: uptime
+      threshold: 0.99  # 99%
+
+  alerts:
+    - name: FailoverDrillFailed
+      condition: drill_status == "failed"
+      severity: critical
+      channels: [slack, pagerduty]
+
+    - name: HighReplicationLag
+      condition: db_replication_lag > 30s
+      severity: warning
+      channels: [slack]
+
+# Rollback configuration
+rollback:
+  auto: true
+  conditions:
+    - metric: error_rate
+      threshold: 0.05
+      duration: 2m
+
+    - metric: p95_latency
+      threshold: 2000ms
+      duration: 2m
+
+  actions:
+    - revert_dns
+    - notify_team
+    - create_postmortem_issue

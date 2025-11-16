@@ -1,0 +1,193 @@
+# Canary Deployment Configuration
+# Progressive delivery with error-budget gating and auto-rollback
+
+global:
+  regions:
+    - name: us-east-1
+      priority: 1
+      weight: 0.4
+    - name: eu-west-1
+      priority: 2
+      weight: 0.35
+    - name: ap-southeast-1
+      priority: 3
+      weight: 0.25
+
+  # Error budget configuration
+  errorBudget:
+    # SLO thresholds
+    availability: 99.9  # 99.9% uptime
+    latencyP95Ms: 500   # p95 < 500ms
+    latencyP99Ms: 1500  # p99 < 1500ms
+    errorRate: 0.01     # < 1% error rate
+
+    # Budget burn rate
+    budgetWindowHours: 168  # 1 week window
+    burnRateThresholds:
+      critical: 14.4    # Burns 1 hour budget in 5 minutes
+      warning: 6.0      # Burns 1 hour budget in 10 minutes
+
+  # Canary stages
+  stages:
+    - name: initial
+      weight: 0.05      # 5% traffic
+      duration: 30m
+      minSampleSize: 1000
+
+    - name: ramp-1
+      weight: 0.10      # 10% traffic
+      duration: 1h
+      minSampleSize: 5000
+
+    - name: ramp-2
+      weight: 0.25      # 25% traffic
+      duration: 2h
+      minSampleSize: 10000
+
+    - name: ramp-3
+      weight: 0.50      # 50% traffic
+      duration: 4h
+      minSampleSize: 20000
+
+    - name: full
+      weight: 1.00      # 100% traffic
+      duration: indefinite
+      minSampleSize: 50000
+
+  # Rollback criteria
+  rollback:
+    auto: true
+    criteria:
+      - metric: error_rate
+        threshold: 0.05    # > 5% error rate
+        window: 5m
+
+      - metric: latency_p95
+        threshold: 1000    # p95 > 1000ms
+        window: 5m
+
+      - metric: availability
+        threshold: 99.0    # < 99% uptime
+        window: 15m
+
+      - metric: budget_burn_rate
+        threshold: 14.4    # Critical burn rate
+        window: 5m
+
+# Per-service configuration
+services:
+  api-gateway:
+    enabled: true
+    stages: default
+    rollback:
+      manualApprovalRequired: true
+
+  reporting:
+    enabled: true
+    stages: default
+    rollback:
+      manualApprovalRequired: false
+
+  corp-cockpit:
+    enabled: true
+    stages:
+      - name: initial
+        weight: 0.01      # More conservative for UI
+        duration: 1h
+      - name: ramp-1
+        weight: 0.05
+        duration: 2h
+      - name: ramp-2
+        weight: 0.20
+        duration: 4h
+      - name: full
+        weight: 1.00
+    rollback:
+      manualApprovalRequired: false
+
+# Feature flags for region-specific rollout
+featureFlags:
+  provider: launchdarkly  # or posthog, split.io, custom
+
+  flags:
+    - key: canary_deployment_enabled
+      description: Master switch for canary deployments
+      regions:
+        us-east-1: true
+        eu-west-1: true
+        ap-southeast-1: true
+
+    - key: new_reporting_engine
+      description: Enable new Gen-AI reporting engine
+      regions:
+        us-east-1: true
+        eu-west-1: false
+        ap-southeast-1: false
+      rolloutPercentage: 0.05
+
+    - key: enhanced_metrics_dashboard
+      description: Enable FinOps and carbon dashboards
+      regions:
+        us-east-1: true
+        eu-west-1: true
+        ap-southeast-1: false
+
+# Observability & alerting
+monitoring:
+  prometheus:
+    scrapeInterval: 15s
+    evaluationInterval: 15s
+
+  alerts:
+    - name: CanaryErrorRateHigh
+      expr: |
+        (
+          sum(rate(http_requests_total{job="canary",status=~"5.."}[5m]))
+          /
+          sum(rate(http_requests_total{job="canary"}[5m]))
+        ) > 0.05
+      for: 5m
+      severity: critical
+      action: rollback
+
+    - name: CanaryLatencyHigh
+      expr: |
+        histogram_quantile(0.95,
+          sum(rate(http_request_duration_seconds_bucket{job="canary"}[5m])) by (le)
+        ) > 1.0
+      for: 5m
+      severity: warning
+      action: pause
+
+    - name: CanaryBudgetBurnCritical
+      expr: |
+        (
+          (1 - (sum(rate(http_requests_total{job="canary",status=~"2.."}[1h]))
+                / sum(rate(http_requests_total{job="canary"}[1h]))))
+          / (1 - 0.999)
+        ) > 14.4
+      for: 2m
+      severity: critical
+      action: rollback
+
+# Notifications
+notifications:
+  slack:
+    enabled: true
+    channels:
+      - name: "#ops-alerts"
+        events: [rollback, error, critical]
+      - name: "#deployments"
+        events: [start, complete, pause]
+
+  pagerduty:
+    enabled: true
+    integrationKey: ${PAGERDUTY_INTEGRATION_KEY}
+    events: [rollback, critical]
+
+  email:
+    enabled: true
+    recipients:
+      - ops-team@example.com
+      - sre-oncall@example.com
+    events: [rollback, complete]

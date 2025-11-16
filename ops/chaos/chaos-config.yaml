@@ -1,0 +1,247 @@
+# Chaos Engineering Program Configuration
+# Agent: chaos-experimenter, slo-validator, autoticket-integrator
+
+global:
+  enabled: true
+  environment: production  # or staging, development
+  dryRun: false
+
+  # Blast radius limits
+  blastRadius:
+    maxPodsAffected: 3
+    maxPercentageOfReplicas: 0.33  # Max 33% of replicas
+    excludeNamespaces:
+      - kube-system
+      - cert-manager
+      - monitoring
+
+  # SLO thresholds - experiments must not violate these
+  sloThresholds:
+    availability: 99.9      # 99.9% uptime
+    errorRate: 0.01         # < 1% error rate
+    latencyP95Ms: 500       # p95 < 500ms
+    latencyP99Ms: 1500      # p99 < 1500ms
+
+  # Automated ticket creation
+  ticketing:
+    enabled: true
+    provider: github  # or jira, linear
+    labels: [chaos-experiment, sre, incident]
+    assignTeam: sre-team
+
+# Experiment schedules
+experiments:
+  # Week 1: Pod Failures
+  - name: api-gateway-pod-kill
+    description: Kill random API gateway pods to test resilience
+    type: pod-kill
+    schedule: "0 10 * * MON"  # Every Monday at 10 AM UTC
+    enabled: true
+
+    targets:
+      namespace: teei-production
+      deployment: prod-teei-api-gateway
+      count: 1  # Kill 1 pod at a time
+
+    duration: 5m
+
+    validation:
+      - metric: availability
+        threshold: 99.9
+        window: 10m
+
+      - metric: error_rate
+        threshold: 0.01
+        window: 5m
+
+      - metric: latency_p95
+        threshold: 500
+        window: 5m
+
+  # Week 2: Network Latency
+  - name: reporting-network-latency
+    description: Inject 200ms latency to reporting service
+    type: network-latency
+    schedule: "0 10 * * TUE"  # Every Tuesday at 10 AM UTC
+    enabled: true
+
+    targets:
+      namespace: teei-production
+      deployment: prod-teei-reporting
+      percentage: 0.50  # Affect 50% of pods
+
+    config:
+      latencyMs: 200
+      jitterMs: 50
+
+    duration: 10m
+
+    validation:
+      - metric: latency_p95
+        threshold: 700  # Expect increased latency
+        window: 10m
+
+      - metric: error_rate
+        threshold: 0.01
+        window: 10m
+
+  # Week 3: Network Packet Loss
+  - name: database-network-loss
+    description: Inject 5% packet loss to database connections
+    type: network-loss
+    schedule: "0 10 * * WED"  # Every Wednesday at 10 AM UTC
+    enabled: true
+
+    targets:
+      namespace: teei-production
+      service: postgres
+      percentage: 0.25
+
+    config:
+      lossPercentage: 5
+      correlation: 25
+
+    duration: 5m
+
+    validation:
+      - metric: database_connection_errors
+        threshold: 0.05
+        window: 10m
+
+      - metric: error_rate
+        threshold: 0.02
+        window: 10m
+
+  # Week 4: Resource Stress
+  - name: cpu-stress-test
+    description: Stress CPU on corp-cockpit instances
+    type: cpu-stress
+    schedule: "0 10 * * THU"  # Every Thursday at 10 AM UTC
+    enabled: true
+
+    targets:
+      namespace: teei-production
+      deployment: prod-teei-corp-cockpit
+      count: 2
+
+    config:
+      cpuPercent: 80
+      workers: 2
+
+    duration: 10m
+
+    validation:
+      - metric: latency_p95
+        threshold: 1000
+        window: 10m
+
+      - metric: availability
+        threshold: 99.5
+        window: 10m
+
+  # Monthly: Multi-AZ Failure Simulation
+  - name: az-failure-simulation
+    description: Simulate availability zone failure
+    type: az-failure
+    schedule: "0 10 1 * *"  # First day of month at 10 AM UTC
+    enabled: true
+
+    targets:
+      region: us-east-1
+      availabilityZone: us-east-1a
+      percentage: 1.0  # All pods in AZ
+
+    duration: 15m
+
+    validation:
+      - metric: availability
+        threshold: 99.5
+        window: 20m
+
+      - metric: error_rate
+        threshold: 0.05
+        window: 20m
+
+      - metric: failover_time_seconds
+        threshold: 60
+        window: 20m
+
+# Notification settings
+notifications:
+  slack:
+    enabled: true
+    channel: "#chaos-experiments"
+    events: [start, complete, failed, slo_violation]
+
+  pagerduty:
+    enabled: true
+    severity: warning
+    events: [slo_violation, failed]
+
+  email:
+    enabled: true
+    recipients: [sre-team@example.com]
+    events: [slo_violation, failed]
+
+# Monitoring & reporting
+monitoring:
+  prometheus:
+    enabled: true
+    metricsPrefix: chaos_
+
+  grafana:
+    enabled: true
+    dashboardUid: chaos-experiments
+
+  datadog:
+    enabled: false
+
+# Safety mechanisms
+safety:
+  # Automatic abort conditions
+  abortOnSLOViolation: true
+  abortOnHighErrorRate: true
+  abortThreshold:
+    errorRate: 0.10  # Abort if error rate > 10%
+    availability: 95.0  # Abort if availability < 95%
+
+  # Cooldown between experiments
+  cooldownMinutes: 60
+
+  # Require manual approval for high-risk experiments
+  requireApproval:
+    - az-failure
+    - region-failure
+
+# Compliance & audit
+audit:
+  enabled: true
+  logExperiments: true
+  retentionDays: 90
+
+  # Include in SOC2 evidence
+  soc2Evidence: true
+  evidencePath: /reports/chaos/evidence/
+
+# Integration with incident management
+incidentManagement:
+  autoCreateIncident: false  # Only for SLO violations
+  incidentTemplate: |
+    **Chaos Experiment Result**
+
+    - Experiment: {{experiment.name}}
+    - Status: {{experiment.status}}
+    - SLO Violations: {{violations}}
+    - Started: {{experiment.startedAt}}
+    - Completed: {{experiment.completedAt}}
+
+    **Impact**:
+    - Availability: {{metrics.availability}}%
+    - Error Rate: {{metrics.errorRate}}%
+    - p95 Latency: {{metrics.latencyP95}}ms
+
+    **Next Steps**:
+    - [ ] Review experiment results
+    - [ ] Identify resilience gaps
+    - [ ] Create remediation tickets
+    - [ ] Update runbooks if needed
