@@ -1,0 +1,293 @@
+---
+/**
+ * Usage & Adoption Analytics - Phase H3-C
+ *
+ * Dashboards for tracking platform usage and user adoption:
+ * - Conversion funnels (Builder→Boardroom→Export)
+ * - Cohort retention heatmap
+ * - NPS results
+ * - Stuck-detector feed with Jira integration
+ *
+ * AC: All charts accessible (ARIA + table fallback),
+ * time-range/tenant/program filters, CSV export
+ */
+import BaseLayout from '../../../../layouts/BaseLayout.astro';
+import { hasPermission } from '../../../../types/roles';
+
+// Extract route parameters
+const { lang, companyId } = Astro.params;
+const user = Astro.locals.user;
+const tenantContext = Astro.locals.tenantContext;
+
+// Middleware handles auth/tenant validation
+if (!user || !tenantContext) {
+  return Astro.redirect('/login');
+}
+
+// Verify user has usage analytics access
+if (!hasPermission(user.role, 'VIEW_ANALYTICS')) {
+  return Astro.redirect(`/${lang}/cockpit/401?reason=insufficient_permissions`);
+}
+
+const canExport = hasPermission(user.role, 'EXPORT_DATA');
+
+// Feature flag check
+const USAGE_ANALYTICS_ENABLED = import.meta.env.PUBLIC_FEATURE_USAGE_ANALYTICS_V1 !== 'false';
+
+if (!USAGE_ANALYTICS_ENABLED) {
+  return Astro.redirect(`/${lang}/cockpit/${companyId}`);
+}
+---
+
+<BaseLayout title="Usage & Adoption Analytics - TEEI Corporate Cockpit" lang={lang}>
+  <div class="usage-header">
+    <div>
+      <h1>Usage & Adoption Analytics</h1>
+      <p class="breadcrumb">
+        <a href={`/${lang}/cockpit/${companyId}`}>Dashboard</a>
+        <span class="separator">›</span>
+        <span>Usage Analytics</span>
+      </p>
+    </div>
+    {canExport && (
+      <button id="export-csv-btn" class="button button-primary">
+        Export CSV
+      </button>
+    )}
+  </div>
+
+  <!-- Filters -->
+  <div id="usage-filters" data-company-id={companyId}></div>
+
+  <!-- Main Analytics Grid -->
+  <div class="usage-grid">
+    <!-- Conversion Funnel -->
+    <section class="usage-section full-width">
+      <h2>
+        <span class="icon" aria-hidden="true">🎯</span>
+        Conversion Funnel
+      </h2>
+      <p class="section-description">
+        User journey from report builder to boardroom presentation to export
+      </p>
+      <div id="conversion-funnel" data-company-id={companyId}></div>
+    </section>
+
+    <!-- Cohort Retention Heatmap -->
+    <section class="usage-section full-width">
+      <h2>
+        <span class="icon" aria-hidden="true">🔥</span>
+        Cohort Retention
+      </h2>
+      <p class="section-description">
+        Week-over-week retention by user cohort
+      </p>
+      <div id="retention-heatmap" data-company-id={companyId}></div>
+    </section>
+
+    <!-- NPS Results -->
+    <section class="usage-section">
+      <h2>
+        <span class="icon" aria-hidden="true">⭐</span>
+        Net Promoter Score
+      </h2>
+      <p class="section-description">
+        User satisfaction and NPS trends
+      </p>
+      <div id="nps-widget" data-company-id={companyId}></div>
+    </section>
+
+    <!-- Stuck Detector -->
+    <section class="usage-section">
+      <h2>
+        <span class="icon" aria-hidden="true">🚨</span>
+        Stuck Users
+      </h2>
+      <p class="section-description">
+        Users experiencing friction or abandonment
+      </p>
+      <div id="stuck-detector" data-company-id={companyId}></div>
+    </section>
+  </div>
+
+  <!-- Import React components -->
+  <script>
+    import { createRoot } from 'react-dom/client';
+    import UsageFilters from '../../../../components/usage/UsageFilters';
+    import ConversionFunnel from '../../../../components/usage/ConversionFunnel';
+    import RetentionHeatmap from '../../../../components/usage/RetentionHeatmap';
+    import NPSWidget from '../../../../components/usage/NPSWidget';
+    import StuckDetector from '../../../../components/usage/StuckDetector';
+
+    const companyId = document.querySelector('[data-company-id]')?.dataset.companyId || '';
+
+    // Mount filters
+    const filtersContainer = document.getElementById('usage-filters');
+    if (filtersContainer) {
+      createRoot(filtersContainer).render(<UsageFilters companyId={companyId} />);
+    }
+
+    // Mount conversion funnel
+    const funnelContainer = document.getElementById('conversion-funnel');
+    if (funnelContainer) {
+      createRoot(funnelContainer).render(<ConversionFunnel companyId={companyId} />);
+    }
+
+    // Mount retention heatmap
+    const retentionContainer = document.getElementById('retention-heatmap');
+    if (retentionContainer) {
+      createRoot(retentionContainer).render(<RetentionHeatmap companyId={companyId} />);
+    }
+
+    // Mount NPS widget
+    const npsContainer = document.getElementById('nps-widget');
+    if (npsContainer) {
+      createRoot(npsContainer).render(<NPSWidget companyId={companyId} />);
+    }
+
+    // Mount stuck detector
+    const stuckContainer = document.getElementById('stuck-detector');
+    if (stuckContainer) {
+      createRoot(stuckContainer).render(<StuckDetector companyId={companyId} />);
+    }
+
+    // CSV Export handler
+    const exportBtn = document.getElementById('export-csv-btn');
+    if (exportBtn) {
+      exportBtn.addEventListener('click', async () => {
+        try {
+          const response = await fetch(`/api/usage-analytics/${companyId}/export`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+          });
+
+          if (response.ok) {
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `usage-analytics-${companyId}-${Date.now()}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+          }
+        } catch (error) {
+          console.error('Export failed:', error);
+          alert('Failed to export CSV. Please try again.');
+        }
+      });
+    }
+  </script>
+</BaseLayout>
+
+<style>
+  .usage-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: calc(var(--spacing-unit) * 4);
+    flex-wrap: wrap;
+    gap: calc(var(--spacing-unit) * 2);
+    padding-bottom: calc(var(--spacing-unit) * 3);
+    border-bottom: 2px solid var(--color-border);
+  }
+
+  h1 {
+    font-size: 2rem;
+    margin-bottom: calc(var(--spacing-unit) * 1);
+    color: var(--color-text);
+  }
+
+  .breadcrumb {
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+  }
+
+  .breadcrumb a {
+    color: var(--color-primary);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+
+  .breadcrumb a:hover {
+    color: var(--color-primary-dark);
+  }
+
+  .separator {
+    margin: 0 calc(var(--spacing-unit) * 1);
+  }
+
+  .button {
+    padding: calc(var(--spacing-unit) * 1.5) calc(var(--spacing-unit) * 3);
+    border-radius: var(--border-radius);
+    font-weight: 600;
+    font-size: 0.875rem;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+  }
+
+  .button-primary {
+    background-color: var(--color-primary);
+    color: white;
+  }
+
+  .button-primary:hover {
+    opacity: 0.9;
+  }
+
+  .usage-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+    gap: calc(var(--spacing-unit) * 4);
+    margin-top: calc(var(--spacing-unit) * 3);
+  }
+
+  .usage-section {
+    background-color: var(--color-bg);
+    padding: calc(var(--spacing-unit) * 4);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--color-border);
+  }
+
+  .usage-section.full-width {
+    grid-column: 1 / -1;
+  }
+
+  .usage-section h2 {
+    font-size: 1.5rem;
+    margin-bottom: calc(var(--spacing-unit) * 1);
+    color: var(--color-text);
+    display: flex;
+    align-items: center;
+    gap: calc(var(--spacing-unit) * 1.5);
+  }
+
+  .usage-section .icon {
+    font-size: 1.75rem;
+  }
+
+  .section-description {
+    color: var(--color-text-secondary);
+    margin-bottom: calc(var(--spacing-unit) * 3);
+    line-height: 1.5;
+    font-size: 0.9375rem;
+  }
+
+  @media (max-width: 768px) {
+    .usage-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .usage-header {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .usage-section {
+      padding: calc(var(--spacing-unit) * 3);
+    }
+  }
+</style>

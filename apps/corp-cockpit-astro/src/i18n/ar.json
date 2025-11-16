@@ -1,0 +1,142 @@
+{
+  "app": {
+    "title": "لوحة القيادة المؤسسية",
+    "subtitle": "لوحة تحليلات تنفيذية"
+  },
+  "nav": {
+    "dashboard": "لوحة القيادة",
+    "trends": "الاتجاهات",
+    "q2q": "تغذية Q2Q",
+    "sroi": "العائد الاجتماعي على الاستثمار",
+    "vis": "درجة تأثير المتطوعين",
+    "settings": "الإعدادات",
+    "logout": "تسجيل الخروج",
+    "boardroomLive": "العرض الحي لغرفة الاجتماعات",
+    "adminStudio": "استوديو المسؤول",
+    "usage": "الاستخدام والتبني"
+  },
+  "boardroom": {
+    "title": "وضع غرفة الاجتماعات",
+    "enterMode": "دخول وضع غرفة الاجتماعات",
+    "exitMode": "الخروج",
+    "evidence": "الأدلة",
+    "export": "تصدير PDF",
+    "controls": {
+      "navigate": "التنقل",
+      "toggleEvidence": "تبديل الأدلة",
+      "refresh": "تحديث",
+      "exit": "خروج"
+    },
+    "status": {
+      "live": "تحديثات حية",
+      "polling": "وضع الاستقصاء",
+      "offline": "غير متصل",
+      "disconnected": "غير متصل"
+    }
+  },
+  "adminStudio": {
+    "title": "استوديو المسؤول",
+    "residency": {
+      "title": "إقامة البيانات",
+      "description": "تكوين مكان تخزين ومعالجة بيانات شركتك",
+      "currentRegion": "المنطقة الحالية",
+      "selectRegion": "اختر منطقة البيانات",
+      "confirmChange": "تأكيد تغيير المنطقة",
+      "warning": "سيؤدي هذا التغيير إلى بدء ترحيل البيانات فورًا"
+    },
+    "embedTokens": {
+      "title": "رموز التضمين",
+      "description": "إدارة رموز المصادقة لتضمين لوحات القيادة",
+      "createNew": "إنشاء رمز جديد",
+      "tokenName": "اسم الرمز",
+      "saveToken": "احفظ هذا الرمز الآن - لن يظهر مرة أخرى!",
+      "revoke": "إلغاء"
+    },
+    "domainAllowlist": {
+      "title": "قائمة النطاقات المسموح بها",
+      "description": "حدد النطاقات المصرح لها بتضمين لوحات القيادة الخاصة بك",
+      "addDomain": "إضافة نطاق",
+      "remove": "إزالة"
+    },
+    "activityStream": {
+      "title": "تدفق النشاط",
+      "description": "تغذية فورية للإجراءات الإدارية وتغييرات التكوين",
+      "filterAll": "الكل",
+      "filterInfo": "معلومات",
+      "filterWarning": "تحذير",
+      "filterCritical": "حرج",
+      "live": "مباشر"
+    }
+  },
+  "usage": {
+    "title": "تحليلات الاستخدام والتبني",
+    "exportCSV": "تصدير CSV",
+    "filters": {
+      "timeRange": "النطاق الزمني",
+      "tenant": "المستأجر",
+      "program": "البرنامج",
+      "last7days": "آخر 7 أيام",
+      "last30days": "آخر 30 يومًا",
+      "last90days": "آخر 90 يومًا",
+      "lastYear": "العام الماضي",
+      "allTenants": "جميع المستأجرين",
+      "allPrograms": "جميع البرامج"
+    },
+    "funnel": {
+      "title": "مسار التحويل",
+      "description": "رحلة المستخدم من منشئ التقارير إلى العرض التقديمي إلى التصدير",
+      "builder": "منشئ التقارير",
+      "boardroom": "عرض غرفة الاجتماعات",
+      "export": "تصدير/مشاركة",
+      "dropoff": "انخفاض"
+    },
+    "retention": {
+      "title": "الاحتفاظ بالمجموعة",
+      "description": "الاحتفاظ أسبوعًا بعد أسبوع حسب مجموعة المستخدمين",
+      "week": "الأسبوع",
+      "low": "منخفض",
+      "high": "عالٍ"
+    },
+    "nps": {
+      "title": "صافي نقاط الترويج",
+      "description": "رضا المستخدم واتجاهات NPS",
+      "excellent": "ممتاز",
+      "great": "رائع",
+      "good": "جيد",
+      "needsImprovement": "يحتاج إلى تحسين",
+      "critical": "حرج",
+      "promoters": "المروجون",
+      "passives": "السلبيون",
+      "detractors": "المنتقدون",
+      "basedOn": "بناءً على {count} ردود"
+    },
+    "stuckDetector": {
+      "title": "المستخدمون العالقون",
+      "description": "المستخدمون الذين يواجهون احتكاكًا أو تخليًا",
+      "severity": {
+        "high": "عالٍ",
+        "medium": "متوسط",
+        "low": "منخفض"
+      },
+      "stuckAt": "عالق عند:",
+      "duration": "المدة:",
+      "lastAction": "آخر إجراء:",
+      "viewJira": "عرض تذكرة Jira",
+      "noStuckUsers": "✅ لم يتم اكتشاف مستخدمين عالقين - الجميع يتدفق بسلاسة!"
+    }
+  },
+  "common": {
+    "loading": "جار التحميل...",
+    "error": "خطأ",
+    "noData": "لا توجد بيانات متاحة",
+    "refresh": "تحديث",
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "confirm": "تأكيد",
+    "delete": "حذف",
+    "edit": "تحرير",
+    "close": "إغلاق",
+    "viewDetails": "عرض التفاصيل",
+    "viewAsTable": "عرض كجدول (يمكن الوصول إليه)"
+  }
+}

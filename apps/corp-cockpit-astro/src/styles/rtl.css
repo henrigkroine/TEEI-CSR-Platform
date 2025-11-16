@@ -1,0 +1,332 @@
+/**
+ * RTL (Right-to-Left) Support - Phase H3-D
+ *
+ * CSS overrides for Arabic and Hebrew languages.
+ * Applies logical properties and directional adjustments.
+ */
+
+/* RTL Language Detection */
+[lang="ar"],
+[lang="he"],
+[dir="rtl"] {
+  direction: rtl;
+  text-align: right;
+}
+
+/* Logical Property Overrides */
+[lang="ar"] *,
+[lang="he"] *,
+[dir="rtl"] * {
+  /* Use logical properties for better RTL support */
+  margin-inline-start: initial;
+  margin-inline-end: initial;
+  padding-inline-start: initial;
+  padding-inline-end: initial;
+}
+
+/* Navigation & Breadcrumbs */
+[lang="ar"] .breadcrumb,
+[lang="he"] .breadcrumb,
+[dir="rtl"] .breadcrumb {
+  direction: rtl;
+}
+
+[lang="ar"] .breadcrumb .separator,
+[lang="he"] .breadcrumb .separator,
+[dir="rtl"] .breadcrumb .separator {
+  transform: scaleX(-1);
+}
+
+/* Icons & Arrows */
+[lang="ar"] .arrow-right,
+[lang="he"] .arrow-right,
+[dir="rtl"] .arrow-right {
+  transform: scaleX(-1);
+}
+
+[lang="ar"] .arrow-left,
+[lang="he"] .arrow-left,
+[dir="rtl"] .arrow-left {
+  transform: scaleX(-1);
+}
+
+/* Flex Layouts */
+[lang="ar"] .flex-row,
+[lang="he"] .flex-row,
+[dir="rtl"] .flex-row {
+  flex-direction: row-reverse;
+}
+
+/* Grid Layouts */
+[lang="ar"] .grid-rtl,
+[lang="he"] .grid-rtl,
+[dir="rtl"] .grid-rtl {
+  direction: rtl;
+}
+
+/* Boardroom Controls */
+[lang="ar"] .presenter-controls,
+[lang="he"] .presenter-controls,
+[dir="rtl"] .presenter-controls {
+  direction: rtl;
+}
+
+[lang="ar"] .view-nav,
+[lang="he"] .view-nav,
+[dir="rtl"] .view-nav {
+  flex-direction: row-reverse;
+}
+
+/* Tables */
+[lang="ar"] table,
+[lang="he"] table,
+[dir="rtl"] table {
+  direction: rtl;
+}
+
+[lang="ar"] th,
+[lang="he"] th,
+[dir="rtl"] th {
+  text-align: right;
+}
+
+[lang="ar"] td,
+[lang="he"] td,
+[dir="rtl"] td {
+  text-align: right;
+}
+
+/* Forms */
+[lang="ar"] .form-group,
+[lang="he"] .form-group,
+[dir="rtl"] .form-group {
+  direction: rtl;
+}
+
+[lang="ar"] input,
+[lang="he"] input,
+[dir="rtl"] input {
+  text-align: right;
+}
+
+[lang="ar"] select,
+[lang="he"] select,
+[dir="rtl"] select {
+  text-align: right;
+}
+
+/* Buttons with Icons */
+[lang="ar"] .button-with-icon,
+[lang="he"] .button-with-icon,
+[dir="rtl"] .button-with-icon {
+  flex-direction: row-reverse;
+}
+
+/* Modals & Dialogs */
+[lang="ar"] .dialog-actions,
+[lang="he"] .dialog-actions,
+[dir="rtl"] .dialog-actions {
+  flex-direction: row-reverse;
+}
+
+/* Lists */
+[lang="ar"] ul,
+[lang="he"] ul,
+[dir="rtl"] ul {
+  padding-right: 1.5rem;
+  padding-left: 0;
+}
+
+[lang="ar"] ol,
+[lang="he"] ol,
+[dir="rtl"] ol {
+  padding-right: 1.5rem;
+  padding-left: 0;
+}
+
+/* Tooltips & Popovers */
+[lang="ar"] .tooltip,
+[lang="he"] .tooltip,
+[dir="rtl"] .tooltip {
+  text-align: right;
+}
+
+/* Charts & Visualizations */
+[lang="ar"] .chart-legend,
+[lang="he"] .chart-legend,
+[dir="rtl"] .chart-legend {
+  direction: rtl;
+}
+
+/* Heatmaps */
+[lang="ar"] .heatmap-grid,
+[lang="he"] .heatmap-grid,
+[dir="rtl"] .heatmap-grid {
+  direction: rtl;
+}
+
+/* Activity Stream */
+[lang="ar"] .event-item,
+[lang="he"] .event-item,
+[dir="rtl"] .event-item {
+  flex-direction: row-reverse;
+}
+
+[lang="ar"] .event-icon,
+[lang="he"] .event-icon,
+[dir="rtl"] .event-icon {
+  order: 2;
+}
+
+[lang="ar"] .event-content,
+[lang="he"] .event-content,
+[dir="rtl"] .event-content {
+  order: 1;
+}
+
+/* Stuck Detector */
+[lang="ar"] .stuck-header,
+[lang="he"] .stuck-header,
+[dir="rtl"] .stuck-header {
+  flex-direction: row-reverse;
+}
+
+[lang="ar"] .detail-row,
+[lang="he"] .detail-row,
+[dir="rtl"] .detail-row {
+  flex-direction: row-reverse;
+  text-align: right;
+}
+
+/* Conversion Funnel */
+[lang="ar"] .funnel-stage,
+[lang="he"] .funnel-stage,
+[dir="rtl"] .funnel-stage {
+  direction: rtl;
+}
+
+/* Admin Studio */
+[lang="ar"] .admin-studio-grid,
+[lang="he"] .admin-studio-grid,
+[dir="rtl"] .admin-studio-grid {
+  direction: rtl;
+}
+
+[lang="ar"] .section-header,
+[lang="he"] .section-header,
+[dir="rtl"] .section-header {
+  flex-direction: row-reverse;
+}
+
+/* Embed Token Manager */
+[lang="ar"] .token-header,
+[lang="he"] .token-header,
+[dir="rtl"] .token-header {
+  flex-direction: row-reverse;
+}
+
+/* Domain Allow-List */
+[lang="ar"] .domain-item,
+[lang="he"] .domain-item,
+[dir="rtl"] .domain-item {
+  flex-direction: row-reverse;
+}
+
+/* NPS Widget */
+[lang="ar"] .distribution-item,
+[lang="he"] .distribution-item,
+[dir="rtl"] .distribution-item {
+  flex-direction: row-reverse;
+}
+
+/* Evidence Overlay */
+[lang="ar"] .evidence-header,
+[lang="he"] .evidence-header,
+[dir="rtl"] .evidence-header {
+  flex-direction: row-reverse;
+}
+
+[lang="ar"] .evidence-item-header,
+[lang="he"] .evidence-item-header,
+[dir="rtl"] .evidence-item-header {
+  flex-direction: row-reverse;
+}
+
+/* Scrollbar Flip for RTL */
+[lang="ar"] .scrollable,
+[lang="he"] .scrollable,
+[dir="rtl"] .scrollable {
+  direction: rtl;
+}
+
+/* Typography Adjustments */
+[lang="ar"] {
+  font-family: 'Segoe UI', 'Tahoma', 'Arial', sans-serif;
+}
+
+[lang="he"] {
+  font-family: 'Arial', 'Segoe UI', 'Tahoma', sans-serif;
+}
+
+/* Number Formatting (keep LTR for numbers) */
+[lang="ar"] .number,
+[lang="he"] .number,
+[dir="rtl"] .number {
+  direction: ltr;
+  display: inline-block;
+}
+
+/* Date Formatting (keep LTR for dates in numeric format) */
+[lang="ar"] .date,
+[lang="he"] .date,
+[dir="rtl"] .date {
+  direction: ltr;
+  display: inline-block;
+}
+
+/* Code & Technical Text */
+[lang="ar"] code,
+[lang="he"] code,
+[dir="rtl"] code {
+  direction: ltr;
+  display: inline-block;
+  text-align: left;
+}
+
+[lang="ar"] pre,
+[lang="he"] pre,
+[dir="rtl"] pre {
+  direction: ltr;
+  text-align: left;
+}
+
+/* URLs & Email */
+[lang="ar"] .url,
+[lang="he"] .url,
+[dir="rtl"] .url {
+  direction: ltr;
+  display: inline-block;
+}
+
+[lang="ar"] .email,
+[lang="he"] .email,
+[dir="rtl"] .email {
+  direction: ltr;
+  display: inline-block;
+}
+
+/* Accessibility: Ensure focus indicators work in RTL */
+[lang="ar"] *:focus,
+[lang="he"] *:focus,
+[dir="rtl"] *:focus {
+  outline-offset: 2px;
+}
+
+/* Print Styles for RTL */
+@media print {
+  [lang="ar"],
+  [lang="he"],
+  [dir="rtl"] {
+    direction: rtl;
+  }
+}

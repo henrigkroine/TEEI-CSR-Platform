@@ -1,0 +1,142 @@
+{
+  "app": {
+    "title": "תא הטייס הארגוני",
+    "subtitle": "לוח ניתוח מנהלים"
+  },
+  "nav": {
+    "dashboard": "לוח בקרה",
+    "trends": "מגמות",
+    "q2q": "הזנת Q2Q",
+    "sroi": "תשואה חברתית להשקעה",
+    "vis": "ציון השפעת מתנדבים",
+    "settings": "הגדרות",
+    "logout": "התנתק",
+    "boardroomLive": "חדר ישיבות חי",
+    "adminStudio": "אולפן מנהל",
+    "usage": "שימוש ואימוץ"
+  },
+  "boardroom": {
+    "title": "מצב חדר ישיבות",
+    "enterMode": "כניסה למצב חדר ישיבות",
+    "exitMode": "יציאה",
+    "evidence": "ראיות",
+    "export": "ייצא PDF",
+    "controls": {
+      "navigate": "ניווט",
+      "toggleEvidence": "הצג/הסתר ראיות",
+      "refresh": "רענן",
+      "exit": "יציאה"
+    },
+    "status": {
+      "live": "עדכונים חיים",
+      "polling": "מצב סקר",
+      "offline": "לא מקוון",
+      "disconnected": "מנותק"
+    }
+  },
+  "adminStudio": {
+    "title": "אולפן מנהל",
+    "residency": {
+      "title": "מגורי נתונים",
+      "description": "הגדר היכן נתוני החברה שלך מאוחסנים ומעובדים",
+      "currentRegion": "אזור נוכחי",
+      "selectRegion": "בחר אזור נתונים",
+      "confirmChange": "אשר שינוי אזור",
+      "warning": "שינוי זה יתחיל העברת נתונים מיידית"
+    },
+    "embedTokens": {
+      "title": "אסימוני הטמעה",
+      "description": "ניהול אסימוני אימות להטמעת לוחות בקרה",
+      "createNew": "צור אסימון חדש",
+      "tokenName": "שם אסימון",
+      "saveToken": "שמור אסימון זה כעת - הוא לא יוצג שוב!",
+      "revoke": "בטל"
+    },
+    "domainAllowlist": {
+      "title": "רשימת דומיינים מורשים",
+      "description": "ציין אילו דומיינים מורשים להטמיע את לוחות הבקרה שלך",
+      "addDomain": "הוסף דומיין",
+      "remove": "הסר"
+    },
+    "activityStream": {
+      "title": "זרם פעילות",
+      "description": "הזנה בזמן אמת של פעולות ניהוליות ושינויי תצורה",
+      "filterAll": "הכל",
+      "filterInfo": "מידע",
+      "filterWarning": "אזהרה",
+      "filterCritical": "קריטי",
+      "live": "חי"
+    }
+  },
+  "usage": {
+    "title": "ניתוח שימוש ואימוץ",
+    "exportCSV": "ייצא CSV",
+    "filters": {
+      "timeRange": "טווח זמן",
+      "tenant": "דייר",
+      "program": "תוכנית",
+      "last7days": "7 ימים אחרונים",
+      "last30days": "30 ימים אחרונים",
+      "last90days": "90 ימים אחרונים",
+      "lastYear": "שנה שעברה",
+      "allTenants": "כל הדיירים",
+      "allPrograms": "כל התוכניות"
+    },
+    "funnel": {
+      "title": "משפך המרה",
+      "description": "מסע המשתמש מבונה דוחות למצגת לייצוא",
+      "builder": "בונה דוחות",
+      "boardroom": "תצוגת חדר ישיבות",
+      "export": "ייצוא/שיתוף",
+      "dropoff": "נשירה"
+    },
+    "retention": {
+      "title": "שימור קבוצה",
+      "description": "שימור שבוע אחר שבוע לפי קבוצת משתמשים",
+      "week": "שבוע",
+      "low": "נמוך",
+      "high": "גבוה"
+    },
+    "nps": {
+      "title": "ציון מקדם נטו",
+      "description": "שביעות רצון משתמשים ומגמות NPS",
+      "excellent": "מצוין",
+      "great": "נהדר",
+      "good": "טוב",
+      "needsImprovement": "צריך שיפור",
+      "critical": "קריטי",
+      "promoters": "מקדמים",
+      "passives": "פסיביים",
+      "detractors": "מבקרים",
+      "basedOn": "מבוסס על {count} תגובות"
+    },
+    "stuckDetector": {
+      "title": "משתמשים תקועים",
+      "description": "משתמשים החווים חיכוך או נטישה",
+      "severity": {
+        "high": "גבוה",
+        "medium": "בינוני",
+        "low": "נמוך"
+      },
+      "stuckAt": "תקוע ב:",
+      "duration": "משך:",
+      "lastAction": "פעולה אחרונה:",
+      "viewJira": "הצג כרטיס Jira",
+      "noStuckUsers": "✅ לא זוהו משתמשים תקועים - כולם זורמים בצורה חלקה!"
+    }
+  },
+  "common": {
+    "loading": "טוען...",
+    "error": "שגיאה",
+    "noData": "אין נתונים זמינים",
+    "refresh": "רענן",
+    "save": "שמור",
+    "cancel": "בטל",
+    "confirm": "אשר",
+    "delete": "מחק",
+    "edit": "ערוך",
+    "close": "סגור",
+    "viewDetails": "הצג פרטים",
+    "viewAsTable": "הצג כטבלה (נגיש)"
+  }
+}
