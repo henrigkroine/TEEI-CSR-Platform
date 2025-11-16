@@ -1,0 +1,177 @@
+---
+# Istio PeerAuthentication - STRICT mTLS enforcement
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: default-mtls-strict
+  namespace: teei-us-east-1
+  labels:
+    region: us-east-1
+    security-policy: strict
+spec:
+  mtls:
+    mode: STRICT
+
+---
+# Mesh-wide mTLS enforcement (fallback)
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: mesh-wide-mtls
+  namespace: istio-system
+spec:
+  mtls:
+    mode: STRICT
+
+---
+# DestinationRule - Enforce TLS for all outbound traffic
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: default-mtls-destination
+  namespace: teei-us-east-1
+  labels:
+    region: us-east-1
+spec:
+  host: "*.teei-us-east-1.svc.cluster.local"
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL
+    connectionPool:
+      tcp:
+        maxConnections: 1000
+      http:
+        http1MaxPendingRequests: 1000
+        http2MaxRequests: 1000
+        maxRequestsPerConnection: 2
+    outlierDetection:
+      consecutive5xxErrors: 5
+      interval: 30s
+      baseEjectionTime: 30s
+      maxEjectionPercent: 50
+      minHealthPercent: 40
+
+---
+# DestinationRule - PostgreSQL mTLS
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: postgres-mtls
+  namespace: teei-us-east-1
+spec:
+  host: postgresql.teei-us-east-1.svc.cluster.local
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL
+
+---
+# DestinationRule - ClickHouse mTLS
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: clickhouse-mtls
+  namespace: teei-us-east-1
+spec:
+  host: clickhouse.teei-us-east-1.svc.cluster.local
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL
+
+---
+# DestinationRule - NATS mTLS
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: nats-mtls
+  namespace: teei-us-east-1
+spec:
+  host: nats.teei-us-east-1.svc.cluster.local
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL
+
+---
+# AuthorizationPolicy - Deny by default, allow explicit
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: deny-all-default
+  namespace: teei-us-east-1
+spec:
+  action: DENY
+  rules:
+  - {}
+
+---
+# AuthorizationPolicy - Allow API Gateway ingress
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-ingress-to-gateway
+  namespace: teei-us-east-1
+spec:
+  selector:
+    matchLabels:
+      app: teei-api-gateway
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        namespaces: ["istio-system", "ingress-nginx"]
+
+---
+# AuthorizationPolicy - Allow gateway to backend services
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-gateway-to-services
+  namespace: teei-us-east-1
+spec:
+  selector:
+    matchLabels:
+      component: backend
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        principals: ["cluster.local/ns/teei-us-east-1/sa/api-gateway"]
+    to:
+    - operation:
+        methods: ["GET", "POST", "PUT", "DELETE", "PATCH"]
+        paths: ["/*"]
+
+---
+# ServiceEntry - Allow external AI APIs (OpenAI, Anthropic)
+apiVersion: networking.istio.io/v1beta1
+kind: ServiceEntry
+metadata:
+  name: external-ai-apis
+  namespace: teei-us-east-1
+spec:
+  hosts:
+  - "api.openai.com"
+  - "api.anthropic.com"
+  ports:
+  - number: 443
+    name: https
+    protocol: HTTPS
+  location: MESH_EXTERNAL
+  resolution: DNS
+
+---
+# ServiceEntry - Allow Discord API
+apiVersion: networking.istio.io/v1beta1
+kind: ServiceEntry
+metadata:
+  name: external-discord-api
+  namespace: teei-us-east-1
+spec:
+  hosts:
+  - "discord.com"
+  - "*.discord.com"
+  ports:
+  - number: 443
+    name: https
+    protocol: HTTPS
+  location: MESH_EXTERNAL
+  resolution: DNS

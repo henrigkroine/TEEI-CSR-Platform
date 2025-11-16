@@ -1,0 +1,41 @@
+---
+# GDPR-specific configuration patch for all services
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: "*"
+spec:
+  template:
+    metadata:
+      labels:
+        pii-handling: "true"
+        encryption-at-rest: "aes-256"
+        data-residency: "eu"
+      annotations:
+        gdpr.retention-days: "365"
+        gdpr.deletion-policy: "soft-delete"
+        gdpr.consent-tracking: "enabled"
+        gdpr.right-to-erasure: "enabled"
+        gdpr.right-to-access: "enabled"
+        gdpr.data-portability: "enabled"
+        audit-logging: "enabled"
+        audit-retention-days: "2555"  # 7 years for GDPR compliance
+    spec:
+      containers:
+      - name: "*"
+        env:
+        - name: GDPR_ENABLED
+          value: "true"
+        - name: DATA_RESIDENCY
+          value: "eu"
+        - name: PII_ENCRYPTION_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: gdpr-encryption-keys
+              key: pii-key-id
+        - name: AUDIT_LOG_LEVEL
+          value: "detailed"
+        - name: CONSENT_VALIDATION
+          value: "strict"
+        - name: DATA_RETENTION_DAYS
+          value: "365"

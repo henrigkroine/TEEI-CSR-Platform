@@ -1,11 +1,22 @@
+<<<<<<< HEAD
 # Argo Rollout for API Gateway with canary strategy and SLO gates
 # Progressive: 5% → 15% → 30% → 60% → 100%
 # Gates: p95 latency, error rate, saturation
+=======
+---
+# Argo Rollout for API Gateway with progressive canary delivery
+>>>>>>> origin/claude/ga-cutover-phase-one-0111mH9eWczXzBtpzUU5uUVU
 apiVersion: argoproj.io/v1alpha1
 kind: Rollout
 metadata:
   name: teei-api-gateway
+<<<<<<< HEAD
   namespace: teei-production-us-east-1
+=======
+  labels:
+    app: teei-api-gateway
+    component: gateway
+>>>>>>> origin/claude/ga-cutover-phase-one-0111mH9eWczXzBtpzUU5uUVU
 spec:
   replicas: 5
   revisionHistoryLimit: 5
@@ -16,19 +27,49 @@ spec:
     metadata:
       labels:
         app: teei-api-gateway
+<<<<<<< HEAD
     spec:
+=======
+        component: gateway
+    spec:
+      serviceAccountName: api-gateway
+>>>>>>> origin/claude/ga-cutover-phase-one-0111mH9eWczXzBtpzUU5uUVU
       containers:
       - name: api-gateway
         image: ghcr.io/henrigkroine/teei-api-gateway:v1.0.0
         ports:
+<<<<<<< HEAD
         - containerPort: 8080
           name: http
         - containerPort: 9090
           name: metrics
+=======
+        - containerPort: 3000
+          name: http
+          protocol: TCP
+        env:
+        - name: NODE_ENV
+          value: production
+        - name: PORT
+          value: "3000"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+>>>>>>> origin/claude/ga-cutover-phase-one-0111mH9eWczXzBtpzUU5uUVU
   strategy:
     canary:
       maxSurge: "25%"
       maxUnavailable: 0
+<<<<<<< HEAD
       # SLO-gated canary steps
       steps:
       - setWeight: 5
@@ -36,34 +77,74 @@ spec:
       - analysis:
           templates:
           - templateName: api-gateway-slo-analysis
+=======
+      # Progressive canary: 5% → 15% → 30% → 60% → 100%
+      steps:
+      - setWeight: 5
+      - pause:
+          duration: 5m
+      - analysis:
+          templates:
+          - templateName: success-rate
+>>>>>>> origin/claude/ga-cutover-phase-one-0111mH9eWczXzBtpzUU5uUVU
           args:
           - name: service-name
             value: teei-api-gateway
       - setWeight: 15
+<<<<<<< HEAD
       - pause: {duration: 3m}
       - analysis:
           templates:
           - templateName: api-gateway-slo-analysis
+=======
+      - pause:
+          duration: 5m
+      - analysis:
+          templates:
+          - templateName: success-rate
+          - templateName: latency-p95
+>>>>>>> origin/claude/ga-cutover-phase-one-0111mH9eWczXzBtpzUU5uUVU
           args:
           - name: service-name
             value: teei-api-gateway
       - setWeight: 30
+<<<<<<< HEAD
       - pause: {duration: 5m}
       - analysis:
           templates:
           - templateName: api-gateway-slo-analysis
+=======
+      - pause:
+          duration: 10m
+      - analysis:
+          templates:
+          - templateName: success-rate
+          - templateName: latency-p95
+          - templateName: error-budget
+>>>>>>> origin/claude/ga-cutover-phase-one-0111mH9eWczXzBtpzUU5uUVU
           args:
           - name: service-name
             value: teei-api-gateway
       - setWeight: 60
+<<<<<<< HEAD
       - pause: {duration: 5m}
       - analysis:
           templates:
           - templateName: api-gateway-slo-analysis
+=======
+      - pause:
+          duration: 10m
+      - analysis:
+          templates:
+          - templateName: success-rate
+          - templateName: latency-p95
+          - templateName: error-budget
+>>>>>>> origin/claude/ga-cutover-phase-one-0111mH9eWczXzBtpzUU5uUVU
           args:
           - name: service-name
             value: teei-api-gateway
       - setWeight: 100
+<<<<<<< HEAD
       trafficRouting:
         istio:
           virtualService:
@@ -79,21 +160,71 @@ kind: AnalysisTemplate
 metadata:
   name: api-gateway-slo-analysis
   namespace: teei-production-us-east-1
+=======
+      - pause: {}  # Manual gate before full promotion
+      trafficRouting:
+        istio:
+          virtualService:
+            name: api-gateway-vsvc
+            routes:
+            - primary
+      analysis:
+        successfulRunHistoryLimit: 5
+        unsuccessfulRunHistoryLimit: 5
+
+---
+# AnalysisTemplate: Success Rate Check
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: success-rate
 spec:
   args:
   - name: service-name
   metrics:
+  - name: success-rate
+    interval: 1m
+    count: 3
+    successCondition: result[0] >= 0.999  # 99.9% success rate
+    failureLimit: 1
+    provider:
+      prometheus:
+        address: http://prometheus.observability.svc.cluster.local:9090
+        query: |
+          sum(rate(http_requests_total{service="{{args.service-name}}",status!~"5.."}[5m]))
+          /
+          sum(rate(http_requests_total{service="{{args.service-name}}"}[5m]))
+
+---
+# AnalysisTemplate: P95 Latency Check
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: latency-p95
+>>>>>>> origin/claude/ga-cutover-phase-one-0111mH9eWczXzBtpzUU5uUVU
+spec:
+  args:
+  - name: service-name
+  metrics:
+<<<<<<< HEAD
   # Metric 1: p95 latency < 500ms
   - name: latency-p95
     interval: 30s
     count: 4
     successCondition: result < 500
+=======
+  - name: latency-p95
+    interval: 1m
+    count: 3
+    successCondition: result[0] <= 500  # P95 latency < 500ms
+>>>>>>> origin/claude/ga-cutover-phase-one-0111mH9eWczXzBtpzUU5uUVU
     failureLimit: 2
     provider:
       prometheus:
         address: http://prometheus.observability.svc.cluster.local:9090
         query: |
           histogram_quantile(0.95,
+<<<<<<< HEAD
             sum(rate(http_request_duration_seconds_bucket{service="{{args.service-name}}"}[5m])) by (le)
           ) * 1000
   # Metric 2: Error rate < 0.1%
@@ -102,10 +233,31 @@ spec:
     count: 4
     successCondition: result < 0.001
     failureLimit: 2
+=======
+            sum(rate(http_request_duration_milliseconds_bucket{service="{{args.service-name}}"}[5m])) by (le)
+          )
+
+---
+# AnalysisTemplate: Error Budget Burn Rate
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: error-budget
+spec:
+  args:
+  - name: service-name
+  metrics:
+  - name: error-budget-burn
+    interval: 2m
+    count: 3
+    successCondition: result[0] <= 0.001  # Error budget burn < 0.1%
+    failureLimit: 1
+>>>>>>> origin/claude/ga-cutover-phase-one-0111mH9eWczXzBtpzUU5uUVU
     provider:
       prometheus:
         address: http://prometheus.observability.svc.cluster.local:9090
         query: |
+<<<<<<< HEAD
           sum(rate(http_requests_total{service="{{args.service-name}}",status=~"5.."}[5m]))
           /
           sum(rate(http_requests_total{service="{{args.service-name}}"}[5m]))
@@ -133,3 +285,57 @@ spec:
           avg(container_memory_working_set_bytes{pod=~"{{args.service-name}}-.*"}
           /
           container_spec_memory_limit_bytes{pod=~"{{args.service-name}}-.*"}) * 100
+=======
+          (
+            sum(rate(http_requests_total{service="{{args.service-name}}",status=~"5.."}[10m]))
+            /
+            sum(rate(http_requests_total{service="{{args.service-name}}"}[10m]))
+          ) - 0.001
+
+---
+# Istio VirtualService for traffic splitting
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: api-gateway-vsvc
+spec:
+  hosts:
+  - api-gateway.teei.svc.cluster.local
+  http:
+  - name: primary
+    match:
+    - headers:
+        canary:
+          exact: "true"
+    route:
+    - destination:
+        host: api-gateway
+        subset: canary
+      weight: 100
+  - name: primary
+    route:
+    - destination:
+        host: api-gateway
+        subset: stable
+      weight: 100
+    - destination:
+        host: api-gateway
+        subset: canary
+      weight: 0
+
+---
+# Istio DestinationRule for subsets
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: api-gateway-dr
+spec:
+  host: api-gateway.teei.svc.cluster.local
+  subsets:
+  - name: stable
+    labels:
+      rollouts-pod-template-hash: stable
+  - name: canary
+    labels:
+      rollouts-pod-template-hash: canary
+>>>>>>> origin/claude/ga-cutover-phase-one-0111mH9eWczXzBtpzUU5uUVU

@@ -1,0 +1,108 @@
+---
+# Istio PeerAuthentication - STRICT mTLS enforcement for EU
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: default-mtls-strict
+  namespace: teei-eu-central-1
+  labels:
+    region: eu-central-1
+    security-policy: strict
+    gdpr-compliant: "true"
+spec:
+  mtls:
+    mode: STRICT
+
+---
+# DestinationRule - Enforce TLS for all outbound traffic in EU
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: default-mtls-destination
+  namespace: teei-eu-central-1
+  labels:
+    region: eu-central-1
+    gdpr-compliant: "true"
+spec:
+  host: "*.teei-eu-central-1.svc.cluster.local"
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL
+    connectionPool:
+      tcp:
+        maxConnections: 1000
+      http:
+        http1MaxPendingRequests: 1000
+        http2MaxRequests: 1000
+        maxRequestsPerConnection: 2
+    outlierDetection:
+      consecutive5xxErrors: 5
+      interval: 30s
+      baseEjectionTime: 30s
+      maxEjectionPercent: 50
+      minHealthPercent: 40
+
+---
+# AuthorizationPolicy - Deny by default, allow explicit
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: deny-all-default
+  namespace: teei-eu-central-1
+spec:
+  action: DENY
+  rules:
+  - {}
+
+---
+# AuthorizationPolicy - Allow API Gateway ingress
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-ingress-to-gateway
+  namespace: teei-eu-central-1
+spec:
+  selector:
+    matchLabels:
+      app: teei-api-gateway
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        namespaces: ["istio-system", "ingress-nginx"]
+
+---
+# AuthorizationPolicy - Block cross-region traffic (GDPR enforcement)
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: block-us-region-egress
+  namespace: teei-eu-central-1
+  annotations:
+    gdpr-policy: "data-residency-enforcement"
+spec:
+  action: DENY
+  rules:
+  - to:
+    - operation:
+        hosts:
+        - "*.teei-us-east-1.svc.cluster.local"
+        - "*.us-east-1.amazonaws.com"
+
+---
+# ServiceEntry - Allow external AI APIs (with EU endpoints only)
+apiVersion: networking.istio.io/v1beta1
+kind: ServiceEntry
+metadata:
+  name: external-ai-apis-eu
+  namespace: teei-eu-central-1
+spec:
+  hosts:
+  - "api.openai.com"
+  - "api.anthropic.com"
+  ports:
+  - number: 443
+    name: https
+    protocol: HTTPS
+  location: MESH_EXTERNAL
+  resolution: DNS

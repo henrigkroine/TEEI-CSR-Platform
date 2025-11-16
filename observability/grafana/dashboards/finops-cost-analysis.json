@@ -1,0 +1,250 @@
+{
+  "dashboard": {
+    "title": "FinOps - Cost Analysis & Budget Tracking",
+    "tags": ["finops", "cost", "budget", "soc2"],
+    "timezone": "utc",
+    "schemaVersion": 38,
+    "version": 1,
+    "refresh": "5m",
+    "time": {
+      "from": "now-30d",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "Total Cloud Spend - Last 30 Days",
+        "type": "stat",
+        "gridPos": {"x": 0, "y": 0, "w": 6, "h": 4},
+        "targets": [
+          {
+            "datasource": "ClickHouse",
+            "rawSql": "SELECT sum(cost_usd) FROM teei_analytics.cloud_costs WHERE date >= today() - INTERVAL 30 DAY",
+            "format": "table"
+          }
+        ],
+        "options": {
+          "graphMode": "area",
+          "colorMode": "value",
+          "unit": "currencyUSD",
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"]
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 80000, "color": "yellow"},
+                {"value": 100000, "color": "red"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "Cost by Region",
+        "type": "piechart",
+        "gridPos": {"x": 6, "y": 0, "w": 6, "h": 4},
+        "targets": [
+          {
+            "datasource": "ClickHouse",
+            "rawSql": "SELECT region, sum(cost_usd) as cost FROM teei_analytics.cloud_costs WHERE date >= today() - INTERVAL 30 DAY GROUP BY region",
+            "format": "table"
+          }
+        ],
+        "options": {
+          "pieType": "donut",
+          "displayLabels": ["name", "percent"]
+        }
+      },
+      {
+        "id": 3,
+        "title": "Budget Utilization - US East",
+        "type": "gauge",
+        "gridPos": {"x": 12, "y": 0, "w": 6, "h": 4},
+        "targets": [
+          {
+            "datasource": "ClickHouse",
+            "rawSql": "SELECT (sum(cost_usd) / 50000) * 100 as utilization FROM teei_analytics.cloud_costs WHERE region = 'us-east-1' AND toYYYYMM(date) = toYYYYMM(today())",
+            "format": "table"
+          }
+        ],
+        "options": {
+          "showThresholdLabels": true,
+          "showThresholdMarkers": true
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "min": 0,
+            "max": 100,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 70, "color": "yellow"},
+                {"value": 90, "color": "red"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 4,
+        "title": "Budget Utilization - EU Central",
+        "type": "gauge",
+        "gridPos": {"x": 18, "y": 0, "w": 6, "h": 4},
+        "targets": [
+          {
+            "datasource": "ClickHouse",
+            "rawSql": "SELECT (sum(cost_usd) / 40000) * 100 as utilization FROM teei_analytics.cloud_costs WHERE region = 'eu-central-1' AND toYYYYMM(date) = toYYYYMM(today())",
+            "format": "table"
+          }
+        ],
+        "options": {
+          "showThresholdLabels": true,
+          "showThresholdMarkers": true
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "min": 0,
+            "max": 100,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 70, "color": "yellow"},
+                {"value": 90, "color": "red"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 5,
+        "title": "Daily Cost Trend",
+        "type": "timeseries",
+        "gridPos": {"x": 0, "y": 4, "w": 12, "h": 8},
+        "targets": [
+          {
+            "datasource": "ClickHouse",
+            "rawSql": "SELECT date as time, region, sum(cost_usd) as cost FROM teei_analytics.cloud_costs WHERE date >= today() - INTERVAL 30 DAY GROUP BY date, region ORDER BY date",
+            "format": "time_series"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyUSD",
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 10,
+              "stacking": {"mode": "normal"}
+            }
+          }
+        }
+      },
+      {
+        "id": 6,
+        "title": "Cost Forecast - Next 30 Days",
+        "type": "timeseries",
+        "gridPos": {"x": 12, "y": 4, "w": 12, "h": 8},
+        "targets": [
+          {
+            "datasource": "ClickHouse",
+            "rawSql": "SELECT forecast_date as time, region, predicted_cost_usd as forecast, confidence_lower, confidence_upper FROM teei_analytics.cost_forecasts WHERE forecast_date >= today() AND forecast_date <= today() + INTERVAL 30 DAY ORDER BY forecast_date",
+            "format": "time_series"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyUSD",
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 20
+            }
+          }
+        }
+      },
+      {
+        "id": 7,
+        "title": "Top 10 Services by Cost",
+        "type": "table",
+        "gridPos": {"x": 0, "y": 12, "w": 12, "h": 8},
+        "targets": [
+          {
+            "datasource": "ClickHouse",
+            "rawSql": "SELECT service, region, sum(cost_usd) as total_cost, avg(cost_usd) as avg_daily_cost FROM teei_analytics.cloud_costs WHERE date >= today() - INTERVAL 30 DAY GROUP BY service, region ORDER BY total_cost DESC LIMIT 10",
+            "format": "table"
+          }
+        ],
+        "fieldConfig": {
+          "overrides": [
+            {
+              "matcher": {"id": "byName", "options": "total_cost"},
+              "properties": [{"id": "unit", "value": "currencyUSD"}]
+            },
+            {
+              "matcher": {"id": "byName", "options": "avg_daily_cost"},
+              "properties": [{"id": "unit", "value": "currencyUSD"}]
+            }
+          ]
+        }
+      },
+      {
+        "id": 8,
+        "title": "Budget Alerts",
+        "type": "table",
+        "gridPos": {"x": 12, "y": 12, "w": 12, "h": 8},
+        "targets": [
+          {
+            "datasource": "ClickHouse",
+            "rawSql": "SELECT alert_date, region, cost_center, budget_limit_usd, actual_cost_usd, utilization_percent, alert_level FROM teei_analytics.budget_alerts WHERE alert_date >= today() - INTERVAL 7 DAY ORDER BY alert_date DESC, utilization_percent DESC LIMIT 20",
+            "format": "table"
+          }
+        ],
+        "fieldConfig": {
+          "overrides": [
+            {
+              "matcher": {"id": "byName", "options": "alert_level"},
+              "properties": [
+                {
+                  "id": "custom.cellOptions",
+                  "value": {
+                    "type": "color-background",
+                    "mode": "basic"
+                  }
+                },
+                {
+                  "id": "mappings",
+                  "value": [
+                    {"type": "value", "options": {"critical": {"color": "red", "index": 0}}},
+                    {"type": "value", "options": {"warning": {"color": "yellow", "index": 1}}},
+                    {"type": "value", "options": {"info": {"color": "blue", "index": 2}}}
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "annotations": {
+      "list": [
+        {
+          "name": "Deployments",
+          "datasource": "Prometheus",
+          "expr": "changes(kube_deployment_status_observed_generation[5m]) > 0",
+          "tagKeys": "deployment,namespace"
+        }
+      ]
+    }
+  }
+}

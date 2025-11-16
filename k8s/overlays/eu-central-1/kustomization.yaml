@@ -1,13 +1,18 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
+<<<<<<< HEAD
 namespace: teei-production-eu-central-1
+=======
+namespace: teei-eu-central-1
+>>>>>>> origin/claude/ga-cutover-phase-one-0111mH9eWczXzBtpzUU5uUVU
 
 namePrefix: eu-
 
 commonLabels:
   environment: production
   region: eu-central-1
+<<<<<<< HEAD
   data-residency: eu
   managed-by: kustomize
   cost-center: production-eu
@@ -21,6 +26,19 @@ commonAnnotations:
   compliance.teei.cloud/schrems-ii: "compliant"
 
 # Reference production overlay as base
+=======
+  managed-by: kustomize
+  data-residency: eu
+  gdpr-zone: "true"
+
+commonAnnotations:
+  gdpr-region: "true"
+  cost-center: "eu-operations"
+  sla-tier: "platinum"
+  compliance: "gdpr,soc2"
+
+# Reference all base services
+>>>>>>> origin/claude/ga-cutover-phase-one-0111mH9eWczXzBtpzUU5uUVU
 resources:
 - ../../base/api-gateway
 - ../../base/unified-profile
@@ -39,10 +57,24 @@ resources:
 - ../../base/reporting
 - ../../base/corp-cockpit-astro
 - ../../base/observability
+<<<<<<< HEAD
 - ../../base/ingress.yaml
 - ../../base/network-policies.yaml
 
 # Regional ConfigMap with GDPR settings
+=======
+
+# Ingress and NetworkPolicies
+- ../../base/ingress.yaml
+- ../../base/network-policies.yaml
+
+# Regional security policies
+- mtls-strict.yaml
+- admission-policies.yaml
+- gdpr-policies.yaml
+
+# ConfigMap generator for EU Central region
+>>>>>>> origin/claude/ga-cutover-phase-one-0111mH9eWczXzBtpzUU5uUVU
 configMapGenerator:
 - name: env-config
   literals:
@@ -51,6 +83,7 @@ configMapGenerator:
   - LOG_LEVEL=warn
   - ENABLE_DEBUG=false
   - DATA_RESIDENCY=eu
+<<<<<<< HEAD
   - GDPR_STRICT_MODE=true
   - SCHREMS_II_COMPLIANT=true
   - BACKUP_REGION=eu-west-1
@@ -70,6 +103,26 @@ patchesStrategicMerge:
 - gdpr-network-policy-patch.yaml
 
 # Production image tags
+=======
+  - GDPR_ENABLED=true
+  - DATA_RETENTION_DAYS=365
+  - PII_ENCRYPTION_REQUIRED=true
+  - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector.observability.svc.cluster.local:4317
+  - POSTGRES_REGION=eu-central-1
+  - CLICKHOUSE_REGION=eu-central-1
+  - NATS_REGION=eu-central-1
+
+# Patches for production EU region
+patchesStrategicMerge:
+- replica-patch.yaml
+- resource-limits-patch.yaml
+- security-patch.yaml
+- ingress-patch.yaml
+- residency-patch.yaml
+- gdpr-patch.yaml
+
+# Image tags for production (use specific version tags with digest)
+>>>>>>> origin/claude/ga-cutover-phase-one-0111mH9eWczXzBtpzUU5uUVU
 images:
 - name: ghcr.io/henrigkroine/teei-api-gateway
   newTag: v1.0.0
@@ -103,3 +156,17 @@ images:
   newTag: v1.0.0
 - name: ghcr.io/henrigkroine/teei-corp-cockpit
   newTag: v1.0.0
+<<<<<<< HEAD
+=======
+
+# Replica configuration for EU region
+replicas:
+- name: teei-api-gateway
+  count: 4
+- name: teei-unified-profile
+  count: 3
+- name: teei-reporting
+  count: 3
+- name: teei-analytics
+  count: 3
+>>>>>>> origin/claude/ga-cutover-phase-one-0111mH9eWczXzBtpzUU5uUVU

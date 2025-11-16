@@ -1,0 +1,99 @@
+---
+# Kyverno ClusterPolicy - Verify image signatures (EU region)
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: verify-image-signatures
+  annotations:
+    policies.kyverno.io/title: Verify Image Signatures
+    policies.kyverno.io/severity: high
+spec:
+  validationFailureAction: Enforce
+  background: false
+  webhookTimeoutSeconds: 30
+  rules:
+  - name: verify-ghcr-images
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+          namespaces:
+          - teei-eu-central-1
+    verifyImages:
+    - imageReferences:
+      - "ghcr.io/henrigkroine/*"
+      attestors:
+      - count: 1
+        entries:
+        - keys:
+            publicKeys: |-
+              -----BEGIN PUBLIC KEY-----
+              # Placeholder: Replace with actual cosign public key
+              -----END PUBLIC KEY-----
+
+---
+# Kyverno ClusterPolicy - Require resource limits
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-resource-limits
+  annotations:
+    policies.kyverno.io/title: Require Resource Limits
+    policies.kyverno.io/severity: medium
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+  - name: require-cpu-memory-limits
+    match:
+      any:
+      - resources:
+          kinds:
+          - Deployment
+          - StatefulSet
+          namespaces:
+          - teei-eu-central-1
+    validate:
+      message: "CPU and memory limits are required"
+      pattern:
+        spec:
+          template:
+            spec:
+              containers:
+              - resources:
+                  limits:
+                    memory: "?*"
+                    cpu: "?*"
+                  requests:
+                    memory: "?*"
+                    cpu: "?*"
+
+---
+# Kyverno ClusterPolicy - Disallow privileged containers
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: disallow-privileged-containers
+  annotations:
+    policies.kyverno.io/title: Disallow Privileged Containers
+    policies.kyverno.io/severity: high
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+  - name: deny-privileged
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+          namespaces:
+          - teei-eu-central-1
+    validate:
+      message: "Privileged containers are not allowed"
+      pattern:
+        spec:
+          containers:
+          - =(securityContext):
+              =(privileged): false

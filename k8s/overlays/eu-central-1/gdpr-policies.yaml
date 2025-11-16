@@ -1,0 +1,208 @@
+---
+# GDPR-specific admission policies for EU region
+# Kyverno ClusterPolicy - Require PII encryption labels
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-pii-encryption-labels
+  annotations:
+    policies.kyverno.io/title: Require PII Encryption Labels
+    policies.kyverno.io/severity: critical
+    policies.kyverno.io/description: |
+      All resources handling PII must be labeled with encryption status.
+      Required for GDPR compliance.
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+  - name: require-pii-labels
+    match:
+      any:
+      - resources:
+          kinds:
+          - Deployment
+          - StatefulSet
+          - Job
+          namespaces:
+          - teei-eu-central-1
+    validate:
+      message: "GDPR: Resources must have pii-handling and encryption-at-rest labels"
+      pattern:
+        metadata:
+          labels:
+            pii-handling: "?*"
+            encryption-at-rest: "?*"
+            data-residency: "eu"
+
+---
+# Kyverno ClusterPolicy - Require data retention annotations
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-data-retention-policy
+  annotations:
+    policies.kyverno.io/title: Require Data Retention Policy
+    policies.kyverno.io/severity: high
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+  - name: data-retention-annotation
+    match:
+      any:
+      - resources:
+          kinds:
+          - Deployment
+          namespaces:
+          - teei-eu-central-1
+    validate:
+      message: "GDPR: Must specify data retention policy in days"
+      pattern:
+        metadata:
+          annotations:
+            gdpr.retention-days: "?*"
+            gdpr.deletion-policy: "soft-delete|hard-delete|anonymize"
+
+---
+# Kyverno ClusterPolicy - Block US region cross-egress
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: block-us-egress-gdpr
+  annotations:
+    policies.kyverno.io/title: Block US Cross-Region Egress
+    policies.kyverno.io/severity: critical
+    policies.kyverno.io/description: |
+      GDPR Article 45: Prevent data transfer to regions without
+      adequacy decision unless explicit consent exists.
+spec:
+  validationFailureAction: Enforce
+  background: false
+  rules:
+  - name: deny-us-service-references
+    match:
+      any:
+      - resources:
+          kinds:
+          - Service
+          - Ingress
+          namespaces:
+          - teei-eu-central-1
+    validate:
+      message: "GDPR violation: Cannot route to US region without adequacy decision"
+      deny:
+        conditions:
+          any:
+          - key: "{{ request.object.spec.externalName || '' }}"
+            operator: Contains
+            value: "us-east-1"
+          - key: "{{ request.object.metadata.annotations.\"cross-region\" || 'false' }}"
+            operator: Equals
+            value: "us"
+
+---
+# Kyverno ClusterPolicy - Require audit logging
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-audit-logging
+  annotations:
+    policies.kyverno.io/title: Require Audit Logging
+    policies.kyverno.io/severity: high
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+  - name: audit-logging-enabled
+    match:
+      any:
+      - resources:
+          kinds:
+          - Deployment
+          namespaces:
+          - teei-eu-central-1
+    validate:
+      message: "GDPR Article 30: Audit logging must be enabled"
+      pattern:
+        metadata:
+          annotations:
+            audit-logging: "enabled"
+            audit-retention-days: ">90"
+
+---
+# Kyverno ClusterPolicy - Enforce TLS 1.3 minimum
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: enforce-tls-1-3
+  annotations:
+    policies.kyverno.io/title: Enforce TLS 1.3 Minimum
+    policies.kyverno.io/severity: high
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+  - name: tls-version-check
+    match:
+      any:
+      - resources:
+          kinds:
+          - Ingress
+          namespaces:
+          - teei-eu-central-1
+    validate:
+      message: "GDPR: Minimum TLS version must be 1.2 or higher"
+      pattern:
+        metadata:
+          annotations:
+            (alb.ingress.kubernetes.io/ssl-policy): "ELBSecurityPolicy-TLS-1-2-*"
+
+---
+# OPA Gatekeeper ConstraintTemplate - GDPR consent validation
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: gdprconsentvalidation
+spec:
+  crd:
+    spec:
+      names:
+        kind: GDPRConsentValidation
+  targets:
+  - target: admission.k8s.gatekeeper.sh
+    rego: |
+      package gdprconsentvalidation
+
+      violation[{"msg": msg}] {
+        # Check if service handles PII
+        input.review.object.metadata.labels["pii-handling"] == "true"
+
+        # Ensure consent tracking is enabled
+        not input.review.object.metadata.annotations["gdpr.consent-tracking"]
+
+        msg := "GDPR Article 7: Services handling PII must enable consent tracking"
+      }
+
+      violation[{"msg": msg}] {
+        # Check if right-to-erasure is configured
+        input.review.object.metadata.labels["pii-handling"] == "true"
+
+        not input.review.object.metadata.annotations["gdpr.right-to-erasure"]
+
+        msg := "GDPR Article 17: Must support right to erasure (RTBF)"
+      }
+
+---
+# OPA Gatekeeper Constraint - Enforce GDPR consent
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: GDPRConsentValidation
+metadata:
+  name: enforce-gdpr-consent
+spec:
+  enforcementAction: deny
+  match:
+    kinds:
+    - apiGroups: ["apps"]
+      kinds: ["Deployment"]
+    namespaces:
+    - teei-eu-central-1

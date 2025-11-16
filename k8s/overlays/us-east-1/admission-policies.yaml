@@ -1,0 +1,224 @@
+---
+# Kyverno ClusterPolicy - Require image signatures
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: verify-image-signatures
+  annotations:
+    policies.kyverno.io/title: Verify Image Signatures
+    policies.kyverno.io/severity: high
+    policies.kyverno.io/description: |
+      All container images must be signed and verified before deployment.
+      Blocks unsigned images to prevent supply chain attacks.
+spec:
+  validationFailureAction: Enforce
+  background: false
+  webhookTimeoutSeconds: 30
+  rules:
+  - name: verify-ghcr-images
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+          namespaces:
+          - teei-us-east-1
+    verifyImages:
+    - imageReferences:
+      - "ghcr.io/henrigkroine/*"
+      attestors:
+      - count: 1
+        entries:
+        - keys:
+            publicKeys: |-
+              -----BEGIN PUBLIC KEY-----
+              # Placeholder: Replace with actual cosign public key
+              -----END PUBLIC KEY-----
+
+---
+# Kyverno ClusterPolicy - Require resource limits
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-resource-limits
+  annotations:
+    policies.kyverno.io/title: Require Resource Limits
+    policies.kyverno.io/severity: medium
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+  - name: require-cpu-memory-limits
+    match:
+      any:
+      - resources:
+          kinds:
+          - Deployment
+          - StatefulSet
+          - DaemonSet
+          namespaces:
+          - teei-us-east-1
+    validate:
+      message: "CPU and memory limits are required for all containers"
+      pattern:
+        spec:
+          template:
+            spec:
+              containers:
+              - resources:
+                  limits:
+                    memory: "?*"
+                    cpu: "?*"
+                  requests:
+                    memory: "?*"
+                    cpu: "?*"
+
+---
+# Kyverno ClusterPolicy - Disallow privileged containers
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: disallow-privileged-containers
+  annotations:
+    policies.kyverno.io/title: Disallow Privileged Containers
+    policies.kyverno.io/severity: high
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+  - name: deny-privileged
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+          namespaces:
+          - teei-us-east-1
+    validate:
+      message: "Privileged containers are not allowed"
+      pattern:
+        spec:
+          containers:
+          - =(securityContext):
+              =(privileged): false
+
+---
+# Kyverno ClusterPolicy - Require pod security standards
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: enforce-pod-security-restricted
+  annotations:
+    policies.kyverno.io/title: Enforce Pod Security Restricted
+    policies.kyverno.io/severity: high
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+  - name: restricted-capabilities
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+          namespaces:
+          - teei-us-east-1
+    validate:
+      message: "Containers must drop ALL capabilities and run as non-root"
+      pattern:
+        spec:
+          containers:
+          - securityContext:
+              allowPrivilegeEscalation: false
+              runAsNonRoot: true
+              capabilities:
+                drop:
+                - ALL
+              seccompProfile:
+                type: RuntimeDefault
+
+---
+# Kyverno ClusterPolicy - Block cross-region data egress
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: block-cross-region-egress
+  annotations:
+    policies.kyverno.io/title: Block Cross-Region Data Egress
+    policies.kyverno.io/severity: critical
+    policies.kyverno.io/description: |
+      Enforce GDPR data residency by blocking pods from accessing
+      services in other regions unless explicitly allowed.
+spec:
+  validationFailureAction: Audit  # Start with audit, switch to Enforce after validation
+  background: false
+  rules:
+  - name: deny-eu-egress
+    match:
+      any:
+      - resources:
+          kinds:
+          - Service
+          namespaces:
+          - teei-us-east-1
+    validate:
+      message: "US region services cannot access EU region endpoints"
+      deny:
+        conditions:
+          any:
+          - key: "{{ request.object.spec.externalName }}"
+            operator: Contains
+            value: "eu-central-1"
+
+---
+# OPA Gatekeeper ConstraintTemplate - Require cost allocation tags
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: requiredlabels
+spec:
+  crd:
+    spec:
+      names:
+        kind: RequiredLabels
+      validation:
+        openAPIV3Schema:
+          type: object
+          properties:
+            labels:
+              type: array
+              items:
+                type: string
+  targets:
+  - target: admission.k8s.gatekeeper.sh
+    rego: |
+      package requiredlabels
+
+      violation[{"msg": msg, "details": {"missing_labels": missing}}] {
+        provided := {label | input.review.object.metadata.labels[label]}
+        required := {label | label := input.parameters.labels[_]}
+        missing := required - provided
+        count(missing) > 0
+        msg := sprintf("Missing required labels: %v", [missing])
+      }
+
+---
+# OPA Gatekeeper Constraint - Enforce cost/compliance labels
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: RequiredLabels
+metadata:
+  name: require-cost-allocation-labels
+spec:
+  enforcementAction: deny
+  match:
+    kinds:
+    - apiGroups: ["apps"]
+      kinds: ["Deployment", "StatefulSet", "DaemonSet"]
+    namespaces:
+    - teei-us-east-1
+  parameters:
+    labels:
+    - "cost-center"
+    - "region"
+    - "environment"
+    - "data-residency"
