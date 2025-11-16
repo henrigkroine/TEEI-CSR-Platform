@@ -177,6 +177,6 @@ export default function AtAGlance({ companyId, period }: Props) {
           color: #ef4444;
         }
       `}</style>
-    </div>
+    </section>
   );
 }

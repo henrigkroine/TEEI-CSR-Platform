@@ -13,12 +13,19 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import {
   SSEClient,
-  PollingFallback,
+  // PollingFallback, // TODO: Implement PollingFallback or remove references
   createSSEClient,
   type SSEEvent,
   type SSEError,
   type ConnectionState,
 } from '../utils/sseClient';
+
+// Temporary stub for PollingFallback until implemented
+class PollingFallback {
+  constructor(options: any) {}
+  start() {}
+  stop() {}
+}
 
 export interface UseSSEConnectionOptions {
   /** Company ID for tenant-scoped events */

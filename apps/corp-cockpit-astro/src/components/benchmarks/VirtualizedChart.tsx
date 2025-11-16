@@ -3,6 +3,7 @@
  *
  * Performance-optimized chart component with windowing for large datasets
  * Uses debouncing for zoom/pan interactions and memoization for rendering
+ * Supports dark mode with WCAG AA compliant color palettes
  */
 
 import { memo, useMemo, useState, useCallback, useRef, useEffect } from 'react';
@@ -20,6 +21,8 @@ import {
   type ChartData,
 } from 'chart.js';
 import { Line, Bar } from 'react-chartjs-2';
+import { useTheme } from '../theme/ThemeProvider';
+import { getChartTheme } from '../../utils/chartThemes';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend);
 
@@ -60,6 +63,10 @@ const VirtualizedChart = memo(function VirtualizedChart({
   const [isLoading, setIsLoading] = useState(showSkeleton);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Get theme for color palette
+  const { resolvedTheme } = useTheme();
+  const theme = useMemo(() => getChartTheme(resolvedTheme === 'dark'), [resolvedTheme]);
+
   // Virtualize data - only show a window of points
   const virtualizedData = useMemo(() => {
     if (data.length <= windowSize) {
@@ -70,7 +77,7 @@ const VirtualizedChart = memo(function VirtualizedChart({
     return data.slice(start, Math.min(end, data.length));
   }, [data, visibleRange, windowSize]);
 
-  // Prepare chart data with memoization
+  // Prepare chart data with memoization and theme colors
   const chartData: ChartData<typeof type> = useMemo(() => {
     return {
       labels: virtualizedData.map((d) => d.label),
@@ -78,8 +85,8 @@ const VirtualizedChart = memo(function VirtualizedChart({
         {
           label: yAxisLabel || 'Value',
           data: virtualizedData.map((d) => d.value),
-          backgroundColor: type === 'bar' ? 'rgba(59, 130, 246, 0.8)' : 'rgba(59, 130, 246, 0.2)',
-          borderColor: 'rgba(59, 130, 246, 1)',
+          backgroundColor: type === 'bar' ? theme.backgroundColor[0] : theme.backgroundColor[0].replace('0.8', '0.2'),
+          borderColor: theme.borderColor[0],
           borderWidth: 2,
           pointRadius: type === 'line' && data.length > 100 ? 0 : 3,
           pointHoverRadius: 5,
@@ -88,7 +95,7 @@ const VirtualizedChart = memo(function VirtualizedChart({
         },
       ],
     };
-  }, [virtualizedData, type, yAxisLabel, data.length]);
+  }, [virtualizedData, type, yAxisLabel, data.length, theme]);
 
   // Debounced range update for smooth scrolling/panning
   const updateVisibleRange = useCallback(
@@ -104,7 +111,7 @@ const VirtualizedChart = memo(function VirtualizedChart({
     [data.length]
   );
 
-  // Chart options with performance optimizations
+  // Chart options with performance optimizations and theme colors
   const options: ChartOptions<typeof type> = useMemo(
     () => ({
       responsive: true,
@@ -124,15 +131,24 @@ const VirtualizedChart = memo(function VirtualizedChart({
             size: 16,
             weight: 'bold',
           },
+          color: theme.textColor,
         },
         legend: {
           display: true,
           position: 'top',
+          labels: {
+            color: theme.textColor,
+          },
         },
         tooltip: {
           enabled: true,
           mode: 'index',
           intersect: false,
+          backgroundColor: theme.tooltipBg,
+          titleColor: theme.tooltipText,
+          bodyColor: theme.tooltipText,
+          borderColor: theme.tooltipBorder,
+          borderWidth: 1,
           callbacks: {
             label: (context) => {
               const label = context.dataset.label || '';
@@ -152,19 +168,22 @@ const VirtualizedChart = memo(function VirtualizedChart({
             minRotation: 0,
             autoSkip: true,
             maxTicksLimit: 20,
+            color: theme.textColor,
           },
         },
         y: {
           beginAtZero: true,
           grid: {
-            color: 'rgba(0, 0, 0, 0.05)',
+            color: theme.gridColor,
           },
           ticks: {
             callback: (value) => value.toLocaleString(),
+            color: theme.textColor,
           },
           title: {
             display: !!yAxisLabel,
             text: yAxisLabel,
+            color: theme.textColor,
           },
         },
       },
@@ -173,7 +192,7 @@ const VirtualizedChart = memo(function VirtualizedChart({
       normalized: true,
       spanGaps: false,
     }),
-    [title, yAxisLabel, data.length]
+    [title, yAxisLabel, data.length, theme]
   );
 
   // Progressive loading simulation

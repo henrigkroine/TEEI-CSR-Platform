@@ -90,7 +90,7 @@ export default function LanguageSwitcher({ currentLang }: LanguageSwitcherProps)
             setIsOpen(true);
           }
         }}
-        className="inline-flex items-center justify-center w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 min-h-[44px] bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+        className="inline-flex items-center justify-center w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 min-h-[44px] bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500"
         aria-expanded={isOpen}
         aria-haspopup="true"
         aria-label={`Language selector. Current language: ${languageNames[currentLang]}`}
@@ -124,7 +124,7 @@ export default function LanguageSwitcher({ currentLang }: LanguageSwitcherProps)
                     lang === currentLang
                       ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white'
                       : 'text-gray-700 dark:text-gray-200'
-                  } block w-full text-left px-4 py-2.5 min-h-[44px] text-sm hover:bg-gray-100 dark:hover:bg-gray-700 focus:bg-gray-100 dark:focus:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500`}
+                  } block w-full text-left px-4 py-2.5 min-h-[44px] text-sm hover:bg-gray-100 dark:hover:bg-gray-700 focus-visible:bg-gray-100 dark:focus-visible:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500`}
                   role="menuitem"
                   tabIndex={-1}
                   aria-current={lang === currentLang ? 'true' : undefined}

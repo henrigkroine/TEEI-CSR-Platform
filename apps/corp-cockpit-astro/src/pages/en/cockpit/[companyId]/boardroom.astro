@@ -1,0 +1,153 @@
+---
+/**
+ * Boardroom Mode Page
+ *
+ * Full-screen dashboard view optimized for executive presentations.
+ * Uses minimal layout with no navigation/sidebar, large typography,
+ * live SSE updates with offline support, and accessibility features.
+ *
+ * Route: /en/cockpit/[companyId]/boardroom
+ *
+ * @module pages/boardroom
+ */
+
+import { BoardroomView } from '../../../../components/boardroom/BoardroomView';
+
+const { companyId } = Astro.params;
+
+// Verify company access (mock implementation)
+// TODO: Replace with actual access verification
+if (!companyId) {
+  return Astro.redirect('/en');
+}
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="description" content="TEEI Boardroom Mode - Executive Dashboard" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0f172a" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <title>Boardroom Mode</title>
+
+    <!-- Preconnect for performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+
+    <!-- Service Worker Registration -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker
+            .register('/sw.js', { scope: '/' })
+            .then((registration) => {
+              console.log('[PWA] Service Worker registered:', registration.scope);
+
+              // Check for updates periodically
+              setInterval(() => {
+                registration.update();
+              }, 60000); // Every 60 seconds
+            })
+            .catch((error) => {
+              console.error('[PWA] Service Worker registration failed:', error);
+            });
+        });
+      }
+    </script>
+
+    <style is:global>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #0f172a;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue',
+          Arial, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+
+      #app {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+      }
+
+      main {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        padding: 0;
+        margin: 0;
+      }
+
+      /* Hide skip links in boardroom */
+      .skip-link {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border-width: 0;
+      }
+
+      /* High DPI Display Support */
+      @media (-webkit-device-pixel-ratio: 2), (resolution: 192dpi) {
+        body {
+          -webkit-font-smoothing: antialiased;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <main id="main-content">
+        <BoardroomView
+          client:load
+          companyId={companyId}
+          sseUrl="/api/sse/metrics"
+          autoRefreshInterval={30}
+          staleTimeout={300}
+          title="TEEI Corporate Cockpit - Boardroom Mode"
+        />
+      </main>
+    </div>
+
+    <script>
+      // Prevent accidental navigation away in boardroom mode
+      window.addEventListener('beforeunload', (e) => {
+        e.preventDefault();
+        e.returnValue = '';
+      });
+
+      // Prevent context menu in boardroom mode (optional)
+      // Uncomment if needed: document.addEventListener('contextmenu', (e) => e.preventDefault());
+
+      // Log boardroom mode entry for analytics
+      console.info('[Boardroom] Mode activated for company:', document.location.pathname);
+
+      // Detect fullscreen changes and log
+      document.addEventListener('fullscreenchange', () => {
+        if (!document.fullscreenElement) {
+          console.info('[Boardroom] Exited fullscreen mode');
+        }
+      });
+    </script>
+  </body>
+</html>

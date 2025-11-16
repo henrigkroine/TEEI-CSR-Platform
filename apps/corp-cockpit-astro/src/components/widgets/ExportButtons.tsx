@@ -192,6 +192,6 @@ export default function ExportButtons({ companyId, period }: Props) {
           margin-bottom: 4px;
         }
       `}</style>
-    </div>
+    </section>
   );
 }

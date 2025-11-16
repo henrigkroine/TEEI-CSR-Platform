@@ -2,19 +2,24 @@
  * SSE (Server-Sent Events) Client for Real-Time Dashboard Updates
  *
  * Features:
- * - Auto-reconnection with exponential backoff
+ * - 6-state FSM for robust connection lifecycle
+ * - Exponential backoff with jitter (2s → 32s, max 10 retries)
+ * - Last-Event-ID resume for gap-free event streaming
+ * - localStorage persistence across page reloads
  * - Event queuing when offline
  * - Integration with offline storage (IndexedDB)
  * - Type-safe event handling
+ *
+ * @module sseClient
  */
 
-export type ConnectionState = 'connecting' | 'connected' | 'disconnected' | 'error' | 'reconnecting' | 'failed';
+export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'reconnecting' | 'error' | 'failed';
 
 export interface SSEError {
   message: string;
   code?: string;
   timestamp: number;
-  retryable?: boolean;
+  retryable: boolean;
 }
 
 export type SSEEventType =
@@ -38,44 +43,57 @@ export interface SSEClientOptions {
   url: string;
   companyId: string;
   onEvent?: (event: SSEEvent) => void;
-  onError?: (error: Error) => void;
-  onOpen?: () => void;
-  onClose?: () => void;
+  onError?: (error: SSEError) => void;
+  onStateChange?: (newState: ConnectionState, oldState: ConnectionState) => void;
+  onConnect?: () => void;
+  onDisconnect?: () => void;
   maxReconnectAttempts?: number;
-  reconnectInterval?: number;
+  baseDelay?: number;
+  maxDelay?: number;
 }
 
 export class SSEClient {
   private eventSource: EventSource | null = null;
   private options: Required<SSEClientOptions>;
+  private state: ConnectionState = 'disconnected';
   private reconnectAttempts = 0;
   private reconnectTimeout: number | null = null;
-  private isConnected = false;
   private messageBuffer: SSEEvent[] = [];
   private lastEventId: string | null = null;
+  private eventCount = 0;
+  private readonly STORAGE_KEY_PREFIX = 'teei-sse-lastEventId';
+  private readonly CONNECT_TIMEOUT = 5000; // 5s timeout for connection
+  private connectTimeoutId: number | null = null;
 
   constructor(options: SSEClientOptions) {
     this.options = {
       maxReconnectAttempts: 10,
-      reconnectInterval: 1000,
+      baseDelay: 2000, // 2 seconds
+      maxDelay: 32000, // 32 seconds
       onEvent: () => {},
       onError: () => {},
-      onOpen: () => {},
-      onClose: () => {},
+      onStateChange: () => {},
+      onConnect: () => {},
+      onDisconnect: () => {},
       ...options,
     };
+
+    // Restore lastEventId from localStorage on initialization
+    this.restoreLastEventId();
   }
 
   /**
    * Connect to SSE endpoint
    */
   connect(): void {
-    if (this.eventSource) {
-      console.warn('[SSE] Already connected');
+    if (this.eventSource && this.state !== 'disconnected' && this.state !== 'failed') {
+      console.warn('[SSE] Already connected or connecting');
       return;
     }
 
     try {
+      this.setState('connecting');
+
       const url = new URL(this.options.url);
 
       // Add company ID and last event ID to URL
@@ -106,10 +124,25 @@ export class SSEClient {
         });
       });
 
+      // Set connection timeout
+      this.connectTimeoutId = window.setTimeout(() => {
+        if (this.state === 'connecting') {
+          console.error('[SSE] Connection timeout');
+          this.handleConnectionTimeout();
+        }
+      }, this.CONNECT_TIMEOUT);
+
       console.log('[SSE] Connecting to:', url.toString());
     } catch (error) {
       console.error('[SSE] Connection error:', error);
-      this.options.onError(error as Error);
+      const sseError: SSEError = {
+        message: (error as Error).message || 'Connection error',
+        code: 'CONNECTION_ERROR',
+        timestamp: Date.now(),
+        retryable: true,
+      };
+      this.options.onError(sseError);
+      this.setState('error');
       this.scheduleReconnect();
     }
   }
@@ -123,20 +156,54 @@ export class SSEClient {
       this.reconnectTimeout = null;
     }
 
+    if (this.connectTimeoutId) {
+      clearTimeout(this.connectTimeoutId);
+      this.connectTimeoutId = null;
+    }
+
     if (this.eventSource) {
       this.eventSource.close();
       this.eventSource = null;
-      this.isConnected = false;
-      this.options.onClose();
-      console.log('[SSE] Disconnected');
     }
+
+    this.setState('disconnected');
+    this.options.onDisconnect();
+    console.log('[SSE] Disconnected');
   }
 
   /**
    * Get connection status
    */
   get connected(): boolean {
-    return this.isConnected;
+    return this.state === 'connected';
+  }
+
+  /**
+   * Get current connection state
+   */
+  getConnectionState(): ConnectionState {
+    return this.state;
+  }
+
+  /**
+   * Get last event ID
+   */
+  getLastEventId(): string | null {
+    return this.lastEventId;
+  }
+
+  /**
+   * Get retry attempt count
+   */
+  getRetryAttempt(): number {
+    return this.reconnectAttempts;
+  }
+
+  /**
+   * Get max retry attempts
+   */
+  getMaxRetries(): number {
+    return this.options.maxReconnectAttempts;
   }
 
   /**
@@ -159,9 +226,16 @@ export class SSEClient {
 
   private handleOpen(): void {
     console.log('[SSE] Connected');
-    this.isConnected = true;
+
+    // Clear connection timeout
+    if (this.connectTimeoutId) {
+      clearTimeout(this.connectTimeoutId);
+      this.connectTimeoutId = null;
+    }
+
+    this.setState('connected');
     this.reconnectAttempts = 0;
-    this.options.onOpen();
+    this.options.onConnect();
 
     // Flush buffered messages
     if (this.messageBuffer.length > 0) {
@@ -175,10 +249,20 @@ export class SSEClient {
 
   private handleError(error: Event): void {
     console.error('[SSE] Error:', error);
-    this.isConnected = false;
 
-    const errorObj = new Error('SSE connection error');
-    this.options.onError(errorObj);
+    // Clear connection timeout if it's still pending
+    if (this.connectTimeoutId) {
+      clearTimeout(this.connectTimeoutId);
+      this.connectTimeoutId = null;
+    }
+
+    const sseError: SSEError = {
+      message: 'SSE connection error',
+      code: 'CONNECTION_ERROR',
+      timestamp: Date.now(),
+      retryable: true,
+    };
+    this.options.onError(sseError);
 
     // EventSource automatically reconnects on error, but we'll handle manual reconnection
     if (
@@ -186,8 +270,33 @@ export class SSEClient {
       this.eventSource.readyState === EventSource.CLOSED
     ) {
       this.eventSource = null;
+
+      // Only transition to error if not already reconnecting
+      if (this.state === 'connected' || this.state === 'connecting') {
+        this.setState('error');
+      }
+
       this.scheduleReconnect();
     }
+  }
+
+  private handleConnectionTimeout(): void {
+    console.error('[SSE] Connection timeout after 5 seconds');
+
+    if (this.eventSource) {
+      this.eventSource.close();
+      this.eventSource = null;
+    }
+
+    const timeoutError: SSEError = {
+      message: 'Connection timeout',
+      code: 'TIMEOUT',
+      timestamp: Date.now(),
+      retryable: true,
+    };
+    this.options.onError(timeoutError);
+    this.setState('error');
+    this.scheduleReconnect();
   }
 
   private handleMessage(event: MessageEvent): void {
@@ -201,7 +310,13 @@ export class SSEClient {
         data: data,
       };
 
-      this.lastEventId = sseEvent.id;
+      // Update and persist lastEventId
+      if (sseEvent.id) {
+        this.lastEventId = sseEvent.id;
+        this.persistLastEventId(sseEvent.id);
+      }
+
+      this.eventCount++;
       this.processEvent(sseEvent);
     } catch (error) {
       console.error('[SSE] Failed to parse message:', error);
@@ -219,7 +334,13 @@ export class SSEClient {
         data: data,
       };
 
-      this.lastEventId = sseEvent.id;
+      // Update and persist lastEventId
+      if (sseEvent.id) {
+        this.lastEventId = sseEvent.id;
+        this.persistLastEventId(sseEvent.id);
+      }
+
+      this.eventCount++;
       this.processEvent(sseEvent);
     } catch (error) {
       console.error(`[SSE] Failed to parse ${type} event:`, error);
@@ -249,15 +370,24 @@ export class SSEClient {
   private scheduleReconnect(): void {
     if (this.reconnectAttempts >= this.options.maxReconnectAttempts) {
       console.error('[SSE] Max reconnection attempts reached');
-      this.options.onError(new Error('Max reconnection attempts reached'));
+      const failedError: SSEError = {
+        message: 'Max reconnection attempts reached',
+        code: 'MAX_RETRIES_EXCEEDED',
+        timestamp: Date.now(),
+        retryable: false,
+      };
+      this.options.onError(failedError);
+      this.setState('failed');
       return;
     }
 
     const delay = this.calculateBackoff();
+    this.setState('reconnecting');
+
     console.log(
       `[SSE] Scheduling reconnect (attempt ${this.reconnectAttempts + 1}/${
         this.options.maxReconnectAttempts
-      }) in ${delay}ms`
+      }) in ${Math.round(delay)}ms`
     );
 
     this.reconnectTimeout = window.setTimeout(() => {
@@ -266,12 +396,46 @@ export class SSEClient {
     }, delay);
   }
 
+  /**
+   * Calculate exponential backoff delay with jitter
+   * Formula: delay = min(baseDelay × 2^attempt + jitter, maxDelay)
+   */
   private calculateBackoff(): number {
-    // Exponential backoff with jitter
-    const exponentialDelay =
-      this.options.reconnectInterval * Math.pow(2, this.reconnectAttempts);
+    const baseDelay = this.options.baseDelay; // 2000ms
+    const maxDelay = this.options.maxDelay;   // 32000ms
+
+    // Exponential: 2s, 4s, 8s, 16s, 32s, 32s, ...
+    const exponentialDelay = baseDelay * Math.pow(2, this.reconnectAttempts);
+    const cappedDelay = Math.min(exponentialDelay, maxDelay);
+
+    // Add jitter: 0-1000ms random
     const jitter = Math.random() * 1000;
-    return Math.min(exponentialDelay + jitter, 30000); // Max 30 seconds
+
+    return cappedDelay + jitter;
+  }
+
+  /**
+   * Manual reconnect (resets retry counter)
+   */
+  reconnect(): void {
+    console.log('[SSE] Manual reconnect requested');
+
+    // Cancel any pending reconnection
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
+      this.reconnectTimeout = null;
+    }
+
+    // Reset retry counter
+    this.reconnectAttempts = 0;
+
+    // Disconnect and reconnect
+    if (this.eventSource) {
+      this.eventSource.close();
+      this.eventSource = null;
+    }
+
+    this.connect();
   }
 
   /**
@@ -318,11 +482,63 @@ export class SSEClient {
   }
 
   /**
+   * State Management
+   */
+
+  private setState(newState: ConnectionState): void {
+    const oldState = this.state;
+    if (oldState === newState) {
+      return; // No change
+    }
+
+    this.state = newState;
+    console.log(`[SSE] State transition: ${oldState} → ${newState}`);
+
+    // Notify state change listeners
+    this.options.onStateChange(newState, oldState);
+
+    // Emit custom event for components
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('sse:state-change', {
+          detail: { state: newState, oldState, companyId: this.options.companyId },
+        })
+      );
+    }
+  }
+
+  /**
+   * Last-Event-ID Persistence
+   */
+
+  private persistLastEventId(eventId: string): void {
+    try {
+      const storageKey = `${this.STORAGE_KEY_PREFIX}-${this.options.companyId}`;
+      localStorage.setItem(storageKey, eventId);
+    } catch (error) {
+      console.error('[SSE] Failed to persist lastEventId:', error);
+    }
+  }
+
+  private restoreLastEventId(): void {
+    try {
+      const storageKey = `${this.STORAGE_KEY_PREFIX}-${this.options.companyId}`;
+      const storedId = localStorage.getItem(storageKey);
+      if (storedId) {
+        this.lastEventId = storedId;
+        console.log('[SSE] Restored lastEventId from localStorage:', storedId);
+      }
+    } catch (error) {
+      console.error('[SSE] Failed to restore lastEventId:', error);
+    }
+  }
+
+  /**
    * Utilities
    */
 
   private generateEventId(): string {
-    return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    return `evt-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   }
 }
 

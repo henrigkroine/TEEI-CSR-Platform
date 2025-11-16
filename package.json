@@ -85,6 +85,7 @@
     "prettier-plugin-astro": "^0.12.2",
     "sharp": "^0.34.5",
     "storybook": "^7.6.7",
+    "terser": "^5.44.1",
     "tsx": "^4.7.0",
     "typescript": "^5.3.3",
     "vitest": "^1.2.1"

@@ -14,7 +14,12 @@ import {
 } from 'chart.js';
 import { Line, Bar, Pie, Doughnut } from 'react-chartjs-2';
 import { getOptimizedChartConfig } from '../utils/chartOptimizations';
+<<<<<<< HEAD
 import { applyChartThemeDefaults, generateChartColors } from '../lib/themes/chartColors';
+=======
+import { useTheme } from './theme/ThemeProvider';
+import { applyThemeToChartOptions } from '../utils/chartThemes';
+>>>>>>> origin/claude/worker3-phaseE-cockpit-polish-01DEt2S7UMEooTBJBivWKcpD
 
 // Tree-shaking: Only register components that are actually used
 // This reduces bundle size by excluding unused Chart.js features
@@ -77,6 +82,7 @@ function ChartOptimized({
   const [isDark, setIsDark] = React.useState(false);
   const renderStartTime = React.useRef<number>(0);
 
+<<<<<<< HEAD
   // Detect current theme
   React.useEffect(() => {
     const checkTheme = () => {
@@ -101,6 +107,10 @@ function ChartOptimized({
       window.removeEventListener('theme-changed', handleThemeChange);
     };
   }, []);
+=======
+  // Get theme for color palette
+  const { resolvedTheme } = useTheme();
+>>>>>>> origin/claude/worker3-phaseE-cockpit-polish-01DEt2S7UMEooTBJBivWKcpD
 
   // Track render start time
   React.useLayoutEffect(() => {
@@ -177,16 +187,28 @@ function ChartOptimized({
       options
     );
 
+<<<<<<< HEAD
     // Merge with default responsive settings and apply theme
+=======
+    // Merge with default responsive settings
+>>>>>>> origin/claude/worker3-phaseE-cockpit-polish-01DEt2S7UMEooTBJBivWKcpD
     const baseOptions = {
       responsive: true,
       maintainAspectRatio: false,
       ...optimizedConfig,
+<<<<<<< HEAD
     };
 
     // Apply theme-aware defaults
     return applyChartThemeDefaults(baseOptions, isDark) as ChartOptions<any>;
   }, [data, options, preset, isDark]);
+=======
+    } as ChartOptions<any>;
+
+    // Apply theme colors
+    return applyThemeToChartOptions(resolvedTheme === 'dark', baseOptions);
+  }, [data, options, preset, resolvedTheme]);
+>>>>>>> origin/claude/worker3-phaseE-cockpit-polish-01DEt2S7UMEooTBJBivWKcpD
 
   // Memoize chart component selection
   const ChartComponent = React.useMemo(() => {

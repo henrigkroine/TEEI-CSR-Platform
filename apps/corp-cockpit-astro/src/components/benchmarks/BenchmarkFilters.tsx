@@ -309,9 +309,16 @@ export default function BenchmarkFilters({ companyId }: Props) {
           background: #dbeafe;
         }
 
-        .cohort-btn:focus {
-          outline: 2px solid #3b82f6;
+        .cohort-btn:focus-visible {
+          outline: 2px solid #2563eb;
           outline-offset: 2px;
+        }
+
+        /* Dark mode - already handled by global.css, but ensure compatibility */
+        @media (prefers-color-scheme: dark) {
+          .cohort-btn:focus-visible {
+            outline-color: #60a5fa;
+          }
         }
 
         .btn-icon {
@@ -363,10 +370,16 @@ export default function BenchmarkFilters({ companyId }: Props) {
           border-color: #9ca3af;
         }
 
-        .filter-select:focus {
-          outline: none;
+        .filter-select:focus-visible {
+          outline: 2px solid #2563eb;
+          outline-offset: 2px;
           border-color: #3b82f6;
-          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        @media (prefers-color-scheme: dark) {
+          .filter-select:focus-visible {
+            outline-color: #60a5fa;
+          }
         }
 
         .filter-actions {
@@ -395,9 +408,15 @@ export default function BenchmarkFilters({ companyId }: Props) {
           box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
         }
 
-        .apply-btn:focus {
+        .apply-btn:focus-visible {
           outline: 2px solid #10b981;
           outline-offset: 2px;
+        }
+
+        @media (prefers-color-scheme: dark) {
+          .apply-btn:focus-visible {
+            outline-color: #34d399;
+          }
         }
 
         .apply-btn:disabled {
