@@ -1,0 +1,148 @@
+{
+  "dashboard": {
+    "title": "FinOps Overview",
+    "tags": ["finops", "costs", "budget"],
+    "timezone": "utc",
+    "editable": true,
+    "graphTooltip": 1,
+    "panels": [
+      {
+        "id": 1,
+        "title": "Total Cloud Costs (Last 30 Days)",
+        "type": "stat",
+        "gridPos": {"x": 0, "y": 0, "w": 6, "h": 4},
+        "targets": [
+          {
+            "refId": "A",
+            "rawSql": "SELECT sum(cost_usd) FROM finops.cloud_costs WHERE date >= today() - INTERVAL 30 DAY",
+            "format": "table"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyUSD",
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 5000, "color": "yellow"},
+                {"value": 10000, "color": "red"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "Cost by Region",
+        "type": "piechart",
+        "gridPos": {"x": 6, "y": 0, "w": 6, "h": 4},
+        "targets": [
+          {
+            "refId": "A",
+            "rawSql": "SELECT region, sum(cost_usd) as cost FROM finops.cloud_costs WHERE date >= today() - INTERVAL 30 DAY GROUP BY region",
+            "format": "table"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Cost by Service",
+        "type": "piechart",
+        "gridPos": {"x": 12, "y": 0, "w": 6, "h": 4},
+        "targets": [
+          {
+            "refId": "A",
+            "rawSql": "SELECT service, sum(cost_usd) as cost FROM finops.cloud_costs WHERE date >= today() - INTERVAL 30 DAY GROUP BY service ORDER BY cost DESC LIMIT 10",
+            "format": "table"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Budget vs Actual vs Forecast",
+        "type": "bargauge",
+        "gridPos": {"x": 18, "y": 0, "w": 6, "h": 4},
+        "targets": [
+          {
+            "refId": "A",
+            "rawSql": "SELECT cost_center, budget_usd, actual_usd, forecast_usd FROM finops.budget_alerts WHERE date = today()",
+            "format": "table"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyUSD",
+            "max": 1000,
+            "thresholds": {
+              "mode": "percentage",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 80, "color": "yellow"},
+                {"value": 100, "color": "red"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 5,
+        "title": "Daily Cost Trend",
+        "type": "graph",
+        "gridPos": {"x": 0, "y": 4, "w": 12, "h": 6},
+        "targets": [
+          {
+            "refId": "A",
+            "rawSql": "SELECT date, sum(cost_usd) as cost FROM finops.cloud_costs WHERE date >= today() - INTERVAL 30 DAY GROUP BY date ORDER BY date",
+            "format": "time_series"
+          }
+        ],
+        "yaxes": [
+          {"format": "currencyUSD", "label": "Cost"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Cost by Cost Center",
+        "type": "table",
+        "gridPos": {"x": 12, "y": 4, "w": 12, "h": 6},
+        "targets": [
+          {
+            "refId": "A",
+            "rawSql": "SELECT cost_center, sum(cost_usd) as total_cost, count(*) as resource_count FROM finops.cloud_costs WHERE date >= today() - INTERVAL 30 DAY GROUP BY cost_center ORDER BY total_cost DESC",
+            "format": "table"
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Budget Alerts",
+        "type": "table",
+        "gridPos": {"x": 0, "y": 10, "w": 24, "h": 6},
+        "targets": [
+          {
+            "refId": "A",
+            "rawSql": "SELECT cost_center, budget_usd, actual_usd, forecast_usd, variance_percent, alert_severity FROM finops.budget_alerts WHERE date = today() AND alert_severity != 'normal' ORDER BY variance_percent DESC",
+            "format": "table"
+          }
+        ],
+        "styles": [
+          {
+            "pattern": "alert_severity",
+            "type": "cell",
+            "mappingType": 2,
+            "valueMaps": [
+              {"text": "Critical", "value": "critical", "color": "red"},
+              {"text": "Warning", "value": "warning", "color": "yellow"}
+            ]
+          }
+        ]
+      }
+    ],
+    "refresh": "5m",
+    "schemaVersion": 27,
+    "version": 1
+  }
+}

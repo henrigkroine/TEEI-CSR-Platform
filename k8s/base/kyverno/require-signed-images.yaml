@@ -1,0 +1,45 @@
+# Kyverno Policy: Block unsigned container images
+# All images must be signed and from approved registries
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-signed-images
+  annotations:
+    policies.kyverno.io/title: Require Signed Images
+    policies.kyverno.io/category: Security, Supply Chain
+    policies.kyverno.io/severity: high
+    policies.kyverno.io/description: >-
+      All container images must be signed with Sigstore/Cosign.
+      Blocks unsigned images to prevent supply chain attacks.
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+  - name: verify-image-signature
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+          - Deployment
+          - StatefulSet
+          - DaemonSet
+          - Job
+          - CronJob
+          namespaces:
+          - teei-production-us-east-1
+          - teei-production-eu-central-1
+    verifyImages:
+    - imageReferences:
+      - "ghcr.io/henrigkroine/teei-*"
+      attestors:
+      - count: 1
+        entries:
+        - keys:
+            publicKeys: |-
+              -----BEGIN PUBLIC KEY-----
+              MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE...
+              -----END PUBLIC KEY-----
+      mutateDigest: true
+      verifyDigest: true
+      required: true

@@ -1,0 +1,85 @@
+# EU-Central-1 Production: Resource limits for critical services
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: teei-api-gateway
+spec:
+  template:
+    spec:
+      containers:
+      - name: api-gateway
+        resources:
+          requests:
+            cpu: 500m
+            memory: 512Mi
+          limits:
+            cpu: 2000m
+            memory: 2Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: teei-corp-cockpit
+spec:
+  template:
+    spec:
+      containers:
+      - name: corp-cockpit
+        resources:
+          requests:
+            cpu: 500m
+            memory: 1Gi
+          limits:
+            cpu: 3000m
+            memory: 4Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: teei-reporting
+spec:
+  template:
+    spec:
+      containers:
+      - name: reporting
+        resources:
+          requests:
+            cpu: 400m
+            memory: 512Mi
+          limits:
+            cpu: 2000m
+            memory: 2Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: teei-analytics
+spec:
+  template:
+    spec:
+      containers:
+      - name: analytics
+        resources:
+          requests:
+            cpu: 400m
+            memory: 1Gi
+          limits:
+            cpu: 2000m
+            memory: 4Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: teei-q2q-ai
+spec:
+  template:
+    spec:
+      containers:
+      - name: q2q-ai
+        resources:
+          requests:
+            cpu: 1000m
+            memory: 2Gi
+          limits:
+            cpu: 4000m
+            memory: 8Gi

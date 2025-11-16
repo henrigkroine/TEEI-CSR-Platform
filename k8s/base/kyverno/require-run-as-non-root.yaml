@@ -1,0 +1,34 @@
+# Kyverno Policy: Require running as non-root user
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-run-as-non-root
+  annotations:
+    policies.kyverno.io/title: Require Run As Non-Root
+    policies.kyverno.io/category: Security, Pod Security Standards (Restricted)
+    policies.kyverno.io/severity: high
+    policies.kyverno.io/description: >-
+      Containers must run as non-root users to minimize privilege escalation risks.
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+  - name: check-run-as-non-root
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+          namespaces:
+          - teei-production-us-east-1
+          - teei-production-eu-central-1
+    validate:
+      message: "Containers must run as non-root user"
+      pattern:
+        spec:
+          securityContext:
+            runAsNonRoot: true
+          containers:
+          - securityContext:
+              runAsNonRoot: true
+              runAsUser: ">0"

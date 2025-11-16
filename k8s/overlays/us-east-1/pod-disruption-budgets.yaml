@@ -1,0 +1,161 @@
+# US-East-1: PodDisruptionBudgets for all critical services
+# Ensures minimum availability during voluntary disruptions (node drains, upgrades)
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: api-gateway-pdb
+spec:
+  minAvailable: 3
+  selector:
+    matchLabels:
+      app: teei-api-gateway
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: corp-cockpit-pdb
+spec:
+  minAvailable: 4
+  selector:
+    matchLabels:
+      app: teei-corp-cockpit
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: reporting-pdb
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: teei-reporting
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: unified-profile-pdb
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: teei-unified-profile
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: analytics-pdb
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: teei-analytics
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: q2q-ai-pdb
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: teei-q2q-ai
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: impact-calculator-pdb
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: teei-impact-calculator
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: journey-engine-pdb
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: teei-journey-engine
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: notifications-pdb
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: teei-notifications
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: discord-bot-pdb
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: teei-discord-bot
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: kintell-connector-pdb
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: teei-kintell-connector
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: buddy-service-pdb
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: teei-buddy-service
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: buddy-connector-pdb
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: teei-buddy-connector
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: upskilling-connector-pdb
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: teei-upskilling-connector
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: safety-moderation-pdb
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: teei-safety-moderation
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: impact-in-pdb
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: teei-impact-in

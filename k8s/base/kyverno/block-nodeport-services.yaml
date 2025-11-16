@@ -1,0 +1,29 @@
+# Kyverno Policy: Block NodePort services
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: block-nodeport-services
+  annotations:
+    policies.kyverno.io/title: Block NodePort Services
+    policies.kyverno.io/category: Security, Networking
+    policies.kyverno.io/severity: medium
+    policies.kyverno.io/description: >-
+      NodePort services expose ports on all nodes. Use LoadBalancer or Ingress instead.
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+  - name: check-service-type
+    match:
+      any:
+      - resources:
+          kinds:
+          - Service
+          namespaces:
+          - teei-production-us-east-1
+          - teei-production-eu-central-1
+    validate:
+      message: "NodePort services are not allowed. Use ClusterIP or LoadBalancer."
+      pattern:
+        spec:
+          type: "!NodePort"
