@@ -1,0 +1,104 @@
+---
+/**
+ * Boardroom Live - Phase H3-A
+ * Full-screen presentation mode with:
+ * - Live SSE updates (degrades to polling)
+ * - Evidence overlay toggle
+ * - Offline snapshot capability
+ * - Presenter controls
+ * - PDF export with watermarks
+ */
+import BaseLayout from '../../../../layouts/BaseLayout.astro';
+import { hasPermission } from '../../../../types/roles';
+
+// Extract route parameters
+const { lang, companyId } = Astro.params;
+const user = Astro.locals.user;
+const tenantContext = Astro.locals.tenantContext;
+
+// Middleware handles auth/tenant validation
+if (!user || !tenantContext) {
+  return Astro.redirect('/login');
+}
+
+// Verify user has boardroom access
+if (!hasPermission(user.role, 'VIEW_DASHBOARD')) {
+  return Astro.redirect(`/${lang}/cockpit/401?reason=insufficient_permissions`);
+}
+
+const canExport = hasPermission(user.role, 'EXPORT_DATA');
+
+// Feature flag check
+const BOARDROOM_LIVE_ENABLED = import.meta.env.PUBLIC_FEATURE_COCKPIT_BOARDROOM_LIVE !== 'false';
+
+if (!BOARDROOM_LIVE_ENABLED) {
+  return Astro.redirect(`/${lang}/cockpit/${companyId}`);
+}
+---
+
+<BaseLayout
+  title="Boardroom Live - TEEI Corporate Cockpit"
+  lang={lang}
+  minimal={true}
+>
+  <div id="boardroom-live-app" data-company-id={companyId} data-lang={lang}>
+    <!-- React app will mount here -->
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <p>Loading Boardroom Live...</p>
+    </div>
+  </div>
+
+  <!-- Import the main Boardroom Live component -->
+  <script>
+    import BoardroomLiveApp from '../../../../components/boardroom/BoardroomLiveApp';
+    import { createRoot } from 'react-dom/client';
+
+    const container = document.getElementById('boardroom-live-app');
+    if (container) {
+      const companyId = container.dataset.companyId;
+      const lang = container.dataset.lang;
+
+      const root = createRoot(container);
+      root.render(
+        <BoardroomLiveApp
+          companyId={companyId}
+          lang={lang}
+          canExport={Boolean(import.meta.env.PUBLIC_EXPORT_ENABLED)}
+        />
+      );
+    }
+  </script>
+</BaseLayout>
+
+<style>
+  #boardroom-live-app {
+    min-height: 100vh;
+    background: var(--color-bg-dark, #111827);
+  }
+
+  .loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    color: white;
+  }
+
+  .spinner {
+    width: 48px;
+    height: 48px;
+    border: 4px solid rgba(255, 255, 255, 0.1);
+    border-top-color: #3b82f6;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 1rem;
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+</style>

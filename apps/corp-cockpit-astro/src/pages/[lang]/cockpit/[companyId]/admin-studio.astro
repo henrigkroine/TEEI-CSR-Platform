@@ -1,0 +1,314 @@
+---
+/**
+ * Admin Studio - Phase H3-B
+ * Advanced administrative configuration UI with:
+ * - Data residency selector (wired to backend API)
+ * - Embed token manager (CRUD operations)
+ * - Domain allow-list manager
+ * - Activity/audit stream
+ *
+ * All operations enforce RBAC and audit logging.
+ */
+import BaseLayout from '../../../../layouts/BaseLayout.astro';
+import { hasPermission } from '../../../../types/roles';
+
+// Extract route parameters
+const { lang, companyId } = Astro.params;
+const user = Astro.locals.user;
+const tenantContext = Astro.locals.tenantContext;
+
+// Middleware handles auth/tenant validation
+if (!user || !tenantContext) {
+  return Astro.redirect('/login');
+}
+
+// Verify user has admin studio access
+if (!hasPermission(user.role, 'ADMIN_CONSOLE')) {
+  return Astro.redirect(`/${lang}/cockpit/401?reason=insufficient_permissions`);
+}
+
+// Check permissions for specific features
+const canManageResidency = hasPermission(user.role, 'MANAGE_DATA_RESIDENCY');
+const canManageEmbeds = hasPermission(user.role, 'MANAGE_EMBED_TOKENS');
+const canManageDomains = hasPermission(user.role, 'MANAGE_DOMAIN_ALLOWLIST');
+const canViewAudit = hasPermission(user.role, 'VIEW_AUDIT_LOG');
+
+// Feature flag check
+const ADMIN_STUDIO_ENABLED = import.meta.env.PUBLIC_FEATURE_ADMIN_STUDIO_V1 !== 'false';
+
+if (!ADMIN_STUDIO_ENABLED) {
+  return Astro.redirect(`/${lang}/cockpit/${companyId}/admin`);
+}
+---
+
+<BaseLayout title="Admin Studio - TEEI Corporate Cockpit" lang={lang}>
+  <div class="admin-studio-header">
+    <div>
+      <h1>Admin Studio</h1>
+      <p class="breadcrumb">
+        <a href={`/${lang}/cockpit/${companyId}`}>Dashboard</a>
+        <span class="separator">›</span>
+        <a href={`/${lang}/cockpit/${companyId}/admin`}>Admin</a>
+        <span class="separator">›</span>
+        <span>Admin Studio</span>
+      </p>
+    </div>
+    <div class="role-indicator">
+      <span class="role-badge">{user.role}</span>
+    </div>
+  </div>
+
+  <div class="admin-studio-grid">
+    <!-- Data Residency Selector -->
+    {canManageResidency && (
+      <section class="studio-section">
+        <div class="section-header">
+          <h2>
+            <span class="icon" aria-hidden="true">🌍</span>
+            Data Residency
+          </h2>
+          <span class="badge badge-critical">Critical</span>
+        </div>
+        <p class="section-description">
+          Configure where your company's data is stored and processed.
+          Changes take effect immediately and trigger compliance audit.
+        </p>
+        <div id="data-residency-container" data-company-id={companyId}></div>
+      </section>
+    )}
+
+    <!-- Embed Token Manager -->
+    {canManageEmbeds && (
+      <section class="studio-section">
+        <div class="section-header">
+          <h2>
+            <span class="icon" aria-hidden="true">🔐</span>
+            Embed Tokens
+          </h2>
+          <span class="badge badge-security">Security</span>
+        </div>
+        <p class="section-description">
+          Manage authentication tokens for embedding dashboards in external applications.
+        </p>
+        <div id="embed-tokens-container" data-company-id={companyId}></div>
+      </section>
+    )}
+
+    <!-- Domain Allow-List Manager -->
+    {canManageDomains && (
+      <section class="studio-section">
+        <div class="section-header">
+          <h2>
+            <span class="icon" aria-hidden="true">🔗</span>
+            Domain Allow-List
+          </h2>
+          <span class="badge badge-security">Security</span>
+        </div>
+        <p class="section-description">
+          Specify which domains are authorized to embed your dashboards.
+        </p>
+        <div id="domain-allowlist-container" data-company-id={companyId}></div>
+      </section>
+    )}
+
+    <!-- Activity & Audit Stream -->
+    {canViewAudit && (
+      <section class="studio-section full-width">
+        <div class="section-header">
+          <h2>
+            <span class="icon" aria-hidden="true">📊</span>
+            Activity Stream
+          </h2>
+          <span class="badge badge-info">Live</span>
+        </div>
+        <p class="section-description">
+          Real-time feed of administrative actions and configuration changes.
+        </p>
+        <div id="activity-stream-container" data-company-id={companyId}></div>
+      </section>
+    )}
+  </div>
+
+  <!-- Import React components -->
+  <script>
+    import { createRoot } from 'react-dom/client';
+    import DataResidencySelector from '../../../../components/admin-studio/DataResidencySelector';
+    import EmbedTokenManager from '../../../../components/admin-studio/EmbedTokenManager';
+    import DomainAllowListManager from '../../../../components/admin-studio/DomainAllowListManager';
+    import ActivityStream from '../../../../components/admin-studio/ActivityStream';
+
+    // Mount Data Residency Selector
+    const residencyContainer = document.getElementById('data-residency-container');
+    if (residencyContainer) {
+      const companyId = residencyContainer.dataset.companyId;
+      createRoot(residencyContainer).render(
+        <DataResidencySelector companyId={companyId} />
+      );
+    }
+
+    // Mount Embed Token Manager
+    const embedContainer = document.getElementById('embed-tokens-container');
+    if (embedContainer) {
+      const companyId = embedContainer.dataset.companyId;
+      createRoot(embedContainer).render(
+        <EmbedTokenManager companyId={companyId} />
+      );
+    }
+
+    // Mount Domain Allow-List Manager
+    const domainContainer = document.getElementById('domain-allowlist-container');
+    if (domainContainer) {
+      const companyId = domainContainer.dataset.companyId;
+      createRoot(domainContainer).render(
+        <DomainAllowListManager companyId={companyId} />
+      );
+    }
+
+    // Mount Activity Stream
+    const activityContainer = document.getElementById('activity-stream-container');
+    if (activityContainer) {
+      const companyId = activityContainer.dataset.companyId;
+      createRoot(activityContainer).render(
+        <ActivityStream companyId={companyId} />
+      );
+    }
+  </script>
+</BaseLayout>
+
+<style>
+  .admin-studio-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: calc(var(--spacing-unit) * 4);
+    flex-wrap: wrap;
+    gap: calc(var(--spacing-unit) * 2);
+    padding-bottom: calc(var(--spacing-unit) * 3);
+    border-bottom: 2px solid var(--color-border);
+  }
+
+  h1 {
+    font-size: 2rem;
+    margin-bottom: calc(var(--spacing-unit) * 1);
+    color: var(--color-text);
+  }
+
+  .breadcrumb {
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+  }
+
+  .breadcrumb a {
+    color: var(--color-primary);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+
+  .breadcrumb a:hover {
+    color: var(--color-primary-dark);
+  }
+
+  .separator {
+    margin: 0 calc(var(--spacing-unit) * 1);
+  }
+
+  .role-indicator {
+    display: flex;
+    align-items: center;
+    gap: calc(var(--spacing-unit) * 2);
+  }
+
+  .role-badge {
+    padding: calc(var(--spacing-unit) * 1) calc(var(--spacing-unit) * 2);
+    background-color: var(--color-primary);
+    color: white;
+    border-radius: calc(var(--border-radius) / 2);
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .admin-studio-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+    gap: calc(var(--spacing-unit) * 4);
+  }
+
+  .studio-section {
+    background-color: var(--color-bg);
+    padding: calc(var(--spacing-unit) * 4);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--color-border);
+  }
+
+  .studio-section.full-width {
+    grid-column: 1 / -1;
+  }
+
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: calc(var(--spacing-unit) * 2);
+  }
+
+  .studio-section h2 {
+    font-size: 1.5rem;
+    color: var(--color-text);
+    display: flex;
+    align-items: center;
+    gap: calc(var(--spacing-unit) * 1.5);
+    margin: 0;
+  }
+
+  .studio-section .icon {
+    font-size: 1.75rem;
+  }
+
+  .badge {
+    padding: calc(var(--spacing-unit) * 0.75) calc(var(--spacing-unit) * 1.5);
+    border-radius: calc(var(--border-radius) / 2);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .badge-critical {
+    background-color: #fee2e2;
+    color: #991b1b;
+  }
+
+  .badge-security {
+    background-color: #fef3c7;
+    color: #92400e;
+  }
+
+  .badge-info {
+    background-color: #dbeafe;
+    color: #1e40af;
+  }
+
+  .section-description {
+    color: var(--color-text-secondary);
+    margin-bottom: calc(var(--spacing-unit) * 3);
+    line-height: 1.6;
+    font-size: 0.9375rem;
+  }
+
+  @media (max-width: 768px) {
+    .admin-studio-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .admin-studio-header {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .studio-section {
+      padding: calc(var(--spacing-unit) * 3);
+    }
+  }
+</style>
