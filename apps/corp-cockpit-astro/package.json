@@ -25,6 +25,8 @@
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx,.astro",
     "lint:fix": "eslint . --ext .js,.jsx,.ts,.tsx,.astro --fix",
     "lighthouse": "lighthouse http://localhost:4321 --config-path=./lighthouserc.json --output=html --output-path=./lighthouse-report.html",
+    "perf:check": "tsx ../../scripts/checkPerformanceBudgets.ts",
+    "perf:check:verbose": "VERBOSE=1 tsx ../../scripts/checkPerformanceBudgets.ts",
     "contrast:check": "node scripts/check-contrast.js"
   },
   "dependencies": {

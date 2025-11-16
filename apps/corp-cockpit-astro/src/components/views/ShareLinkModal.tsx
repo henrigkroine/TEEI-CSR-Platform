@@ -25,6 +25,7 @@ export const ShareLinkModal: FC<ShareLinkModalProps> = ({
 }) => {
   const [ttlDays, setTtlDays] = useState(7);
   const [boardroomMode, setBoardroomMode] = useState(false);
+  const [includesSensitiveData, setIncludesSensitiveData] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedLink, setGeneratedLink] = useState<string | null>(null);
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
@@ -47,6 +48,7 @@ export const ShareLinkModal: FC<ShareLinkModalProps> = ({
           filter_config: savedViewId ? undefined : currentFilters,
           ttl_days: ttlDays,
           boardroom_mode: boardroomMode,
+          includes_sensitive_data: includesSensitiveData,
         }),
       });
 
@@ -82,6 +84,7 @@ export const ShareLinkModal: FC<ShareLinkModalProps> = ({
     setExpiresAt(null);
     setTtlDays(7);
     setBoardroomMode(false);
+    setIncludesSensitiveData(false);
     setCopied(false);
     setError(null);
     onClose();
@@ -171,6 +174,37 @@ export const ShareLinkModal: FC<ShareLinkModalProps> = ({
                 </label>
               </div>
 
+              <div>
+                <label className="flex items-start gap-3 cursor-pointer p-2 rounded hover:bg-gray-50 dark:hover:bg-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={includesSensitiveData}
+                    onChange={(e) => setIncludesSensitiveData(e.target.checked)}
+                    className="mt-0.5 w-6 h-6 text-orange-600 border-gray-300 rounded
+                             focus:ring-orange-500 dark:focus:ring-orange-400
+                             dark:border-gray-600 dark:bg-gray-900 cursor-pointer flex-shrink-0"
+                    disabled={isGenerating}
+                  />
+                  <div className="flex-1">
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Include Sensitive Data
+                    </span>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                      When enabled, individual names and identifiers are included. When disabled
+                      (default), only aggregated metrics are shared with PII redacted.
+                    </p>
+                  </div>
+                </label>
+                {includesSensitiveData && (
+                  <div className="ml-9 mt-2 p-2 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-md">
+                    <p className="text-xs text-orange-800 dark:text-orange-200">
+                      <strong>Warning:</strong> This link will include individual-level data. Only
+                      share with trusted recipients and consider using shorter TTL.
+                    </p>
+                  </div>
+                )}
+              </div>
+
               <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md p-3">
                 <h3 className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">
                   Security Features
@@ -179,7 +213,9 @@ export const ShareLinkModal: FC<ShareLinkModalProps> = ({
                   <li>• Read-only access (no editing or data export)</li>
                   <li>• HMAC-signed URLs prevent tampering</li>
                   <li>• Automatic expiration after TTL</li>
+                  <li>• PII redaction (unless sensitive data enabled)</li>
                   <li>• Access logging for audit trails</li>
+                  <li>• Revocable at any time</li>
                 </ul>
               </div>
             </div>

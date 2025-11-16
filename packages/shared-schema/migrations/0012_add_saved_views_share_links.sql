@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS share_links (
   access_count INTEGER DEFAULT 0, -- Track usage
   last_accessed_at TIMESTAMP WITH TIME ZONE, -- Last view time
   boardroom_mode BOOLEAN DEFAULT FALSE, -- Enable presentation mode
+  includes_sensitive_data BOOLEAN DEFAULT FALSE, -- Whether link includes sensitive PII
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
   CONSTRAINT fk_saved_view FOREIGN KEY (saved_view_id) REFERENCES saved_views(id) ON DELETE SET NULL
 );
@@ -67,6 +68,7 @@ CREATE TABLE IF NOT EXISTS share_link_access_log (
   referer VARCHAR(500),
   access_granted BOOLEAN NOT NULL, -- FALSE if expired/revoked
   failure_reason VARCHAR(100), -- 'expired', 'revoked', 'invalid_signature'
+  metadata JSONB, -- Additional metadata (redaction stats, etc.)
   CONSTRAINT fk_share_link FOREIGN KEY (share_link_id) REFERENCES share_links(id) ON DELETE CASCADE
 );
 
@@ -124,7 +126,9 @@ COMMENT ON COLUMN saved_views.is_shared IS 'When true, view is visible to all us
 COMMENT ON COLUMN share_links.signature IS 'HMAC-SHA256 signature of link_id + expires_at + filter_config for tamper detection';
 COMMENT ON COLUMN share_links.expires_at IS 'Default 7 days from creation, configurable up to 90 days';
 COMMENT ON COLUMN share_links.boardroom_mode IS 'Enables auto-refresh and large typography for presentations';
+COMMENT ON COLUMN share_links.includes_sensitive_data IS 'When FALSE, PII and names are redacted; when TRUE, individual-level data is shared';
 COMMENT ON COLUMN share_link_access_log.access_granted IS 'TRUE if link was valid and not expired/revoked';
+COMMENT ON COLUMN share_link_access_log.metadata IS 'Additional metadata like redaction counts (no PII stored)';
 
 -- Insert sample saved views for testing (optional)
 -- Commented out for production, uncomment for development

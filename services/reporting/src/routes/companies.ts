@@ -5,10 +5,16 @@ import { getQ2QFeed } from '../controllers/q2qFeed.js';
 import { getSROI } from '../controllers/sroiController.js';
 import { getVIS } from '../controllers/visController.js';
 import { exportCSRD } from '../controllers/export.js';
+import { CACHE_CONTROL } from '../middleware/etag.js';
+import type { FastifyRequest, FastifyReply } from 'fastify';
 
 export const companyRoutes: FastifyPluginAsync = async (fastify) => {
   // At-a-glance metrics
   fastify.get('/companies/:id/at-a-glance', {
+    preHandler: async (request: FastifyRequest, reply: FastifyReply) => {
+      // Apply short cache (5 minutes) for frequently updated metrics
+      reply.header('Cache-Control', CACHE_CONTROL.SHORT);
+    },
     schema: {
       description: 'Get at-a-glance metrics for a company',
       tags: ['companies'],
@@ -30,6 +36,10 @@ export const companyRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Outcome dimensions
   fastify.get('/companies/:id/outcomes', {
+    preHandler: async (request: FastifyRequest, reply: FastifyReply) => {
+      // Apply short cache (5 minutes) for frequently updated outcomes
+      reply.header('Cache-Control', CACHE_CONTROL.SHORT);
+    },
     schema: {
       description: 'Get outcome time series for a company',
       tags: ['companies'],
@@ -75,6 +85,10 @@ export const companyRoutes: FastifyPluginAsync = async (fastify) => {
 
   // SROI
   fastify.get('/companies/:id/sroi', {
+    preHandler: async (request: FastifyRequest, reply: FastifyReply) => {
+      // Apply medium cache (1 hour) for expensive SROI calculations
+      reply.header('Cache-Control', CACHE_CONTROL.MEDIUM);
+    },
     schema: {
       description: 'Calculate SROI for a company',
       tags: ['companies'],
@@ -96,6 +110,10 @@ export const companyRoutes: FastifyPluginAsync = async (fastify) => {
 
   // VIS
   fastify.get('/companies/:id/vis', {
+    preHandler: async (request: FastifyRequest, reply: FastifyReply) => {
+      // Apply medium cache (1 hour) for expensive VIS calculations
+      reply.header('Cache-Control', CACHE_CONTROL.MEDIUM);
+    },
     schema: {
       description: 'Calculate VIS for a company',
       tags: ['companies'],

@@ -12,7 +12,7 @@
  * @module routes/reports
  */
 
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import {
   getReportTemplates,
   createReport,
@@ -21,12 +21,17 @@ import {
   downloadReport,
   deleteReport,
 } from '../controllers/reports.js';
+import { CACHE_CONTROL } from '../middleware/etag.js';
 
 export async function reportRoutes(fastify: FastifyInstance) {
   /**
    * Get available report templates
    */
   fastify.get('/companies/:id/reports/templates', {
+    preHandler: async (request: FastifyRequest, reply: FastifyReply) => {
+      // Apply long cache (24 hours) for static templates
+      reply.header('Cache-Control', CACHE_CONTROL.LONG);
+    },
     schema: {
       description: 'Get available report templates',
       tags: ['Reports'],
@@ -132,6 +137,10 @@ export async function reportRoutes(fastify: FastifyInstance) {
    * List reports
    */
   fastify.get('/companies/:id/reports', {
+    preHandler: async (request: FastifyRequest, reply: FastifyReply) => {
+      // Apply short cache (5 minutes) for dynamic reports list
+      reply.header('Cache-Control', CACHE_CONTROL.SHORT);
+    },
     schema: {
       description: 'List reports for company',
       tags: ['Reports'],
@@ -202,6 +211,10 @@ export async function reportRoutes(fastify: FastifyInstance) {
    * Get report details
    */
   fastify.get('/companies/:id/reports/:reportId', {
+    preHandler: async (request: FastifyRequest, reply: FastifyReply) => {
+      // Apply short cache (5 minutes) for report details
+      reply.header('Cache-Control', CACHE_CONTROL.SHORT);
+    },
     schema: {
       description: 'Get report details',
       tags: ['Reports'],

@@ -25,12 +25,19 @@ import {
   sanitizeFilterConfig,
   type ShareLinkPayload,
 } from '../../utils/signedLinks.js';
+<<<<<<< HEAD
 import { validateIPAllowlist, validateRequestIP, getClientIP } from '../utils/ipValidation.js';
 import { getDefaultWatermarkPolicy, validateWatermarkPolicy, generateWatermarkMetadata, type WatermarkPolicyType } from '../utils/watermarking.js';
 import { validateUserAccess, type AccessType, type UserRole } from '../utils/sharingRBAC.js';
 import { createServiceLogger } from '@teei/shared-utils';
 
 const logger = createServiceLogger('reporting:shareLinks');
+=======
+import {
+  prepareDataForSharing,
+  filterConfigContainsSensitiveData,
+} from '../lib/shareRedaction.js';
+>>>>>>> origin/claude/phase-f-boardroom-pptx-a11y-01GvaGy8W3FGnuPTTgeRH8vx
 
 interface CompanyParams {
   companyId: string;
@@ -67,6 +74,7 @@ export async function shareLinksRoutes(fastify: FastifyInstance) {
           filter_config: { type: 'object' },
           ttl_days: { type: 'number', minimum: 1, maximum: 90, default: 7 },
           boardroom_mode: { type: 'boolean', default: false },
+<<<<<<< HEAD
           // Phase H: Enhanced Sharing
           access_type: {
             type: 'string',
@@ -97,6 +105,9 @@ export async function shareLinksRoutes(fastify: FastifyInstance) {
             items: { type: 'string', enum: ['admin', 'manager', 'member', 'viewer', 'guest'] },
             description: 'Required roles for access',
           },
+=======
+          includes_sensitive_data: { type: 'boolean', default: false },
+>>>>>>> origin/claude/phase-f-boardroom-pptx-a11y-01GvaGy8W3FGnuPTTgeRH8vx
         },
       },
       response: {
@@ -123,6 +134,7 @@ export async function shareLinksRoutes(fastify: FastifyInstance) {
     },
     async handler(request, reply) {
       const { companyId } = request.params;
+<<<<<<< HEAD
       const {
         saved_view_id,
         filter_config,
@@ -136,6 +148,9 @@ export async function shareLinksRoutes(fastify: FastifyInstance) {
         group_ids,
         role_restrictions,
       } = request.body;
+=======
+      const { saved_view_id, filter_config, ttl_days, boardroom_mode, includes_sensitive_data } = request.body;
+>>>>>>> origin/claude/phase-f-boardroom-pptx-a11y-01GvaGy8W3FGnuPTTgeRH8vx
 
       const userId = (request as any).user?.id;
       if (!userId) {
@@ -198,6 +213,14 @@ export async function shareLinksRoutes(fastify: FastifyInstance) {
         finalFilterConfig = viewResult.rows[0].filter_config;
       }
 
+      // Check if filter config contains sensitive data
+      const hasSensitiveFilters = filterConfigContainsSensitiveData(finalFilterConfig);
+      if (hasSensitiveFilters && !includes_sensitive_data) {
+        return reply.code(400).send({
+          error: 'Filter configuration contains sensitive data. Set includes_sensitive_data=true or remove sensitive filters.',
+        });
+      }
+
       // Sanitize filter config (remove PII)
       const sanitizedConfig = sanitizeFilterConfig(finalFilterConfig);
 
@@ -211,10 +234,16 @@ export async function shareLinksRoutes(fastify: FastifyInstance) {
       // Store in database with Phase H enhancements
       const result = await pool.query(
         `INSERT INTO share_links
+<<<<<<< HEAD
          (link_id, company_id, created_by, saved_view_id, filter_config, signature, expires_at, boardroom_mode,
           access_type, allowed_ips, ip_allowlist_enabled, watermark_policy, watermark_text, group_ids, role_restrictions)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
          RETURNING id, link_id, expires_at, boardroom_mode, access_type, ip_allowlist_enabled, watermark_policy, access_count, created_at`,
+=======
+         (link_id, company_id, created_by, saved_view_id, filter_config, signature, expires_at, boardroom_mode, includes_sensitive_data)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+         RETURNING id, link_id, expires_at, boardroom_mode, includes_sensitive_data, access_count, created_at`,
+>>>>>>> origin/claude/phase-f-boardroom-pptx-a11y-01GvaGy8W3FGnuPTTgeRH8vx
         [
           signedLink.linkId,
           companyId,
@@ -224,6 +253,7 @@ export async function shareLinksRoutes(fastify: FastifyInstance) {
           signedLink.signature,
           signedLink.expiresAt,
           boardroom_mode || false,
+<<<<<<< HEAD
           access_type || 'public_link',
           allowed_ips ? JSON.stringify(allowed_ips) : null,
           ip_allowlist_enabled || false,
@@ -231,6 +261,9 @@ export async function shareLinksRoutes(fastify: FastifyInstance) {
           watermark_text || null,
           group_ids ? JSON.stringify(group_ids) : null,
           role_restrictions ? JSON.stringify(role_restrictions) : null,
+=======
+          includes_sensitive_data || false,
+>>>>>>> origin/claude/phase-f-boardroom-pptx-a11y-01GvaGy8W3FGnuPTTgeRH8vx
         ]
       );
 
@@ -272,9 +305,13 @@ export async function shareLinksRoutes(fastify: FastifyInstance) {
         url: fullURL,
         expires_at: link.expires_at.toISOString(),
         boardroom_mode: link.boardroom_mode,
+<<<<<<< HEAD
         access_type: link.access_type,
         ip_allowlist_enabled: link.ip_allowlist_enabled,
         watermark_policy: link.watermark_policy,
+=======
+        includes_sensitive_data: link.includes_sensitive_data,
+>>>>>>> origin/claude/phase-f-boardroom-pptx-a11y-01GvaGy8W3FGnuPTTgeRH8vx
         access_count: link.access_count,
         created_at: link.created_at.toISOString(),
       });
@@ -547,9 +584,13 @@ export async function shareLinksRoutes(fastify: FastifyInstance) {
 
       // Fetch link from database with Phase H enhancements
       const result = await pool.query(
+<<<<<<< HEAD
         `SELECT id, company_id, filter_config, signature, expires_at, revoked_at, boardroom_mode, created_by,
                 access_type, allowed_ips, ip_allowlist_enabled, watermark_policy, watermark_text,
                 group_ids, role_restrictions
+=======
+        `SELECT id, company_id, filter_config, signature, expires_at, revoked_at, boardroom_mode, includes_sensitive_data, created_by
+>>>>>>> origin/claude/phase-f-boardroom-pptx-a11y-01GvaGy8W3FGnuPTTgeRH8vx
          FROM share_links
          WHERE link_id = $1`,
         [linkId]
@@ -606,6 +647,7 @@ export async function shareLinksRoutes(fastify: FastifyInstance) {
         });
       }
 
+<<<<<<< HEAD
       // Phase H: Validate RBAC for org/group shares
       const user = (request as any).user;
       if (link.access_type !== 'public_link') {
@@ -674,6 +716,26 @@ export async function shareLinksRoutes(fastify: FastifyInstance) {
         boardroom_mode: link.boardroom_mode,
         watermark: watermarkPolicy.type !== 'none' ? watermarkMeta : undefined,
       });
+=======
+      // Prepare data with comprehensive redaction
+      const redactedData = await prepareDataForSharing(
+        {
+          company_id: link.company_id,
+          filter_config: link.filter_config,
+          boardroom_mode: link.boardroom_mode,
+        },
+        {
+          includesSensitiveData: link.includes_sensitive_data || false,
+          preserveAggregates: true,
+          logAccess: true,
+          shareLinkId: linkId,
+          accessorIp: request.ip,
+          accessorUserAgent: request.headers['user-agent'] || 'unknown',
+        }
+      );
+
+      return reply.send(redactedData.data);
+>>>>>>> origin/claude/phase-f-boardroom-pptx-a11y-01GvaGy8W3FGnuPTTgeRH8vx
     },
   });
 }
