@@ -1,0 +1,212 @@
+{
+  "dashboard": {
+    "title": "SLO Overview - Production",
+    "uid": "slo-overview-prod",
+    "timezone": "utc",
+    "tags": ["slo", "error-budget", "production"],
+    "refresh": "30s",
+    "time": {
+      "from": "now-24h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "API Gateway - Availability SLO (99.9%)",
+        "type": "stat",
+        "gridPos": {"x": 0, "y": 0, "w": 6, "h": 4},
+        "targets": [
+          {
+            "expr": "slo:api_gateway:availability:ratio_rate1d{}",
+            "legendFormat": "Availability"
+          }
+        ],
+        "options": {
+          "graphMode": "area",
+          "colorMode": "value",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"value": 0, "color": "red"},
+              {"value": 0.995, "color": "orange"},
+              {"value": 0.999, "color": "green"}
+            ]
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percentunit",
+            "decimals": 4
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "API Gateway - Error Budget Remaining (30d)",
+        "type": "gauge",
+        "gridPos": {"x": 6, "y": 0, "w": 6, "h": 4},
+        "targets": [
+          {
+            "expr": "slo:api_gateway:error_budget:remaining_30d{}",
+            "legendFormat": "Budget Remaining"
+          }
+        ],
+        "options": {
+          "showThresholdLabels": true,
+          "showThresholdMarkers": true,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"value": 0, "color": "red"},
+              {"value": 0.25, "color": "orange"},
+              {"value": 0.5, "color": "yellow"},
+              {"value": 0.75, "color": "green"}
+            ]
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percentunit",
+            "min": 0,
+            "max": 1
+          }
+        }
+      },
+      {
+        "id": 3,
+        "title": "API Gateway - Latency P95 (SLO: ≤100ms)",
+        "type": "timeseries",
+        "gridPos": {"x": 12, "y": 0, "w": 12, "h": 4},
+        "targets": [
+          {
+            "expr": "slo:api_gateway:latency:p95_5m{}",
+            "legendFormat": "P95 Latency"
+          },
+          {
+            "expr": "0.1",
+            "legendFormat": "SLO Target (100ms)"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 0.1, "color": "red"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 4,
+        "title": "Reporting - Availability SLO (99.5%)",
+        "type": "stat",
+        "gridPos": {"x": 0, "y": 4, "w": 6, "h": 4},
+        "targets": [
+          {
+            "expr": "slo:reporting:availability:ratio_rate1d{}",
+            "legendFormat": "Availability"
+          }
+        ],
+        "options": {
+          "graphMode": "area",
+          "colorMode": "value",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"value": 0, "color": "red"},
+              {"value": 0.99, "color": "orange"},
+              {"value": 0.995, "color": "green"}
+            ]
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percentunit",
+            "decimals": 4
+          }
+        }
+      },
+      {
+        "id": 5,
+        "title": "Reporting - Report Generation P95 (SLO: ≤15s)",
+        "type": "timeseries",
+        "gridPos": {"x": 6, "y": 4, "w": 12, "h": 4},
+        "targets": [
+          {
+            "expr": "slo:reporting:gen_latency:p95_5m{}",
+            "legendFormat": "P95 Generation Time"
+          },
+          {
+            "expr": "15",
+            "legendFormat": "SLO Target (15s)"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 15, "color": "red"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 6,
+        "title": "Q2Q AI - Cache Hit Rate (SLO: ≥60%)",
+        "type": "gauge",
+        "gridPos": {"x": 18, "y": 4, "w": 6, "h": 4},
+        "targets": [
+          {
+            "expr": "slo:q2q_ai:cache_hit_rate:ratio_1h{}",
+            "legendFormat": "Cache Hit Rate"
+          }
+        ],
+        "options": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"value": 0, "color": "red"},
+              {"value": 0.5, "color": "orange"},
+              {"value": 0.6, "color": "green"}
+            ]
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percentunit",
+            "min": 0,
+            "max": 1
+          }
+        }
+      },
+      {
+        "id": 7,
+        "title": "Error Budget Burn Rate (All Services)",
+        "type": "heatmap",
+        "gridPos": {"x": 0, "y": 8, "w": 24, "h": 8},
+        "targets": [
+          {
+            "expr": "1 - (slo:api_gateway:availability:ratio_rate1h{} - (1 - 0.999)) / (1 - 0.999)",
+            "legendFormat": "API Gateway"
+          },
+          {
+            "expr": "1 - (slo:reporting:availability:ratio_rate1h{} - (1 - 0.995)) / (1 - 0.995)",
+            "legendFormat": "Reporting"
+          },
+          {
+            "expr": "1 - (slo:q2q_ai:availability:ratio_rate1h{} - (1 - 0.999)) / (1 - 0.999)",
+            "legendFormat": "Q2Q AI"
+          }
+        ]
+      }
+    ]
+  }
+}

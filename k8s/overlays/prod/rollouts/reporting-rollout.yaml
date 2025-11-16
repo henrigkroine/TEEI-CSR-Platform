@@ -1,0 +1,196 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: reporting
+  namespace: teei-prod
+  labels:
+    app: reporting
+    tier: backend
+    managed-by: argo-rollouts
+spec:
+  replicas: 4
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: reporting
+  strategy:
+    canary:
+      # Canary strategy with longer pauses for data-intensive service
+      steps:
+      - setWeight: 5
+      - pause: {duration: 10m}
+      - analysis:
+          templates:
+          - templateName: reporting-quality-gate
+      - setWeight: 25
+      - pause: {duration: 15m}
+      - analysis:
+          templates:
+          - templateName: reporting-quality-gate
+      - setWeight: 50
+      - pause: {duration: 15m}
+      - analysis:
+          templates:
+          - templateName: reporting-quality-gate
+      - setWeight: 100
+
+      trafficRouting:
+        nginx:
+          stableIngress: reporting-stable
+          annotationPrefix: nginx.ingress.kubernetes.io
+
+      analysis:
+        templates:
+        - templateName: reporting-quality-gate
+        startingStep: 1
+        args:
+        - name: service-name
+          value: reporting
+
+  template:
+    metadata:
+      labels:
+        app: reporting
+        version: canary
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3001"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: reporting
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+
+      containers:
+      - name: reporting
+        image: ghcr.io/henrigkroine/teei-reporting:latest
+        imagePullPolicy: Always
+
+        ports:
+        - name: http
+          containerPort: 3001
+          protocol: TCP
+        - name: metrics
+          containerPort: 9090
+          protocol: TCP
+
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: LOG_LEVEL
+          value: "info"
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: backend-services-secrets
+              key: database-url
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: "http://otel-collector:4318"
+        - name: AI_TOKEN_BUDGET_DAILY
+          value: "100000"
+
+        resources:
+          requests:
+            cpu: 1000m
+            memory: 1Gi
+          limits:
+            cpu: 4000m
+            memory: 4Gi
+
+        livenessProbe:
+          httpGet:
+            path: /health/live
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 10
+          failureThreshold: 3
+
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: http
+          initialDelaySeconds: 15
+          periodSeconds: 5
+          timeoutSeconds: 5
+          failureThreshold: 2
+
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - reporting
+              topologyKey: kubernetes.io/hostname
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: reporting-quality-gate
+  namespace: teei-prod
+spec:
+  args:
+  - name: service-name
+
+  metrics:
+  # Metric 1: Report generation P95 ≤ 15s
+  - name: report-gen-p95
+    interval: 2m
+    count: 5
+    successCondition: result[0] < 15
+    failureLimit: 2
+    provider:
+      prometheus:
+        address: http://prometheus:9090
+        query: |
+          histogram_quantile(0.95,
+            sum(rate(report_generation_duration_seconds_bucket{service="{{args.service-name}}"}[5m])) by (le)
+          )
+
+  # Metric 2: Error rate ≤ 0.5% (stricter for reports)
+  - name: error-rate
+    interval: 1m
+    count: 5
+    successCondition: result[0] < 0.005
+    failureLimit: 2
+    provider:
+      prometheus:
+        address: http://prometheus:9090
+        query: |
+          sum(rate(http_requests_total{service="{{args.service-name}}", status=~"5.."}[5m])) /
+          sum(rate(http_requests_total{service="{{args.service-name}}"}[5m]))
+
+  # Metric 3: AI token budget compliance
+  - name: ai-token-budget
+    interval: 2m
+    count: 3
+    successCondition: result[0] < 100000
+    failureLimit: 1
+    provider:
+      prometheus:
+        address: http://prometheus:9090
+        query: |
+          sum(increase(ai_tokens_total{service="{{args.service-name}}"}[1h]))
+
+  # Metric 4: Database query P95 ≤ 500ms
+  - name: db-query-p95
+    interval: 1m
+    count: 5
+    successCondition: result[0] < 0.5
+    failureLimit: 2
+    provider:
+      prometheus:
+        address: http://prometheus:9090
+        query: |
+          histogram_quantile(0.95,
+            sum(rate(db_query_duration_seconds_bucket{service="{{args.service-name}}"}[5m])) by (le)
+          )

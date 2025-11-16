@@ -1,0 +1,327 @@
+---
+# AI Cost Budgets & Guardrails
+# Per-tenant and per-model token limits with alerting
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ai-budgets
+  namespace: teei-prod
+data:
+  budgets.yaml: |
+    # Global monthly budget
+    global:
+      monthly_budget_usd: 10000
+      alert_thresholds:
+        - percentage: 50
+          severity: warning
+          notification: slack
+        - percentage: 75
+          severity: warning
+          notification: email,slack
+        - percentage: 90
+          severity: critical
+          notification: email,slack,pagerduty
+        - percentage: 100
+          severity: critical
+          notification: email,slack,pagerduty
+          action: block_new_requests
+
+    # Per-tenant budgets
+    tenants:
+      - tenant_id: acme-corp
+        monthly_budget_usd: 2000
+        daily_budget_usd: 100
+        token_limits:
+          daily: 500000
+          monthly: 10000000
+        models:
+          - name: gpt-4
+            daily_tokens: 100000
+            cost_per_1k_input: 0.03
+            cost_per_1k_output: 0.06
+          - name: gpt-3.5-turbo
+            daily_tokens: 300000
+            cost_per_1k_input: 0.0015
+            cost_per_1k_output: 0.002
+          - name: claude-3-sonnet
+            daily_tokens: 100000
+            cost_per_1k_input: 0.003
+            cost_per_1k_output: 0.015
+
+      - tenant_id: global-impact-fund
+        monthly_budget_usd: 3000
+        daily_budget_usd: 150
+        token_limits:
+          daily: 750000
+          monthly: 15000000
+
+      - tenant_id: pilot-tenant-3
+        monthly_budget_usd: 1000
+        daily_budget_usd: 50
+        token_limits:
+          daily: 250000
+          monthly: 5000000
+
+    # Q2Q cache hit rate targets
+    cache:
+      target_hit_rate: 0.60  # 60% cache hit rate
+      alert_below: 0.50      # Alert if <50%
+      eviction_policy: lru
+      ttl_seconds: 86400     # 24 hours
+
+    # Rate limiting
+    rate_limits:
+      # Per-tenant request limits
+      - scope: tenant
+        window: 1h
+        max_requests: 100
+        max_tokens: 50000
+
+      # Per-endpoint limits
+      - scope: endpoint
+        endpoint: /v1/gen-reports:generate
+        window: 1h
+        max_requests: 10
+        window_daily: 24h
+        max_requests_daily: 50
+
+    # Cost forecasting
+    forecasting:
+      enabled: true
+      lookback_days: 30
+      alert_on_trend: true
+      trend_threshold_percent: 150  # Alert if trend >150% of budget
+
+---
+# Prometheus AlertManager rules for AI cost budgets
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ai-cost-alerts
+  namespace: teei-prod
+data:
+  alerts.yaml: |
+    groups:
+    - name: ai-costs
+      interval: 5m
+      rules:
+      # Global budget alerts
+      - alert: AIBudget50PercentReached
+        expr: |
+          (sum(ai_cost_usd_total{}) / 10000) >= 0.50
+        for: 5m
+        labels:
+          severity: warning
+          component: ai-costs
+        annotations:
+          summary: "AI monthly budget at 50%"
+          description: "Spent ${{ $value | humanize }}k of $10k monthly budget"
+          action: "Review high-cost tenants and models"
+
+      - alert: AIBudget75PercentReached
+        expr: |
+          (sum(ai_cost_usd_total{}) / 10000) >= 0.75
+        for: 5m
+        labels:
+          severity: warning
+          component: ai-costs
+        annotations:
+          summary: "AI monthly budget at 75%"
+          description: "Spent ${{ $value | humanize }}k of $10k monthly budget"
+          action: "Prepare to enforce rate limits"
+
+      - alert: AIBudget90PercentReached
+        expr: |
+          (sum(ai_cost_usd_total{}) / 10000) >= 0.90
+        for: 5m
+        labels:
+          severity: critical
+          component: ai-costs
+        annotations:
+          summary: "AI monthly budget at 90% - CRITICAL"
+          description: "Spent ${{ $value | humanize }}k of $10k monthly budget"
+          action: "Enable cost guardrails, block over-budget tenants"
+
+      - alert: AIBudgetExceeded
+        expr: |
+          (sum(ai_cost_usd_total{}) / 10000) >= 1.0
+        for: 1m
+        labels:
+          severity: critical
+          component: ai-costs
+          page: true
+        annotations:
+          summary: "AI monthly budget EXCEEDED"
+          description: "Spent ${{ $value | humanize }}k, exceeding $10k budget"
+          action: "IMMEDIATE: Block all non-critical AI requests"
+
+      # Per-tenant budget alerts
+      - alert: TenantAIBudgetExceeded
+        expr: |
+          sum(ai_cost_usd_total{}) by (tenant_id) >
+          on(tenant_id)
+          ai_tenant_monthly_budget_usd{}
+        for: 5m
+        labels:
+          severity: critical
+          component: ai-costs
+        annotations:
+          summary: "Tenant {{ $labels.tenant_id }} exceeded AI budget"
+          description: "Tenant spent ${{ $value }} this month"
+          action: "Block AI requests for this tenant until next cycle"
+
+      # Cache hit rate alerts
+      - alert: AICacheHitRateLow
+        expr: |
+          sum(rate(ai_cache_hits_total[1h])) /
+          sum(rate(ai_cache_requests_total[1h])) < 0.50
+        for: 15m
+        labels:
+          severity: warning
+          component: ai-costs
+        annotations:
+          summary: "AI cache hit rate below 50%"
+          description: "Current hit rate: {{ $value | humanizePercentage }}"
+          action: "Review cache TTL, increase cache size, or improve prompt reuse"
+
+      # Cost per inference alerts
+      - alert: AICostPerInferenceHigh
+        expr: |
+          sum(rate(ai_cost_usd_total[1h])) /
+          sum(rate(ai_requests_total[1h])) > 0.10
+        for: 10m
+        labels:
+          severity: warning
+          component: ai-costs
+        annotations:
+          summary: "AI cost per inference >$0.10"
+          description: "Average cost: ${{ $value | humanize }}"
+          action: "Investigate expensive prompts, switch to cheaper models"
+
+      # Daily token limit alerts
+      - alert: TenantDailyTokenLimitReached
+        expr: |
+          sum(increase(ai_tokens_total[24h])) by (tenant_id) >=
+          on(tenant_id)
+          ai_tenant_daily_token_limit{}
+        for: 5m
+        labels:
+          severity: warning
+          component: ai-costs
+        annotations:
+          summary: "Tenant {{ $labels.tenant_id }} reached daily token limit"
+          description: "Tokens used: {{ $value | humanize }}"
+          action: "Throttle requests, reset at midnight UTC"
+
+---
+# Cost tracking CronJob
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: ai-cost-reporter
+  namespace: teei-prod
+spec:
+  schedule: "0 0 * * *"  # Daily at midnight UTC
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          serviceAccountName: cost-reporter
+          containers:
+          - name: reporter
+            image: postgres:15-alpine
+            env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: backend-services-secrets
+                  key: database-url
+            - name: SLACK_WEBHOOK_URL
+              valueFrom:
+                secretKeyRef:
+                  name: cost-reporter-secret
+                  key: slack-webhook
+            command:
+            - /bin/sh
+            - -c
+            - |
+              #!/bin/sh
+              set -e
+
+              echo "Generating daily AI cost report..."
+
+              # Query yesterday's costs
+              REPORT=$(psql $DATABASE_URL -t -c "
+                SELECT
+                  tenant_id,
+                  SUM(tokens_input) as tokens_in,
+                  SUM(tokens_output) as tokens_out,
+                  SUM(cost_usd) as cost_usd,
+                  COUNT(*) as requests
+                FROM llm_cost_telemetry
+                WHERE DATE(created_at) = CURRENT_DATE - INTERVAL '1 day'
+                GROUP BY tenant_id
+                ORDER BY cost_usd DESC;
+              ")
+
+              # Calculate totals
+              TOTAL_COST=$(echo "$REPORT" | awk '{sum+=$4} END {print sum}')
+              MONTHLY_SPEND=$(psql $DATABASE_URL -t -c "
+                SELECT COALESCE(SUM(cost_usd), 0)
+                FROM llm_cost_telemetry
+                WHERE created_at >= DATE_TRUNC('month', CURRENT_DATE);
+              " | xargs)
+
+              BUDGET_REMAINING=$(echo "10000 - $MONTHLY_SPEND" | bc)
+              BUDGET_PERCENT=$(echo "scale=2; ($MONTHLY_SPEND / 10000) * 100" | bc)
+
+              # Post to Slack
+              curl -X POST $SLACK_WEBHOOK_URL \
+                -H 'Content-Type: application/json' \
+                -d @- <<EOF
+              {
+                "text": "📊 Daily AI Cost Report",
+                "blocks": [
+                  {
+                    "type": "header",
+                    "text": {
+                      "type": "plain_text",
+                      "text": "☁️ AI Cost Report - $(date +%Y-%m-%d)"
+                    }
+                  },
+                  {
+                    "type": "section",
+                    "fields": [
+                      {"type": "mrkdwn", "text": "*Yesterday's Total:*\n\$$TOTAL_COST"},
+                      {"type": "mrkdwn", "text": "*Month-to-Date:*\n\$$MONTHLY_SPEND"},
+                      {"type": "mrkdwn", "text": "*Budget Remaining:*\n\$$BUDGET_REMAINING"},
+                      {"type": "mrkdwn", "text": "*Budget Used:*\n${BUDGET_PERCENT}%"}
+                    ]
+                  },
+                  {
+                    "type": "section",
+                    "text": {
+                      "type": "mrkdwn",
+                      "text": "\`\`\`$REPORT\`\`\`"
+                    }
+                  },
+                  {
+                    "type": "context",
+                    "elements": [
+                      {"type": "mrkdwn", "text": "View details: <https://grafana.teei.com/d/ai-costs|Grafana Dashboard>"}
+                    ]
+                  }
+                ]
+              }
+              EOF
+
+              echo "Report sent to Slack ✓"
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cost-reporter
+  namespace: teei-prod

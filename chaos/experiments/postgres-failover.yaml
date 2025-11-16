@@ -1,0 +1,136 @@
+---
+# Chaos Experiment: PostgreSQL Failover
+# Tests database HA and connection pool resilience
+# Expected: Automatic failover, zero data loss (RPO ≤15m), RTO ≤60m
+
+apiVersion: chaos-mesh.org/v1alpha1
+kind: PodChaos
+metadata:
+  name: postgres-failover
+  namespace: teei-prod
+  labels:
+    experiment: database-failover
+    service: postgres
+    severity: critical
+spec:
+  action: pod-kill
+  mode: one
+  selector:
+    namespaces:
+      - teei-prod
+    labelSelectors:
+      app: postgresql
+      role: master
+
+  duration: "5m"
+
+  # Scheduler: Monthly drills
+  scheduler:
+    cron: "0 2 1 * *"  # 2 AM on 1st of month
+
+---
+# Validation Job: Verify database recovery
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: validate-postgres-recovery
+  namespace: teei-prod
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: validator
+        image: postgres:15-alpine
+        env:
+        - name: PGHOST
+          value: "postgresql.teei-prod.svc.cluster.local"
+        - name: PGDATABASE
+          value: "teei"
+        - name: PGUSER
+          valueFrom:
+            secretKeyRef:
+              name: backend-services-secrets
+              key: postgres-user
+        - name: PGPASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: backend-services-secrets
+              key: postgres-password
+        command:
+        - /bin/sh
+        - -c
+        - |
+          set -e
+          echo "Waiting 2 minutes for failover..."
+          sleep 120
+
+          echo "Testing database connection..."
+          psql -c "SELECT 1" || {
+            echo "Database connection failed!"
+            exit 1
+          }
+
+          echo "Checking replication lag..."
+          LAG=$(psql -t -c "SELECT EXTRACT(EPOCH FROM (now() - pg_last_xact_replay_timestamp()))::INT")
+          if [ "$LAG" -gt 900 ]; then  # 15 minutes = 900 seconds
+            echo "Replication lag ${LAG}s exceeds RPO of 900s!"
+            exit 1
+          fi
+
+          echo "Verifying read/write capability..."
+          psql -c "CREATE TEMP TABLE chaos_test (id INT); INSERT INTO chaos_test VALUES (1);" || {
+            echo "Write test failed!"
+            exit 1
+          }
+
+          echo "PostgreSQL recovery validated ✓"
+          echo "Replication lag: ${LAG}s (RPO ≤15m ✓)"
+
+---
+# Pre-failover backup checkpoint
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: postgres-pre-chaos-backup
+  namespace: teei-prod
+spec:
+  schedule: "55 1 * * *"  # 5 minutes before monthly drill
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+          - name: backup
+            image: postgres:15-alpine
+            env:
+            - name: PGHOST
+              value: "postgresql.teei-prod.svc.cluster.local"
+            - name: PGDATABASE
+              value: "teei"
+            - name: PGUSER
+              valueFrom:
+                secretKeyRef:
+                  name: backend-services-secrets
+                  key: postgres-user
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: backend-services-secrets
+                  key: postgres-password
+            command:
+            - /bin/sh
+            - -c
+            - |
+              TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+              echo "Creating pre-chaos backup: chaos_backup_${TIMESTAMP}"
+              pg_dump -Fc > /backup/chaos_backup_${TIMESTAMP}.dump
+              echo "Backup complete"
+            volumeMounts:
+            - name: backup-storage
+              mountPath: /backup
+          volumes:
+          - name: backup-storage
+            persistentVolumeClaim:
+              claimName: postgres-backup-pvc

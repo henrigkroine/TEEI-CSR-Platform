@@ -1,0 +1,217 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: q2q-ai
+  namespace: teei-prod
+  labels:
+    app: q2q-ai
+    tier: ai
+    managed-by: argo-rollouts
+spec:
+  replicas: 3
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: q2q-ai
+  strategy:
+    canary:
+      # Conservative rollout for AI service with cache warming
+      steps:
+      - setWeight: 5
+      - pause: {duration: 15m}  # Extended pause for cache warming
+      - analysis:
+          templates:
+          - templateName: q2q-ai-quality-gate
+      - setWeight: 25
+      - pause: {duration: 20m}
+      - analysis:
+          templates:
+          - templateName: q2q-ai-quality-gate
+      - setWeight: 50
+      - pause: {duration: 20m}
+      - analysis:
+          templates:
+          - templateName: q2q-ai-quality-gate
+      - setWeight: 100
+
+      trafficRouting:
+        nginx:
+          stableIngress: q2q-ai-stable
+          annotationPrefix: nginx.ingress.kubernetes.io
+
+      analysis:
+        templates:
+        - templateName: q2q-ai-quality-gate
+        startingStep: 1
+        args:
+        - name: service-name
+          value: q2q-ai
+        - name: cache-hit-rate-target
+          value: "0.60"  # 60% cache hit rate
+
+  template:
+    metadata:
+      labels:
+        app: q2q-ai
+        version: canary
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3002"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: q2q-ai
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+
+      containers:
+      - name: q2q-ai
+        image: ghcr.io/henrigkroine/teei-q2q-ai:latest
+        imagePullPolicy: Always
+
+        ports:
+        - name: http
+          containerPort: 3002
+          protocol: TCP
+        - name: metrics
+          containerPort: 9090
+          protocol: TCP
+
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: LOG_LEVEL
+          value: "info"
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: q2q-ai-secret
+              key: openai-api-key
+        - name: ANTHROPIC_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: q2q-ai-secret
+              key: anthropic-api-key
+        - name: AI_CACHE_TTL
+          value: "86400"  # 24 hours
+        - name: AI_CACHE_HIT_RATE_TARGET
+          value: "0.60"
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: "http://otel-collector:4318"
+
+        resources:
+          requests:
+            cpu: 2000m
+            memory: 2Gi
+          limits:
+            cpu: 8000m
+            memory: 8Gi
+
+        livenessProbe:
+          httpGet:
+            path: /health/live
+            port: http
+          initialDelaySeconds: 60
+          periodSeconds: 15
+          timeoutSeconds: 10
+          failureThreshold: 3
+
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 2
+
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - q2q-ai
+            topologyKey: kubernetes.io/hostname
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: q2q-ai-quality-gate
+  namespace: teei-prod
+spec:
+  args:
+  - name: service-name
+  - name: cache-hit-rate-target
+
+  metrics:
+  # Metric 1: Cache hit rate ≥ 60%
+  - name: cache-hit-rate
+    interval: 2m
+    count: 5
+    successCondition: result[0] >= {{args.cache-hit-rate-target}}
+    failureLimit: 2
+    provider:
+      prometheus:
+        address: http://prometheus:9090
+        query: |
+          sum(rate(ai_cache_hits_total{service="{{args.service-name}}"}[10m])) /
+          sum(rate(ai_cache_requests_total{service="{{args.service-name}}"}[10m]))
+
+  # Metric 2: AI inference P95 ≤ 3s
+  - name: ai-inference-p95
+    interval: 2m
+    count: 5
+    successCondition: result[0] < 3
+    failureLimit: 2
+    provider:
+      prometheus:
+        address: http://prometheus:9090
+        query: |
+          histogram_quantile(0.95,
+            sum(rate(ai_inference_duration_seconds_bucket{service="{{args.service-name}}"}[5m])) by (le)
+          )
+
+  # Metric 3: Cost per inference ≤ $0.05
+  - name: cost-per-inference
+    interval: 5m
+    count: 3
+    successCondition: result[0] < 0.05
+    failureLimit: 1
+    provider:
+      prometheus:
+        address: http://prometheus:9090
+        query: |
+          sum(rate(ai_cost_usd_total{service="{{args.service-name}}"}[10m])) /
+          sum(rate(ai_requests_total{service="{{args.service-name}}"}[10m]))
+
+  # Metric 4: Error rate ≤ 0.1% (very strict for AI)
+  - name: error-rate
+    interval: 1m
+    count: 5
+    successCondition: result[0] < 0.001
+    failureLimit: 1
+    provider:
+      prometheus:
+        address: http://prometheus:9090
+        query: |
+          sum(rate(http_requests_total{service="{{args.service-name}}", status=~"5.."}[5m])) /
+          sum(rate(http_requests_total{service="{{args.service-name}}"}[5m]))
+
+  # Metric 5: Model availability
+  - name: model-availability
+    interval: 1m
+    count: 5
+    successCondition: result[0] >= 0.999
+    failureLimit: 1
+    provider:
+      prometheus:
+        address: http://prometheus:9090
+        query: |
+          sum(rate(ai_model_requests_total{service="{{args.service-name}}", status="success"}[5m])) /
+          sum(rate(ai_model_requests_total{service="{{args.service-name}}"}[5m]))

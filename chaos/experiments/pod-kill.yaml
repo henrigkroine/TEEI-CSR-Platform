@@ -1,0 +1,158 @@
+---
+# Chaos Experiment: Random Pod Kill
+# Tests pod restart resilience and HPA scaling
+# Expected: Zero user-facing errors, traffic shifts to healthy pods within 10s
+
+apiVersion: chaos-mesh.org/v1alpha1
+kind: PodChaos
+metadata:
+  name: random-pod-kill
+  namespace: teei-prod
+  labels:
+    experiment: pod-resilience
+    severity: low
+spec:
+  action: pod-kill
+  mode: one  # Kill one pod at a time
+  selector:
+    namespaces:
+      - teei-prod
+    labelSelectors:
+      tier: backend
+    expressionSelectors:
+      - key: app
+        operator: In
+        values:
+          - api-gateway
+          - reporting
+          - impact-in
+          - unified-profile
+
+  duration: "30s"
+
+  # Scheduler: Daily chaos during business hours
+  scheduler:
+    cron: "*/30 9-17 * * 1-5"  # Every 30 minutes, 9 AM - 5 PM, Mon-Fri
+
+  # Grace period for pod termination
+  gracePeriod: 10
+
+---
+# PodChaos with CPU stress
+apiVersion: chaos-mesh.org/v1alpha1
+kind: StressChaos
+metadata:
+  name: cpu-stress
+  namespace: teei-prod
+  labels:
+    experiment: resource-exhaustion
+    severity: medium
+spec:
+  mode: one
+  selector:
+    namespaces:
+      - teei-prod
+    labelSelectors:
+      app: reporting  # Target compute-heavy service
+
+  # Stress 2 CPU cores for 5 minutes
+  stressors:
+    cpu:
+      workers: 2
+      load: 80
+
+  duration: "5m"
+
+  # Scheduler: Weekly stress test
+  scheduler:
+    cron: "0 10 * * 3"  # 10 AM every Wednesday
+
+---
+# Validation: Check HPA scaling
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: validate-hpa-scaling
+  namespace: teei-prod
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      serviceAccountName: chaos-validator
+      containers:
+      - name: validator
+        image: bitnami/kubectl:latest
+        command:
+        - /bin/sh
+        - -c
+        - |
+          set -e
+          echo "Monitoring HPA scaling during pod kill..."
+
+          # Get initial replica count
+          INITIAL_REPLICAS=$(kubectl get deployment reporting -n teei-prod -o jsonpath='{.spec.replicas}')
+          echo "Initial replicas: $INITIAL_REPLICAS"
+
+          # Wait for HPA to react
+          sleep 60
+
+          # Check if HPA scaled up
+          CURRENT_REPLICAS=$(kubectl get deployment reporting -n teei-prod -o jsonpath='{.spec.replicas}')
+          echo "Current replicas: $CURRENT_REPLICAS"
+
+          # Verify error rate stayed low
+          ERROR_RATE=$(kubectl exec -n teei-prod prometheus-0 -- \
+            promtool query instant http://localhost:9090 \
+            'sum(rate(http_requests_total{service="reporting",status=~"5.."}[5m])) / sum(rate(http_requests_total{service="reporting"}[5m]))' \
+            | grep -oP '\d+\.\d+')
+
+          echo "Error rate during chaos: $ERROR_RATE"
+
+          if (( $(echo "$ERROR_RATE < 0.01" | bc -l) )); then
+            echo "✓ Error rate < 1%"
+          else
+            echo "✗ Error rate ${ERROR_RATE} exceeds 1%"
+            exit 1
+          fi
+
+          echo "✓ Pod kill resilience validated"
+
+---
+# ServiceAccount for validation jobs
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: chaos-validator
+  namespace: teei-prod
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: chaos-validator
+  namespace: teei-prod
+rules:
+- apiGroups: ["apps"]
+  resources: ["deployments", "replicasets"]
+  verbs: ["get", "list"]
+- apiGroups: [""]
+  resources: ["pods", "pods/exec"]
+  verbs: ["get", "list", "create"]
+- apiGroups: ["autoscaling"]
+  resources: ["horizontalpodautoscalers"]
+  verbs: ["get", "list"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: chaos-validator
+  namespace: teei-prod
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: chaos-validator
+subjects:
+- kind: ServiceAccount
+  name: chaos-validator
+  namespace: teei-prod

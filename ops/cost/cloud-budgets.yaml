@@ -1,0 +1,303 @@
+---
+# Cloud Infrastructure Cost Budgets
+# AWS/GCP/Azure spend tracking and alerts
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloud-budgets
+  namespace: teei-prod
+data:
+  budgets.yaml: |
+    # Monthly cloud budget (all providers)
+    global:
+      monthly_budget_usd: 25000
+      currency: USD
+      alert_thresholds:
+        - percentage: 50
+          notification: email
+        - percentage: 75
+          notification: email,slack
+        - percentage: 90
+          notification: email,slack,pagerduty
+        - percentage: 100
+          notification: email,slack,pagerduty
+          action: notify_finance_team
+
+    # Per-service budgets
+    services:
+      - name: kubernetes
+        monthly_budget_usd: 12000
+        resources:
+          - type: compute
+            budget_usd: 8000
+          - type: storage
+            budget_usd: 2000
+          - type: networking
+            budget_usd: 2000
+
+      - name: databases
+        monthly_budget_usd: 5000
+        resources:
+          - name: postgresql-prod
+            budget_usd: 3000
+          - name: clickhouse-analytics
+            budget_usd: 1500
+          - name: redis-cache
+            budget_usd: 500
+
+      - name: object-storage
+        monthly_budget_usd: 2000
+        resources:
+          - name: s3-backups
+            budget_usd: 1000
+          - name: s3-exports
+            budget_usd: 500
+          - name: s3-logs
+            budget_usd: 500
+
+      - name: networking
+        monthly_budget_usd: 3000
+        resources:
+          - name: load-balancers
+            budget_usd: 1500
+          - name: cdn
+            budget_usd: 1000
+          - name: vpn
+            budget_usd: 500
+
+      - name: observability
+        monthly_budget_usd: 2000
+        resources:
+          - name: prometheus-storage
+            budget_usd: 800
+          - name: loki-storage
+            budget_usd: 600
+          - name: jaeger-storage
+            budget_usd: 400
+          - name: grafana-cloud
+            budget_usd: 200
+
+      - name: third-party
+        monthly_budget_usd: 1000
+        resources:
+          - name: sentry
+            budget_usd: 300
+          - name: pagerduty
+            budget_usd: 200
+          - name: statuspage
+            budget_usd: 200
+          - name: github-actions
+            budget_usd: 300
+
+    # Cost optimization targets
+    optimization:
+      # Reserved instances / savings plans
+      reserved_instances:
+        target_coverage: 70  # 70% of compute on reserved/spot
+        current_coverage: 45
+        potential_savings_usd: 3000
+
+      # Right-sizing recommendations
+      right_sizing:
+        enabled: true
+        underutilized_threshold: 30  # CPU <30% for 7 days
+        oversized_threshold: 90      # CPU >90% for 7 days
+
+      # Unused resources
+      cleanup:
+        - resource: ebs-volumes-unattached
+          age_days: 7
+          estimated_savings_usd: 500
+        - resource: elastic-ips-unassociated
+          age_days: 1
+          estimated_savings_usd: 50
+        - resource: old-snapshots
+          age_days: 90
+          estimated_savings_usd: 300
+
+    # Forecasting
+    forecast:
+      enabled: true
+      lookback_days: 90
+      projection_days: 30
+      alert_on_overrun: true
+
+---
+# Prometheus alerts for cloud costs
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloud-cost-alerts
+  namespace: teei-prod
+data:
+  alerts.yaml: |
+    groups:
+    - name: cloud-costs
+      interval: 1h
+      rules:
+      - alert: CloudBudget75PercentReached
+        expr: |
+          (sum(cloud_cost_usd_total{}) / 25000) >= 0.75
+        for: 1h
+        labels:
+          severity: warning
+          component: cloud-costs
+        annotations:
+          summary: "Monthly cloud budget at 75%"
+          description: "Spent ${{ $value | humanize }}k of $25k budget"
+
+      - alert: CloudBudgetExceeded
+        expr: |
+          (sum(cloud_cost_usd_total{}) / 25000) >= 1.0
+        for: 1h
+        labels:
+          severity: critical
+          component: cloud-costs
+        annotations:
+          summary: "Monthly cloud budget EXCEEDED"
+          description: "Spent ${{ $value | humanize }}k, exceeding $25k budget"
+          action: "Review resource usage, consider scaling down non-critical services"
+
+      - alert: ServiceBudgetExceeded
+        expr: |
+          sum(cloud_cost_usd_total{}) by (service) >
+          on(service)
+          cloud_service_monthly_budget_usd{}
+        for: 1h
+        labels:
+          severity: warning
+          component: cloud-costs
+        annotations:
+          summary: "Service {{ $labels.service }} exceeded budget"
+          description: "Spent ${{ $value }} this month"
+
+      - alert: UnexpectedCostSpike
+        expr: |
+          (
+            sum(rate(cloud_cost_usd_total[24h])) * 30
+          ) > (
+            sum(rate(cloud_cost_usd_total[7d] offset 7d)) * 30 * 1.5
+          )
+        for: 6h
+        labels:
+          severity: warning
+          component: cloud-costs
+        annotations:
+          summary: "Cloud cost trend 50% higher than last week"
+          description: "Projected monthly cost: ${{ $value | humanize }}k"
+          action: "Investigate resource spikes, check for runaway processes"
+
+---
+# Cost optimization CronJob
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: cloud-cost-optimizer
+  namespace: teei-prod
+spec:
+  schedule: "0 2 * * 1"  # Weekly on Monday at 2 AM
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          serviceAccountName: cost-optimizer
+          containers:
+          - name: optimizer
+            image: amazon/aws-cli:latest
+            env:
+            - name: AWS_REGION
+              value: "us-east-1"
+            command:
+            - /bin/bash
+            - -c
+            - |
+              set -e
+
+              echo "🔍 Scanning for cost optimization opportunities..."
+
+              # Find unattached EBS volumes
+              echo "Checking unattached EBS volumes..."
+              UNATTACHED_VOLUMES=$(aws ec2 describe-volumes \
+                --filters Name=status,Values=available \
+                --query 'Volumes[*].[VolumeId,Size,CreateTime]' \
+                --output text)
+
+              # Find unassociated Elastic IPs
+              echo "Checking unassociated Elastic IPs..."
+              UNASSOCIATED_IPS=$(aws ec2 describe-addresses \
+                --query 'Addresses[?AssociationId==null].[PublicIp,AllocationId]' \
+                --output text)
+
+              # Find old snapshots
+              echo "Checking old snapshots (>90 days)..."
+              CUTOFF_DATE=$(date -d '90 days ago' +%Y-%m-%d)
+              OLD_SNAPSHOTS=$(aws ec2 describe-snapshots \
+                --owner-ids self \
+                --query "Snapshots[?StartTime<'$CUTOFF_DATE'].[SnapshotId,StartTime,VolumeSize]" \
+                --output text)
+
+              # Generate report
+              cat > /tmp/cost-optimization-report.txt <<EOF
+              ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+              📊 Weekly Cost Optimization Report
+              ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+              🔹 Unattached EBS Volumes:
+              $UNATTACHED_VOLUMES
+
+              🔹 Unassociated Elastic IPs:
+              $UNASSOCIATED_IPS
+
+              🔹 Old Snapshots (>90 days):
+              $OLD_SNAPSHOTS
+
+              ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+              💡 Recommendations:
+              1. Delete unattached volumes after 7 days
+              2. Release unassociated Elastic IPs immediately
+              3. Archive old snapshots to Glacier
+              4. Review reserved instance coverage
+              ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+              EOF
+
+              cat /tmp/cost-optimization-report.txt
+
+              echo "Report generated ✓"
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cost-optimizer
+  namespace: teei-prod
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: cost-optimizer
+  namespace: teei-prod
+rules:
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "list"]
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: cost-optimizer
+  namespace: teei-prod
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: cost-optimizer
+subjects:
+- kind: ServiceAccount
+  name: cost-optimizer
+  namespace: teei-prod
