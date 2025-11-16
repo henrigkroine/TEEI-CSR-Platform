@@ -1,0 +1,122 @@
+# Deny-by-default authorization policy
+# Only explicitly allowed traffic is permitted
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: deny-all-default
+  namespace: istio-system
+spec:
+  {}
+---
+# Allow health checks from Kubernetes
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-health-checks
+  namespace: teei-production-us-east-1
+spec:
+  action: ALLOW
+  rules:
+  - to:
+    - operation:
+        paths:
+        - /health
+        - /healthz
+        - /ready
+        - /readiness
+        - /livez
+        - /liveness
+        methods:
+        - GET
+---
+# Allow API Gateway to backend services
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: api-gateway-to-backends
+  namespace: teei-production-us-east-1
+spec:
+  selector:
+    matchLabels:
+      app: teei-unified-profile
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        principals:
+        - cluster.local/ns/teei-production-us-east-1/sa/api-gateway
+    to:
+    - operation:
+        methods:
+        - GET
+        - POST
+        - PUT
+        - PATCH
+        - DELETE
+---
+# Allow observability components
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-observability
+  namespace: teei-production-us-east-1
+spec:
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        namespaces:
+        - observability
+    to:
+    - operation:
+        paths:
+        - /metrics
+        - /stats/prometheus
+        methods:
+        - GET
+---
+# EU region - Deny by default
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: deny-all-default-eu
+  namespace: teei-production-eu-central-1
+spec:
+  {}
+---
+# EU - Allow health checks
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-health-checks-eu
+  namespace: teei-production-eu-central-1
+spec:
+  action: ALLOW
+  rules:
+  - to:
+    - operation:
+        paths:
+        - /health
+        - /healthz
+        - /ready
+        - /readiness
+        - /livez
+        - /liveness
+        methods:
+        - GET
+---
+# EU - GDPR-compliant: Block cross-region traffic
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: block-cross-region-eu
+  namespace: teei-production-eu-central-1
+spec:
+  action: DENY
+  rules:
+  - from:
+    - source:
+        notNamespaces:
+        - teei-production-eu-central-1
+        - observability
+        - istio-system

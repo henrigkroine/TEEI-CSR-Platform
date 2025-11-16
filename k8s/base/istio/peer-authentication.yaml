@@ -1,0 +1,30 @@
+# Global mTLS STRICT enforcement
+# All service-to-service communication MUST use mutual TLS
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: default-mtls-strict
+  namespace: istio-system
+spec:
+  mtls:
+    mode: STRICT
+---
+# Per-namespace enforcement for production US
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: mtls-strict-us
+  namespace: teei-production-us-east-1
+spec:
+  mtls:
+    mode: STRICT
+---
+# Per-namespace enforcement for production EU
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: mtls-strict-eu
+  namespace: teei-production-eu-central-1
+spec:
+  mtls:
+    mode: STRICT

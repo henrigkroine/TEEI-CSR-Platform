@@ -1,0 +1,135 @@
+# Argo Rollout for API Gateway with canary strategy and SLO gates
+# Progressive: 5% → 15% → 30% → 60% → 100%
+# Gates: p95 latency, error rate, saturation
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: teei-api-gateway
+  namespace: teei-production-us-east-1
+spec:
+  replicas: 5
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app: teei-api-gateway
+  template:
+    metadata:
+      labels:
+        app: teei-api-gateway
+    spec:
+      containers:
+      - name: api-gateway
+        image: ghcr.io/henrigkroine/teei-api-gateway:v1.0.0
+        ports:
+        - containerPort: 8080
+          name: http
+        - containerPort: 9090
+          name: metrics
+  strategy:
+    canary:
+      maxSurge: "25%"
+      maxUnavailable: 0
+      # SLO-gated canary steps
+      steps:
+      - setWeight: 5
+      - pause: {duration: 2m}
+      - analysis:
+          templates:
+          - templateName: api-gateway-slo-analysis
+          args:
+          - name: service-name
+            value: teei-api-gateway
+      - setWeight: 15
+      - pause: {duration: 3m}
+      - analysis:
+          templates:
+          - templateName: api-gateway-slo-analysis
+          args:
+          - name: service-name
+            value: teei-api-gateway
+      - setWeight: 30
+      - pause: {duration: 5m}
+      - analysis:
+          templates:
+          - templateName: api-gateway-slo-analysis
+          args:
+          - name: service-name
+            value: teei-api-gateway
+      - setWeight: 60
+      - pause: {duration: 5m}
+      - analysis:
+          templates:
+          - templateName: api-gateway-slo-analysis
+          args:
+          - name: service-name
+            value: teei-api-gateway
+      - setWeight: 100
+      trafficRouting:
+        istio:
+          virtualService:
+            name: api-gateway-vs-us
+            routes:
+            - primary
+      # Auto-rollback configuration
+      abortScaleDownDelaySeconds: 120
+---
+# AnalysisTemplate for SLO validation
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: api-gateway-slo-analysis
+  namespace: teei-production-us-east-1
+spec:
+  args:
+  - name: service-name
+  metrics:
+  # Metric 1: p95 latency < 500ms
+  - name: latency-p95
+    interval: 30s
+    count: 4
+    successCondition: result < 500
+    failureLimit: 2
+    provider:
+      prometheus:
+        address: http://prometheus.observability.svc.cluster.local:9090
+        query: |
+          histogram_quantile(0.95,
+            sum(rate(http_request_duration_seconds_bucket{service="{{args.service-name}}"}[5m])) by (le)
+          ) * 1000
+  # Metric 2: Error rate < 0.1%
+  - name: error-rate
+    interval: 30s
+    count: 4
+    successCondition: result < 0.001
+    failureLimit: 2
+    provider:
+      prometheus:
+        address: http://prometheus.observability.svc.cluster.local:9090
+        query: |
+          sum(rate(http_requests_total{service="{{args.service-name}}",status=~"5.."}[5m]))
+          /
+          sum(rate(http_requests_total{service="{{args.service-name}}"}[5m]))
+  # Metric 3: CPU saturation < 80%
+  - name: cpu-saturation
+    interval: 30s
+    count: 4
+    successCondition: result < 80
+    failureLimit: 2
+    provider:
+      prometheus:
+        address: http://prometheus.observability.svc.cluster.local:9090
+        query: |
+          avg(rate(container_cpu_usage_seconds_total{pod=~"{{args.service-name}}-.*"}[5m])) * 100
+  # Metric 4: Memory saturation < 85%
+  - name: memory-saturation
+    interval: 30s
+    count: 4
+    successCondition: result < 85
+    failureLimit: 2
+    provider:
+      prometheus:
+        address: http://prometheus.observability.svc.cluster.local:9090
+        query: |
+          avg(container_memory_working_set_bytes{pod=~"{{args.service-name}}-.*"}
+          /
+          container_spec_memory_limit_bytes{pod=~"{{args.service-name}}-.*"}) * 100

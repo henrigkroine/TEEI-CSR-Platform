@@ -1,0 +1,90 @@
+# Argo Rollout for Corporate Cockpit with canary strategy
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: teei-corp-cockpit
+  namespace: teei-production-us-east-1
+spec:
+  replicas: 6
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app: teei-corp-cockpit
+  template:
+    metadata:
+      labels:
+        app: teei-corp-cockpit
+    spec:
+      containers:
+      - name: corp-cockpit
+        image: ghcr.io/henrigkroine/teei-corp-cockpit:v1.0.0
+        ports:
+        - containerPort: 3000
+          name: http
+        - containerPort: 9090
+          name: metrics
+  strategy:
+    canary:
+      maxSurge: "25%"
+      maxUnavailable: 0
+      steps:
+      - setWeight: 5
+      - pause: {duration: 2m}
+      - analysis:
+          templates:
+          - templateName: corp-cockpit-slo-analysis
+      - setWeight: 15
+      - pause: {duration: 3m}
+      - analysis:
+          templates:
+          - templateName: corp-cockpit-slo-analysis
+      - setWeight: 30
+      - pause: {duration: 5m}
+      - analysis:
+          templates:
+          - templateName: corp-cockpit-slo-analysis
+      - setWeight: 60
+      - pause: {duration: 5m}
+      - analysis:
+          templates:
+          - templateName: corp-cockpit-slo-analysis
+      - setWeight: 100
+      trafficRouting:
+        istio:
+          virtualService:
+            name: corp-cockpit-vs-us
+            routes:
+            - primary
+      abortScaleDownDelaySeconds: 120
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: corp-cockpit-slo-analysis
+  namespace: teei-production-us-east-1
+spec:
+  metrics:
+  - name: latency-p95
+    interval: 30s
+    count: 4
+    successCondition: result < 1000
+    failureLimit: 2
+    provider:
+      prometheus:
+        address: http://prometheus.observability.svc.cluster.local:9090
+        query: |
+          histogram_quantile(0.95,
+            sum(rate(http_request_duration_seconds_bucket{service="teei-corp-cockpit"}[5m])) by (le)
+          ) * 1000
+  - name: error-rate
+    interval: 30s
+    count: 4
+    successCondition: result < 0.001
+    failureLimit: 2
+    provider:
+      prometheus:
+        address: http://prometheus.observability.svc.cluster.local:9090
+        query: |
+          sum(rate(http_requests_total{service="teei-corp-cockpit",status=~"5.."}[5m]))
+          /
+          sum(rate(http_requests_total{service="teei-corp-cockpit"}[5m]))

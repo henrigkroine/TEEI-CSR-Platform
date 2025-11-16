@@ -1,0 +1,58 @@
+# Istio Gateway for ingress traffic
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: teei-gateway-us
+  namespace: teei-production-us-east-1
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - port:
+      number: 443
+      name: https
+      protocol: HTTPS
+    tls:
+      mode: SIMPLE
+      credentialName: teei-tls-cert-us
+    hosts:
+    - "*.teei.cloud"
+    - "api.teei.cloud"
+    - "cockpit.teei.cloud"
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+    - "*.teei.cloud"
+    tls:
+      httpsRedirect: true
+---
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: teei-gateway-eu
+  namespace: teei-production-eu-central-1
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - port:
+      number: 443
+      name: https
+      protocol: HTTPS
+    tls:
+      mode: SIMPLE
+      credentialName: teei-tls-cert-eu
+    hosts:
+    - "*.eu.teei.cloud"
+    - "api.eu.teei.cloud"
+    - "cockpit.eu.teei.cloud"
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+    - "*.eu.teei.cloud"
+    tls:
+      httpsRedirect: true

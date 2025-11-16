@@ -1,0 +1,118 @@
+# EU-Central-1: GDPR-compliant network policies
+# Blocks egress to non-EU regions and enforces data residency
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: deny-cross-border-egress
+  namespace: teei-production-eu-central-1
+spec:
+  podSelector: {}
+  policyTypes:
+  - Egress
+  egress:
+  # Allow DNS
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: kube-system
+    ports:
+    - protocol: UDP
+      port: 53
+  # Allow within cluster
+  - to:
+    - podSelector: {}
+  # Allow to EU-based services only
+  - to:
+    - podSelector:
+        matchLabels:
+          data-residency: eu
+    ports:
+    - protocol: TCP
+      port: 443
+    - protocol: TCP
+      port: 5432
+    - protocol: TCP
+      port: 9000
+    - protocol: TCP
+      port: 6379
+  # Block egress to US/non-EU regions
+  - to:
+    - podSelector:
+        matchExpressions:
+        - key: data-residency
+          operator: NotIn
+          values:
+          - us
+          - ap
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: api-gateway-eu-only
+  namespace: teei-production-eu-central-1
+spec:
+  podSelector:
+    matchLabels:
+      app: teei-api-gateway
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Only accept traffic from EU load balancers
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    - podSelector:
+        matchLabels:
+          geo-restriction: eu-only
+  egress:
+  # Allow to EU databases only
+  - to:
+    - podSelector:
+        matchLabels:
+          data-residency: eu
+          component: database
+    ports:
+    - protocol: TCP
+      port: 5432
+  # Allow to EU analytics only
+  - to:
+    - podSelector:
+        matchLabels:
+          app: teei-analytics
+          data-residency: eu
+    ports:
+    - protocol: TCP
+      port: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: unified-profile-gdpr-strict
+  namespace: teei-production-eu-central-1
+spec:
+  podSelector:
+    matchLabels:
+      app: teei-unified-profile
+  policyTypes:
+  - Egress
+  egress:
+  # DNS
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: kube-system
+    ports:
+    - protocol: UDP
+      port: 53
+  # Only EU PostgreSQL
+  - to:
+    - podSelector:
+        matchLabels:
+          component: postgres
+          region: eu-central-1
+    ports:
+    - protocol: TCP
+      port: 5432
+  # Block all other egress (no cross-border data transfer)

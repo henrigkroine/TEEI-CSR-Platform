@@ -1,0 +1,28 @@
+# US-East-1: Regional database and service endpoints
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: database-config
+data:
+  POSTGRES_HOST: postgres-us-east-1.teei.internal
+  POSTGRES_PORT: "5432"
+  CLICKHOUSE_HOST: clickhouse-us-east-1.teei.internal
+  CLICKHOUSE_PORT: "9000"
+  NATS_URL: nats://nats-us-east-1.teei.internal:4222
+  REDIS_HOST: redis-us-east-1.teei.internal
+  REDIS_PORT: "6379"
+  BACKUP_S3_BUCKET: s3://teei-backups-us-east-1
+  BACKUP_S3_REGION: us-east-1
+  METRICS_REGION: us-east-1
+  DATA_RESIDENCY_ZONE: us
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: observability-config
+data:
+  JAEGER_ENDPOINT: http://jaeger-collector.observability.svc.cluster.local:14268/api/traces
+  LOKI_ENDPOINT: http://loki.observability.svc.cluster.local:3100
+  PROMETHEUS_ENDPOINT: http://prometheus.observability.svc.cluster.local:9090
+  GRAFANA_ENDPOINT: http://grafana.observability.svc.cluster.local:3000
+  OTEL_RESOURCE_ATTRIBUTES: service.namespace=teei-production-us-east-1,deployment.environment=production,cloud.region=us-east-1

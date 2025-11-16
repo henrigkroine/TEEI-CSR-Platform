@@ -1,0 +1,47 @@
+# Kyverno Policy: EU Data Residency Enforcement (GDPR)
+# Blocks pods without EU data-residency label in EU namespace
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: eu-data-residency-enforcement
+  annotations:
+    policies.kyverno.io/title: EU Data Residency Enforcement
+    policies.kyverno.io/category: Compliance, GDPR
+    policies.kyverno.io/severity: critical
+    policies.kyverno.io/description: >-
+      Enforces GDPR data residency by requiring all pods in EU namespace
+      to have data-residency: eu label.
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+  - name: require-eu-residency-label
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+          namespaces:
+          - teei-production-eu-central-1
+    validate:
+      message: "Pods in EU region must have data-residency: eu label for GDPR compliance"
+      pattern:
+        metadata:
+          labels:
+            data-residency: "eu"
+  - name: block-us-residency-in-eu
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+          namespaces:
+          - teei-production-eu-central-1
+    validate:
+      message: "US data residency pods are not allowed in EU namespace"
+      deny:
+        conditions:
+          any:
+          - key: "{{request.object.metadata.labels.\"data-residency\" || ''}}"
+            operator: Equals
+            value: "us"

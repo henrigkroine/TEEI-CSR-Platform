@@ -1,0 +1,163 @@
+{
+  "dashboard": {
+    "title": "Carbon Emissions (CO\u2082e) Dashboard",
+    "tags": ["finops", "carbon", "sustainability", "co2e"],
+    "timezone": "utc",
+    "editable": true,
+    "graphTooltip": 1,
+    "panels": [
+      {
+        "id": 1,
+        "title": "Total CO\u2082e Emissions (Last 30 Days)",
+        "type": "stat",
+        "gridPos": {"x": 0, "y": 0, "w": 6, "h": 4},
+        "targets": [
+          {
+            "refId": "A",
+            "rawSql": "SELECT sum(co2e_kg) FROM finops.co2e_emissions WHERE date >= today() - INTERVAL 30 DAY",
+            "format": "table"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "kg",
+            "decimals": 2,
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 500, "color": "yellow"},
+                {"value": 1000, "color": "red"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "Emissions by Region",
+        "type": "piechart",
+        "gridPos": {"x": 6, "y": 0, "w": 6, "h": 4},
+        "targets": [
+          {
+            "refId": "A",
+            "rawSql": "SELECT region, sum(co2e_kg) as co2e FROM finops.co2e_emissions WHERE date >= today() - INTERVAL 30 DAY GROUP BY region",
+            "format": "table"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Carbon Intensity by Region",
+        "type": "bargauge",
+        "gridPos": {"x": 12, "y": 0, "w": 6, "h": 4},
+        "targets": [
+          {
+            "refId": "A",
+            "rawSql": "SELECT region, avg(carbon_intensity_gco2_kwh) as intensity FROM finops.co2e_emissions WHERE date >= today() - INTERVAL 30 DAY GROUP BY region",
+            "format": "table"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "gCO\u2082/kWh",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 300, "color": "yellow"},
+                {"value": 400, "color": "red"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 4,
+        "title": "Renewable Energy Percentage",
+        "type": "gauge",
+        "gridPos": {"x": 18, "y": 0, "w": 6, "h": 4},
+        "targets": [
+          {
+            "refId": "A",
+            "rawSql": "SELECT avg(renewable_percentage) FROM finops.co2e_emissions WHERE date >= today() - INTERVAL 30 DAY",
+            "format": "table"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "min": 0,
+            "max": 100,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 30, "color": "yellow"},
+                {"value": 60, "color": "green"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 5,
+        "title": "Daily CO\u2082e Emissions Trend",
+        "type": "graph",
+        "gridPos": {"x": 0, "y": 4, "w": 12, "h": 6},
+        "targets": [
+          {
+            "refId": "A",
+            "rawSql": "SELECT date, region, sum(co2e_kg) as co2e FROM finops.co2e_emissions WHERE date >= today() - INTERVAL 30 DAY GROUP BY date, region ORDER BY date",
+            "format": "time_series"
+          }
+        ],
+        "yaxes": [
+          {"format": "kg", "label": "CO\u2082e (kg)"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Energy Consumption (kWh)",
+        "type": "graph",
+        "gridPos": {"x": 12, "y": 4, "w": 12, "h": 6},
+        "targets": [
+          {
+            "refId": "A",
+            "rawSql": "SELECT date, region, sum(energy_kwh) as energy FROM finops.co2e_emissions WHERE date >= today() - INTERVAL 30 DAY GROUP BY date, region ORDER BY date",
+            "format": "time_series"
+          }
+        ],
+        "yaxes": [
+          {"format": "kWh", "label": "Energy"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Emissions by Service",
+        "type": "table",
+        "gridPos": {"x": 0, "y": 10, "w": 12, "h": 6},
+        "targets": [
+          {
+            "refId": "A",
+            "rawSql": "SELECT service, sum(co2e_kg) as total_co2e, sum(energy_kwh) as total_energy FROM finops.co2e_emissions WHERE date >= today() - INTERVAL 30 DAY GROUP BY service ORDER BY total_co2e DESC",
+            "format": "table"
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Carbon Reduction Recommendations",
+        "type": "text",
+        "gridPos": {"x": 12, "y": 10, "w": 12, "h": 6},
+        "content": "## Carbon Reduction Playbook\\n\\n**Current Actions:**\\n\\n1. **Migrate to Lower-Carbon Regions**\\n   - EU regions have 20% lower carbon intensity than US\\n   - Consider migrating workloads to eu-central-1\\n\\n2. **Right-Size Resources**\\n   - Over-provisioned resources waste energy\\n   - Review CPU/memory utilization\\n\\n3. **Schedule Non-Critical Workloads**\\n   - Run batch jobs during off-peak hours\\n   - Use spot instances for flexibility\\n\\n4. **Optimize Storage**\\n   - Archive old data to cold storage\\n   - Enable compression\\n\\n**Target:** Reduce CO\u2082e by 25% in 6 months"
+      }
+    ],
+    "refresh": "5m",
+    "schemaVersion": 27,
+    "version": 1
+  }
+}

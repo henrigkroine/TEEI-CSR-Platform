@@ -1,0 +1,32 @@
+# EU-Central-1: Regional database and service endpoints with GDPR compliance
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: database-config
+data:
+  POSTGRES_HOST: postgres-eu-central-1.teei.internal
+  POSTGRES_PORT: "5432"
+  CLICKHOUSE_HOST: clickhouse-eu-central-1.teei.internal
+  CLICKHOUSE_PORT: "9000"
+  NATS_URL: nats://nats-eu-central-1.teei.internal:4222
+  REDIS_HOST: redis-eu-central-1.teei.internal
+  REDIS_PORT: "6379"
+  BACKUP_S3_BUCKET: s3://teei-backups-eu-central-1
+  BACKUP_S3_REGION: eu-central-1
+  METRICS_REGION: eu-central-1
+  DATA_RESIDENCY_ZONE: eu
+  GDPR_STRICT_MODE: "true"
+  SCHREMS_II_COMPLIANT: "true"
+  CROSS_BORDER_TRANSFER_ALLOWED: "false"
+  EU_DATA_LOCALIZATION: "enforced"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: observability-config
+data:
+  JAEGER_ENDPOINT: http://jaeger-collector.observability.svc.cluster.local:14268/api/traces
+  LOKI_ENDPOINT: http://loki.observability.svc.cluster.local:3100
+  PROMETHEUS_ENDPOINT: http://prometheus.observability.svc.cluster.local:9090
+  GRAFANA_ENDPOINT: http://grafana.observability.svc.cluster.local:3000
+  OTEL_RESOURCE_ATTRIBUTES: service.namespace=teei-production-eu-central-1,deployment.environment=production,cloud.region=eu-central-1,compliance.gdpr=strict

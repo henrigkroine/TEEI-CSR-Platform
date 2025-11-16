@@ -1,0 +1,31 @@
+# Kyverno Policy: Require read-only root filesystem
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-read-only-root-filesystem
+  annotations:
+    policies.kyverno.io/title: Require Read-Only Root Filesystem
+    policies.kyverno.io/category: Security, Pod Security Standards (Restricted)
+    policies.kyverno.io/severity: medium
+    policies.kyverno.io/description: >-
+      Containers must run with a read-only root filesystem to prevent runtime modifications.
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+  - name: check-read-only-root-fs
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+          namespaces:
+          - teei-production-us-east-1
+          - teei-production-eu-central-1
+    validate:
+      message: "Containers must have readOnlyRootFilesystem set to true"
+      pattern:
+        spec:
+          containers:
+          - securityContext:
+              readOnlyRootFilesystem: true

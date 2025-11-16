@@ -1,0 +1,115 @@
+# VirtualService for API Gateway routing
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: api-gateway-vs-us
+  namespace: teei-production-us-east-1
+spec:
+  hosts:
+  - "api.teei.cloud"
+  gateways:
+  - teei-gateway-us
+  http:
+  - match:
+    - uri:
+        prefix: /api/v1
+    route:
+    - destination:
+        host: teei-api-gateway.teei-production-us-east-1.svc.cluster.local
+        port:
+          number: 8080
+    timeout: 30s
+    retries:
+      attempts: 3
+      perTryTimeout: 10s
+      retryOn: 5xx,reset,connect-failure,refused-stream
+---
+# VirtualService for Corporate Cockpit
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: corp-cockpit-vs-us
+  namespace: teei-production-us-east-1
+spec:
+  hosts:
+  - "cockpit.teei.cloud"
+  gateways:
+  - teei-gateway-us
+  http:
+  - match:
+    - uri:
+        prefix: /
+    route:
+    - destination:
+        host: teei-corp-cockpit.teei-production-us-east-1.svc.cluster.local
+        port:
+          number: 3000
+    timeout: 60s
+---
+# EU region - VirtualService for API Gateway
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: api-gateway-vs-eu
+  namespace: teei-production-eu-central-1
+spec:
+  hosts:
+  - "api.eu.teei.cloud"
+  gateways:
+  - teei-gateway-eu
+  http:
+  - match:
+    - uri:
+        prefix: /api/v1
+    headers:
+      X-Data-Residency:
+        exact: "eu"
+    route:
+    - destination:
+        host: teei-api-gateway.teei-production-eu-central-1.svc.cluster.local
+        port:
+          number: 8080
+    timeout: 30s
+    retries:
+      attempts: 3
+      perTryTimeout: 10s
+      retryOn: 5xx,reset,connect-failure,refused-stream
+  # Reject non-EU traffic
+  - match:
+    - uri:
+        prefix: /api/v1
+    route:
+    - destination:
+        host: teei-api-gateway.teei-production-eu-central-1.svc.cluster.local
+        port:
+          number: 8080
+    fault:
+      abort:
+        httpStatus: 451
+        percentage:
+          value: 100
+---
+# EU region - VirtualService for Corporate Cockpit
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: corp-cockpit-vs-eu
+  namespace: teei-production-eu-central-1
+spec:
+  hosts:
+  - "cockpit.eu.teei.cloud"
+  gateways:
+  - teei-gateway-eu
+  http:
+  - match:
+    - uri:
+        prefix: /
+    headers:
+      X-Data-Residency:
+        exact: "eu"
+    route:
+    - destination:
+        host: teei-corp-cockpit.teei-production-eu-central-1.svc.cluster.local
+        port:
+          number: 3000
+    timeout: 60s
