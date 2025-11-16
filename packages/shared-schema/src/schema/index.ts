@@ -14,3 +14,4 @@ export * from './audits.js';
 export * from './pii.js';
 export * from './impact-metrics.js';
 export * from './lineage.js';
+export * from './nlq.js';

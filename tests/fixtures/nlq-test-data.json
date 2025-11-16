@@ -1,0 +1,670 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "NLQ E2E Test Fixtures - Deterministic test data for repeatability and edge case coverage",
+  "version": "1.0.0",
+  "testCompanies": [
+    {
+      "id": "test-company-001",
+      "name": "Test Corp Alpha",
+      "industry": "Technology",
+      "country": "USA",
+      "created": "2024-01-01T00:00:00Z"
+    },
+    {
+      "id": "test-company-002",
+      "name": "Test Corp Beta",
+      "industry": "Finance",
+      "country": "UK",
+      "created": "2024-01-01T00:00:00Z"
+    }
+  ],
+  "testUsers": [
+    {
+      "id": "test-user-001",
+      "email": "test-exec@testcorp.com",
+      "role": "company_user",
+      "companyId": "test-company-001"
+    },
+    {
+      "id": "test-user-002",
+      "email": "test-analyst@testcorp.com",
+      "role": "company_user",
+      "companyId": "test-company-001"
+    }
+  ],
+  "successScenarios": [
+    {
+      "testId": "nlq-001",
+      "name": "Simple SROI Query - High Confidence",
+      "category": "simple_query",
+      "input": {
+        "question": "What is our SROI for last quarter?",
+        "companyId": "test-company-001",
+        "userId": "test-user-001",
+        "language": "en"
+      },
+      "expectedOutput": {
+        "intent": "get_metric",
+        "confidence": {
+          "min": 0.90,
+          "expected": 0.95
+        },
+        "templateMatched": "sroi_ratio",
+        "results": {
+          "rowCount": 1,
+          "executionTimeMs": {
+            "max": 2500
+          }
+        },
+        "visualization": {
+          "chartType": "single_stat"
+        },
+        "lineage": {
+          "nodeCount": {
+            "min": 2
+          }
+        }
+      },
+      "assertions": [
+        "response.status === 200",
+        "response.body.confidence >= 0.90",
+        "response.body.results.executionTimeMs < 2500",
+        "response.body.templateMatched === 'sroi_ratio'",
+        "response.body.results.data.length === 1",
+        "response.body.lineage.length >= 2"
+      ]
+    },
+    {
+      "testId": "nlq-002",
+      "name": "Trend Analysis - 12 Month SROI",
+      "category": "trend_analysis",
+      "input": {
+        "question": "Show me SROI trend for the past year",
+        "companyId": "test-company-001",
+        "userId": "test-user-001"
+      },
+      "expectedOutput": {
+        "intent": "trend_analysis",
+        "confidence": {
+          "min": 0.85,
+          "expected": 0.93
+        },
+        "templateMatched": "sroi_ratio",
+        "results": {
+          "rowCount": 12,
+          "executionTimeMs": {
+            "max": 2500
+          }
+        },
+        "visualization": {
+          "chartType": "line_chart"
+        }
+      },
+      "assertions": [
+        "response.status === 200",
+        "response.body.intent === 'trend_analysis'",
+        "response.body.results.data.length === 12",
+        "response.body.visualization.chartType === 'line_chart'",
+        "response.body.summary.includes('trend')"
+      ]
+    },
+    {
+      "testId": "nlq-003",
+      "name": "Outcome Dimensions - Q2Q Data",
+      "category": "outcome_query",
+      "input": {
+        "question": "What are our outcome scores by dimension?",
+        "companyId": "test-company-001",
+        "userId": "test-user-001"
+      },
+      "expectedOutput": {
+        "intent": "get_metric",
+        "confidence": {
+          "min": 0.80,
+          "expected": 0.89
+        },
+        "templateMatched": "outcome_scores_by_dimension",
+        "results": {
+          "rowCount": 5,
+          "executionTimeMs": {
+            "max": 3000
+          }
+        },
+        "visualization": {
+          "chartType": "bar_chart"
+        },
+        "lineage": {
+          "nodeCount": {
+            "min": 3
+          },
+          "sources": ["outcome_scores", "users"]
+        }
+      },
+      "assertions": [
+        "response.status === 200",
+        "response.body.results.data.length === 5",
+        "response.body.lineage.some(n => n.label === 'outcome_scores')",
+        "response.body.lineage.some(n => n.nodeType === 'join')",
+        "response.body.results.data.every(d => d.dimension && d.avg_score)"
+      ]
+    },
+    {
+      "testId": "nlq-004",
+      "name": "Volunteer Activity Count",
+      "category": "simple_query",
+      "input": {
+        "question": "How many volunteers were active last month?",
+        "companyId": "test-company-001",
+        "userId": "test-user-001"
+      },
+      "expectedOutput": {
+        "intent": "get_metric",
+        "confidence": {
+          "min": 0.85,
+          "expected": 0.92
+        },
+        "templateMatched": "volunteer_activity",
+        "results": {
+          "rowCount": 1
+        }
+      },
+      "assertions": [
+        "response.status === 200",
+        "response.body.results.data[0].hasOwnProperty('volunteers_count')",
+        "response.body.confidence >= 0.85"
+      ]
+    },
+    {
+      "testId": "nlq-005",
+      "name": "Quarterly Comparison",
+      "category": "comparison",
+      "input": {
+        "question": "Compare SROI across quarters",
+        "companyId": "test-company-001",
+        "userId": "test-user-001"
+      },
+      "expectedOutput": {
+        "intent": "compare_periods",
+        "confidence": {
+          "min": 0.85,
+          "expected": 0.91
+        },
+        "templateMatched": "sroi_quarterly_comparison",
+        "results": {
+          "rowCount": 4
+        },
+        "visualization": {
+          "chartType": "grouped_bar_chart"
+        }
+      },
+      "assertions": [
+        "response.status === 200",
+        "response.body.intent === 'compare_periods'",
+        "response.body.results.data.length === 4",
+        "response.body.results.data.every(d => d.quarter && d.avg_sroi)"
+      ]
+    },
+    {
+      "testId": "nlq-006",
+      "name": "VIS Score Trend",
+      "category": "trend_analysis",
+      "input": {
+        "question": "What is our average VIS score and how has it changed?",
+        "companyId": "test-company-001",
+        "userId": "test-user-001"
+      },
+      "expectedOutput": {
+        "intent": "trend_analysis",
+        "confidence": {
+          "min": 0.80,
+          "expected": 0.86
+        },
+        "templateMatched": "vis_score",
+        "results": {
+          "rowCount": {
+            "min": 1
+          }
+        }
+      },
+      "assertions": [
+        "response.status === 200",
+        "response.body.results.data.every(d => d.vis_score !== undefined)",
+        "response.body.summary.toLowerCase().includes('vis')"
+      ]
+    },
+    {
+      "testId": "nlq-007",
+      "name": "Participant Engagement Trend",
+      "category": "complex_query",
+      "input": {
+        "question": "Show participant engagement over time for last 6 months",
+        "companyId": "test-company-001",
+        "userId": "test-user-001"
+      },
+      "expectedOutput": {
+        "intent": "trend_analysis",
+        "confidence": {
+          "min": 0.85,
+          "expected": 0.90
+        },
+        "templateMatched": "participant_engagement",
+        "results": {
+          "rowCount": 6
+        },
+        "visualization": {
+          "chartType": "combo_chart"
+        }
+      },
+      "assertions": [
+        "response.status === 200",
+        "response.body.results.data.length === 6",
+        "response.body.results.data.every(d => d.participants_count && d.sessions_count)"
+      ]
+    }
+  ],
+  "edgeCaseScenarios": [
+    {
+      "testId": "nlq-edge-001",
+      "name": "Empty Results - No Data for Period",
+      "category": "edge_case",
+      "input": {
+        "question": "What is our SROI for Q1 2020?",
+        "companyId": "test-company-001",
+        "userId": "test-user-001"
+      },
+      "expectedOutput": {
+        "intent": "get_metric",
+        "confidence": {
+          "min": 0.90
+        },
+        "results": {
+          "rowCount": 0,
+          "data": []
+        },
+        "summary": "No data available for the specified period"
+      },
+      "assertions": [
+        "response.status === 200",
+        "response.body.results.rowCount === 0",
+        "response.body.summary.toLowerCase().includes('no data')"
+      ]
+    },
+    {
+      "testId": "nlq-edge-002",
+      "name": "Ambiguous Query - Low Confidence",
+      "category": "edge_case",
+      "input": {
+        "question": "Show me stuff about things",
+        "companyId": "test-company-001",
+        "userId": "test-user-001"
+      },
+      "expectedOutput": {
+        "confidence": {
+          "max": 0.50
+        },
+        "warning": "Low confidence. Please rephrase your question."
+      },
+      "assertions": [
+        "response.status === 200 || response.status === 400",
+        "response.body.confidence < 0.50 || response.body.warning"
+      ]
+    },
+    {
+      "testId": "nlq-edge-003",
+      "name": "Missing Required Field - Company ID",
+      "category": "validation_error",
+      "input": {
+        "question": "What is our SROI?",
+        "userId": "test-user-001"
+      },
+      "expectedOutput": {
+        "status": 400,
+        "error": "Validation error",
+        "code": "MISSING_REQUIRED_FIELD"
+      },
+      "assertions": [
+        "response.status === 400",
+        "response.body.error.toLowerCase().includes('required')"
+      ]
+    },
+    {
+      "testId": "nlq-edge-004",
+      "name": "Cached Result - Instant Response",
+      "category": "performance",
+      "setup": "Run nlq-001 first to populate cache",
+      "input": {
+        "question": "What is our SROI for last quarter?",
+        "companyId": "test-company-001",
+        "userId": "test-user-001"
+      },
+      "expectedOutput": {
+        "cached": true,
+        "results": {
+          "executionTimeMs": {
+            "max": 100
+          }
+        }
+      },
+      "assertions": [
+        "response.status === 200",
+        "response.body.cached === true",
+        "response.body.results.executionTimeMs < 100"
+      ]
+    },
+    {
+      "testId": "nlq-edge-005",
+      "name": "Time Window Exceeds Limit",
+      "category": "safety_violation",
+      "input": {
+        "question": "Show me SROI for the last 5 years",
+        "companyId": "test-company-001",
+        "userId": "test-user-001"
+      },
+      "expectedOutput": {
+        "status": 400,
+        "error": "Safety validation failed",
+        "code": "TIME_WINDOW_EXCEEDED",
+        "violations": [
+          {
+            "check": "time_window_limit",
+            "severity": "medium"
+          }
+        ]
+      },
+      "assertions": [
+        "response.status === 400",
+        "response.body.code === 'TIME_WINDOW_EXCEEDED'",
+        "response.body.violations.some(v => v.check === 'time_window_limit')"
+      ]
+    }
+  ],
+  "securityScenarios": [
+    {
+      "testId": "nlq-security-001",
+      "name": "SQL Injection Attempt",
+      "category": "security",
+      "input": {
+        "question": "SELECT * FROM users WHERE 1=1; DROP TABLE users; --",
+        "companyId": "test-company-001",
+        "userId": "test-user-001"
+      },
+      "expectedOutput": {
+        "status": 400,
+        "error": "Safety validation failed",
+        "code": "SAFETY_VIOLATION",
+        "violations": [
+          {
+            "check": "sql_injection",
+            "severity": "critical"
+          }
+        ]
+      },
+      "assertions": [
+        "response.status === 400",
+        "response.body.code === 'SAFETY_VIOLATION'",
+        "response.body.violations.some(v => v.check === 'sql_injection')"
+      ]
+    },
+    {
+      "testId": "nlq-security-002",
+      "name": "PII Column Access Attempt",
+      "category": "security",
+      "input": {
+        "question": "Show me all user emails and phone numbers",
+        "companyId": "test-company-001",
+        "userId": "test-user-001"
+      },
+      "expectedOutput": {
+        "status": 400,
+        "error": "Safety validation failed",
+        "code": "SAFETY_VIOLATION",
+        "violations": [
+          {
+            "check": "column_whitelist",
+            "severity": "high"
+          }
+        ]
+      },
+      "assertions": [
+        "response.status === 400",
+        "response.body.violations.some(v => v.check === 'column_whitelist')"
+      ]
+    },
+    {
+      "testId": "nlq-security-003",
+      "name": "Tenant Isolation Validation",
+      "category": "security",
+      "input": {
+        "question": "What is our SROI for last quarter?",
+        "companyId": "test-company-002",
+        "userId": "test-user-001"
+      },
+      "expectedOutput": {
+        "status": 403,
+        "error": "Forbidden",
+        "code": "TENANT_MISMATCH"
+      },
+      "assertions": [
+        "response.status === 403",
+        "response.body.code === 'TENANT_MISMATCH'"
+      ]
+    },
+    {
+      "testId": "nlq-security-004",
+      "name": "Rate Limit Enforcement",
+      "category": "security",
+      "setup": "Submit 51 queries in rapid succession",
+      "input": {
+        "question": "What is our SROI?",
+        "companyId": "test-company-001",
+        "userId": "test-user-001"
+      },
+      "expectedOutput": {
+        "status": 429,
+        "error": "Rate limit exceeded",
+        "code": "RATE_LIMIT_EXCEEDED"
+      },
+      "assertions": [
+        "response.status === 429",
+        "response.body.code === 'RATE_LIMIT_EXCEEDED'",
+        "response.headers['retry-after']"
+      ]
+    }
+  ],
+  "performanceScenarios": [
+    {
+      "testId": "nlq-perf-001",
+      "name": "P95 Latency Target - Simple Query",
+      "category": "performance",
+      "iterations": 100,
+      "input": {
+        "question": "What is our SROI for last quarter?",
+        "companyId": "test-company-001",
+        "userId": "test-user-001"
+      },
+      "expectedOutput": {
+        "p95_latency_ms": {
+          "max": 2500
+        }
+      },
+      "assertions": [
+        "p95(response.time) <= 2500"
+      ]
+    },
+    {
+      "testId": "nlq-perf-002",
+      "name": "P95 Latency Target - Complex Query",
+      "category": "performance",
+      "iterations": 100,
+      "input": {
+        "question": "Show participant engagement over time for last 6 months",
+        "companyId": "test-company-001",
+        "userId": "test-user-001"
+      },
+      "expectedOutput": {
+        "p95_latency_ms": {
+          "max": 2500
+        }
+      },
+      "assertions": [
+        "p95(response.time) <= 2500"
+      ]
+    },
+    {
+      "testId": "nlq-perf-003",
+      "name": "Cache Hit Rate",
+      "category": "performance",
+      "setup": "Run 10 identical queries",
+      "input": {
+        "question": "What is our SROI for last quarter?",
+        "companyId": "test-company-001",
+        "userId": "test-user-001"
+      },
+      "expectedOutput": {
+        "cache_hit_rate": {
+          "min": 0.80
+        }
+      },
+      "assertions": [
+        "cache_hits / total_queries >= 0.80"
+      ]
+    }
+  ],
+  "mockResponses": {
+    "sroi_simple": {
+      "queryId": "mock-001",
+      "question": "What is our SROI for last quarter?",
+      "intent": "get_metric",
+      "confidence": 0.95,
+      "templateMatched": "sroi_ratio",
+      "results": {
+        "data": [
+          {
+            "company_id": "test-company-001",
+            "period_start": "2025-10-01",
+            "period_end": "2025-12-31",
+            "sroi_ratio": 6.23,
+            "participants_count": 1450,
+            "volunteers_count": 385
+          }
+        ],
+        "rowCount": 1,
+        "executionTimeMs": 42
+      },
+      "summary": "Your Social Return on Investment (SROI) for Q4 2025 was 6.23:1.",
+      "lineage": [
+        {
+          "nodeId": "source_1",
+          "nodeType": "table",
+          "label": "metrics_company_period"
+        },
+        {
+          "nodeId": "result_1",
+          "nodeType": "result",
+          "label": "Final Result",
+          "parents": ["source_1"]
+        }
+      ],
+      "visualization": {
+        "chartType": "single_stat",
+        "config": {
+          "primaryValue": 6.23,
+          "label": "SROI Ratio",
+          "format": "ratio"
+        }
+      },
+      "cached": false,
+      "createdAt": "2025-11-16T10:00:00Z"
+    },
+    "outcome_dimensions": {
+      "queryId": "mock-002",
+      "question": "What are our outcome scores by dimension?",
+      "intent": "get_metric",
+      "confidence": 0.89,
+      "templateMatched": "outcome_scores_by_dimension",
+      "results": {
+        "data": [
+          {
+            "dimension": "confidence",
+            "avg_score": 0.823,
+            "sample_size": 342
+          },
+          {
+            "dimension": "belonging",
+            "avg_score": 0.815,
+            "sample_size": 338
+          },
+          {
+            "dimension": "well_being",
+            "avg_score": 0.791,
+            "sample_size": 295
+          },
+          {
+            "dimension": "job_readiness",
+            "avg_score": 0.768,
+            "sample_size": 312
+          },
+          {
+            "dimension": "lang_level_proxy",
+            "avg_score": 0.752,
+            "sample_size": 329
+          }
+        ],
+        "rowCount": 5,
+        "executionTimeMs": 156
+      },
+      "summary": "Your outcome scores show strong performance across all dimensions.",
+      "lineage": [
+        {
+          "nodeId": "source_1",
+          "nodeType": "table",
+          "label": "outcome_scores"
+        },
+        {
+          "nodeId": "join_1",
+          "nodeType": "join",
+          "label": "User Tenant Filter",
+          "parents": ["source_1"]
+        },
+        {
+          "nodeId": "calc_1",
+          "nodeType": "calculation",
+          "label": "Dimension Aggregation",
+          "parents": ["join_1"]
+        }
+      ],
+      "visualization": {
+        "chartType": "bar_chart",
+        "config": {
+          "xAxis": "dimension",
+          "yAxis": "avg_score"
+        }
+      },
+      "cached": false,
+      "createdAt": "2025-11-16T10:05:00Z"
+    }
+  },
+  "testMetadata": {
+    "created": "2025-11-16",
+    "version": "1.0.0",
+    "totalScenarios": 18,
+    "coverageAreas": [
+      "simple_queries",
+      "trend_analysis",
+      "comparisons",
+      "outcome_dimensions",
+      "edge_cases",
+      "security_validation",
+      "performance_targets",
+      "cache_behavior",
+      "error_handling"
+    ],
+    "runInstructions": {
+      "setup": "Ensure nlq-demo-data.ts seed has been run",
+      "teardown": "Clear test data and cache after run",
+      "parallel": false,
+      "retries": 2,
+      "timeout": 5000
+    }
+  }
+}
