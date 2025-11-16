@@ -1,8 +1,18 @@
 ---
+/**
+ * Benchmarking & Peer Comparison Dashboard
+ *
+ * Privacy-preserving cohort benchmarking with k-anonymity and differential privacy.
+ * Includes opt-in consent management (admin-only) and advanced cohort builder.
+ *
+ * @author percentile-viz-engineer & opt-in-governance
+ */
+
 import BaseLayout from '../../../../layouts/BaseLayout.astro';
 import { hasPermission } from '../../../../utils/rbac';
-import CohortSelector from '../../../../components/benchmarks/CohortSelector';
-import BenchmarkCharts from '../../../../components/benchmarks/BenchmarkCharts';
+import CohortBuilder from '../../../../components/benchmarks/CohortBuilder';
+import PercentileRibbon from '../../../../components/benchmarks/PercentileRibbon';
+import OptInConsent from '../../../../components/benchmarks/OptInConsent';
 
 // Extract route parameters
 const { lang, companyId } = Astro.params;
@@ -25,156 +35,107 @@ if (!canViewBenchmarks) {
   return Astro.redirect(`/${lang}/cockpit/${companyId}/401`);
 }
 
-// Client-side callback (will be replaced by script below)
-const handleCohortChange = (industry?: string, size?: string, geography?: string) => {
-  console.log('Cohort changed:', { industry, size, geography });
-};
+// Admin-only access for consent management
+const isAdmin = hasPermission(user.role, 'ADMIN_CONSOLE');
 ---
 
-<BaseLayout title="Benchmarks & Cohorts - TEEI Corporate Cockpit" lang={lang}>
+<BaseLayout title="Benchmarks & Peer Comparison - TEEI Corporate Cockpit" lang={lang}>
   <div class="benchmarks-page">
+    {/* Page Header */}
     <div class="page-header">
       <div>
         <a href={`/${lang}/cockpit/${companyId}`} class="back-link">
           ← Back to Dashboard
         </a>
-        <h1>Benchmarks & Cohort Comparison</h1>
-        <p class="subtitle">Compare your CSR performance against peer companies</p>
-      </div>
-      <div class="refresh-info">
-        <span class="icon">🔄</span>
-        <div class="text">
-          <div class="label">Data Refreshed Daily</div>
-          <div class="timestamp" id="last-refreshed">Loading...</div>
-        </div>
+        <h1>Benchmarking & Peer Comparison</h1>
+        <p class="subtitle">
+          Compare your CSR performance against peer companies with privacy-preserving analytics
+        </p>
       </div>
     </div>
 
-    {/* Info alert */}
-    <div class="alert-info">
-      <strong>Privacy & Aggregation</strong>
-      <p>
-        All benchmark data is fully anonymized and aggregated. Individual company data is never
-        disclosed. Cohorts must contain at least 10 companies to ensure privacy compliance.
-      </p>
+    {/* Privacy Notice */}
+    <div class="alert-info" role="alert">
+      <div class="alert-icon" aria-hidden="true">🔒</div>
+      <div>
+        <strong>Privacy & Aggregation</strong>
+        <p>
+          All benchmark data is fully anonymized and aggregated using k-anonymity (minimum 5 companies)
+          and differential privacy (ε=0.1). Individual company data is never disclosed.
+        </p>
+      </div>
     </div>
 
-    {/* Cohort Selector */}
-    <CohortSelector companyId={companyId} onCohortChange={handleCohortChange} client:load />
+    {/* Admin-Only: Opt-In Consent Manager */}
+    {isAdmin && (
+      <div id="consent-section" data-company-id={companyId}>
+        {/* This will be hydrated client-side */}
+      </div>
+    )}
+
+    {/* Cohort Builder */}
+    <div id="cohort-builder-section" data-company-id={companyId}>
+      {/* This will be hydrated client-side */}
+    </div>
 
     {/* Loading State */}
     <div id="loading-state" class="loading-container">
-      <div class="spinner"></div>
-      <p>Loading benchmark data...</p>
+      <div class="spinner" aria-hidden="true"></div>
+      <p role="status">Loading benchmark data...</p>
     </div>
 
-    {/* Benchmarks Container */}
+    {/* Benchmarks Results Container */}
     <div id="benchmarks-container" style="display: none;">
-      {/* Will be populated dynamically */}
+      {/* Populated by client-side script */}
     </div>
 
     {/* Empty State */}
     <div id="empty-state" class="empty-state" style="display: none;">
-      <div class="icon">📊</div>
-      <h3>No Data Available</h3>
-      <p>Select cohort criteria above to view benchmark comparisons.</p>
+      <div class="empty-icon" aria-hidden="true">📊</div>
+      <h3>No Benchmark Data Available</h3>
+      <p>
+        Select cohort criteria above to view benchmark comparisons.
+        Make sure your cohort has at least 5 companies to meet privacy requirements.
+      </p>
     </div>
 
-    {/* Methodology Section */}
-    <section class="methodology-section">
-      <h2>Methodology & Calculation</h2>
-      <p class="section-description">
-        Understand how benchmarks are calculated and what they mean for your organization.
-      </p>
-
-      <div class="methodology-grid">
-        <div class="methodology-card">
-          <h4>📐 Percentile Ranking</h4>
+    {/* Privacy Notice Footer */}
+    <section class="privacy-notice-footer">
+      <h2>Privacy Compliance & Methodology</h2>
+      <div class="privacy-footer-grid">
+        <div class="privacy-footer-card">
+          <div class="card-icon" aria-hidden="true">🔐</div>
+          <h3>k-Anonymity Protection</h3>
           <p>
-            Your percentile rank shows the percentage of companies in the cohort that perform
-            below your level. For example, 75th percentile means you perform better than 75%
-            of companies in the cohort.
+            Cohorts must contain at least 5 companies to prevent re-identification.
+            Smaller cohorts are automatically blocked to protect privacy.
           </p>
         </div>
 
-        <div class="methodology-card">
-          <h4>📊 Cohort Selection</h4>
+        <div class="privacy-footer-card">
+          <div class="card-icon" aria-hidden="true">🎲</div>
+          <h3>Differential Privacy</h3>
           <p>
-            Cohorts are defined by industry, company size, and geography. More specific cohorts
-            provide more accurate comparisons but may have fewer companies. We recommend a
-            cohort size of at least 50 companies.
+            Mathematical noise (ε=0.1) is added to all aggregated values to protect
+            individual contributions while maintaining statistical accuracy.
           </p>
         </div>
 
-        <div class="methodology-card">
-          <h4>🔄 Data Freshness</h4>
+        <div class="privacy-footer-card">
+          <div class="card-icon" aria-hidden="true">📊</div>
+          <h3>Percentile Methodology</h3>
           <p>
-            Benchmark data is refreshed daily from the Worker-2 data warehouse. Cohort statistics
-            are recalculated nightly to reflect the latest company data submissions.
+            Percentile ranks show your position relative to peers: p50 is median,
+            p90 is top 10%, p10 is bottom 10%. Higher is better for all metrics.
           </p>
         </div>
 
-        <div class="methodology-card">
-          <h4>🔒 Privacy Compliance</h4>
+        <div class="privacy-footer-card">
+          <div class="card-icon" aria-hidden="true">🔄</div>
+          <h3>Data Freshness</h3>
           <p>
-            All data is fully anonymized. No individual company can be identified from the
-            aggregated statistics. Cohorts with fewer than 10 companies are not displayed to
-            protect privacy.
-          </p>
-        </div>
-      </div>
-    </section>
-
-    {/* Help Section */}
-    <section class="help-section">
-      <h3>Metrics Explained</h3>
-      <div class="help-grid">
-        <div class="help-card">
-          <h4>SROI (Social Return on Investment)</h4>
-          <p>
-            Measures the social value generated per dollar invested. A ratio of 4:1 means
-            every $1 invested creates $4 of social value. Calculated using TEEI's validated
-            impact methodology.
-          </p>
-        </div>
-
-        <div class="help-card">
-          <h4>Total Beneficiaries</h4>
-          <p>
-            The number of unique individuals who directly benefited from your CSR programs.
-            Includes program participants, community members, and service recipients.
-          </p>
-        </div>
-
-        <div class="help-card">
-          <h4>Volunteer Hours</h4>
-          <p>
-            Total hours contributed by employees to CSR initiatives. Includes skills-based
-            volunteering, mentorship, and community service activities.
-          </p>
-        </div>
-
-        <div class="help-card">
-          <h4>Employee Engagement Rate</h4>
-          <p>
-            Percentage of employees who participated in at least one CSR activity during the
-            reporting period. Higher engagement indicates stronger organizational commitment.
-          </p>
-        </div>
-
-        <div class="help-card">
-          <h4>Active Programs</h4>
-          <p>
-            Number of distinct CSR programs operating during the period. Includes both
-            ongoing and completed programs with measurable outcomes.
-          </p>
-        </div>
-
-        <div class="help-card">
-          <h4>Overall Impact Score</h4>
-          <p>
-            Composite metric (0-100) combining SROI, engagement, scale, and sustainability
-            factors. Provides a holistic view of CSR program effectiveness.
+            Benchmark data is refreshed daily at 2:00 AM UTC. Cohort statistics are
+            recalculated nightly to reflect the latest submissions.
           </p>
         </div>
       </div>
@@ -182,29 +143,100 @@ const handleCohortChange = (industry?: string, size?: string, geography?: string
   </div>
 
   <script>
-    import type { CohortSelector } from '../../../../components/benchmarks/CohortSelector';
-    import type { BenchmarkCharts } from '../../../../components/benchmarks/BenchmarkCharts';
+    import type { CohortDefinition } from '../../../../components/benchmarks/CohortBuilder';
 
-    // Get company ID from URL
+    // Get parameters from DOM
     const pathParts = window.location.pathname.split('/');
     const companyId = pathParts[pathParts.indexOf('cockpit') + 1];
+    const isAdmin = document.getElementById('consent-section') !== null;
 
     // State
-    let currentIndustry: string | undefined;
-    let currentSize: string | undefined;
-    let currentGeography: string | undefined;
+    let currentCohort: CohortDefinition | null = null;
+    let consentData: { consent: boolean; consentDate?: Date } | null = null;
 
-    // Handle cohort change from selector
-    (window as any).handleCohortChange = async (
-      industry?: string,
-      size?: string,
-      geography?: string
-    ) => {
-      currentIndustry = industry;
-      currentSize = size;
-      currentGeography = geography;
+    // Initialize
+    async function init() {
+      // Hydrate consent manager (admin only)
+      if (isAdmin) {
+        await hydrateConsentManager();
+      }
+
+      // Hydrate cohort builder
+      await hydrateCohortBuilder();
+    }
+
+    // Hydrate OptInConsent component (admin-only)
+    async function hydrateConsentManager() {
+      try {
+        const response = await fetch(`http://localhost:3001/companies/${companyId}/consent`);
+        if (response.ok) {
+          consentData = await response.json();
+        } else {
+          consentData = { consent: false };
+        }
+
+        const { default: OptInConsent } = await import('../../../../components/benchmarks/OptInConsent');
+        const { createRoot } = await import('react-dom/client');
+        const { createElement } = await import('react');
+
+        const container = document.getElementById('consent-section');
+        if (container) {
+          const root = createRoot(container);
+          root.render(
+            createElement(OptInConsent, {
+              companyId,
+              currentConsent: consentData.consent,
+              consentDate: consentData.consentDate ? new Date(consentData.consentDate) : undefined,
+              onConsentChange: async (consent: boolean) => {
+                const response = await fetch(`http://localhost:3001/companies/${companyId}/consent`, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ consent }),
+                });
+
+                if (!response.ok) {
+                  throw new Error('Failed to update consent');
+                }
+
+                const updated = await response.json();
+                consentData = updated;
+              },
+            })
+          );
+        }
+      } catch (error) {
+        console.error('Failed to hydrate consent manager:', error);
+      }
+    }
+
+    // Hydrate CohortBuilder component
+    async function hydrateCohortBuilder() {
+      try {
+        const { default: CohortBuilder } = await import('../../../../components/benchmarks/CohortBuilder');
+        const { createRoot } = await import('react-dom/client');
+        const { createElement } = await import('react');
+
+        const container = document.getElementById('cohort-builder-section');
+        if (container) {
+          const root = createRoot(container);
+          root.render(
+            createElement(CohortBuilder, {
+              companyId,
+              onCohortChange: handleCohortChange,
+              savedCohorts: [], // TODO: Fetch saved cohorts from API
+            })
+          );
+        }
+      } catch (error) {
+        console.error('Failed to hydrate cohort builder:', error);
+      }
+    }
+
+    // Handle cohort change from CohortBuilder
+    async function handleCohortChange(cohort: CohortDefinition) {
+      currentCohort = cohort;
       await fetchBenchmarks();
-    };
+    }
 
     // Fetch benchmarks data
     async function fetchBenchmarks() {
@@ -219,43 +251,31 @@ const handleCohortChange = (industry?: string, size?: string, geography?: string
       benchmarksContainer.style.display = 'none';
       emptyState.style.display = 'none';
 
-      try {
-        // Build query params
-        const params = new URLSearchParams();
-        if (currentIndustry) params.append('industry', currentIndustry);
-        if (currentSize) params.append('size', currentSize);
-        if (currentGeography) params.append('geography', currentGeography);
+      if (!currentCohort || !currentCohort.size || currentCohort.size < 5) {
+        // Cohort too small or not selected
+        loadingState.style.display = 'none';
+        emptyState.style.display = 'block';
+        return;
+      }
 
-        const url = `http://localhost:3001/companies/${companyId}/benchmarks?${params.toString()}`;
-        const response = await fetch(url);
+      try {
+        const params = new URLSearchParams();
+        const { industry, region, employeeRange, programType } = currentCohort.dimensions;
+
+        if (industry) params.append('industries', industry.join(','));
+        if (region) params.append('regions', region.join(','));
+        if (employeeRange) params.append('employee_ranges', employeeRange.join(','));
+        if (programType) params.append('program_types', programType.join(','));
+
+        const response = await fetch(
+          `http://localhost:3001/companies/${companyId}/benchmarks?${params.toString()}`
+        );
 
         if (response.ok) {
           const data = await response.json();
 
-          // Update last refreshed timestamp
-          const lastRefreshed = document.getElementById('last-refreshed');
-          if (lastRefreshed) {
-            const date = new Date(data.last_refreshed);
-            lastRefreshed.textContent = `Last updated: ${date.toLocaleString()}`;
-          }
-
-          // Render benchmarks (using React component via client:load)
-          if (data.benchmarks && data.benchmarks.length > 0) {
-            // Import and render BenchmarkCharts component
-            const { default: BenchmarkCharts } = await import('../../../../components/benchmarks/BenchmarkCharts');
-            const { createRoot } = await import('react-dom/client');
-            const { createElement } = await import('react');
-
-            benchmarksContainer.innerHTML = '';
-            const root = createRoot(benchmarksContainer);
-            root.render(
-              createElement(BenchmarkCharts, {
-                benchmarks: data.benchmarks,
-                companyName: data.company_name,
-                cohortName: data.cohort.name,
-              })
-            );
-
+          if (data.metrics && data.metrics.length > 0) {
+            await renderBenchmarks(data);
             loadingState.style.display = 'none';
             benchmarksContainer.style.display = 'block';
           } else {
@@ -274,8 +294,59 @@ const handleCohortChange = (industry?: string, size?: string, geography?: string
       }
     }
 
-    // Initial load with default (no filters)
-    fetchBenchmarks();
+    // Render benchmark results
+    async function renderBenchmarks(data: any) {
+      const { default: PercentileRibbon } = await import('../../../../components/benchmarks/PercentileRibbon');
+      const { createRoot } = await import('react-dom/client');
+      const { createElement } = await import('react');
+
+      const container = document.getElementById('benchmarks-container');
+      if (!container) return;
+
+      container.innerHTML = '';
+
+      // Create header
+      const header = document.createElement('div');
+      header.className = 'benchmarks-header';
+      header.innerHTML = `
+        <h2>Your Performance vs. Peer Cohort</h2>
+        <p class="cohort-summary">
+          Cohort: <strong>${data.cohortName || 'Custom Selection'}</strong> •
+          <strong>${data.cohortSize || currentCohort?.size || 0}</strong> companies •
+          Last updated: ${new Date(data.lastUpdated || Date.now()).toLocaleDateString()}
+        </p>
+      `;
+      container.appendChild(header);
+
+      // Create metrics grid
+      const metricsGrid = document.createElement('div');
+      metricsGrid.className = 'metrics-grid';
+      container.appendChild(metricsGrid);
+
+      // Render each metric
+      for (const metric of data.metrics) {
+        const metricContainer = document.createElement('div');
+        metricsGrid.appendChild(metricContainer);
+
+        const root = createRoot(metricContainer);
+        root.render(
+          createElement(PercentileRibbon, {
+            metric: {
+              name: metric.name,
+              unit: metric.unit,
+              p10: metric.p10,
+              p50: metric.p50,
+              p90: metric.p90,
+              yourValue: metric.yourValue,
+              dpApplied: metric.dpApplied ?? true,
+            },
+          })
+        );
+      }
+    }
+
+    // Initialize on load
+    init();
   </script>
 
   <style>
@@ -286,11 +357,7 @@ const handleCohortChange = (industry?: string, size?: string, geography?: string
     }
 
     .page-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
       margin-bottom: 24px;
-      gap: 24px;
     }
 
     .page-header h1 {
@@ -320,39 +387,25 @@ const handleCohortChange = (industry?: string, size?: string, geography?: string
       text-decoration: underline;
     }
 
-    .refresh-info {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 12px 16px;
-      background: #f0fdf4;
-      border: 1px solid #86efac;
-      border-radius: 8px;
-    }
-
-    .refresh-info .icon {
-      font-size: 1.5rem;
-    }
-
-    .refresh-info .text {
-      font-size: 0.875rem;
-    }
-
-    .refresh-info .label {
-      font-weight: 600;
-      color: #166534;
-    }
-
-    .refresh-info .timestamp {
-      color: #15803d;
+    .back-link:focus {
+      outline: 2px solid #3b82f6;
+      outline-offset: 2px;
+      border-radius: 4px;
     }
 
     .alert-info {
+      display: flex;
+      gap: 12px;
       padding: 16px;
       background: #dbeafe;
       border-left: 4px solid #3b82f6;
       border-radius: 8px;
       margin-bottom: 24px;
+    }
+
+    .alert-icon {
+      font-size: 1.5rem;
+      flex-shrink: 0;
     }
 
     .alert-info strong {
@@ -372,6 +425,9 @@ const handleCohortChange = (industry?: string, size?: string, geography?: string
     .loading-container {
       text-align: center;
       padding: 64px 24px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     }
 
     .spinner {
@@ -403,7 +459,7 @@ const handleCohortChange = (industry?: string, size?: string, geography?: string
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     }
 
-    .empty-state .icon {
+    .empty-icon {
       font-size: 4rem;
       margin-bottom: 16px;
     }
@@ -417,10 +473,34 @@ const handleCohortChange = (industry?: string, size?: string, geography?: string
     .empty-state p {
       margin: 0;
       color: #6b7280;
+      max-width: 500px;
+      margin-left: auto;
+      margin-right: auto;
     }
 
-    .methodology-section,
-    .help-section {
+    .benchmarks-header {
+      margin-bottom: 24px;
+    }
+
+    .benchmarks-header h2 {
+      margin: 0 0 8px 0;
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: #1f2937;
+    }
+
+    .cohort-summary {
+      margin: 0;
+      font-size: 0.875rem;
+      color: #6b7280;
+    }
+
+    .metrics-grid {
+      display: grid;
+      gap: 24px;
+    }
+
+    .privacy-notice-footer {
       margin-top: 48px;
       padding: 32px;
       background: white;
@@ -428,45 +508,39 @@ const handleCohortChange = (industry?: string, size?: string, geography?: string
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     }
 
-    .methodology-section h2,
-    .help-section h3 {
-      margin: 0 0 8px 0;
+    .privacy-notice-footer h2 {
+      margin: 0 0 24px 0;
       font-size: 1.5rem;
       font-weight: 600;
       color: #1f2937;
     }
 
-    .section-description {
-      margin: 0 0 24px 0;
-      font-size: 0.9375rem;
-      color: #6b7280;
-    }
-
-    .methodology-grid,
-    .help-grid {
+    .privacy-footer-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
       gap: 20px;
     }
 
-    .methodology-card,
-    .help-card {
-      padding: 20px;
+    .privacy-footer-card {
       background: #f9fafb;
       border: 1px solid #e5e7eb;
       border-radius: 8px;
+      padding: 20px;
     }
 
-    .methodology-card h4,
-    .help-card h4 {
-      margin: 0 0 12px 0;
+    .card-icon {
+      font-size: 2rem;
+      margin-bottom: 12px;
+    }
+
+    .privacy-footer-card h3 {
+      margin: 0 0 8px 0;
       font-size: 1rem;
       font-weight: 600;
       color: #1f2937;
     }
 
-    .methodology-card p,
-    .help-card p {
+    .privacy-footer-card p {
       margin: 0;
       font-size: 0.875rem;
       color: #6b7280;
@@ -478,25 +552,15 @@ const handleCohortChange = (industry?: string, size?: string, geography?: string
         padding: 16px;
       }
 
-      .page-header {
-        flex-direction: column;
-      }
-
       .page-header h1 {
         font-size: 1.5rem;
       }
 
-      .refresh-info {
-        width: 100%;
-      }
-
-      .methodology-section,
-      .help-section {
+      .privacy-notice-footer {
         padding: 20px;
       }
 
-      .methodology-grid,
-      .help-grid {
+      .privacy-footer-grid {
         grid-template-columns: 1fr;
       }
     }

@@ -375,6 +375,93 @@ export const metricsRoutes: FastifyPluginAsync = async (fastify) => {
       });
     }
   });
+
+  /**
+   * GET /metrics/company/:companyId/history
+   * Get historical time-series data for forecasting
+   *
+   * @param companyId - UUID of the company
+   * @query metric - Metric to retrieve (sroi_ratio or vis_score)
+   * @query months - Number of months to retrieve (default: 24)
+   * @returns Historical time-series data points
+   */
+  fastify.get<{
+    Params: { companyId: string };
+    Querystring: { metric?: string; months?: string };
+  }>('/company/:companyId/history', async (request, reply) => {
+    const { companyId } = request.params;
+    const metric = request.query.metric || 'sroi_ratio';
+    const months = parseInt(request.query.months || '24');
+
+    try {
+      // Validate metric
+      if (!['sroi_ratio', 'vis_score'].includes(metric)) {
+        return reply.code(400).send({
+          error: 'Invalid metric',
+          message: `Metric must be 'sroi_ratio' or 'vis_score'`,
+        });
+      }
+
+      // Validate months
+      if (months < 1 || months > 120) {
+        return reply.code(400).send({
+          error: 'Invalid months',
+          message: 'Months must be between 1 and 120',
+        });
+      }
+
+      // Calculate start date
+      const endDate = new Date();
+      const startDate = new Date(endDate);
+      startDate.setMonth(startDate.getMonth() - months);
+
+      // Query metrics from database
+      const metrics = await db
+        .select()
+        .from(metricsCompanyPeriod)
+        .where(
+          and(
+            eq(metricsCompanyPeriod.companyId, companyId),
+            gte(
+              metricsCompanyPeriod.periodStart,
+              startDate.toISOString().split('T')[0]
+            ),
+            lte(
+              metricsCompanyPeriod.periodEnd,
+              endDate.toISOString().split('T')[0]
+            )
+          )
+        )
+        .orderBy(metricsCompanyPeriod.periodStart);
+
+      // Transform to time-series format
+      const timeSeries = metrics.map((m: any) => ({
+        date: m.periodStart,
+        value:
+          metric === 'sroi_ratio'
+            ? parseFloat(m.sroiRatio) || 0
+            : parseFloat(m.visScore) || 0,
+      }));
+
+      return {
+        companyId,
+        metric,
+        dataPoints: timeSeries.length,
+        dateRange: {
+          start: startDate.toISOString().split('T')[0],
+          end: endDate.toISOString().split('T')[0],
+        },
+        data: timeSeries,
+        generatedAt: new Date().toISOString(),
+      };
+    } catch (error) {
+      fastify.log.error({ error }, 'Error fetching historical metrics');
+      return reply.code(500).send({
+        error: 'Failed to fetch historical metrics',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  });
 };
 
 /**

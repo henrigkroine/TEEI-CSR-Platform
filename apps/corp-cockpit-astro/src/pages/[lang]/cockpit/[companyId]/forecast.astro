@@ -1,0 +1,439 @@
+---
+/**
+ * Predictive Analytics & Forecasting Dashboard
+ *
+ * Time-series forecasting with confidence bands, scenario planning, and model validation.
+ * Supports ETS, Prophet, and Ensemble models with walk-forward backtesting.
+ *
+ * @author confidence-band-renderer & scenario-modeler
+ */
+
+import BaseLayout from '../../../../layouts/BaseLayout.astro';
+import { hasPermission } from '../../../../utils/rbac';
+
+// Extract route parameters
+const { lang, companyId } = Astro.params;
+const user = Astro.locals.user;
+const tenantContext = Astro.locals.tenantContext;
+
+// Middleware handles auth/tenant validation
+if (!user || !tenantContext) {
+  return Astro.redirect('/login');
+}
+
+// Verify tenant context matches route
+if (tenantContext.companyId !== companyId || tenantContext.lang !== lang) {
+  return Astro.redirect(`/${lang}/cockpit/401`);
+}
+
+// RBAC: ANALYST and above can access forecasts
+const canViewForecasts = hasPermission(user.role, 'VIEW_REPORTS');
+if (!canViewForecasts) {
+  return Astro.redirect(`/${lang}/cockpit/${companyId}/401`);
+}
+
+// Admin-only access for advanced settings
+const isAdmin = hasPermission(user.role, 'ADMIN_CONSOLE');
+---
+
+<BaseLayout title="Predictive Analytics & Forecasting - TEEI Corporate Cockpit" lang={lang}>
+  <div class="forecast-page">
+    {/* Page Header */}
+    <div class="page-header">
+      <div>
+        <a href={`/${lang}/cockpit/${companyId}`} class="back-link">
+          ← Back to Dashboard
+        </a>
+        <h1>Predictive Analytics & Forecasting</h1>
+        <p class="subtitle">
+          Generate time-series forecasts with confidence bands and scenario analysis for strategic planning
+        </p>
+      </div>
+      <div class="header-actions">
+        <button id="export-pdf-btn" class="btn-secondary">
+          <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          Export PDF
+        </button>
+        <button id="export-csv-btn" class="btn-secondary">
+          <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+          </svg>
+          Export CSV
+        </button>
+      </div>
+    </div>
+
+    {/* Info Notice */}
+    <div class="alert-info" role="alert">
+      <div class="alert-icon" aria-hidden="true">📈</div>
+      <div>
+        <strong>About Forecasting</strong>
+        <p>
+          Our forecasting models use statistical methods (ETS, Prophet) to predict future values based on historical patterns.
+          Confidence bands show the range of likely outcomes. Use these forecasts for planning, but remember they are estimates.
+        </p>
+      </div>
+    </div>
+
+    {/* Forecast Card Container */}
+    <div id="forecast-card-container" data-company-id={companyId} data-locale={lang}>
+      {/* This will be hydrated client-side */}
+    </div>
+
+    {/* Disclaimer Footer */}
+    <section class="disclaimer-footer">
+      <div class="disclaimer-icon" aria-hidden="true">⚠️</div>
+      <div>
+        <h3>Important Disclaimer About Forecasts</h3>
+        <p>
+          Forecasts are statistical estimates based on historical data and identified patterns. They are not guarantees of future performance.
+          Actual results may differ significantly from forecasts due to unforeseen events, market changes, or organizational shifts.
+          Use forecasts as one input among many in your strategic planning process.
+        </p>
+        <p class="disclaimer-details">
+          <strong>Model Limitations:</strong> All models have inherent limitations and assumptions. The accuracy metrics shown represent historical performance
+          and may not reflect future accuracy. Confidence bands indicate statistical probability ranges, not absolute certainty.
+        </p>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    import type { ForecastResult } from '../../../../components/forecast/ForecastCard';
+
+    // Get parameters from DOM
+    const pathParts = window.location.pathname.split('/');
+    const companyId = pathParts[pathParts.indexOf('cockpit') + 1];
+    const lang = pathParts[1] || 'en';
+
+    // Initialize
+    async function init() {
+      await hydrateForecastCard();
+      setupExportButtons();
+    }
+
+    // Hydrate ForecastCard component
+    async function hydrateForecastCard() {
+      try {
+        const { default: ForecastCard } = await import('../../../../components/forecast/ForecastCard');
+        const { createRoot } = await import('react-dom/client');
+        const { createElement } = await import('react');
+
+        const container = document.getElementById('forecast-card-container');
+        if (container) {
+          const root = createRoot(container);
+          root.render(
+            createElement(ForecastCard, {
+              companyId,
+              initialMetric: 'sroi_ratio',
+              locale: lang,
+            })
+          );
+        }
+      } catch (error) {
+        console.error('Failed to hydrate forecast card:', error);
+      }
+    }
+
+    // Setup export buttons
+    function setupExportButtons() {
+      const pdfBtn = document.getElementById('export-pdf-btn');
+      const csvBtn = document.getElementById('export-csv-btn');
+
+      if (pdfBtn) {
+        pdfBtn.addEventListener('click', async () => {
+          try {
+            pdfBtn.textContent = 'Generating PDF...';
+            pdfBtn.disabled = true;
+
+            const response = await fetch(`http://localhost:3001/forecasts/export/pdf?companyId=${companyId}`);
+
+            if (response.ok) {
+              const blob = await response.blob();
+              const url = window.URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `forecast-${companyId}-${new Date().toISOString().split('T')[0]}.pdf`;
+              document.body.appendChild(a);
+              a.click();
+              window.URL.revokeObjectURL(url);
+              document.body.removeChild(a);
+            } else {
+              console.error('PDF export failed:', response.statusText);
+              alert('Failed to export PDF. Please try again.');
+            }
+          } catch (error) {
+            console.error('Error exporting PDF:', error);
+            alert('Failed to export PDF. Please try again.');
+          } finally {
+            pdfBtn.textContent = 'Export PDF';
+            pdfBtn.disabled = false;
+          }
+        });
+      }
+
+      if (csvBtn) {
+        csvBtn.addEventListener('click', async () => {
+          try {
+            csvBtn.textContent = 'Generating CSV...';
+            csvBtn.disabled = true;
+
+            const response = await fetch(`http://localhost:3001/forecasts/export/csv?companyId=${companyId}`);
+
+            if (response.ok) {
+              const blob = await response.blob();
+              const url = window.URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `forecast-${companyId}-${new Date().toISOString().split('T')[0]}.csv`;
+              document.body.appendChild(a);
+              a.click();
+              window.URL.revokeObjectURL(url);
+              document.body.removeChild(a);
+            } else {
+              console.error('CSV export failed:', response.statusText);
+              alert('Failed to export CSV. Please try again.');
+            }
+          } catch (error) {
+            console.error('Error exporting CSV:', error);
+            alert('Failed to export CSV. Please try again.');
+          } finally {
+            csvBtn.textContent = 'Export CSV';
+            csvBtn.disabled = false;
+          }
+        });
+      }
+    }
+
+    // Initialize on load
+    init();
+  </script>
+
+  <style>
+    .forecast-page {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 32px;
+    }
+
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 24px;
+      gap: 24px;
+    }
+
+    .page-header h1 {
+      margin: 8px 0 4px 0;
+      font-size: 2rem;
+      font-weight: 700;
+      color: #1f2937;
+    }
+
+    .page-header .subtitle {
+      margin: 0;
+      font-size: 1rem;
+      color: #6b7280;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.875rem;
+      color: #3b82f6;
+      text-decoration: none;
+      margin-bottom: 8px;
+    }
+
+    .back-link:hover {
+      text-decoration: underline;
+    }
+
+    .back-link:focus {
+      outline: 2px solid #3b82f6;
+      outline-offset: 2px;
+      border-radius: 4px;
+    }
+
+    .btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #374151;
+      background: white;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .btn-secondary:hover {
+      background: #f9fafb;
+      border-color: #9ca3af;
+    }
+
+    .btn-secondary:focus {
+      outline: 2px solid #3b82f6;
+      outline-offset: 2px;
+    }
+
+    .btn-secondary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary .icon {
+      width: 18px;
+      height: 18px;
+    }
+
+    .alert-info {
+      display: flex;
+      gap: 12px;
+      padding: 16px;
+      background: #dbeafe;
+      border-left: 4px solid #3b82f6;
+      border-radius: 8px;
+      margin-bottom: 24px;
+    }
+
+    .alert-icon {
+      font-size: 1.5rem;
+      flex-shrink: 0;
+    }
+
+    .alert-info strong {
+      display: block;
+      margin-bottom: 4px;
+      color: #1e40af;
+      font-weight: 600;
+    }
+
+    .alert-info p {
+      margin: 0;
+      font-size: 0.875rem;
+      color: #1e40af;
+      line-height: 1.5;
+    }
+
+    .disclaimer-footer {
+      margin-top: 48px;
+      padding: 24px;
+      background: #fef3c7;
+      border-left: 4px solid #f59e0b;
+      border-radius: 8px;
+      display: flex;
+      gap: 16px;
+    }
+
+    .disclaimer-icon {
+      font-size: 2rem;
+      flex-shrink: 0;
+    }
+
+    .disclaimer-footer h3 {
+      margin: 0 0 8px 0;
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: #92400e;
+    }
+
+    .disclaimer-footer p {
+      margin: 0 0 12px 0;
+      font-size: 0.875rem;
+      color: #92400e;
+      line-height: 1.6;
+    }
+
+    .disclaimer-footer p:last-child {
+      margin-bottom: 0;
+    }
+
+    .disclaimer-details {
+      font-size: 0.8125rem !important;
+      opacity: 0.9;
+    }
+
+    @media (max-width: 768px) {
+      .forecast-page {
+        padding: 16px;
+      }
+
+      .page-header {
+        flex-direction: column;
+      }
+
+      .page-header h1 {
+        font-size: 1.5rem;
+      }
+
+      .header-actions {
+        width: 100%;
+        flex-direction: column;
+      }
+
+      .btn-secondary {
+        justify-content: center;
+      }
+
+      .disclaimer-footer {
+        flex-direction: column;
+        padding: 16px;
+      }
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .page-header h1 {
+        color: #f9fafb;
+      }
+
+      .page-header .subtitle {
+        color: #d1d5db;
+      }
+
+      .btn-secondary {
+        color: #e5e7eb;
+        background: #374151;
+        border-color: #4b5563;
+      }
+
+      .btn-secondary:hover {
+        background: #4b5563;
+        border-color: #6b7280;
+      }
+
+      .alert-info {
+        background: #1e3a8a;
+        border-left-color: #60a5fa;
+      }
+
+      .alert-info strong,
+      .alert-info p {
+        color: #dbeafe;
+      }
+
+      .disclaimer-footer {
+        background: #78350f;
+        border-left-color: #fbbf24;
+      }
+
+      .disclaimer-footer h3,
+      .disclaimer-footer p {
+        color: #fef3c7;
+      }
+    }
+  </style>
+</BaseLayout>

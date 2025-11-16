@@ -1,0 +1,196 @@
+{
+  "title": "Predictive Analytics & Forecasting",
+  "subtitle": "Generate time-series forecasts with confidence bands and scenario analysis for strategic planning",
+  "backToDashboard": "Back to Dashboard",
+
+  "forecastBuilder": {
+    "title": "Forecast Builder",
+    "metricLabel": "Metric",
+    "horizonLabel": "Forecast Horizon",
+    "monthsLabel": "months",
+    "modelLabel": "Model",
+    "generateButton": "Generate Forecast",
+    "generating": "Generating Forecast...",
+    "advancedSettings": "Advanced Settings"
+  },
+
+  "metrics": {
+    "sroiRatio": "SROI Ratio",
+    "visScore": "VIS Score",
+    "volunteerHours": "Volunteer Hours"
+  },
+
+  "models": {
+    "ets": "ETS",
+    "prophet": "Prophet",
+    "ensemble": "Ensemble"
+  },
+
+  "summaryCards": {
+    "estimate": "Month Estimate",
+    "growth": "Expected Growth",
+    "vsCurrent": "vs current",
+    "mae": "Mean Absolute Error",
+    "modelAccuracy": "Model accuracy"
+  },
+
+  "tabs": {
+    "forecast": "Forecast",
+    "scenarios": "Scenarios",
+    "accuracy": "Accuracy"
+  },
+
+  "confidenceBands": {
+    "title": "Forecast with Confidence Bands",
+    "description": "The chart shows historical data (solid line), point forecast (dashed line), and confidence intervals. Shaded areas represent the probability ranges for future values.",
+    "legend": {
+      "historical": "Historical Data",
+      "forecast": "Point Forecast",
+      "confidence80": "80% Confidence",
+      "confidence95": "95% Confidence"
+    },
+    "understanding": {
+      "title": "Understanding Confidence Bands:",
+      "conf80": "80% Confidence: There's an 80% probability the actual value will fall within this range",
+      "conf95": "95% Confidence: There's a 95% probability the actual value will fall within this wider range",
+      "point": "Point Forecast: The most likely expected value (median of the distribution)"
+    }
+  },
+
+  "scenarios": {
+    "title": "Scenario Comparison",
+    "description": "Compare three forecast scenarios based on different assumptions about future conditions.",
+    "optimistic": "Optimistic",
+    "realistic": "Realistic",
+    "pessimistic": "Pessimistic",
+    "growth": "growth",
+    "decline": "decline",
+    "assumptions": {
+      "optimistic": "Upper 80% confidence bound (favorable conditions)",
+      "realistic": "Median forecast (expected conditions)",
+      "pessimistic": "Lower 80% confidence bound (challenging conditions)"
+    },
+    "guidance": {
+      "title": "Scenario Planning Guidance:",
+      "description": "These scenarios represent different possible futures based on statistical confidence intervals. Use them for risk assessment and strategic planning, but remember that actual outcomes may fall outside these ranges."
+    }
+  },
+
+  "backtest": {
+    "title": "Forecast Accuracy (Walk-Forward Validation)",
+    "description": "Model performance evaluated using time-series cross-validation folds. Lower error metrics indicate better accuracy.",
+    "metrics": {
+      "mae": "MAE (Mean Absolute Error)",
+      "maeDesc": "Average absolute difference",
+      "rmse": "RMSE (Root Mean Squared Error)",
+      "rmseDesc": "Penalizes large errors",
+      "mape": "MAPE (Mean Absolute % Error)",
+      "mapeDesc": "Percentage accuracy",
+      "rating": "Overall Rating",
+      "ratingDesc": "Based on MAPE"
+    },
+    "ratings": {
+      "excellent": "Excellent",
+      "good": "Good",
+      "fair": "Fair",
+      "poor": "Poor"
+    },
+    "charts": {
+      "actualVsPredicted": "Actual vs. Predicted Values",
+      "actualVsPredictedDesc": "Points closer together indicate better predictions. Triangles (predicted) should align with circles (actual).",
+      "residuals": "Residual Plot (Prediction Errors)",
+      "residualsDesc": "Green bars show under-predictions, red bars show over-predictions. Smaller bars are better."
+    },
+    "foldDetails": {
+      "title": "Cross-Validation Fold Details",
+      "fold": "Fold",
+      "trainPeriod": "Training Period",
+      "testPeriod": "Test Period",
+      "average": "Average Across All Folds"
+    },
+    "understanding": {
+      "title": "Understanding Accuracy Metrics:",
+      "mae": "MAE: Average size of errors (same units as metric)",
+      "rmse": "RMSE: Like MAE but penalizes large errors more heavily",
+      "mape": "MAPE: Error as percentage of actual value (easier to interpret)",
+      "walkForward": "Walk-Forward: Each fold trains on past data and tests on future data (realistic time-series validation)"
+    }
+  },
+
+  "settings": {
+    "title": "Advanced Forecast Settings",
+    "tabs": {
+      "ets": "ETS Model",
+      "prophet": "Prophet Model",
+      "ensemble": "Ensemble",
+      "backtest": "Validation"
+    },
+    "ets": {
+      "method": "ETS Method",
+      "methodDesc": "Choose based on data characteristics (trend, seasonality)",
+      "methods": {
+        "simple": "Simple Exponential Smoothing",
+        "holt": "Holt's Linear Trend",
+        "holtWinters": "Holt-Winters Seasonal"
+      },
+      "seasonalPeriod": "Seasonal Period",
+      "seasonalPeriodDesc": "Length of seasonal cycle (e.g., 12 for yearly patterns)",
+      "damped": "Use damped trend (prevents over-extrapolation)"
+    },
+    "prophet": {
+      "growthType": "Growth Type",
+      "linear": "Linear",
+      "logistic": "Logistic (with saturation)",
+      "seasonality": "Seasonality Components",
+      "weekly": "Weekly seasonality",
+      "yearly": "Yearly seasonality",
+      "holidays": "Include holidays",
+      "changepoints": "Changepoints",
+      "changepointsDesc": "Number of potential trend changes to detect"
+    },
+    "ensemble": {
+      "description": "Combine predictions from multiple models using weighted averaging. Weights are automatically normalized to sum to 1.",
+      "etsWeight": "ETS Weight",
+      "prophetWeight": "Prophet Weight",
+      "tip": "Tip: Equal weights (50/50) often provide robust results. Adjust based on historical model performance shown in the Accuracy tab."
+    },
+    "backtest": {
+      "trainTestSplit": "Train/Test Split",
+      "trainTestSplitDesc": "Percentage of data used for training in each fold",
+      "training": "training",
+      "folds": "Number of Folds",
+      "foldsDesc": "More folds = more thorough validation but slower",
+      "stride": "Stride",
+      "strideDesc": "Time step between validation windows",
+      "months": "month(s)"
+    },
+    "buttons": {
+      "save": "Save Settings",
+      "saving": "Saving...",
+      "reset": "Reset to Defaults",
+      "cancel": "Cancel"
+    }
+  },
+
+  "export": {
+    "pdf": "Export PDF",
+    "csv": "Export CSV",
+    "generating": "Generating..."
+  },
+
+  "errors": {
+    "generationFailed": "Failed to generate forecast. Please try again.",
+    "exportFailed": "Failed to export. Please try again."
+  },
+
+  "disclaimer": {
+    "title": "Important Disclaimer About Forecasts",
+    "mainText": "Forecasts are statistical estimates based on historical data and identified patterns. They are not guarantees of future performance. Actual results may differ significantly from forecasts due to unforeseen events, market changes, or organizational shifts. Use forecasts as one input among many in your strategic planning process.",
+    "limitations": "Model Limitations: All models have inherent limitations and assumptions. The accuracy metrics shown represent historical performance and may not reflect future accuracy. Confidence bands indicate statistical probability ranges, not absolute certainty."
+  },
+
+  "infoNotice": {
+    "title": "About Forecasting",
+    "description": "Our forecasting models use statistical methods (ETS, Prophet) to predict future values based on historical patterns. Confidence bands show the range of likely outcomes. Use these forecasts for planning, but remember they are estimates."
+  }
+}

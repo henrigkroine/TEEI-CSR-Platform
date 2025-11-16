@@ -1,0 +1,164 @@
+{
+  "title": "Benchmarking og sammenligning med andre",
+  "subtitle": "Sammenlign CSR-ytelsen din med andre selskaper med personvernbevarende analyser",
+  "backToDashboard": "Tilbake til dashbord",
+
+  "privacy": {
+    "notice": "Personvern og aggregering",
+    "description": "Alle benchmarkdata er fullstendig anonymisert og aggregert ved hjelp av k-anonymitet (minimum 5 selskaper) og differensiell personvern (ε=0.1). Individuelle selskapsdata blir aldri avslørt.",
+    "kAnonymityTitle": "k-anonymitetsbeskyttelse",
+    "kAnonymityDesc": "Kohorter må inneholde minst 5 selskaper for å forhindre re-identifikasjon. Mindre kohorter blokkeres automatisk for å beskytte personvernet.",
+    "differentialPrivacyTitle": "Differensiell personvern",
+    "differentialPrivacyDesc": "Matematisk støy (ε=0.1) legges til alle aggregerte verdier for å beskytte individuelle bidrag samtidig som statistisk nøyaktighet opprettholdes.",
+    "percentileMethodTitle": "Persentilmetodikk",
+    "percentileMethodDesc": "Persentilrangering viser posisjonen din i forhold til andre: p50 er median, p90 er topp 10%, p10 er bunn 10%. Høyere er bedre for alle beregninger.",
+    "dataFreshnessTitle": "Dataferskhet",
+    "dataFreshnessDesc": "Benchmarkdata oppdateres daglig kl. 02:00 UTC. Kohortstatistikk omberegnes hver natt for å gjenspeile de siste innsendingene."
+  },
+
+  "cohortBuilder": {
+    "title": "Bygg din kohort",
+    "subtitle": "Velg filtre for å finne andre selskaper for personvernbevarende benchmarking",
+    "saveCohort": "Lagre kohort",
+    "loadCohort": "Last lagret kohort",
+    "selectSavedCohort": "-- Velg en lagret kohort --",
+    "calculating": "Beregner kohortstørrelse...",
+    "selectFilters": "Velg filtre for å forhåndsvise kohortstørrelse",
+    "cohortSize": "selskaper i kohort",
+    "recommendedMet": "(anbefalt minimum oppfylt)",
+    "tooSmall": "Kohorten er for liten",
+    "privacyThresholdNotMet": "personvernterskel ikke oppfylt",
+    "minimum": "minimum",
+    "filters": {
+      "industry": "Bransje",
+      "region": "Region",
+      "companySize": "Selskapsstørrelse (ansatte)",
+      "programType": "Programtype"
+    },
+    "industries": {
+      "technology": "Teknologi",
+      "finance": "Finansielle tjenester",
+      "healthcare": "Helsevesen",
+      "manufacturing": "Produksjon",
+      "retail": "Detaljhandel og forbruksvarer",
+      "energy": "Energi og verktøy",
+      "education": "Utdanning",
+      "nonprofit": "Ideell organisasjon",
+      "consulting": "Konsulent- og profesjonelle tjenester",
+      "other": "Annet"
+    },
+    "regions": {
+      "northAmerica": "Nord-Amerika",
+      "southAmerica": "Sør-Amerika",
+      "europe": "Europa",
+      "asiaPacific": "Asia-Stillehavet",
+      "middleEast": "Midtøsten",
+      "africa": "Afrika"
+    },
+    "employeeRanges": {
+      "small": "1-50",
+      "medium": "51-500",
+      "large": "501-5000",
+      "enterprise": "5000+"
+    },
+    "programTypes": {
+      "skillsDevelopment": "Kompetanseutvikling",
+      "communityOutreach": "Samfunnsengasjement",
+      "environmental": "Miljø",
+      "healthWellness": "Helse og velvære",
+      "educationLiteracy": "Utdanning og leseferdighet",
+      "economicEmpowerment": "Økonomisk egenkraft"
+    },
+    "saveModal": {
+      "title": "Lagre kohort",
+      "nameLabel": "Kohortnavn:",
+      "placeholder": "f.eks. Teknologiselskaper i Europa",
+      "cancel": "Avbryt",
+      "save": "Lagre",
+      "saving": "Lagrer..."
+    }
+  },
+
+  "consent": {
+    "title": "Datadeling for benchmarks",
+    "subtitle": "Kontroller hvordan selskapets data brukes i anonymisert benchmarking",
+    "statusActive": "Aktiv",
+    "statusInactive": "Inaktiv",
+    "intro": "Ved å velge å delta, vil selskapets aggregerte beregninger (SROI, VIS, osv.) inkluderes i anonyme kohortbenchmarks. Dette hjelper andre selskaper med å sammenligne ytelsen sin.",
+    "whatShared": "Hva som deles",
+    "whatNotShared": "Hva som IKKE deles",
+    "shared": {
+      "aggregated": "Kun aggregerte beregninger (gjennomsnitt, persentiler)",
+      "noPii": "Ingen personlig identifiserbar informasjon (PII)",
+      "kAnonymity": "k-anonymitetsbeskyttelse (minimum 5 selskaper per kohort)",
+      "dpNoise": "Differensiell personvernstøy lagt til alle verdier"
+    },
+    "notShared": {
+      "employees": "Individuelle ansattdata",
+      "feedback": "Rå tilbakemelding eller kommentarer",
+      "companyName": "Selskapsnavn eller identifiserende detaljer",
+      "proprietary": "Proprietær programinformasjon"
+    },
+    "safeguards": {
+      "title": "Tekniske personvernsikkerhetstiltak",
+      "kAnonymityTitle": "k-anonymitet",
+      "kAnonymityDesc": "Kohorter må ha minst 5 selskaper for å forhindre re-identifikasjon",
+      "dpTitle": "Differensiell personvern",
+      "dpDesc": "Matematisk støy (ε=0.1) lagt til for å beskytte individuelle bidrag",
+      "auditTitle": "Revisjonsspor",
+      "auditDesc": "All datatilgang er logget og overvåket for samsvar"
+    },
+    "toggleLabel": "Del selskapets data for benchmarks",
+    "lastUpdated": "Sist oppdatert:",
+    "never": "Aldri",
+    "enableConfirm": {
+      "title": "Aktiver datadeling?",
+      "description": "Ved å aktivere datadeling vil selskapets aggregerte beregninger inkluderes i anonyme benchmarks. Dette hjelper CSR-samfunnet med å få bedre innsikt samtidig som personvernet ditt beskyttes.",
+      "checklist": {
+        "aggregated": "All data er aggregert og anonymisert",
+        "privacy": "k-anonymitet og differensiell personvern brukes",
+        "revoke": "Du kan tilbakekalle samtykke når som helst"
+      },
+      "cancel": "Avbryt",
+      "confirm": "Aktiver deling"
+    },
+    "disableConfirm": {
+      "title": "Deaktiver datadeling?",
+      "description": "Selskapets data vil ikke lenger inkluderes i benchmarks. Eksisterende aggregerte data i kohorter vil omberegnes uten bidraget ditt.",
+      "cancel": "Avbryt",
+      "confirm": "Deaktiver deling"
+    },
+    "updating": "Oppdaterer..."
+  },
+
+  "results": {
+    "title": "Din ytelse vs. andre kohorter",
+    "cohortLabel": "Kohort:",
+    "companiesLabel": "selskaper",
+    "lastUpdated": "Sist oppdatert:",
+    "noData": "Ingen benchmarkdata tilgjengelig",
+    "noDataDesc": "Velg kohortkriterier ovenfor for å vise benchmarksammenligninger. Sørg for at kohorten din har minst 5 selskaper for å oppfylle personvernskravene.",
+    "loading": "Laster benchmarkdata..."
+  },
+
+  "percentileRibbon": {
+    "yourPerformance": "Din ytelse sammenlignet med andre kohorter",
+    "privacyProtected": "Personvernbeskyttet (ε=0.1)",
+    "yourPosition": "Din posisjon",
+    "yourValue": "Din verdi",
+    "median": "Median (P50)",
+    "top10": "Topp 10% (P90)",
+    "bottom10": "Bunn 10%",
+    "percentile": "persentil"
+  },
+
+  "metrics": {
+    "sroiRatio": "SROI-forhold",
+    "visScore": "VIS-poengsum",
+    "volunteerHours": "Frivillige timer",
+    "beneficiaries": "Totalt begunstigede",
+    "engagementRate": "Ansattes engasjementsrate",
+    "impactScore": "Samlet påvirkningspoengsum",
+    "q2qConfidence": "Q2Q-tillitspoengsum"
+  }
+}

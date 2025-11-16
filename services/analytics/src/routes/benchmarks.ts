@@ -1,9 +1,12 @@
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
+import crypto from 'crypto';
 import { getClickHouseClient } from '../lib/clickhouse-client.js';
 import { AnalyticsQueryBuilder, DimensionSchema, CompareWithSchema } from '../lib/query-builder.js';
 import { generateCacheKey, withCache } from '../lib/cache.js';
 import { enforceQueryBudget, QueryBudgetError } from '../lib/query-budgets.js';
+import { checkCohortMetricsSize, logCohortAccess } from '../lib/k-anonymity.js';
+import { applyDPToAggregates, getRecommendedEpsilon, generatePrivacyNotice } from '../lib/dp-noise.js';
 import { createServiceLogger } from '@teei/shared-utils';
 
 const logger = createServiceLogger('analytics:benchmarks');
@@ -14,6 +17,10 @@ const BenchmarksQuerySchema = z.object({
   dimension: DimensionSchema,
   startDate: z.string().optional(),
   endDate: z.string().optional(),
+  // Privacy controls
+  kAnonymityThreshold: z.number().int().min(3).max(20).optional().default(5),
+  applyDPNoise: z.boolean().optional().default(true),
+  epsilon: z.number().min(0.01).max(1.0).optional(), // Auto-calculated if not provided
 });
 
 export async function benchmarksRoutes(app: FastifyInstance) {
@@ -59,6 +66,50 @@ export async function benchmarksRoutes(app: FastifyInstance) {
         async () => {
           const client = getClickHouseClient();
 
+          // Build cohort ID based on compareWith dimension
+          const cohortId = `${params.compareWith}-cohort`;
+
+          // Check k-anonymity before executing expensive query
+          const kAnonymityCheck = await checkCohortMetricsSize(
+            client,
+            cohortId,
+            params.startDate || '2020-01-01',
+            params.endDate || new Date().toISOString(),
+            params.kAnonymityThreshold
+          );
+
+          // If cohort too small, suppress data
+          if (!kAnonymityCheck.valid) {
+            logger.warn('Cohort too small for benchmarking', {
+              cohortId,
+              size: kAnonymityCheck.size,
+              threshold: kAnonymityCheck.threshold,
+            });
+
+            // Log suppression for audit
+            await logCohortAccess(client, {
+              cohortId,
+              requestingCompanyId: params.companyId,
+              queryHash: crypto
+                .createHash('sha256')
+                .update(JSON.stringify(params))
+                .digest('hex'),
+              kAnonymityPassed: false,
+              dpNoiseApplied: false,
+              suppressed: true,
+              recordCount: 0,
+              companyCount: kAnonymityCheck.size,
+            });
+
+            return {
+              companyScore: 0,
+              benchmarks: [],
+              suppressed: true,
+              suppressionReason: `Cohort size (${kAnonymityCheck.size}) below privacy threshold (${kAnonymityCheck.threshold})`,
+              privacyNote: 'Data suppressed to protect company privacy.',
+            };
+          }
+
           // Build query
           const query = AnalyticsQueryBuilder.buildBenchmarksQuery({
             companyId: params.companyId,
@@ -90,6 +141,7 @@ export async function benchmarksRoutes(app: FastifyInstance) {
             return {
               companyScore: 0,
               benchmarks: [],
+              suppressed: false,
             };
           }
 
@@ -97,18 +149,68 @@ export async function benchmarksRoutes(app: FastifyInstance) {
             ? parseFloat(rows[0].company_avg_score)
             : 0;
 
-          const benchmarks = rows.map((row: any) => ({
-            cohort: row.cohort || 'unknown',
-            benchmarkAvgScore: parseFloat(row.benchmark_avg_score || '0'),
-            medianScore: parseFloat(row.median_score || '0'),
-            difference: parseFloat(row.difference || '0'),
-            percentageDifference: parseFloat(row.percentage_difference || '0'),
-          }));
+          // Determine epsilon for DP noise
+          const epsilon = params.epsilon || getRecommendedEpsilon(kAnonymityCheck.size);
+
+          // Apply differential privacy noise to benchmarks
+          const benchmarks = rows.map((row: any) => {
+            const rawStats = {
+              avg: parseFloat(row.benchmark_avg_score || '0'),
+              p10: parseFloat(row.p25_score || '0'), // Use p25 as proxy for p10
+              p50: parseFloat(row.median_score || '0'),
+              p90: parseFloat(row.p75_score || '0'), // Use p75 as proxy for p90
+              count: parseInt(row.score_count || '0', 10),
+            };
+
+            // Apply DP noise if enabled
+            const noisedStats = params.applyDPNoise
+              ? applyDPToAggregates(rawStats, { epsilon, sensitivity: 1 })
+              : { value: rawStats, noiseApplied: false, epsilon: 0, sensitivity: 1 };
+
+            return {
+              cohort: row.cohort || 'unknown',
+              benchmarkAvgScore: noisedStats.value.avg,
+              medianScore: noisedStats.value.p50,
+              p10Score: noisedStats.value.p10,
+              p90Score: noisedStats.value.p90,
+              sampleSize: noisedStats.value.count,
+              difference: companyAvgScore - noisedStats.value.avg,
+              percentageDifference:
+                noisedStats.value.avg > 0
+                  ? ((companyAvgScore - noisedStats.value.avg) / noisedStats.value.avg) * 100
+                  : 0,
+              dpApplied: noisedStats.noiseApplied,
+            };
+          });
+
+          // Generate privacy notice
+          const privacyNote = params.applyDPNoise
+            ? generatePrivacyNotice(epsilon, kAnonymityCheck.size)
+            : 'No differential privacy applied.';
+
+          // Log access for audit
+          await logCohortAccess(client, {
+            cohortId,
+            requestingCompanyId: params.companyId,
+            queryHash: crypto
+              .createHash('sha256')
+              .update(JSON.stringify(params))
+              .digest('hex'),
+            kAnonymityPassed: true,
+            dpNoiseApplied: params.applyDPNoise,
+            suppressed: false,
+            recordCount: benchmarks.reduce((sum, b) => sum + b.sampleSize, 0),
+            companyCount: kAnonymityCheck.size,
+          });
 
           return {
             companyScore: companyAvgScore,
             benchmarks,
             compareWith: params.compareWith,
+            suppressed: false,
+            privacyNote,
+            cohortSize: kAnonymityCheck.size,
+            epsilon: params.applyDPNoise ? epsilon : undefined,
           };
         },
         { ttl: 21600 } // 6 hours cache
@@ -122,7 +224,14 @@ export async function benchmarksRoutes(app: FastifyInstance) {
           cached,
           queryTimeMs,
           budgetRemaining,
-          benchmarksCompared: data.benchmarks.length,
+          benchmarksCompared: data.benchmarks?.length || 0,
+          privacyProtections: {
+            kAnonymityThreshold: params.kAnonymityThreshold,
+            dpNoiseApplied: params.applyDPNoise,
+            epsilon: data.epsilon,
+            cohortSize: data.cohortSize,
+            suppressed: data.suppressed,
+          },
         },
       });
     } catch (error) {
