@@ -1,0 +1,24 @@
+# =============================================================================
+# Test Case: Unsigned Container Image
+# =============================================================================
+# Expected Outcome: REJECTED by require-signed-images policy
+# Reason: Container image lacks Cosign signature verification
+#
+# To test:
+#   kubectl apply -f unsigned-pod.yaml
+#   Expected: Error - image signature verification failed
+# =============================================================================
+apiVersion: v1
+kind: Pod
+metadata:
+  name: unsigned-nginx-pod
+  namespace: default
+  labels:
+    app: test-unsigned
+    test-case: "signed-images-policy"
+spec:
+  containers:
+  - name: nginx
+    image: nginx:latest  # Unsigned image - should be rejected
+    ports:
+    - containerPort: 80

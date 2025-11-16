@@ -1,0 +1,50 @@
+apiVersion: 1
+
+providers:
+  # Service dashboards with trace-to-logs correlation
+  - name: 'Service Dashboards'
+    orgId: 1
+    folder: 'Service Metrics'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/dashboards/services
+      foldersFromFilesStructure: false
+
+  # Infrastructure dashboards
+  - name: 'Infrastructure Dashboards'
+    orgId: 1
+    folder: 'Infrastructure'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/dashboards/infrastructure
+      foldersFromFilesStructure: false
+
+  # Observability dashboards
+  - name: 'Observability Dashboards'
+    orgId: 1
+    folder: 'Observability'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/dashboards/observability
+      foldersFromFilesStructure: false
+
+  # SLO and error budget dashboards
+  - name: 'SLO Dashboards'
+    orgId: 1
+    folder: 'SLO & Error Budgets'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/dashboards/slo
+      foldersFromFilesStructure: false

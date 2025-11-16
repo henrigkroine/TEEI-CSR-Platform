@@ -1,0 +1,40 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: deny-nodeport-services
+  annotations:
+    policies.kyverno.io/title: Deny NodePort Services
+    policies.kyverno.io/category: Network Security
+    policies.kyverno.io/severity: medium
+    policies.kyverno.io/subject: Service
+    policies.kyverno.io/description: >-
+      NodePort services expose services on all cluster nodes, creating a
+      larger attack surface and potential security risks. This policy enforces
+      the use of ClusterIP (internal) or LoadBalancer (controlled external access)
+      service types. Exception granted for monitoring namespace where metrics
+      collection may require NodePort access.
+spec:
+  validationFailureAction: audit  # Start in audit mode, switch to enforce after validation
+  background: true
+  rules:
+    - name: deny-nodeport-type
+      match:
+        any:
+        - resources:
+            kinds:
+              - Service
+      exclude:
+        any:
+        - resources:
+            namespaces:
+              - monitoring
+              - prometheus
+              - grafana
+      validate:
+        message: >-
+          NodePort services are not allowed. Please use 'ClusterIP' for internal
+          services or 'LoadBalancer' for controlled external access. NodePort
+          services expose ports on all cluster nodes, creating security risks.
+        pattern:
+          spec:
+            =(type): "!NodePort"

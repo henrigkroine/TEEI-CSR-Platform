@@ -1,0 +1,433 @@
+name: Build, Scan, and Attest Container Images
+
+# Comprehensive CI/CD pipeline with:
+# - Docker image building
+# - SBOM generation (Syft)
+# - Vulnerability scanning (Trivy)
+# - SLSA-3 attestation (Cosign)
+# - S3 SBOM publishing
+
+on:
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'services/**'
+      - 'apps/**'
+      - 'packages/**'
+      - '.github/workflows/build-and-attest.yml'
+  push:
+    branches: [main, develop]
+    paths:
+      - 'services/**'
+      - 'apps/**'
+      - 'packages/**'
+  workflow_dispatch:
+    inputs:
+      service:
+        description: 'Service to build (leave empty for all changed services)'
+        required: false
+        type: string
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}
+  SBOM_S3_BUCKET: teei-sbom
+  SBOM_RETENTION_DAYS: 730 # 2 years
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write # Required for Cosign keyless signing
+  security-events: write # Required for Trivy SARIF upload
+  attestations: write # Required for SLSA attestations
+
+jobs:
+  ###############################################################################
+  # Job 1: Detect Changed Services
+  ###############################################################################
+  detect-changes:
+    name: Detect Changed Services
+    runs-on: ubuntu-latest
+    outputs:
+      services: ${{ steps.filter.outputs.changes }}
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Detect changed services
+        uses: dorny/paths-filter@v2
+        id: filter
+        if: github.event.inputs.service == ''
+        with:
+          filters: |
+            api-gateway:
+              - 'services/api-gateway/**'
+              - 'packages/**'
+            unified-profile:
+              - 'services/unified-profile/**'
+              - 'packages/**'
+            kintell-connector:
+              - 'services/kintell-connector/**'
+              - 'packages/**'
+            buddy-service:
+              - 'services/buddy-service/**'
+              - 'packages/**'
+            upskilling-connector:
+              - 'services/upskilling-connector/**'
+              - 'packages/**'
+            q2q-ai:
+              - 'services/q2q-ai/**'
+              - 'packages/**'
+            safety-moderation:
+              - 'services/safety-moderation/**'
+              - 'packages/**'
+            analytics:
+              - 'services/analytics/**'
+              - 'packages/**'
+            buddy-connector:
+              - 'services/buddy-connector/**'
+              - 'packages/**'
+            discord-bot:
+              - 'services/discord-bot/**'
+              - 'packages/**'
+            impact-calculator:
+              - 'services/impact-calculator/**'
+              - 'packages/**'
+            impact-in:
+              - 'services/impact-in/**'
+              - 'packages/**'
+            journey-engine:
+              - 'services/journey-engine/**'
+              - 'packages/**'
+            notifications:
+              - 'services/notifications/**'
+              - 'packages/**'
+            reporting:
+              - 'services/reporting/**'
+              - 'packages/**'
+            corp-cockpit-astro:
+              - 'apps/corp-cockpit-astro/**'
+              - 'packages/**'
+
+      - name: Set matrix for manual dispatch
+        id: set-matrix
+        run: |
+          if [ -n "${{ github.event.inputs.service }}" ]; then
+            echo "matrix=[\"${{ github.event.inputs.service }}\"]" >> $GITHUB_OUTPUT
+          else
+            echo "matrix=${{ steps.filter.outputs.changes }}" >> $GITHUB_OUTPUT
+          fi
+
+  ###############################################################################
+  # Job 2: Build, Scan, Sign, and Attest
+  ###############################################################################
+  build-scan-attest:
+    name: Build & Attest - ${{ matrix.service }}
+    needs: detect-changes
+    if: needs.detect-changes.outputs.matrix != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: ${{ fromJSON(needs.detect-changes.outputs.matrix) }}
+      fail-fast: false
+      max-parallel: 3
+
+    steps:
+      ###########################################################################
+      # Setup
+      ###########################################################################
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Full history for provenance
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Install Syft
+        uses: anchore/sbom-action/download-syft@v0
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_PREFIX }}/teei-${{ matrix.service }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix={{branch}}-
+            type=raw,value=staging,enable=${{ github.ref == 'refs/heads/develop' }}
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+
+      - name: Determine Dockerfile path
+        id: dockerfile
+        run: |
+          if [[ "${{ matrix.service }}" == "corp-cockpit-astro" ]]; then
+            echo "path=apps/${{ matrix.service }}/Dockerfile" >> $GITHUB_OUTPUT
+            echo "context=." >> $GITHUB_OUTPUT
+          else
+            echo "path=services/${{ matrix.service }}/Dockerfile" >> $GITHUB_OUTPUT
+            echo "context=." >> $GITHUB_OUTPUT
+          fi
+
+      ###########################################################################
+      # Build Docker Image
+      ###########################################################################
+      - name: Build and push Docker image
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ steps.dockerfile.outputs.context }}
+          file: ${{ steps.dockerfile.outputs.path }}
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+          load: ${{ github.event_name == 'pull_request' }}
+          outputs: type=image,name=${{ env.IMAGE_PREFIX }}/teei-${{ matrix.service }},push-by-digest=true,name-canonical=true
+
+      ###########################################################################
+      # Security Scanning with Trivy
+      ###########################################################################
+      - name: Run Trivy vulnerability scanner (blocking)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.IMAGE_PREFIX }}/teei-${{ matrix.service }}@${{ steps.build.outputs.digest }}
+          format: 'sarif'
+          output: 'trivy-results-${{ matrix.service }}.sarif'
+          severity: 'HIGH,CRITICAL'
+          exit-code: '1' # Fail on HIGH/CRITICAL vulnerabilities
+          ignore-unfixed: true
+          scanners: 'vuln,secret,config'
+          trivyignores: '.trivyignore'
+          timeout: '10m'
+
+      - name: Upload Trivy results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results-${{ matrix.service }}.sarif'
+          category: 'trivy-${{ matrix.service }}'
+
+      - name: Run Trivy scan (table format for reporting)
+        uses: aquasecurity/trivy-action@master
+        if: always()
+        with:
+          image-ref: ${{ env.IMAGE_PREFIX }}/teei-${{ matrix.service }}@${{ steps.build.outputs.digest }}
+          format: 'table'
+          output: 'trivy-report-${{ matrix.service }}.txt'
+          severity: 'LOW,MEDIUM,HIGH,CRITICAL'
+          ignore-unfixed: true
+          scanners: 'vuln,secret,config'
+          trivyignores: '.trivyignore'
+
+      - name: Upload Trivy scan report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: trivy-report-${{ matrix.service }}
+          path: trivy-report-${{ matrix.service }}.txt
+          retention-days: 90
+
+      ###########################################################################
+      # SBOM Generation with Syft
+      ###########################################################################
+      - name: Generate SBOM with Syft
+        if: github.event_name != 'pull_request'
+        run: |
+          bash ./ops/sbom/generate.sh \
+            "${{ env.IMAGE_PREFIX }}/teei-${{ matrix.service }}@${{ steps.build.outputs.digest }}" \
+            "${{ matrix.service }}" \
+            "${{ steps.meta.outputs.version }}"
+
+      - name: Upload SBOM artifact
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-${{ matrix.service }}
+          path: |
+            sbom-${{ matrix.service }}-${{ steps.meta.outputs.version }}.spdx.json
+            sbom-${{ matrix.service }}-${{ steps.meta.outputs.version }}.metadata.json
+          retention-days: 90
+
+      ###########################################################################
+      # Publish SBOM to S3
+      ###########################################################################
+      - name: Configure AWS credentials
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_SBOM_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Publish SBOM to S3
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        run: |
+          bash ./ops/sbom/publish.sh \
+            "${{ matrix.service }}" \
+            "${{ steps.meta.outputs.version }}" \
+            "sbom-${{ matrix.service }}-${{ steps.meta.outputs.version }}.spdx.json"
+        env:
+          SBOM_S3_BUCKET: ${{ env.SBOM_S3_BUCKET }}
+          SBOM_RETENTION_DAYS: ${{ env.SBOM_RETENTION_DAYS }}
+
+      ###########################################################################
+      # SLSA-3 Attestation with Cosign
+      ###########################################################################
+      - name: Sign image and attach SLSA provenance
+        if: github.event_name != 'pull_request'
+        run: |
+          bash ./ops/slsa/attest-build.sh \
+            "${{ env.IMAGE_PREFIX }}/teei-${{ matrix.service }}" \
+            "${{ steps.build.outputs.digest }}" \
+            "${{ matrix.service }}" \
+            "${{ steps.meta.outputs.version }}"
+        env:
+          COSIGN_EXPERIMENTAL: "true"
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_REF: ${{ github.ref }}
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_WORKFLOW: ${{ github.workflow }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+
+      - name: Upload SLSA attestation artifacts
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: slsa-attestation-${{ matrix.service }}
+          path: |
+            slsa-provenance-${{ matrix.service }}-${{ steps.meta.outputs.version }}.json
+            slsa-attestation-summary-${{ matrix.service }}-${{ steps.meta.outputs.version }}.json
+            cosign-*.json
+            cosign-*.log
+          retention-days: 90
+
+      ###########################################################################
+      # Verification
+      ###########################################################################
+      - name: Verify signature and attestation
+        if: github.event_name != 'pull_request'
+        run: |
+          echo "=== Verifying Cosign Signature ==="
+          cosign verify "${{ env.IMAGE_PREFIX }}/teei-${{ matrix.service }}@${{ steps.build.outputs.digest }}" | jq .
+
+          echo ""
+          echo "=== Verifying SLSA Attestation ==="
+          cosign verify-attestation \
+            --type slsaprovenance \
+            "${{ env.IMAGE_PREFIX }}/teei-${{ matrix.service }}@${{ steps.build.outputs.digest }}" | jq .
+
+          echo ""
+          echo "=== Extracting Provenance ==="
+          cosign verify-attestation \
+            --type slsaprovenance \
+            "${{ env.IMAGE_PREFIX }}/teei-${{ matrix.service }}@${{ steps.build.outputs.digest }}" \
+            | jq -r '.payload' | base64 -d | jq .
+        env:
+          COSIGN_EXPERIMENTAL: "true"
+
+      ###########################################################################
+      # Build Summary
+      ###########################################################################
+      - name: Generate build summary
+        if: always()
+        run: |
+          cat <<EOF >> $GITHUB_STEP_SUMMARY
+          ## Build Summary - ${{ matrix.service }}
+
+          **Image**: \`${{ env.IMAGE_PREFIX }}/teei-${{ matrix.service }}:${{ steps.meta.outputs.version }}\`
+          **Digest**: \`${{ steps.build.outputs.digest }}\`
+          **Git SHA**: \`${{ github.sha }}\`
+
+          ### Security Scans
+          - **Trivy Scan**: ${{ steps.trivy-scan.outcome || 'completed' }}
+          - **SBOM Generated**: ${{ github.event_name != 'pull_request' && '✅' || '⏭️ Skipped (PR)' }}
+          - **SLSA Attestation**: ${{ github.event_name != 'pull_request' && '✅' || '⏭️ Skipped (PR)' }}
+
+          ### Verification Commands
+          \`\`\`bash
+          # Verify signature
+          cosign verify ${{ env.IMAGE_PREFIX }}/teei-${{ matrix.service }}@${{ steps.build.outputs.digest }}
+
+          # Verify SLSA attestation
+          cosign verify-attestation --type slsaprovenance ${{ env.IMAGE_PREFIX }}/teei-${{ matrix.service }}@${{ steps.build.outputs.digest }}
+
+          # View provenance
+          cosign verify-attestation --type slsaprovenance ${{ env.IMAGE_PREFIX }}/teei-${{ matrix.service }}@${{ steps.build.outputs.digest }} | jq -r '.payload' | base64 -d | jq .
+
+          # Download SBOM from S3
+          aws s3 cp s3://${{ env.SBOM_S3_BUCKET }}/${{ matrix.service }}/${{ steps.meta.outputs.version }}/sbom.json .
+          \`\`\`
+
+          ### SBOM Details
+          - **Format**: SPDX JSON
+          - **Storage**: \`s3://${{ env.SBOM_S3_BUCKET }}/${{ matrix.service }}/${{ steps.meta.outputs.version }}/\`
+          - **Retention**: ${{ env.SBOM_RETENTION_DAYS }} days
+          EOF
+
+  ###############################################################################
+  # Job 3: Build Summary
+  ###############################################################################
+  summary:
+    name: Pipeline Summary
+    needs: [detect-changes, build-scan-attest]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pipeline Summary
+        run: |
+          cat <<EOF >> $GITHUB_STEP_SUMMARY
+          # 🔐 Build & Attestation Pipeline Summary
+
+          **Branch**: \`${{ github.ref_name }}\`
+          **Trigger**: \`${{ github.event_name }}\`
+          **Services Processed**: \`${{ needs.detect-changes.outputs.matrix }}\`
+          **Overall Status**: \`${{ needs.build-scan-attest.result }}\`
+
+          ## Security Gates
+          - ✅ Trivy vulnerability scanning (blocks on HIGH/CRITICAL)
+          - ✅ SBOM generation with Syft (SPDX JSON format)
+          - ✅ SLSA-3 provenance attestation with Cosign
+          - ✅ S3 SBOM publishing with 2-year retention
+          - ✅ Keyless signing with Sigstore (Fulcio + Rekor)
+
+          ## Compliance
+          - **SLSA Level**: 3
+          - **SBOM Standard**: SPDX 2.3
+          - **Signing**: Sigstore (Keyless)
+          - **Transparency**: Rekor public ledger
+          - **Certificate Authority**: Fulcio
+
+          ## Resources
+          - [Security Advisories](https://github.com/${{ github.repository }}/security/advisories)
+          - [Code Scanning](https://github.com/${{ github.repository }}/security/code-scanning)
+          - [Trivy Reports](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+          - [Rekor Transparency Log](https://search.sigstore.dev/)
+
+          ---
+          *Pipeline run ID: ${{ github.run_id }}*
+          EOF
+
+      - name: Check build status
+        if: needs.build-scan-attest.result == 'failure'
+        run: |
+          echo "::error::Build and attestation pipeline failed. Review Trivy scan results for vulnerabilities."
+          exit 1

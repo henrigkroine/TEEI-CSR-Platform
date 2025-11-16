@@ -1,0 +1,42 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-signed-images
+  annotations:
+    policies.kyverno.io/title: Require Signed Container Images
+    policies.kyverno.io/category: Supply Chain Security
+    policies.kyverno.io/severity: high
+    policies.kyverno.io/subject: Pod
+    policies.kyverno.io/description: >-
+      Ensures all container images are signed with Cosign to prevent
+      supply chain attacks. Only allows verified images from trusted sources.
+      Exceptions granted for kube-system namespace where Kubernetes core
+      components run.
+spec:
+  validationFailureAction: audit  # Start in audit mode, switch to enforce after validation
+  background: true
+  rules:
+    - name: verify-image-signature
+      match:
+        any:
+        - resources:
+            kinds:
+              - Pod
+      exclude:
+        any:
+        - resources:
+            namespaces:
+              - kube-system
+      verifyImages:
+      - imageReferences:
+        - "*"
+        attestors:
+        - count: 1
+          entries:
+          - keys:
+              publicKeys: |-
+                -----BEGIN PUBLIC KEY-----
+                # Replace with your actual Cosign public key
+                # This is a placeholder - configure with your organization's signing key
+                -----END PUBLIC KEY-----
+      failurePolicy: Fail

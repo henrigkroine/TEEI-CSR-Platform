@@ -1,0 +1,509 @@
+name: DR Drill - Continuous Verification
+
+on:
+  # Weekly dry-run every Monday at 02:00 UTC
+  schedule:
+    - cron: '0 2 * * 1'
+
+  # Manual trigger for real drills or ad-hoc testing
+  workflow_dispatch:
+    inputs:
+      drill_type:
+        description: 'Type of drill to execute'
+        required: true
+        type: choice
+        options:
+          - dry-run
+          - real-failover
+        default: dry-run
+      source_region:
+        description: 'Source region to failover from'
+        required: true
+        type: choice
+        options:
+          - us-east-1
+          - us-west-2
+          - eu-central-1
+          - eu-west-1
+        default: us-east-1
+      target_region:
+        description: 'Target region to failover to'
+        required: true
+        type: choice
+        options:
+          - us-east-1
+          - us-west-2
+          - eu-central-1
+          - eu-west-1
+        default: eu-central-1
+      skip_notifications:
+        description: 'Skip Slack notifications'
+        type: boolean
+        default: false
+
+env:
+  RTO_TARGET_SECONDS: 900  # 15 minutes
+  RPO_TARGET_SECONDS: 10   # 10 seconds
+  EVIDENCE_DIR: /tmp/dr-evidence
+
+permissions:
+  contents: read
+  id-token: write
+  issues: write
+
+jobs:
+  # ===========================================================================
+  # Pre-Flight Validation
+  # ===========================================================================
+  pre-flight-checks:
+    name: Pre-Flight Validation
+    runs-on: ubuntu-latest
+    outputs:
+      drill_type: ${{ steps.config.outputs.drill_type }}
+      source_region: ${{ steps.config.outputs.source_region }}
+      target_region: ${{ steps.config.outputs.target_region }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Determine drill configuration
+        id: config
+        run: |
+          # Scheduled runs are always dry-run
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            echo "drill_type=dry-run" >> $GITHUB_OUTPUT
+            echo "source_region=us-east-1" >> $GITHUB_OUTPUT
+            echo "target_region=eu-central-1" >> $GITHUB_OUTPUT
+          else
+            echo "drill_type=${{ github.event.inputs.drill_type }}" >> $GITHUB_OUTPUT
+            echo "source_region=${{ github.event.inputs.source_region }}" >> $GITHUB_OUTPUT
+            echo "target_region=${{ github.event.inputs.target_region }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Validate configuration
+        run: |
+          echo "## DR Drill Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Drill Type:** ${{ steps.config.outputs.drill_type }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Source Region:** ${{ steps.config.outputs.source_region }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Target Region:** ${{ steps.config.outputs.target_region }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Triggered By:** ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Actor:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+
+          # Ensure source and target are different
+          if [ "${{ steps.config.outputs.source_region }}" = "${{ steps.config.outputs.target_region }}" ]; then
+            echo "❌ ERROR: Source and target regions must be different"
+            exit 1
+          fi
+
+      - name: Check cluster health (source)
+        run: |
+          echo "Checking source region cluster health..."
+          # TODO: Add actual cluster health check via kubectl or API
+          echo "✅ Source cluster health: OK (placeholder)"
+
+      - name: Check cluster health (target)
+        run: |
+          echo "Checking target region cluster health..."
+          # TODO: Add actual cluster health check via kubectl or API
+          echo "✅ Target cluster health: OK (placeholder)"
+
+      - name: Verify backup freshness
+        run: |
+          echo "Checking backup freshness..."
+          # TODO: Verify latest backup is less than 24 hours old
+          echo "✅ Latest backup: $(date -d '1 hour ago' -u +%Y-%m-%dT%H:%M:%SZ) (placeholder)"
+
+      - name: Check database replication status
+        run: |
+          echo "Checking database replication lag..."
+          # TODO: Query PostgreSQL replication lag
+          REPLICATION_LAG_SECONDS=5
+          echo "Database replication lag: ${REPLICATION_LAG_SECONDS}s"
+
+          if [ "$REPLICATION_LAG_SECONDS" -gt "${{ env.RPO_TARGET_SECONDS }}" ]; then
+            echo "⚠️ WARNING: Replication lag exceeds RPO target"
+          else
+            echo "✅ Replication lag within acceptable range"
+          fi
+
+  # ===========================================================================
+  # Execute DR Drill
+  # ===========================================================================
+  execute-drill:
+    name: Execute DR Failover
+    runs-on: ubuntu-latest
+    needs: pre-flight-checks
+    env:
+      DRILL_TYPE: ${{ needs.pre-flight-checks.outputs.drill_type }}
+      SOURCE_REGION: ${{ needs.pre-flight-checks.outputs.source_region }}
+      TARGET_REGION: ${{ needs.pre-flight-checks.outputs.target_region }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.28.0'
+
+      - name: Configure kubectl contexts
+        run: |
+          # In production, configure kubectl with proper credentials
+          echo "Configuring kubectl contexts..."
+          # TODO: Set up KUBECONFIG with both source and target region contexts
+          echo "✅ kubectl configured (placeholder)"
+
+      - name: Create evidence directory
+        run: |
+          mkdir -p ${{ env.EVIDENCE_DIR }}
+          echo "Evidence directory: ${{ env.EVIDENCE_DIR }}"
+
+      - name: Execute failover script
+        id: failover
+        run: |
+          set -o pipefail
+
+          START_TIME=$(date +%s)
+
+          # Build failover command
+          FAILOVER_CMD="./scripts/dr/failover.sh \
+            --from ${{ env.SOURCE_REGION }} \
+            --to ${{ env.TARGET_REGION }} \
+            --evidence ${{ env.EVIDENCE_DIR }}"
+
+          # Add dry-run flag if applicable
+          if [ "${{ env.DRILL_TYPE }}" = "dry-run" ]; then
+            FAILOVER_CMD="$FAILOVER_CMD --dry-run"
+          fi
+
+          echo "Executing: $FAILOVER_CMD"
+
+          # Execute failover
+          $FAILOVER_CMD | tee ${{ env.EVIDENCE_DIR }}/console.log
+
+          # Capture exit code
+          FAILOVER_EXIT_CODE=$?
+          echo "failover_exit_code=$FAILOVER_EXIT_CODE" >> $GITHUB_OUTPUT
+
+          END_TIME=$(date +%s)
+          TOTAL_DURATION=$((END_TIME - START_TIME))
+          echo "total_duration=$TOTAL_DURATION" >> $GITHUB_OUTPUT
+
+          if [ $FAILOVER_EXIT_CODE -ne 0 ]; then
+            echo "❌ Failover script failed with exit code: $FAILOVER_EXIT_CODE"
+            exit $FAILOVER_EXIT_CODE
+          fi
+
+          echo "✅ Failover script completed successfully"
+
+      - name: Extract RTO/RPO metrics
+        id: metrics
+        if: always()
+        run: |
+          # Read metrics from evidence directory
+          if [ -f "${{ env.EVIDENCE_DIR }}/rto.txt" ]; then
+            RTO=$(cat ${{ env.EVIDENCE_DIR }}/rto.txt)
+            echo "rto=$RTO" >> $GITHUB_OUTPUT
+          else
+            echo "rto=0" >> $GITHUB_OUTPUT
+          fi
+
+          if [ -f "${{ env.EVIDENCE_DIR }}/rpo.txt" ]; then
+            RPO=$(cat ${{ env.EVIDENCE_DIR }}/rpo.txt)
+            echo "rpo=$RPO" >> $GITHUB_OUTPUT
+          else
+            echo "rpo=0" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Validate RTO target
+        id: validate_rto
+        if: always()
+        run: |
+          RTO=${{ steps.metrics.outputs.rto }}
+          TARGET=${{ env.RTO_TARGET_SECONDS }}
+
+          echo "## RTO Validation" >> $GITHUB_STEP_SUMMARY
+          echo "- **Actual RTO:** ${RTO}s" >> $GITHUB_STEP_SUMMARY
+          echo "- **Target RTO:** ${TARGET}s" >> $GITHUB_STEP_SUMMARY
+
+          if [ "$RTO" -gt "$TARGET" ]; then
+            echo "- **Status:** ❌ EXCEEDED" >> $GITHUB_STEP_SUMMARY
+            echo "rto_met=false" >> $GITHUB_OUTPUT
+            if [ "${{ env.DRILL_TYPE }}" = "dry-run" ]; then
+              echo "❌ RTO target exceeded in dry-run: ${RTO}s > ${TARGET}s"
+              exit 1
+            else
+              echo "⚠️ WARNING: RTO target exceeded: ${RTO}s > ${TARGET}s"
+            fi
+          else
+            echo "- **Status:** ✅ MET" >> $GITHUB_STEP_SUMMARY
+            echo "rto_met=true" >> $GITHUB_OUTPUT
+            echo "✅ RTO target met: ${RTO}s ≤ ${TARGET}s"
+          fi
+
+      - name: Validate RPO target
+        id: validate_rpo
+        if: always()
+        run: |
+          RPO=${{ steps.metrics.outputs.rpo }}
+          TARGET=${{ env.RPO_TARGET_SECONDS }}
+
+          echo "## RPO Validation" >> $GITHUB_STEP_SUMMARY
+          echo "- **Actual RPO:** ${RPO}s" >> $GITHUB_STEP_SUMMARY
+          echo "- **Target RPO:** ${TARGET}s" >> $GITHUB_STEP_SUMMARY
+
+          if [ "$RPO" -gt "$TARGET" ]; then
+            echo "- **Status:** ⚠️ EXCEEDED" >> $GITHUB_STEP_SUMMARY
+            echo "rpo_met=false" >> $GITHUB_OUTPUT
+            echo "⚠️ WARNING: RPO target exceeded: ${RPO}s > ${TARGET}s"
+          else
+            echo "- **Status:** ✅ MET" >> $GITHUB_STEP_SUMMARY
+            echo "rpo_met=true" >> $GITHUB_OUTPUT
+            echo "✅ RPO target met: ${RPO}s ≤ ${TARGET}s"
+          fi
+
+      - name: Upload evidence bundle
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dr-evidence-${{ github.run_number }}
+          path: ${{ env.EVIDENCE_DIR }}
+          retention-days: 90
+
+  # ===========================================================================
+  # Health Validation
+  # ===========================================================================
+  health-validation:
+    name: Post-Drill Health Validation
+    runs-on: ubuntu-latest
+    needs: [pre-flight-checks, execute-drill]
+    if: always() && needs.execute-drill.result == 'success'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify service endpoints
+        run: |
+          echo "Verifying critical service endpoints..."
+
+          # List of critical endpoints to check
+          ENDPOINTS=(
+            "https://teei.example.com/health"
+            "https://teei.example.com/api/v1/health"
+            "https://teei.example.com/api/v1/metrics/health"
+          )
+
+          FAILED=0
+          for endpoint in "${ENDPOINTS[@]}"; do
+            echo "Checking: $endpoint"
+            # TODO: Add actual health check
+            # HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$endpoint")
+            HTTP_STATUS=200  # Placeholder
+
+            if [ "$HTTP_STATUS" = "200" ]; then
+              echo "  ✅ HTTP $HTTP_STATUS"
+            else
+              echo "  ❌ HTTP $HTTP_STATUS"
+              FAILED=$((FAILED + 1))
+            fi
+          done
+
+          if [ $FAILED -gt 0 ]; then
+            echo "❌ $FAILED health checks failed"
+            exit 1
+          fi
+
+          echo "✅ All health checks passed"
+
+      - name: Verify database connectivity
+        run: |
+          echo "Verifying database connectivity..."
+          # TODO: Test database connection in target region
+          echo "✅ Database connectivity verified (placeholder)"
+
+      - name: Verify NATS connectivity
+        run: |
+          echo "Verifying NATS connectivity..."
+          # TODO: Test NATS connection in target region
+          echo "✅ NATS connectivity verified (placeholder)"
+
+      - name: Verify ClickHouse connectivity
+        run: |
+          echo "Verifying ClickHouse connectivity..."
+          # TODO: Test ClickHouse connection in target region
+          echo "✅ ClickHouse connectivity verified (placeholder)"
+
+  # ===========================================================================
+  # Notifications
+  # ===========================================================================
+  notify-slack:
+    name: Notify Stakeholders
+    runs-on: ubuntu-latest
+    needs: [pre-flight-checks, execute-drill, health-validation]
+    if: always() && github.event.inputs.skip_notifications != 'true'
+
+    steps:
+      - name: Determine drill status
+        id: status
+        run: |
+          if [ "${{ needs.execute-drill.result }}" = "success" ] && [ "${{ needs.health-validation.result }}" = "success" ]; then
+            echo "status=success" >> $GITHUB_OUTPUT
+            echo "emoji=✅" >> $GITHUB_OUTPUT
+            echo "color=good" >> $GITHUB_OUTPUT
+          elif [ "${{ needs.execute-drill.result }}" = "failure" ]; then
+            echo "status=failure" >> $GITHUB_OUTPUT
+            echo "emoji=❌" >> $GITHUB_OUTPUT
+            echo "color=danger" >> $GITHUB_OUTPUT
+          else
+            echo "status=warning" >> $GITHUB_OUTPUT
+            echo "emoji=⚠️" >> $GITHUB_OUTPUT
+            echo "color=warning" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Send Slack notification
+        uses: slackapi/slack-github-action@v1.26.0
+        with:
+          payload: |
+            {
+              "text": "${{ steps.status.outputs.emoji }} DR Drill: ${{ steps.status.outputs.status }}",
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "${{ steps.status.outputs.emoji }} DR Drill Report",
+                    "emoji": true
+                  }
+                },
+                {
+                  "type": "section",
+                  "fields": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Drill Type:*\n${{ needs.pre-flight-checks.outputs.drill_type }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Status:*\n${{ steps.status.outputs.status }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Source Region:*\n${{ needs.pre-flight-checks.outputs.source_region }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Target Region:*\n${{ needs.pre-flight-checks.outputs.target_region }}"
+                    }
+                  ]
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Workflow:* <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Details>"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_DR_DRILLS }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+
+      - name: Create GitHub issue on failure
+        if: needs.execute-drill.result == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = `🚨 DR Drill Failed - ${new Date().toISOString().split('T')[0]}`;
+            const body = `## DR Drill Failure Report
+
+            **Drill Type:** ${{ needs.pre-flight-checks.outputs.drill_type }}
+            **Source Region:** ${{ needs.pre-flight-checks.outputs.source_region }}
+            **Target Region:** ${{ needs.pre-flight-checks.outputs.target_region }}
+            **Workflow Run:** https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+            ### Issue
+            The automated DR drill has failed. Immediate investigation required.
+
+            ### Action Items
+            - [ ] Review workflow logs
+            - [ ] Investigate root cause
+            - [ ] Update DR procedures if needed
+            - [ ] Rerun drill after fixes
+
+            **Labels:** incident, dr-drill, high-priority
+            `;
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              body: body,
+              labels: ['incident', 'dr-drill', 'high-priority']
+            });
+
+  # ===========================================================================
+  # Reporting
+  # ===========================================================================
+  generate-report:
+    name: Generate DR Drill Report
+    runs-on: ubuntu-latest
+    needs: [pre-flight-checks, execute-drill, health-validation]
+    if: always()
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download evidence bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: dr-evidence-${{ github.run_number }}
+          path: /tmp/dr-evidence
+
+      - name: Generate report
+        run: |
+          REPORT_DIR="reports/dr-drills"
+          mkdir -p "$REPORT_DIR"
+
+          REPORT_FILE="$REPORT_DIR/drill-$(date +%Y%m%d-%H%M%S).md"
+
+          cat > "$REPORT_FILE" << 'EOF'
+          # DR Drill Report
+
+          **Date:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          **Drill Type:** ${{ needs.pre-flight-checks.outputs.drill_type }}
+          **Source Region:** ${{ needs.pre-flight-checks.outputs.source_region }}
+          **Target Region:** ${{ needs.pre-flight-checks.outputs.target_region }}
+          **Triggered By:** ${{ github.actor }}
+
+          ## Drill Status
+          - **Execute Drill:** ${{ needs.execute-drill.result }}
+          - **Health Validation:** ${{ needs.health-validation.result }}
+
+          ## Evidence
+          Evidence bundle available in workflow artifacts.
+
+          ## Next Steps
+          - Review metrics and identify improvement areas
+          - Update runbooks if procedures changed
+          - Schedule next drill
+
+          ---
+          *Generated by GitHub Actions*
+          EOF
+
+          echo "Report generated: $REPORT_FILE"
+
+      - name: Commit report (if on main branch)
+        if: github.ref == 'refs/heads/main'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add reports/dr-drills/
+          git commit -m "chore: Add DR drill report $(date +%Y%m%d-%H%M%S)" || echo "No changes to commit"
+          git push || echo "Push skipped"

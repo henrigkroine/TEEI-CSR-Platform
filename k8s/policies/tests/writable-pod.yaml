@@ -1,0 +1,91 @@
+# =============================================================================
+# Test Case: Writable Root Filesystem
+# =============================================================================
+# Expected Outcome: REJECTED by require-readonly-filesystem policy
+# Reason: Container does not set readOnlyRootFilesystem: true
+#
+# To test:
+#   kubectl apply -f writable-pod.yaml
+#   Expected: Error - containers must use read-only root filesystem
+# =============================================================================
+apiVersion: v1
+kind: Pod
+metadata:
+  name: writable-fs-pod
+  namespace: default
+  labels:
+    app: test-writable
+    test-case: "readonly-fs-policy"
+spec:
+  containers:
+  - name: app
+    image: nginx:latest
+    # Missing securityContext.readOnlyRootFilesystem: true - should be rejected
+    ports:
+    - containerPort: 80
+---
+# =============================================================================
+# Valid Example: Read-Only Filesystem with EmptyDir
+# =============================================================================
+# This demonstrates the CORRECT way to handle temporary storage needs
+# =============================================================================
+apiVersion: v1
+kind: Pod
+metadata:
+  name: readonly-fs-pod
+  namespace: default
+  labels:
+    app: test-readonly
+    test-case: "readonly-fs-compliant"
+spec:
+  containers:
+  - name: app
+    image: nginx:latest
+    securityContext:
+      readOnlyRootFilesystem: true  # Required
+      runAsNonRoot: true
+      runAsUser: 1000
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+        - ALL
+    volumeMounts:
+    - name: cache
+      mountPath: /var/cache/nginx  # Temporary storage via emptyDir
+    - name: run
+      mountPath: /var/run
+    ports:
+    - containerPort: 80
+  volumes:
+  - name: cache
+    emptyDir: {}
+  - name: run
+    emptyDir: {}
+---
+# =============================================================================
+# Exception Example: Stateful Database
+# =============================================================================
+# This would be ALLOWED due to stateful label exception
+# =============================================================================
+apiVersion: v1
+kind: Pod
+metadata:
+  name: postgres-pod
+  namespace: default
+  labels:
+    app: postgres
+    stateful: "true"  # Exception label
+    test-case: "readonly-fs-exception"
+spec:
+  containers:
+  - name: postgres
+    image: postgres:15
+    env:
+    - name: POSTGRES_PASSWORD
+      value: example
+    volumeMounts:
+    - name: pgdata
+      mountPath: /var/lib/postgresql/data
+  volumes:
+  - name: pgdata
+    emptyDir: {}

@@ -1,0 +1,409 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledJob
+metadata:
+  name: carbon-aware-q2q-embeddings
+  namespace: teei-platform
+  labels:
+    app: q2q-embeddings
+    component: batch
+    workload-type: deferrable
+    carbon-aware: "true"
+    part-of: teei-csr-platform
+    managed-by: keda
+spec:
+  jobTargetRef:
+    parallelism: 1
+    completions: 1
+    activeDeadlineSeconds: 3600  # 1 hour max per job
+    backoffLimit: 3
+    template:
+      metadata:
+        labels:
+          app: q2q-embeddings-batch
+          carbon-aware: "true"
+      spec:
+        restartPolicy: OnFailure
+        serviceAccountName: teei-batch-worker
+        # Carbon-aware scheduling hints (to be consumed by custom scheduler or admission webhook)
+        schedulerName: carbon-aware-scheduler  # Optional: custom scheduler
+        nodeSelector:
+          workload-type: batch
+          carbon-region-eligible: "true"  # Nodes in carbon-optimizable regions
+        tolerations:
+          - key: batch-workload
+            operator: Equal
+            value: "true"
+            effect: NoSchedule
+        containers:
+          - name: embeddings-generator
+            image: teei/q2q-embeddings:v1.2.3
+            env:
+              - name: BATCH_MODE
+                value: "true"
+              - name: CARBON_AWARE
+                value: "true"
+              - name: POSTGRES_URL
+                valueFrom:
+                  secretKeyRef:
+                    name: teei-shared-db-secrets
+                    key: DATABASE_URL
+              - name: REGION
+                valueFrom:
+                  fieldRef:
+                    fieldPath: metadata.annotations['topology.kubernetes.io/region']
+            resources:
+              requests:
+                cpu: 500m
+                memory: 1Gi
+              limits:
+                cpu: 2000m
+                memory: 4Gi
+            securityContext:
+              runAsNonRoot: true
+              runAsUser: 1000
+              readOnlyRootFilesystem: true
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop: [ALL]
+            volumeMounts:
+              - name: tmp
+                mountPath: /tmp
+        volumes:
+          - name: tmp
+            emptyDir: {}
+  pollingInterval: 60  # Check every 60 seconds
+  successfulJobsHistoryLimit: 5
+  failedJobsHistoryLimit: 3
+  maxReplicaCount: 10  # Max concurrent jobs
+  scalingStrategy:
+    strategy: "default"
+  triggers:
+    # Trigger 1: Carbon intensity threshold (primary)
+    - type: postgresql
+      metadata:
+        # Connection info
+        host: teei-shared-db.database.svc.cluster.local
+        port: "5432"
+        userName: keda_scaler
+        passwordFromEnv: POSTGRES_PASSWORD
+        dbName: teei_csr
+        sslmode: require
+
+        # Carbon intensity query - scale up when grid is clean
+        # Returns 1 if carbon intensity < 300 gCO2/kWh (clean), 0 otherwise
+        query: |
+          SELECT CASE
+            WHEN gCO2_per_kWh < 300 THEN 1
+            ELSE 0
+          END as should_scale
+          FROM co2e_emissions
+          WHERE region = (
+            SELECT COALESCE(
+              NULLIF(current_setting('app.carbon_region', true), ''),
+              'us-east-1'
+            )
+          )
+          ORDER BY timestamp DESC
+          LIMIT 1;
+
+        # Scale up when query returns >= 1 (carbon intensity is low)
+        targetQueryValue: "1"
+        activationQueryValue: "1"
+      authenticationRef:
+        name: keda-postgres-carbon-auth
+
+    # Trigger 2: Pending work queue (secondary)
+    - type: postgresql
+      metadata:
+        host: teei-shared-db.database.svc.cluster.local
+        port: "5432"
+        userName: keda_scaler
+        passwordFromEnv: POSTGRES_PASSWORD
+        dbName: teei_csr
+        sslmode: require
+
+        # Count of pending embedding generation tasks
+        # Only process if there's work AND carbon is low (primary trigger)
+        query: |
+          SELECT COUNT(*) as pending_count
+          FROM q2q_embedding_queue
+          WHERE status = 'pending'
+          AND created_at > NOW() - INTERVAL '24 hours';
+
+        # Scale based on pending work (1 job per 100 pending tasks)
+        targetQueryValue: "100"
+        activationQueryValue: "10"  # Start scaling when >10 pending
+      authenticationRef:
+        name: keda-postgres-carbon-auth
+
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledJob
+metadata:
+  name: carbon-aware-report-generation
+  namespace: teei-platform
+  labels:
+    app: report-generation
+    component: batch
+    workload-type: standard
+    carbon-aware: "true"
+    part-of: teei-csr-platform
+    managed-by: keda
+spec:
+  jobTargetRef:
+    parallelism: 1
+    completions: 1
+    activeDeadlineSeconds: 1800  # 30 minutes max
+    backoffLimit: 2
+    template:
+      metadata:
+        labels:
+          app: report-generation-batch
+          carbon-aware: "true"
+      spec:
+        restartPolicy: OnFailure
+        serviceAccountName: teei-batch-worker
+        schedulerName: carbon-aware-scheduler
+        nodeSelector:
+          workload-type: batch
+          carbon-region-eligible: "true"
+        containers:
+          - name: report-generator
+            image: teei/reporting:v2.5.1
+            env:
+              - name: BATCH_MODE
+                value: "true"
+              - name: CARBON_AWARE
+                value: "true"
+              - name: POSTGRES_URL
+                valueFrom:
+                  secretKeyRef:
+                    name: teei-shared-db-secrets
+                    key: DATABASE_URL
+            resources:
+              requests:
+                cpu: 250m
+                memory: 512Mi
+              limits:
+                cpu: 1000m
+                memory: 2Gi
+            securityContext:
+              runAsNonRoot: true
+              runAsUser: 1000
+              readOnlyRootFilesystem: true
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop: [ALL]
+  pollingInterval: 120  # Check every 2 minutes (less urgent)
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 2
+  maxReplicaCount: 5
+  scalingStrategy:
+    strategy: "default"
+  triggers:
+    # Carbon intensity trigger - more lenient threshold (400 gCO2/kWh)
+    - type: postgresql
+      metadata:
+        host: teei-shared-db.database.svc.cluster.local
+        port: "5432"
+        userName: keda_scaler
+        passwordFromEnv: POSTGRES_PASSWORD
+        dbName: teei_csr
+        sslmode: require
+
+        # Scale up when grid intensity < 400 gCO2/kWh
+        query: |
+          SELECT CASE
+            WHEN gCO2_per_kWh < 400 THEN 1
+            ELSE 0
+          END as should_scale
+          FROM co2e_emissions
+          WHERE region = (
+            SELECT COALESCE(
+              NULLIF(current_setting('app.carbon_region', true), ''),
+              'us-east-1'
+            )
+          )
+          ORDER BY timestamp DESC
+          LIMIT 1;
+
+        targetQueryValue: "1"
+        activationQueryValue: "1"
+      authenticationRef:
+        name: keda-postgres-carbon-auth
+
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledJob
+metadata:
+  name: carbon-aware-analytics-backfill
+  namespace: teei-platform
+  labels:
+    app: analytics-backfill
+    component: batch
+    workload-type: deferrable
+    carbon-aware: "true"
+    part-of: teei-csr-platform
+    managed-by: keda
+spec:
+  jobTargetRef:
+    parallelism: 1
+    completions: 1
+    activeDeadlineSeconds: 7200  # 2 hours max
+    backoffLimit: 3
+    template:
+      metadata:
+        labels:
+          app: analytics-backfill-batch
+          carbon-aware: "true"
+      spec:
+        restartPolicy: OnFailure
+        serviceAccountName: teei-batch-worker
+        schedulerName: carbon-aware-scheduler
+        nodeSelector:
+          workload-type: batch
+          carbon-region-eligible: "true"
+        containers:
+          - name: analytics-processor
+            image: teei/analytics:v1.8.0
+            env:
+              - name: BATCH_MODE
+                value: "true"
+              - name: CARBON_AWARE
+                value: "true"
+              - name: CLICKHOUSE_URL
+                valueFrom:
+                  secretKeyRef:
+                    name: teei-clickhouse-secrets
+                    key: CLICKHOUSE_URL
+            resources:
+              requests:
+                cpu: 1000m
+                memory: 2Gi
+              limits:
+                cpu: 4000m
+                memory: 8Gi
+            securityContext:
+              runAsNonRoot: true
+              runAsUser: 1000
+              readOnlyRootFilesystem: true
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop: [ALL]
+  pollingInterval: 180  # Check every 3 minutes (very deferrable)
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 2
+  maxReplicaCount: 3
+  scalingStrategy:
+    strategy: "default"
+  triggers:
+    # Strict carbon intensity trigger (< 250 gCO2/kWh for deferrable work)
+    - type: postgresql
+      metadata:
+        host: teei-shared-db.database.svc.cluster.local
+        port: "5432"
+        userName: keda_scaler
+        passwordFromEnv: POSTGRES_PASSWORD
+        dbName: teei_csr
+        sslmode: require
+
+        # Only scale during very clean energy windows
+        query: |
+          SELECT CASE
+            WHEN gCO2_per_kWh < 250
+            AND (energy_mix_solar + energy_mix_wind + energy_mix_hydro) > 30
+            THEN 1
+            ELSE 0
+          END as should_scale
+          FROM co2e_emissions
+          WHERE region = (
+            SELECT COALESCE(
+              NULLIF(current_setting('app.carbon_region', true), ''),
+              'us-east-1'
+            )
+          )
+          ORDER BY timestamp DESC
+          LIMIT 1;
+
+        targetQueryValue: "1"
+        activationQueryValue: "1"
+      authenticationRef:
+        name: keda-postgres-carbon-auth
+
+---
+# Authentication for KEDA PostgreSQL triggers
+apiVersion: v1
+kind: Secret
+metadata:
+  name: keda-postgres-carbon-auth
+  namespace: teei-platform
+  labels:
+    app: keda
+    component: authentication
+    part-of: greenops
+type: Opaque
+stringData:
+  # PostgreSQL credentials for KEDA scaler
+  # For production, use external secrets operator or sealed secrets
+  username: "keda_scaler"
+  password: "changeme_use_sealed_secrets"
+
+---
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: keda-postgres-carbon-auth
+  namespace: teei-platform
+spec:
+  secretTargetRef:
+    - parameter: password
+      name: keda-postgres-carbon-auth
+      key: password
+  env:
+    - parameter: POSTGRES_PASSWORD
+      name: keda-postgres-carbon-auth
+      key: password
+
+---
+# ServiceAccount for batch workers
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: teei-batch-worker
+  namespace: teei-platform
+  labels:
+    app: batch-worker
+    part-of: teei-csr-platform
+
+---
+# RBAC for batch workers (minimal permissions)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: teei-batch-worker-role
+  namespace: teei-platform
+spec:
+  rules:
+    - apiGroups: [""]
+      resources: ["configmaps"]
+      verbs: ["get", "list"]
+      resourceNames: ["greenops-carbon-hints"]
+    - apiGroups: [""]
+      resources: ["secrets"]
+      verbs: ["get"]
+      resourceNames: ["teei-shared-db-secrets", "teei-clickhouse-secrets"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: teei-batch-worker-binding
+  namespace: teei-platform
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: teei-batch-worker-role
+subjects:
+  - kind: ServiceAccount
+    name: teei-batch-worker
+    namespace: teei-platform

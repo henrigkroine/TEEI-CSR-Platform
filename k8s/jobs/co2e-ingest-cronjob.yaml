@@ -1,0 +1,348 @@
+---
+# CO2e Ingestion CronJob
+# Fetches regional grid carbon intensity data hourly
+# Worker: Phase J GreenOps - carbon-coeff-modeler
+# Date: 2025-11-16
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: co2e-ingest
+  labels:
+    app: co2e-ingest
+    component: finops
+    part-of: teei-csr-platform
+    managed-by: kustomize
+  annotations:
+    description: "Hourly ingestion of grid carbon intensity data for emissions tracking"
+spec:
+  # Schedule: Every hour at minute 5 (e.g., 00:05, 01:05, 02:05, ...)
+  # This gives the Electricity Maps API time to update hourly data
+  schedule: "5 * * * *"
+
+  # Concurrency policy: Forbid overlapping runs
+  concurrencyPolicy: Forbid
+
+  # Keep last 3 successful jobs for debugging
+  successfulJobsHistoryLimit: 3
+
+  # Keep last 3 failed jobs for debugging
+  failedJobsHistoryLimit: 3
+
+  # Start deadline: If job doesn't start within 10 minutes, count as missed
+  startingDeadlineSeconds: 600
+
+  jobTemplate:
+    metadata:
+      labels:
+        app: co2e-ingest
+        component: finops
+      annotations:
+        sidecar.istio.io/inject: "false"  # No service mesh for cron jobs
+    spec:
+      # Retry up to 3 times on failure
+      backoffLimit: 3
+
+      # Fail if not completed within 15 minutes
+      activeDeadlineSeconds: 900
+
+      # Keep completed job pods for 30 minutes for log inspection
+      ttlSecondsAfterFinished: 1800
+
+      template:
+        metadata:
+          labels:
+            app: co2e-ingest
+            component: finops
+        spec:
+          # Don't restart on failure - let Job controller handle retries
+          restartPolicy: Never
+
+          # Security Context
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            fsGroup: 1000
+            seccompProfile:
+              type: RuntimeDefault
+
+          # Service Account (for secrets access)
+          serviceAccountName: teei-co2e-ingest
+
+          # Init Container: Pre-flight checks
+          initContainers:
+          - name: pre-flight-check
+            image: postgres:16-alpine
+            imagePullPolicy: IfNotPresent
+
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              runAsNonRoot: true
+              runAsUser: 1000
+              capabilities:
+                drop:
+                - ALL
+
+            env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: teei-shared-db-secrets
+                  key: DATABASE_URL
+
+            command:
+            - sh
+            - -c
+            - |
+              set -e
+              echo "=========================================="
+              echo "CO2e Ingestion Pre-flight Check"
+              echo "=========================================="
+
+              # Test database connectivity
+              echo "Testing database connection..."
+              psql "$DATABASE_URL" -c "SELECT 1;" > /dev/null || {
+                echo "ERROR: Cannot connect to database"
+                exit 1
+              }
+              echo "✓ Database connection successful"
+
+              # Check if co2e_emissions table exists
+              TABLE_EXISTS=$(psql "$DATABASE_URL" -tAc "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'co2e_emissions');")
+              if [ "$TABLE_EXISTS" = "f" ]; then
+                echo "ERROR: co2e_emissions table does not exist. Run migration 0014 first."
+                exit 1
+              fi
+              echo "✓ co2e_emissions table exists"
+
+              echo ""
+              echo "Pre-flight check complete. Ready to ingest."
+
+            volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+
+          # Main Container: Run ingestion script
+          containers:
+          - name: ingest
+            # Use Alpine with curl, jq, and postgresql-client
+            image: alpine:3.19
+            imagePullPolicy: IfNotPresent
+
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              runAsNonRoot: true
+              runAsUser: 1000
+              capabilities:
+                drop:
+                - ALL
+
+            env:
+            # Database credentials
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: teei-shared-db-secrets
+                  key: DATABASE_URL
+
+            # Electricity Maps API key
+            - name: ELECTRICITY_MAPS_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: electricity-maps-api-key
+                  key: api-key
+
+            # Optional: WattTime credentials for fallback
+            - name: WATTTIME_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: watttime-credentials
+                  key: username
+                  optional: true
+
+            - name: WATTTIME_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: watttime-credentials
+                  key: password
+                  optional: true
+
+            # Optional: Slack webhook for failure notifications
+            - name: SLACK_WEBHOOK_URL
+              valueFrom:
+                secretKeyRef:
+                  name: slack-webhooks
+                  key: greenops-alerts
+                  optional: true
+
+            # Runtime settings
+            - name: TZ
+              value: "UTC"
+
+            command:
+            - sh
+            - -c
+            - |
+              set -e
+
+              # Install dependencies
+              echo "Installing dependencies..."
+              apk add --no-cache curl jq postgresql-client bash bc > /dev/null 2>&1
+              echo "✓ Dependencies installed"
+
+              # Copy ingestion script to writable location
+              cp /scripts/co2e-ingest.sh /tmp/co2e-ingest.sh
+              chmod +x /tmp/co2e-ingest.sh
+
+              # Run the ingestion script
+              exec /tmp/co2e-ingest.sh
+
+            resources:
+              requests:
+                cpu: 50m
+                memory: 128Mi
+              limits:
+                cpu: 200m
+                memory: 256Mi
+
+            volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: scripts
+              mountPath: /scripts
+              readOnly: true
+
+          volumes:
+          - name: tmp
+            emptyDir: {}
+          - name: scripts
+            configMap:
+              name: co2e-ingest-scripts
+              defaultMode: 0755
+
+---
+# ConfigMap containing the ingestion script
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: co2e-ingest-scripts
+  labels:
+    app: co2e-ingest
+    component: finops
+    part-of: teei-csr-platform
+data:
+  co2e-ingest.sh: |
+    #!/bin/bash
+    # This is a placeholder. In production, mount the actual script from Git repo
+    # or build it into a custom Docker image.
+    #
+    # For now, this ConfigMap should be created with:
+    #   kubectl create configmap co2e-ingest-scripts \
+    #     --from-file=co2e-ingest.sh=/path/to/scripts/finops/co2e-ingest.sh
+    #
+    # Or use Kustomize to generate it from the repo.
+
+    echo "ERROR: Script not mounted. Update ConfigMap with actual script content."
+    exit 1
+
+---
+# Service Account for CO2e Ingestion CronJob
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: teei-co2e-ingest
+  labels:
+    app: co2e-ingest
+    component: finops
+    part-of: teei-csr-platform
+
+---
+# Role for CO2e Ingestion (minimal permissions)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: teei-co2e-ingest
+  labels:
+    app: co2e-ingest
+    component: finops
+spec:
+  rules:
+  # Read secrets for database and API credentials
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get"]
+    resourceNames:
+    - "teei-shared-db-secrets"
+    - "electricity-maps-api-key"
+    - "watttime-credentials"
+    - "slack-webhooks"
+
+  # Read ConfigMap for script
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get"]
+    resourceNames:
+    - "co2e-ingest-scripts"
+
+---
+# RoleBinding for CO2e Ingestion
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: teei-co2e-ingest
+  labels:
+    app: co2e-ingest
+    component: finops
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: teei-co2e-ingest
+subjects:
+- kind: ServiceAccount
+  name: teei-co2e-ingest
+
+---
+# Sealed Secret for Electricity Maps API Key
+# NOTE: This is a template. Create actual SealedSecret with:
+#   echo -n "your-api-key-here" | kubectl create secret generic electricity-maps-api-key \
+#     --dry-run=client --from-file=api-key=/dev/stdin -o yaml | \
+#     kubeseal -o yaml > electricity-maps-api-key-sealed.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: electricity-maps-api-key
+  labels:
+    app: co2e-ingest
+    component: finops
+type: Opaque
+stringData:
+  # REPLACE THIS WITH ACTUAL API KEY OR USE SEALED SECRETS
+  api-key: "REPLACE_WITH_ACTUAL_API_KEY"
+
+---
+# Sealed Secret for WattTime Credentials (Optional Fallback)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: watttime-credentials
+  labels:
+    app: co2e-ingest
+    component: finops
+type: Opaque
+stringData:
+  # REPLACE WITH ACTUAL CREDENTIALS OR USE SEALED SECRETS
+  username: "REPLACE_WITH_WATTTIME_USERNAME"
+  password: "REPLACE_WITH_WATTTIME_PASSWORD"
+
+---
+# Kustomization helper: Update ConfigMap from file
+# Add to kustomization.yaml:
+#
+# configMapGenerator:
+# - name: co2e-ingest-scripts
+#   files:
+#   - scripts/finops/co2e-ingest.sh
+#   options:
+#     disableNameSuffixHash: true

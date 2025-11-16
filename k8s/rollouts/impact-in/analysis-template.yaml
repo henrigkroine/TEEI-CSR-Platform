@@ -1,0 +1,290 @@
+# Argo Rollouts AnalysisTemplate: Impact-In Service SLO Health Gate
+# Owner: Worker 1 - Team 6 (rollouts-gates)
+# Created: 2025-11-16
+# Purpose: Gate canary promotion on delivery success rate and latency SLOs
+
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: impact-in-slo-health
+  namespace: teei-platform
+  labels:
+    app: impact-in
+    component: canary-analysis
+spec:
+  metrics:
+    # Metric 1: Delivery Success Rate > 99%
+    - name: delivery-success-rate
+      initialDelay: 60s
+      interval: 60s
+      successCondition: result > 0.99
+      failureLimit: 3
+      provider:
+        prometheus:
+          address: http://prometheus.monitoring.svc.cluster.local:9090
+          query: |
+            sum(rate(impact_in_delivery_total{
+              service="impact-in",
+              status="success",
+              version="{{ args.canary-version }}"
+            }[5m]))
+            /
+            sum(rate(impact_in_delivery_total{
+              service="impact-in",
+              version="{{ args.canary-version }}"
+            }[5m]))
+
+    # Metric 2: P95 Delivery Latency < 10s
+    - name: p95-delivery-latency
+      initialDelay: 60s
+      interval: 60s
+      successCondition: result < 10.0
+      failureLimit: 3
+      provider:
+        prometheus:
+          address: http://prometheus.monitoring.svc.cluster.local:9090
+          query: |
+            histogram_quantile(0.95,
+              sum(rate(impact_in_delivery_duration_seconds_bucket{
+                service="impact-in",
+                version="{{ args.canary-version }}"
+              }[5m])) by (le)
+            )
+
+    # Metric 3: P99 Delivery Latency < 30s (stricter than P95)
+    - name: p99-delivery-latency
+      initialDelay: 60s
+      interval: 60s
+      successCondition: result < 30.0
+      failureLimit: 5
+      provider:
+        prometheus:
+          address: http://prometheus.monitoring.svc.cluster.local:9090
+          query: |
+            histogram_quantile(0.99,
+              sum(rate(impact_in_delivery_duration_seconds_bucket{
+                service="impact-in",
+                version="{{ args.canary-version }}"
+              }[5m])) by (le)
+            )
+
+    # Metric 4: API Error Rate < 0.1%
+    - name: api-error-rate
+      initialDelay: 30s
+      interval: 30s
+      successCondition: result < 0.001
+      failureLimit: 3
+      provider:
+        prometheus:
+          address: http://prometheus.monitoring.svc.cluster.local:9090
+          query: |
+            sum(rate(http_server_requests_total{
+              service="impact-in",
+              status=~"5..",
+              version="{{ args.canary-version }}"
+            }[5m]))
+            /
+            sum(rate(http_server_requests_total{
+              service="impact-in",
+              version="{{ args.canary-version }}"
+            }[5m]))
+
+    # Metric 5: Webhook Delivery Retries (lower is better)
+    - name: delivery-retry-rate
+      initialDelay: 60s
+      interval: 60s
+      successCondition: result < 0.05  # < 5% retries
+      failureLimit: 3
+      provider:
+        prometheus:
+          address: http://prometheus.monitoring.svc.cluster.local:9090
+          query: |
+            sum(rate(impact_in_delivery_retries_total{
+              service="impact-in",
+              version="{{ args.canary-version }}"
+            }[5m]))
+            /
+            sum(rate(impact_in_delivery_total{
+              service="impact-in",
+              version="{{ args.canary-version }}"
+            }[5m]))
+
+    # Metric 6: Partner API Response Time (external dependency health)
+    - name: partner-api-latency
+      initialDelay: 60s
+      interval: 60s
+      successCondition: result < 5.0  # Partner APIs should respond < 5s
+      failureLimit: 5
+      provider:
+        prometheus:
+          address: http://prometheus.monitoring.svc.cluster.local:9090
+          query: |
+            histogram_quantile(0.95,
+              sum(rate(http_client_request_duration_seconds_bucket{
+                service="impact-in",
+                client_type="partner_api",
+                version="{{ args.canary-version }}"
+              }[5m])) by (le)
+            )
+
+    # Metric 7: Queue Depth (prevent backlog buildup)
+    - name: delivery-queue-depth
+      initialDelay: 30s
+      interval: 30s
+      successCondition: result < 1000  # Max 1000 pending deliveries
+      failureLimit: 3
+      provider:
+        prometheus:
+          address: http://prometheus.monitoring.svc.cluster.local:9090
+          query: |
+            max(impact_in_queue_depth{
+              service="impact-in",
+              version="{{ args.canary-version }}"
+            })
+
+    # Metric 8: Request Volume (ensure canary receives traffic)
+    - name: request-volume
+      initialDelay: 30s
+      interval: 30s
+      successCondition: result > 2  # At least 2 req/s
+      failureLimit: 3
+      provider:
+        prometheus:
+          address: http://prometheus.monitoring.svc.cluster.local:9090
+          query: |
+            sum(rate(http_server_requests_total{
+              service="impact-in",
+              version="{{ args.canary-version }}"
+            }[1m]))
+
+    # Metric 9: Database Connection Pool Health
+    - name: db-pool-utilization
+      initialDelay: 30s
+      interval: 30s
+      successCondition: result < 0.75  # < 75% pool utilization
+      failureLimit: 3
+      provider:
+        prometheus:
+          address: http://prometheus.monitoring.svc.cluster.local:9090
+          query: |
+            avg(db_pool_active_connections{
+              service="impact-in",
+              version="{{ args.canary-version }}"
+            })
+            /
+            avg(db_pool_max_connections{
+              service="impact-in",
+              version="{{ args.canary-version }}"
+            })
+
+  args:
+    - name: canary-version
+      valueFrom:
+        podTemplateHashValue: Latest
+
+---
+# Rollout definition for Impact-In (external delivery service)
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: impact-in
+  namespace: teei-platform
+  labels:
+    app: impact-in
+    tier: tier-1
+spec:
+  replicas: 4
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: impact-in
+  template:
+    metadata:
+      labels:
+        app: impact-in
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3002"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+        - name: impact-in
+          image: teei-impact-in:latest
+          ports:
+            - name: http
+              containerPort: 3002
+              protocol: TCP
+          resources:
+            requests:
+              cpu: 1000m
+              memory: 1Gi
+            limits:
+              cpu: 4000m
+              memory: 4Gi
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: ENABLE_METRICS
+              value: "true"
+            - name: MAX_RETRY_ATTEMPTS
+              value: "3"
+            - name: DELIVERY_TIMEOUT_MS
+              value: "10000"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3002
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 3002
+            initialDelaySeconds: 10
+            periodSeconds: 5
+
+  strategy:
+    canary:
+      # Conservative rollout for external API: 10% → 40% → 100%
+      steps:
+        # Step 1: Deploy to 10% of traffic
+        - setWeight: 10
+        - pause: {duration: 10m}  # Longer initial pause for delivery monitoring
+        - analysis:
+            templates:
+              - templateName: impact-in-slo-health
+            args:
+              - name: canary-version
+                valueFrom:
+                  podTemplateHashValue: Latest
+
+        # Step 2: Increase to 40% if delivery success > 99%
+        - setWeight: 40
+        - pause: {duration: 20m}  # Extended pause to monitor partner integrations
+        - analysis:
+            templates:
+              - templateName: impact-in-slo-health
+            args:
+              - name: canary-version
+                valueFrom:
+                  podTemplateHashValue: Latest
+
+        # Step 3: Final promotion to 100%
+        - setWeight: 100
+
+      # Automatic rollback on SLO breach
+      analysis:
+        successfulRunHistoryLimit: 5
+        unsuccessfulRunHistoryLimit: 5
+
+      # Traffic routing via Istio
+      trafficRouting:
+        istio:
+          virtualService:
+            name: impact-in-vsvc
+            routes:
+              - primary
+
+      # Auto-rollback settings
+      abortScaleDownDelaySeconds: 30

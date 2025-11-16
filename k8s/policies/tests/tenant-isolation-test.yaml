@@ -1,0 +1,126 @@
+# =============================================================================
+# Test Case: Tenant Isolation RBAC
+# =============================================================================
+# These manifests test the OPA RBAC validation policy for tenant isolation
+#
+# Test Scenarios:
+# 1. User from tenant-A tries to access resource in tenant-A → ALLOWED
+# 2. User from tenant-A tries to access resource in tenant-B → DENIED
+# 3. Cluster admin tries to access any resource → ALLOWED
+# 4. User with no tenant tries to access resource → DENIED
+# =============================================================================
+
+---
+# =============================================================================
+# Scenario 1: Valid Access (Same Tenant)
+# =============================================================================
+# Pod with tenant-A label, accessed by tenant-A user
+# Expected: ALLOWED
+# =============================================================================
+apiVersion: v1
+kind: Pod
+metadata:
+  name: app-tenant-a
+  namespace: default
+  labels:
+    teei.io/tenant-id: tenant-a
+    app: webapp
+    test-case: "opa-same-tenant"
+spec:
+  containers:
+  - name: app
+    image: nginx:latest
+    securityContext:
+      readOnlyRootFilesystem: true
+      runAsNonRoot: true
+      runAsUser: 1000
+
+---
+# =============================================================================
+# Scenario 2: Cross-Tenant Access Attempt
+# =============================================================================
+# Pod with tenant-B label
+# If tenant-A user tries to access → DENIED
+# If tenant-B user tries to access → ALLOWED
+# =============================================================================
+apiVersion: v1
+kind: Pod
+metadata:
+  name: app-tenant-b
+  namespace: default
+  labels:
+    teei.io/tenant-id: tenant-b
+    app: webapp
+    test-case: "opa-cross-tenant"
+spec:
+  containers:
+  - name: app
+    image: nginx:latest
+    securityContext:
+      readOnlyRootFilesystem: true
+      runAsNonRoot: true
+      runAsUser: 1000
+
+---
+# =============================================================================
+# Scenario 3: Namespace-Level Tenant Assignment
+# =============================================================================
+# Resources inherit tenant from namespace labels
+# =============================================================================
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tenant-a-apps
+  labels:
+    teei.io/tenant-id: tenant-a
+    environment: production
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: app-in-tenant-namespace
+  namespace: tenant-a-apps
+  # No explicit tenant label - inherits from namespace
+  labels:
+    app: webapp
+    test-case: "opa-namespace-tenant"
+spec:
+  containers:
+  - name: app
+    image: nginx:latest
+    securityContext:
+      readOnlyRootFilesystem: true
+      runAsNonRoot: true
+      runAsUser: 1000
+
+---
+# =============================================================================
+# Test Helpers: Sample Input for OPA Policy Testing
+# =============================================================================
+# Save this as input.json for opa eval testing
+# =============================================================================
+# {
+#   "request": {
+#     "kind": {
+#       "kind": "Pod"
+#     },
+#     "name": "app-tenant-a",
+#     "namespace": "default",
+#     "operation": "CREATE",
+#     "userInfo": {
+#       "username": "user@tenant-a",
+#       "groups": ["developers"],
+#       "extra": {
+#         "tenant-id": ["tenant-a"]
+#       }
+#     },
+#     "object": {
+#       "metadata": {
+#         "name": "app-tenant-a",
+#         "labels": {
+#           "teei.io/tenant-id": "tenant-a"
+#         }
+#       }
+#     }
+#   }
+# }
