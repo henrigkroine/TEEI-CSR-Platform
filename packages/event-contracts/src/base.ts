@@ -36,7 +36,13 @@ export type EventType =
   | 'orchestration.profile.updated'
   // Safety events
   | 'safety.flag.raised'
-  | 'safety.review.completed';
+  | 'safety.review.completed'
+  // NLQ events
+  | 'nlq.query.started'
+  | 'nlq.query.completed'
+  | 'nlq.query.failed'
+  | 'nlq.query.rejected'
+  | 'nlq.cache.invalidated';
 
 /**
  * Envelope for all events published to event bus

@@ -7,6 +7,7 @@ export * from './kintell/index.js';
 export * from './upskilling/index.js';
 export * from './orchestration/index.js';
 export * from './safety/index.js';
+export * from './nlq/index.js';
 
 // Convenience type for all events
 import type {
@@ -30,6 +31,13 @@ import type {
   OrchestrationProfileUpdated,
 } from './orchestration/index.js';
 import type { SafetyFlagRaised, SafetyReviewCompleted } from './safety/index.js';
+import type {
+  NLQQueryStarted,
+  NLQQueryCompleted,
+  NLQQueryFailed,
+  NLQQueryRejected,
+  NLQCacheInvalidated,
+} from './nlq/index.js';
 
 export type DomainEvent =
   | BuddyMatchCreated
@@ -45,4 +53,9 @@ export type DomainEvent =
   | OrchestrationJourneyMilestoneReached
   | OrchestrationProfileUpdated
   | SafetyFlagRaised
-  | SafetyReviewCompleted;
+  | SafetyReviewCompleted
+  | NLQQueryStarted
+  | NLQQueryCompleted
+  | NLQQueryFailed
+  | NLQQueryRejected
+  | NLQCacheInvalidated;

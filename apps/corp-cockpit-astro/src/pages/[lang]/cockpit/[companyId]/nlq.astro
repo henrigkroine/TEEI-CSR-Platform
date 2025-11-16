@@ -1,0 +1,266 @@
+---
+/**
+ * NLQ (Natural Language Query) Page
+ *
+ * Main page for asking natural language questions about CSR data
+ * Route: /{lang}/cockpit/{companyId}/nlq
+ */
+
+import BaseLayout from '../../../../layouts/BaseLayout.astro';
+import { hasPermission } from '../../../../utils/rbac';
+import NLQPage from '../../../../components/nlq/NLQPage';
+
+// Extract route parameters
+const { lang, companyId } = Astro.params;
+const user = Astro.locals.user;
+const tenantContext = Astro.locals.tenantContext;
+
+// Middleware handles auth/tenant validation, but double-check
+if (!user || !tenantContext) {
+  return Astro.redirect('/login');
+}
+
+// Verify the tenant context matches the route
+if (tenantContext.companyId !== companyId || tenantContext.lang !== lang) {
+  return Astro.redirect(`/${lang}/cockpit/401`);
+}
+
+// Check permissions - require VIEW_ANALYTICS permission for NLQ
+const canViewAnalytics = hasPermission(user.role, 'VIEW_ANALYTICS');
+if (!canViewAnalytics) {
+  return Astro.redirect(`/${lang}/cockpit/${companyId}`);
+}
+
+// Optional: Check for NLQ-specific permission if it exists
+const canUseNLQ = hasPermission(user.role, 'USE_NLQ') || hasPermission(user.role, 'ADMIN_CONSOLE');
+
+if (!canUseNLQ) {
+  // Redirect to main dashboard with a message
+  return Astro.redirect(`/${lang}/cockpit/${companyId}?error=nlq_access_denied`);
+}
+
+// Get session ID for tracking queries
+const sessionId = Astro.cookies.get('session_id')?.value;
+---
+
+<BaseLayout title="Natural Language Query - TEEI Corporate Cockpit" lang={lang}>
+  <header class="nlq-header">
+    <div class="header-content">
+      <div class="breadcrumb">
+        <a href={`/${lang}/cockpit/${companyId}`} class="breadcrumb-link">
+          Dashboard
+        </a>
+        <svg class="breadcrumb-separator" fill="currentColor" viewBox="0 0 20 20">
+          <title>Breadcrumb separator</title>
+          <path
+            fill-rule="evenodd"
+            d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
+            clip-rule="evenodd"
+          />
+        </svg>
+        <span class="breadcrumb-current">Natural Language Query</span>
+      </div>
+
+      <h1 class="page-title">
+        <svg class="title-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <title>NLQ icon</title>
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
+          />
+        </svg>
+        Ask Questions About Your Data
+      </h1>
+      <p class="page-description">
+        Use natural language to query your CSR data and get instant insights
+      </p>
+    </div>
+  </header>
+
+  <main class="nlq-main">
+    <NLQPage
+      companyId={companyId}
+      userId={user.id}
+      sessionId={sessionId}
+      language={lang as 'en' | 'uk' | 'no'}
+      client:load
+    />
+  </main>
+
+  <!-- Info banner -->
+  <aside class="info-banner" role="complementary">
+    <div class="banner-content">
+      <svg class="banner-icon" fill="currentColor" viewBox="0 0 20 20">
+        <title>Info icon</title>
+        <path
+          fill-rule="evenodd"
+          d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+          clip-rule="evenodd"
+        />
+      </svg>
+      <div class="banner-text">
+        <h3 class="banner-title">How it works</h3>
+        <p class="banner-description">
+          Ask questions in plain language about your CSR metrics, impact data, volunteer
+          programs, and more. Our AI will interpret your question, run the appropriate
+          analysis, and provide you with insights backed by your actual data.
+        </p>
+        <ul class="banner-tips">
+          <li>Be specific about time ranges: "last quarter", "this year", etc.</li>
+          <li>Ask for comparisons: "compare regions", "by program", etc.</li>
+          <li>Request breakdowns: "show by demographic", "group by location", etc.</li>
+        </ul>
+      </div>
+    </div>
+  </aside>
+</BaseLayout>
+
+<style>
+  /* Header styles */
+  .nlq-header {
+    margin-bottom: calc(var(--spacing-unit) * 4);
+    padding-bottom: calc(var(--spacing-unit) * 3);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .header-content {
+    max-width: 1200px;
+  }
+
+  .breadcrumb {
+    display: flex;
+    align-items: center;
+    margin-bottom: calc(var(--spacing-unit) * 2);
+    font-size: 0.875rem;
+  }
+
+  .breadcrumb-link {
+    color: var(--color-primary);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+
+  .breadcrumb-link:hover {
+    color: var(--color-primary-dark);
+    text-decoration: underline;
+  }
+
+  .breadcrumb-separator {
+    width: 1rem;
+    height: 1rem;
+    margin: 0 calc(var(--spacing-unit) * 1);
+    color: var(--color-text-secondary);
+  }
+
+  .breadcrumb-current {
+    color: var(--color-text-secondary);
+  }
+
+  .page-title {
+    display: flex;
+    align-items: center;
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--color-text);
+    margin-bottom: calc(var(--spacing-unit) * 1);
+  }
+
+  .title-icon {
+    width: 2rem;
+    height: 2rem;
+    margin-right: calc(var(--spacing-unit) * 2);
+    color: var(--color-primary);
+  }
+
+  .page-description {
+    font-size: 1rem;
+    color: var(--color-text-secondary);
+    max-width: 600px;
+  }
+
+  /* Main content */
+  .nlq-main {
+    margin-bottom: calc(var(--spacing-unit) * 4);
+  }
+
+  /* Info banner */
+  .info-banner {
+    margin-top: calc(var(--spacing-unit) * 6);
+    padding: calc(var(--spacing-unit) * 4);
+    background-color: var(--color-bg-secondary);
+    border-left: 4px solid var(--color-primary);
+    border-radius: var(--border-radius);
+  }
+
+  .banner-content {
+    display: flex;
+    align-items-start;
+    gap: calc(var(--spacing-unit) * 3);
+  }
+
+  .banner-icon {
+    width: 2rem;
+    height: 2rem;
+    flex-shrink: 0;
+    color: var(--color-primary);
+    margin-top: calc(var(--spacing-unit) * 0.5);
+  }
+
+  .banner-text {
+    flex: 1;
+  }
+
+  .banner-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--color-text);
+    margin-bottom: calc(var(--spacing-unit) * 1);
+  }
+
+  .banner-description {
+    font-size: 0.9375rem;
+    color: var(--color-text-secondary);
+    line-height: 1.6;
+    margin-bottom: calc(var(--spacing-unit) * 2);
+  }
+
+  .banner-tips {
+    list-style: disc;
+    padding-left: calc(var(--spacing-unit) * 4);
+    color: var(--color-text-secondary);
+    font-size: 0.875rem;
+  }
+
+  .banner-tips li {
+    margin-bottom: calc(var(--spacing-unit) * 0.5);
+  }
+
+  /* Responsive design */
+  @media (max-width: 768px) {
+    .page-title {
+      font-size: 1.5rem;
+    }
+
+    .title-icon {
+      width: 1.5rem;
+      height: 1.5rem;
+    }
+
+    .banner-content {
+      flex-direction: column;
+    }
+
+    .banner-icon {
+      margin-top: 0;
+    }
+  }
+
+  /* Dark mode adjustments */
+  @media (prefers-color-scheme: dark) {
+    .info-banner {
+      background-color: rgba(59, 130, 246, 0.1);
+    }
+  }
+</style>
