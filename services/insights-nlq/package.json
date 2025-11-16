@@ -1,0 +1,39 @@
+{
+  "name": "@teei/insights-nlq",
+  "version": "2.0.0",
+  "type": "module",
+  "private": true,
+  "description": "Natural Language Query service with RLS, multilingual support, and safety guardrails",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "test": "vitest",
+    "test:cov": "vitest --coverage",
+    "eval": "tsx scripts/eval.ts",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.30.0",
+    "@google/generative-ai": "^0.21.0",
+    "@teei/event-contracts": "workspace:*",
+    "@teei/shared-schema": "workspace:*",
+    "@teei/shared-utils": "workspace:*",
+    "@teei/shared-auth": "workspace:*",
+    "fastify": "^4.25.2",
+    "ioredis": "^5.3.2",
+    "openai": "^4.75.0",
+    "pg": "^8.11.3",
+    "sql-formatter": "^15.3.0",
+    "yaml": "^2.3.4",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.5",
+    "@types/pg": "^8.11.0",
+    "@vitest/coverage-v8": "^1.2.1",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3",
+    "vitest": "^1.2.1"
+  }
+}
