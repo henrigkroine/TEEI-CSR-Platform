@@ -1,5 +1,9 @@
 {
+<<<<<<< HEAD
   "extends": "../../tsconfig.json",
+=======
+  "extends": "../../tsconfig.base.json",
+>>>>>>> origin/claude/worker2-phaseG-nlq-builder-hil-013afuWXrNQq3R3P2SRcTM9M
   "compilerOptions": {
     "outDir": "./dist",
     "rootDir": "./src"
