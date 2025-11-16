@@ -1,0 +1,197 @@
+# SIEM Log Normalization Configuration
+# Normalizes logs from multiple sources into ECS (Elastic Common Schema) format
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: siem-log-normalization
+  namespace: monitoring
+  labels:
+    app: siem
+    component: normalization
+data:
+  normalization-rules.yaml: |
+    # Application Logs Normalization
+    application_logs:
+      - name: "Normalize Fastify logs"
+        source_format: "json"
+        fields:
+          timestamp: "@timestamp"
+          level: "level"
+          message: "msg"
+          service: "hostname"
+          trace_id: "trace.id"
+          span_id: "trace.span_id"
+        mapping:
+          "@timestamp": "ecs.timestamp"
+          "level": "log.level"
+          "msg": "message"
+          "hostname": "service.name"
+          "trace.id": "trace.id"
+          "trace.span_id": "span.id"
+          "req.method": "http.request.method"
+          "req.url": "url.full"
+          "res.statusCode": "http.response.status_code"
+          "responseTime": "event.duration"
+
+      - name: "Normalize authentication events"
+        source_format: "json"
+        event_category: "authentication"
+        fields:
+          user_id: "user.id"
+          email: "user.email"
+          action: "event.action"
+          outcome: "event.outcome"
+        enrichment:
+          event.category: ["authentication"]
+          event.type: ["start", "end"]
+          event.kind: "event"
+
+    # Security Events Normalization
+    security_logs:
+      - name: "Normalize access denied events"
+        source_format: "json"
+        filter:
+          action: "ACCESS_DENIED"
+        mapping:
+          "@timestamp": "ecs.timestamp"
+          "actorId": "user.id"
+          "actorEmail": "user.email"
+          "action": "event.action"
+          "resourceType": "resource.type"
+          "resourceId": "resource.id"
+        enrichment:
+          event.category: ["authentication"]
+          event.type: ["access", "denied"]
+          event.outcome: "failure"
+          event.kind: "alert"
+
+      - name: "Normalize suspicious activity"
+        source_format: "json"
+        filter:
+          action: "SUSPICIOUS_ACTIVITY"
+        mapping:
+          "@timestamp": "ecs.timestamp"
+          "actorId": "user.id"
+          "actorIp": "source.ip"
+          "action": "event.action"
+        enrichment:
+          event.category: ["intrusion_detection"]
+          event.type: ["indicator"]
+          event.outcome: "unknown"
+          event.kind: "alert"
+          event.severity: 7
+
+    # Privacy Events Normalization (DSAR, Consent)
+    privacy_logs:
+      - name: "Normalize DSAR events"
+        source_format: "json"
+        filter:
+          actionCategory: "PRIVACY"
+        mapping:
+          "@timestamp": "ecs.timestamp"
+          "actorId": "user.id"
+          "action": "event.action"
+          "resourceType": "resource.type"
+          "gdprBasis": "event.gdpr_basis"
+        enrichment:
+          event.category: ["configuration"]
+          event.type: ["access", "change", "deletion"]
+          event.kind: "event"
+          compliance.standard: "GDPR"
+
+    # Infrastructure Logs Normalization
+    infrastructure_logs:
+      - name: "Normalize Kubernetes events"
+        source_format: "json"
+        fields:
+          timestamp: "@timestamp"
+          namespace: "kubernetes.namespace"
+          pod: "kubernetes.pod.name"
+          container: "kubernetes.container.name"
+        mapping:
+          "@timestamp": "ecs.timestamp"
+          "kubernetes.namespace": "orchestrator.namespace"
+          "kubernetes.pod.name": "orchestrator.resource.name"
+          "kubernetes.container.name": "container.name"
+        enrichment:
+          event.category: ["process"]
+          event.kind: "event"
+          orchestrator.type: "kubernetes"
+
+  # Enrichment pipelines
+  enrichment-pipelines.yaml: |
+    pipelines:
+      - name: "GeoIP enrichment"
+        input: "source.ip"
+        processor: "geoip"
+        output:
+          - "source.geo.country_name"
+          - "source.geo.city_name"
+          - "source.geo.location"
+
+      - name: "User agent parsing"
+        input: "user_agent.original"
+        processor: "user_agent"
+        output:
+          - "user_agent.name"
+          - "user_agent.version"
+          - "user_agent.device.name"
+
+      - name: "Threat intelligence lookup"
+        input: "source.ip"
+        processor: "threat_intel"
+        threat_feeds:
+          - "abuseipdb"
+          - "alienvault_otx"
+        output:
+          - "threat.indicator.type"
+          - "threat.indicator.confidence"
+
+  # Alert correlation rules
+  correlation-rules.yaml: |
+    rules:
+      - name: "Multiple failed login attempts"
+        condition: |
+          event.category:authentication AND event.outcome:failure
+        window: "5m"
+        threshold: 5
+        group_by: ["user.email", "source.ip"]
+        severity: "medium"
+        action: "alert"
+        output:
+          alert.name: "Brute force attack detected"
+          alert.severity: "medium"
+
+      - name: "Privileged access after hours"
+        condition: |
+          event.action:ACCESS AND user.role:admin AND time.hour:[22 TO 6]
+        severity: "high"
+        action: "alert"
+        output:
+          alert.name: "Privileged access during non-business hours"
+          alert.severity: "high"
+
+      - name: "Multiple DSAR requests from same IP"
+        condition: |
+          event.action:(EXPORT_DATA OR REQUEST_DELETION) AND source.ip:*
+        window: "1h"
+        threshold: 10
+        group_by: ["source.ip"]
+        severity: "medium"
+        action: "alert"
+        output:
+          alert.name: "Potential DSAR abuse"
+          alert.severity: "medium"
+
+      - name: "Unusual data export volume"
+        condition: |
+          event.action:EXPORT_DATA
+        window: "24h"
+        threshold: 100
+        group_by: ["user.id"]
+        severity: "high"
+        action: "alert"
+        output:
+          alert.name: "Unusual data export activity"
+          alert.severity: "high"

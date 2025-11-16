@@ -1,0 +1,252 @@
+# Service Level Objectives (SLO) Configuration
+# Defines SLOs and burn rate alerts for production services
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: slo-config
+  namespace: monitoring
+  labels:
+    app: slo-monitoring
+data:
+  slo-definitions.yaml: |
+    # API Gateway SLOs
+    api_gateway:
+      availability:
+        target: 99.9  # 99.9% uptime
+        window: "30d"
+        measurement:
+          metric: "up{job='api-gateway'}"
+          success_criteria: "== 1"
+        burn_rate_alerts:
+          - name: "API Gateway availability burn rate - critical"
+            window: "1h"
+            burn_rate: 14.4  # 5% error budget in 1 hour
+            severity: "critical"
+          - name: "API Gateway availability burn rate - warning"
+            window: "6h"
+            burn_rate: 6     # 5% error budget in 6 hours
+            severity: "warning"
+
+      latency:
+        target: 95  # 95% of requests < 500ms
+        threshold: "0.5s"
+        window: "30d"
+        measurement:
+          metric: "http_request_duration_seconds"
+          percentile: 95
+        burn_rate_alerts:
+          - name: "API Gateway latency burn rate - critical"
+            window: "1h"
+            burn_rate: 14.4
+            severity: "critical"
+          - name: "API Gateway latency burn rate - warning"
+            window: "6h"
+            burn_rate: 6
+            severity: "warning"
+
+      error_rate:
+        target: 99.5  # 99.5% success rate
+        window: "30d"
+        measurement:
+          metric: "http_requests_total"
+          success_criteria: "status < 500"
+        burn_rate_alerts:
+          - name: "API Gateway error rate burn rate - critical"
+            window: "1h"
+            burn_rate: 14.4
+            severity: "critical"
+
+    # Privacy Orchestrator SLOs
+    privacy_orchestrator:
+      export_sla:
+        target: 95  # 95% of exports complete within 24 hours
+        threshold: "24h"
+        window: "30d"
+        measurement:
+          metric: "dsar_job_duration_hours{type='export'}"
+          percentile: 95
+        burn_rate_alerts:
+          - name: "Privacy export SLA burn rate - critical"
+            window: "1h"
+            burn_rate: 14.4
+            severity: "critical"
+          - name: "Privacy export SLA burn rate - warning"
+            window: "6h"
+            burn_rate: 6
+            severity: "warning"
+        actions:
+          - type: "auto_ticket"
+            system: "jira"
+            template: "sla_breach_export"
+          - type: "page"
+            oncall: "privacy-team"
+
+      delete_sla:
+        target: 95  # 95% of deletions complete within 72 hours
+        threshold: "72h"
+        window: "30d"
+        measurement:
+          metric: "dsar_job_duration_hours{type='delete'}"
+          percentile: 95
+        burn_rate_alerts:
+          - name: "Privacy delete SLA burn rate - critical"
+            window: "1h"
+            burn_rate: 14.4
+            severity: "critical"
+        actions:
+          - type: "auto_ticket"
+            system: "jira"
+            template: "sla_breach_delete"
+
+      availability:
+        target: 99.9
+        window: "30d"
+        measurement:
+          metric: "up{job='privacy-orchestrator'}"
+          success_criteria: "== 1"
+
+    # Reporting Service SLOs
+    reporting:
+      availability:
+        target: 99.5
+        window: "30d"
+        measurement:
+          metric: "up{job='reporting'}"
+          success_criteria: "== 1"
+
+      report_generation:
+        target: 90  # 90% of reports generate within 60 seconds
+        threshold: "60s"
+        window: "30d"
+        measurement:
+          metric: "report_generation_duration_seconds"
+          percentile: 90
+
+    # Database SLOs
+    database:
+      availability:
+        target: 99.95
+        window: "30d"
+        measurement:
+          metric: "pg_up"
+          success_criteria: "== 1"
+
+      connection_pool:
+        target: 80  # Connection pool < 80% utilized
+        window: "30d"
+        measurement:
+          metric: "pg_stat_database_numbackends / pg_settings_max_connections"
+          threshold: 0.8
+
+      query_latency:
+        target: 95  # 95% of queries < 100ms
+        threshold: "0.1s"
+        window: "30d"
+        measurement:
+          metric: "pg_stat_statements_mean_time_seconds"
+          percentile: 95
+
+    # Impact-In API SLOs
+    impact_in:
+      delivery_success:
+        target: 99.5
+        window: "30d"
+        measurement:
+          metric: "impact_in_delivery_total"
+          success_criteria: "status='success'"
+
+      delivery_latency:
+        target: 95  # 95% delivered within 5 seconds
+        threshold: "5s"
+        window: "30d"
+        measurement:
+          metric: "impact_in_delivery_duration_seconds"
+          percentile: 95
+
+  # Burn rate calculation formulas
+  burn-rate-formulas.yaml: |
+    # Burn rate = (Error rate in time window) / (Error budget for 30 days)
+    #
+    # Example: 99.9% SLO = 0.1% error budget per 30 days = 43.2 minutes
+    # If we see 0.5% errors in 1 hour, burn rate = 0.5% / (0.1% / 720 hours) = 3600
+    #
+    # Standard burn rate thresholds:
+    # - 14.4x burn rate in 1 hour = 5% budget consumed in 1 hour (critical)
+    # - 6x burn rate in 6 hours = 5% budget consumed in 6 hours (warning)
+    # - 3x burn rate in 24 hours = 10% budget consumed in 24 hours (info)
+
+    formulas:
+      burn_rate: |
+        (
+          1 - (sum(rate(successful_requests[{window}])) / sum(rate(total_requests[{window}])))
+        ) / (
+          1 - {target}
+        )
+
+      remaining_error_budget: |
+        1 - (
+          (1 - (sum_over_time(successful_requests[30d]) / sum_over_time(total_requests[30d])))
+          / (1 - {target})
+        )
+
+      time_to_exhaustion: |
+        (remaining_error_budget / current_burn_rate) * 30d
+
+  # Auto-ticketing configuration
+  auto-ticket-config.yaml: |
+    jira:
+      url: "https://teei.atlassian.net"
+      project: "OPS"
+      templates:
+        sla_breach_export:
+          issue_type: "Incident"
+          priority: "High"
+          summary: "SLA Breach: Privacy Export exceeding 24h target"
+          description: |
+            **Alert**: Privacy Export SLA burn rate exceeded threshold
+
+            **Current Status**:
+            - Burn Rate: {{burn_rate}}x
+            - Error Budget Remaining: {{error_budget_remaining}}%
+            - Time to Budget Exhaustion: {{time_to_exhaustion}}
+
+            **Affected Jobs**: {{affected_jobs}}
+
+            **Runbook**: https://docs.teei.com/runbooks/privacy-sla-breach
+
+            **Actions Required**:
+            1. Check queue health
+            2. Review recent failed jobs
+            3. Investigate regional executors
+            4. Scale resources if needed
+
+          labels: ["sla-breach", "privacy", "auto-generated"]
+          assignee: "privacy-team"
+
+        sla_breach_delete:
+          issue_type: "Incident"
+          priority: "Medium"
+          summary: "SLA Breach: Privacy Deletion exceeding 72h target"
+          description: |
+            **Alert**: Privacy Deletion SLA burn rate exceeded threshold
+
+            **Current Status**:
+            - Burn Rate: {{burn_rate}}x
+            - Error Budget Remaining: {{error_budget_remaining}}%
+
+            **Runbook**: https://docs.teei.com/runbooks/privacy-sla-breach
+
+          labels: ["sla-breach", "privacy", "auto-generated"]
+          assignee: "privacy-team"
+
+    pagerduty:
+      integration_key: "${PAGERDUTY_INTEGRATION_KEY}"
+      severity_mapping:
+        critical: "critical"
+        high: "error"
+        warning: "warning"
+        info: "info"
+      escalation_policies:
+        privacy-team: "P1234"
+        platform-team: "P5678"

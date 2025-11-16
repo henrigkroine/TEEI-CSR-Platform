@@ -1,0 +1,145 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: privacy-orchestrator
+  namespace: teei-production
+  labels:
+    app: privacy-orchestrator
+    component: privacy
+    tier: backend
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: privacy-orchestrator
+  template:
+    metadata:
+      labels:
+        app: privacy-orchestrator
+        component: privacy
+        tier: backend
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3010"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: privacy-orchestrator
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+      - name: privacy-orchestrator
+        image: ghcr.io/teei/privacy-orchestrator:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: http
+          containerPort: 3010
+          protocol: TCP
+        - name: metrics
+          containerPort: 9090
+          protocol: TCP
+        env:
+        - name: PORT
+          value: "3010"
+        - name: HOST
+          value: "0.0.0.0"
+        - name: LOG_LEVEL
+          value: "info"
+        - name: NODE_ENV
+          value: "production"
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: privacy-orchestrator-secret
+              key: redis-url
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: privacy-orchestrator-secret
+              key: database-url
+        - name: DB_EU_CONNECTION_STRING
+          valueFrom:
+            secretKeyRef:
+              name: privacy-orchestrator-secret
+              key: db-eu-connection-string
+        - name: DB_US_CONNECTION_STRING
+          valueFrom:
+            secretKeyRef:
+              name: privacy-orchestrator-secret
+              key: db-us-connection-string
+        - name: DB_UK_CONNECTION_STRING
+          valueFrom:
+            secretKeyRef:
+              name: privacy-orchestrator-secret
+              key: db-uk-connection-string
+        - name: PII_MASTER_KEY
+          valueFrom:
+            secretKeyRef:
+              name: privacy-orchestrator-secret
+              key: pii-master-key
+        - name: PII_KEY_VERSION
+          value: "v1"
+        - name: SENTRY_DSN
+          valueFrom:
+            secretKeyRef:
+              name: privacy-orchestrator-secret
+              key: sentry-dsn
+              optional: true
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: "http://otel-collector:4318"
+        - name: CORS_ORIGIN
+          value: "https://cockpit.teei.com,https://api.teei.com"
+        - name: RATE_LIMIT_MAX
+          value: "100"
+        - name: RATE_LIMIT_WINDOW
+          value: "1 minute"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /privacy/health
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /privacy/health
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 2
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities:
+            drop:
+            - ALL
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        - name: data
+          mountPath: /app/data
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      - name: data
+        persistentVolumeClaim:
+          claimName: privacy-orchestrator-data
+      imagePullSecrets:
+      - name: ghcr-pull-secret

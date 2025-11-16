@@ -1,0 +1,177 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: production-pod-security
+  annotations:
+    policies.kyverno.io/title: Production Pod Security Standards
+    policies.kyverno.io/category: Pod Security Standards (Restricted)
+    policies.kyverno.io/severity: high
+spec:
+  validationFailureAction: enforce
+  background: true
+  rules:
+  - name: require-run-as-nonroot
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+          namespaces:
+          - teei-production
+    validate:
+      message: "Containers must run as non-root user in production"
+      pattern:
+        spec:
+          securityContext:
+            runAsNonRoot: true
+          containers:
+          - securityContext:
+              runAsNonRoot: true
+              allowPrivilegeEscalation: false
+
+  - name: require-readonly-root-filesystem
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+          namespaces:
+          - teei-production
+    validate:
+      message: "Containers must use read-only root filesystem"
+      pattern:
+        spec:
+          containers:
+          - securityContext:
+              readOnlyRootFilesystem: true
+
+  - name: drop-all-capabilities
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+          namespaces:
+          - teei-production
+    validate:
+      message: "Containers must drop all capabilities"
+      pattern:
+        spec:
+          containers:
+          - securityContext:
+              capabilities:
+                drop:
+                - ALL
+
+  - name: require-resource-limits
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+          namespaces:
+          - teei-production
+    validate:
+      message: "All containers must have CPU and memory limits defined"
+      pattern:
+        spec:
+          containers:
+          - resources:
+              limits:
+                memory: "?*"
+                cpu: "?*"
+              requests:
+                memory: "?*"
+                cpu: "?*"
+
+  - name: disallow-host-namespaces
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+          namespaces:
+          - teei-production
+    validate:
+      message: "Host namespaces are not allowed in production"
+      pattern:
+        spec:
+          =(hostPID): false
+          =(hostIPC): false
+          =(hostNetwork): false
+
+  - name: require-labels
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+          namespaces:
+          - teei-production
+    validate:
+      message: "Production pods must have required labels: app, component, tier"
+      pattern:
+        metadata:
+          labels:
+            app: "?*"
+            component: "?*"
+            tier: "?*"
+---
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: restrict-image-registries
+  annotations:
+    policies.kyverno.io/title: Restrict Image Registries
+    policies.kyverno.io/category: Security
+    policies.kyverno.io/severity: high
+spec:
+  validationFailureAction: enforce
+  background: true
+  rules:
+  - name: allowed-registries
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+          namespaces:
+          - teei-production
+    validate:
+      message: "Only images from approved registries are allowed: ghcr.io/teei"
+      pattern:
+        spec:
+          containers:
+          - image: "ghcr.io/teei/*"
+---
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-network-policy
+  annotations:
+    policies.kyverno.io/title: Require NetworkPolicy
+    policies.kyverno.io/category: Multi-Tenancy, Networking
+    policies.kyverno.io/severity: medium
+spec:
+  validationFailureAction: audit  # Audit mode initially
+  background: true
+  rules:
+  - name: check-for-networkpolicy
+    match:
+      any:
+      - resources:
+          kinds:
+          - Namespace
+          names:
+          - teei-production*
+    validate:
+      message: "Production namespaces must have a NetworkPolicy"
+      deny:
+        conditions:
+          all:
+          - key: "{{request.operation}}"
+            operator: In
+            value: ["CREATE"]
+          - key: "{{request.object.metadata.name}}"
+            operator: NotIn
+            value: ["kube-system", "kube-public"]
