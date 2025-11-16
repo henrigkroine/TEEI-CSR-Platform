@@ -2,6 +2,27 @@
 
 This directory contains k6 load tests for the TEEI CSR Platform.
 
+## Test Suites
+
+### 1. NLQ Service Tests (Natural Language Query)
+- **nlq-performance.js** - Performance validation (p95 ≤ 2.5s, cache hit rate ≥ 80%)
+- **nlq-stress.js** - Find breaking point and identify bottlenecks
+- **nlq-soak.js** - 30-minute endurance test for stability
+- **nlq-helpers.js** - Shared utilities for NLQ tests
+
+See [NLQ Load Testing Runbook](./NLQ_LOAD_TESTING_RUNBOOK.md) for detailed instructions.
+
+### 2. Corporate Cockpit Tests
+- **cockpit-load.js** - Analytics service endpoint performance
+
+### 3. Streaming Tests
+- **streaming-load.js** - SSE connection and event delivery
+
+### 4. Other Services
+- **ingestion-load.js** - Data ingestion performance
+- **reporting-load.js** - Report generation performance
+- **soak-test.js** - General endurance testing
+
 ## Prerequisites
 
 Install k6:
@@ -18,6 +39,36 @@ sudo apt-get install k6
 ```
 
 ## Running Tests
+
+### NLQ Service Tests
+
+**Performance Test (5 minutes):**
+```bash
+cd tests/k6
+k6 run nlq-performance.js
+```
+
+**Stress Test (15 minutes):**
+```bash
+k6 run nlq-stress.js
+```
+
+**Soak Test (30 minutes):**
+```bash
+k6 run nlq-soak.js
+```
+
+**With custom settings:**
+```bash
+BASE_URL=http://localhost:3008/v1/nlq k6 run nlq-performance.js
+MAX_VUS=500 k6 run nlq-stress.js
+SOAK_DURATION=60m TARGET_VUS=50 k6 run nlq-soak.js
+```
+
+**Performance Targets:**
+- p95 latency ≤ 2.5s
+- Cache hit rate ≥ 80%
+- Error rate < 1%
 
 ### SSE Streaming Load Test
 

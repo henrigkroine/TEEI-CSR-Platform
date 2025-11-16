@@ -1,0 +1,684 @@
+{
+  "info": {
+    "name": "TEEI NLQ API",
+    "description": "Natural Language Query API for TEEI CSR Platform\n\nThis collection includes all NLQ endpoints with examples, authentication, and test assertions.\n\n**Base URLs:**\n- Local: http://localhost:3008\n- Staging: https://staging-nlq.teei.io\n- Production: https://nlq.teei.io\n\n**Authentication:** Bearer token (JWT)\n\n**Rate Limits:**\n- 50 queries/hour (burst)\n- 500 queries/day (default)\n\n**API Version:** v1",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "12345678"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{authToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Health Check",
+      "item": [
+        {
+          "name": "Health Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            },
+            "description": "Check if the NLQ service is running and healthy.\n\n**Expected Response:**\n- Status: 200 OK\n- Body: { \"status\": \"ok\", \"service\": \"insights-nlq\", \"version\": \"1.0.0\" }"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200 OK\", function() {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Service is healthy\", function() {",
+                  "  var jsonData = pm.response.json();",
+                  "  pm.expect(jsonData.status).to.eql(\"ok\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Readiness Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health/ready",
+              "host": ["{{baseUrl}}"],
+              "path": ["health", "ready"]
+            },
+            "description": "Check if the NLQ service is ready to accept requests (database connected, AI providers accessible)."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Service is ready\", function() {",
+                  "  pm.response.to.have.status(200);",
+                  "  var jsonData = pm.response.json();",
+                  "  pm.expect(jsonData.ready).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Query Endpoints",
+      "item": [
+        {
+          "name": "Submit NLQ Query",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question\": \"What is our SROI for last quarter?\",\n  \"companyId\": \"{{companyId}}\",\n  \"userId\": \"{{userId}}\",\n  \"language\": \"en\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/query",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "query"]
+            },
+            "description": "Submit a natural language query for processing.\n\n**Request Body:**\n- `question` (string, required): Natural language question\n- `companyId` (uuid, required): Tenant identifier\n- `userId` (uuid, optional): User identifier for audit trail\n- `language` (string, optional): Language code (en, uk, no). Default: en\n\n**Response:**\n- `queryId`: Unique identifier for this query\n- `intent`: Detected intent (get_metric, trend_analysis, etc.)\n- `confidence`: Confidence score (0.0 - 1.0)\n- `results`: Query execution results\n- `summary`: Natural language summary of results\n- `lineage`: Data lineage information\n- `visualization`: Chart configuration"
+          },
+          "response": [
+            {
+              "name": "Success - Simple SROI Query",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"question\": \"What is our SROI for last quarter?\",\n  \"companyId\": \"550e8400-e29b-41d4-a716-446655440000\",\n  \"userId\": \"660e8400-e29b-41d4-a716-446655440000\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/query",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "query"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"queryId\": \"01HQ3Z8YBXM5K7N9P2T4V6W8X\",\n  \"question\": \"What is our SROI for last quarter?\",\n  \"intent\": \"get_metric\",\n  \"confidence\": 0.95,\n  \"templateMatched\": \"sroi_ratio\",\n  \"results\": {\n    \"data\": [\n      {\n        \"period_start\": \"2025-10-01\",\n        \"period_end\": \"2025-12-31\",\n        \"sroi_ratio\": 6.23,\n        \"participants_count\": 1450,\n        \"volunteers_count\": 385\n      }\n    ],\n    \"rowCount\": 1,\n    \"executionTimeMs\": 42\n  },\n  \"summary\": \"Your Social Return on Investment (SROI) for Q4 2025 was 6.23:1, meaning every dollar invested generated $6.23 in social value.\",\n  \"lineage\": [\n    {\n      \"nodeId\": \"source_1\",\n      \"nodeType\": \"table\",\n      \"label\": \"metrics_company_period\",\n      \"metadata\": { \"recordCount\": 1 }\n    }\n  ],\n  \"visualization\": {\n    \"chartType\": \"single_stat\",\n    \"config\": {\n      \"primaryValue\": 6.23,\n      \"label\": \"SROI Ratio\",\n      \"format\": \"ratio\"\n    }\n  },\n  \"cached\": false,\n  \"createdAt\": \"2025-11-16T10:30:00Z\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Query successful\", function() {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has required fields\", function() {",
+                  "  var jsonData = pm.response.json();",
+                  "  pm.expect(jsonData).to.have.property('queryId');",
+                  "  pm.expect(jsonData).to.have.property('intent');",
+                  "  pm.expect(jsonData).to.have.property('confidence');",
+                  "  pm.expect(jsonData).to.have.property('results');",
+                  "});",
+                  "",
+                  "pm.test(\"Confidence is high\", function() {",
+                  "  var jsonData = pm.response.json();",
+                  "  pm.expect(jsonData.confidence).to.be.above(0.8);",
+                  "});",
+                  "",
+                  "pm.test(\"Execution time is fast\", function() {",
+                  "  var jsonData = pm.response.json();",
+                  "  pm.expect(jsonData.results.executionTimeMs).to.be.below(2500);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit Trend Analysis Query",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question\": \"Show me SROI trend for the past year\",\n  \"companyId\": \"{{companyId}}\",\n  \"userId\": \"{{userId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/query",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "query"]
+            },
+            "description": "Example of a trend analysis query that returns time-series data."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Trend query successful\", function() {",
+                  "  pm.response.to.have.status(200);",
+                  "  var jsonData = pm.response.json();",
+                  "  pm.expect(jsonData.intent).to.eql('trend_analysis');",
+                  "});",
+                  "",
+                  "pm.test(\"Returns time series data\", function() {",
+                  "  var jsonData = pm.response.json();",
+                  "  pm.expect(jsonData.results.data).to.be.an('array');",
+                  "  pm.expect(jsonData.results.data.length).to.be.above(1);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit Outcome Dimensions Query",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question\": \"What are our outcome scores by dimension?\",\n  \"companyId\": \"{{companyId}}\",\n  \"userId\": \"{{userId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/query",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "query"]
+            },
+            "description": "Example query for Q2Q outcome dimensions."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Query History",
+      "item": [
+        {
+          "name": "Get Query by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/query/:queryId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "query", ":queryId"],
+              "variable": [
+                {
+                  "key": "queryId",
+                  "value": "01HQ3Z8YBXM5K7N9P2T4V6W8X"
+                }
+              ]
+            },
+            "description": "Retrieve a previously executed query by its ID.\n\n**Path Parameters:**\n- `queryId` (string, required): Query identifier\n\n**Response:**\nSame as query submission response, plus audit metadata."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Query retrieved successfully\", function() {",
+                  "  pm.response.to.have.status(200);",
+                  "  var jsonData = pm.response.json();",
+                  "  pm.expect(jsonData).to.have.property('queryId');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Query History",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/queries?companyId={{companyId}}&limit=20&offset=0",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "queries"],
+              "query": [
+                {
+                  "key": "companyId",
+                  "value": "{{companyId}}",
+                  "description": "Filter by company ID"
+                },
+                {
+                  "key": "userId",
+                  "value": "{{userId}}",
+                  "description": "Filter by user ID (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "Number of results (default 20, max 100)"
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "Pagination offset"
+                }
+              ]
+            },
+            "description": "List query history for a company or user.\n\n**Query Parameters:**\n- `companyId` (uuid, required): Company filter\n- `userId` (uuid, optional): User filter\n- `limit` (number, optional): Results per page (default 20, max 100)\n- `offset` (number, optional): Pagination offset\n\n**Response:**\n- `queries`: Array of query summaries\n- `total`: Total count\n- `limit`: Results per page\n- `offset`: Current offset"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Query history retrieved\", function() {",
+                  "  pm.response.to.have.status(200);",
+                  "  var jsonData = pm.response.json();",
+                  "  pm.expect(jsonData).to.have.property('queries');",
+                  "  pm.expect(jsonData.queries).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Templates",
+      "item": [
+        {
+          "name": "List Metric Templates",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/templates",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "templates"]
+            },
+            "description": "List all available metric templates.\n\n**Response:**\n- Array of template objects with:\n  - `id`: Template identifier\n  - `displayName`: User-facing name\n  - `description`: Template description\n  - `category`: Template category (impact, financial, etc.)\n  - `exampleQuestions`: Sample questions"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Templates listed successfully\", function() {",
+                  "  pm.response.to.have.status(200);",
+                  "  var jsonData = pm.response.json();",
+                  "  pm.expect(jsonData).to.be.an('array');",
+                  "  pm.expect(jsonData.length).to.be.above(0);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Template by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/templates/:templateId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "templates", ":templateId"],
+              "variable": [
+                {
+                  "key": "templateId",
+                  "value": "sroi_ratio"
+                }
+              ]
+            },
+            "description": "Get details for a specific metric template."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Cache",
+      "item": [
+        {
+          "name": "Warm Cache",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"companyId\": \"{{companyId}}\",\n  \"templates\": [\"sroi_ratio\", \"vis_score\", \"outcome_scores_by_dimension\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/cache/warm",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "cache", "warm"]
+            },
+            "description": "Pre-warm cache for common queries.\n\n**Request Body:**\n- `companyId` (uuid, required): Company to cache for\n- `templates` (array, optional): Template IDs to cache (default: all common templates)\n\n**Response:**\n- `jobId`: Cache warming job identifier\n- `status`: Job status (pending, in_progress, completed)\n- `templatesQueued`: Number of templates queued for caching"
+          },
+          "response": []
+        },
+        {
+          "name": "Invalidate Cache",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/cache/:cacheKey",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "cache", ":cacheKey"],
+              "variable": [
+                {
+                  "key": "cacheKey",
+                  "value": "abc123def456"
+                }
+              ]
+            },
+            "description": "Invalidate a specific cache entry.\n\n**Path Parameters:**\n- `cacheKey` (string, required): Cache key to invalidate\n\n**Response:**\n- `invalidated`: Boolean indicating success"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Rate Limits",
+      "item": [
+        {
+          "name": "Get Rate Limit Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/rate-limit?companyId={{companyId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "rate-limit"],
+              "query": [
+                {
+                  "key": "companyId",
+                  "value": "{{companyId}}"
+                }
+              ]
+            },
+            "description": "Check rate limit status for a company.\n\n**Query Parameters:**\n- `companyId` (uuid, required): Company identifier\n\n**Response:**\n- `dailyLimit`: Daily query limit\n- `dailyUsed`: Queries used today\n- `dailyRemaining`: Queries remaining today\n- `hourlyLimit`: Hourly query limit\n- `hourlyUsed`: Queries used this hour\n- `hourlyRemaining`: Queries remaining this hour\n- `resetAt`: When limits reset"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Rate limit status retrieved\", function() {",
+                  "  pm.response.to.have.status(200);",
+                  "  var jsonData = pm.response.json();",
+                  "  pm.expect(jsonData).to.have.property('dailyLimit');",
+                  "  pm.expect(jsonData).to.have.property('dailyRemaining');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Error Scenarios",
+      "item": [
+        {
+          "name": "Invalid Question (Safety Violation)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question\": \"SELECT * FROM users WHERE email LIKE '%'\",\n  \"companyId\": \"{{companyId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/query",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "query"]
+            },
+            "description": "Attempt a query that violates safety checks (should be rejected)."
+          },
+          "response": [
+            {
+              "name": "Safety Violation Response",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"question\": \"SELECT * FROM users WHERE email LIKE '%'\",\n  \"companyId\": \"550e8400-e29b-41d4-a716-446655440000\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/query",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "query"]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"error\": \"Safety validation failed\",\n  \"code\": \"SAFETY_VIOLATION\",\n  \"violations\": [\n    {\n      \"check\": \"sql_injection\",\n      \"severity\": \"critical\",\n      \"message\": \"Detected potential SQL injection pattern\"\n    }\n  ],\n  \"safetyCheckId\": \"01HQ3Z9YCDM5K7N9P2T4V6W8Y\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Query rejected with 400\", function() {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test(\"Error code is SAFETY_VIOLATION\", function() {",
+                  "  var jsonData = pm.response.json();",
+                  "  pm.expect(jsonData.code).to.eql('SAFETY_VIOLATION');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Rate Limit Exceeded",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question\": \"What is our SROI?\",\n  \"companyId\": \"{{companyId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/query",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "query"]
+            },
+            "description": "Submit query when rate limit is exceeded (requires hitting limit first)."
+          },
+          "response": [
+            {
+              "name": "Rate Limit Response",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/query",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "query"]
+                }
+              },
+              "status": "Too Many Requests",
+              "code": 429,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Retry-After",
+                  "value": "3600"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"error\": \"Rate limit exceeded\",\n  \"code\": \"RATE_LIMIT_EXCEEDED\",\n  \"limit\": 50,\n  \"used\": 50,\n  \"resetAt\": \"2025-11-16T12:00:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Low Confidence Query",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question\": \"Show me stuff about things\",\n  \"companyId\": \"{{companyId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/query",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "query"]
+            },
+            "description": "Submit an ambiguous query that results in low confidence."
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Set request ID for tracing",
+          "pm.request.headers.add({",
+          "  key: 'X-Request-ID',",
+          "  value: pm.variables.replaceIn('{{$guid}}')  ",
+          "});"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Global test: Check response time",
+          "pm.test(\"Response time is acceptable\", function() {",
+          "  pm.expect(pm.response.responseTime).to.be.below(3000);",
+          "});"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3008",
+      "type": "string"
+    },
+    {
+      "key": "authToken",
+      "value": "your_jwt_token_here",
+      "type": "string"
+    },
+    {
+      "key": "companyId",
+      "value": "550e8400-e29b-41d4-a716-446655440000",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "660e8400-e29b-41d4-a716-446655440000",
+      "type": "string"
+    }
+  ]
+}

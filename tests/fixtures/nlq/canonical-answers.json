@@ -1,0 +1,433 @@
+{
+  "sroiCurrentQuarter": {
+    "queryId": "q-sroi-001",
+    "question": "What is our SROI for last quarter?",
+    "answer": {
+      "summary": "Your Social Return on Investment (SROI) for Q3 2024 was 3.42, meaning that for every £1 invested in your CSR programs, £3.42 of social value was generated. This represents a 12% increase compared to Q2 2024 (3.05).",
+      "data": [
+        {
+          "metric": "SROI",
+          "value": 3.42,
+          "period": "Q3 2024",
+          "change": "+12%",
+          "previousValue": 3.05
+        }
+      ],
+      "confidence": {
+        "overall": 0.92,
+        "level": "high",
+        "components": {
+          "intentConfidence": 0.95,
+          "dataCompleteness": 0.93,
+          "sampleSizeScore": 0.90,
+          "recencyScore": 0.95,
+          "ambiguityPenalty": 0.88
+        },
+        "weights": {
+          "intent": 0.3,
+          "dataCompleteness": 0.25,
+          "sampleSize": 0.2,
+          "recency": 0.15,
+          "ambiguity": 0.1
+        },
+        "recommendations": []
+      },
+      "lineage": {
+        "sources": [
+          {
+            "sourceType": "database",
+            "sourceId": "postgres-csr-metrics",
+            "tableName": "sroi_calculations",
+            "confidence": 0.95
+          },
+          {
+            "sourceType": "calculation",
+            "sourceId": "sroi-calculator-v2",
+            "confidence": 0.90
+          }
+        ],
+        "transformations": [
+          "Filtered to Q3 2024 (Jul-Sep)",
+          "Aggregated social value outputs",
+          "Divided by total investment",
+          "Calculated percentage change from Q2"
+        ],
+        "calculationSteps": [
+          "Total social value: £684,000",
+          "Total investment: £200,000",
+          "SROI = 684,000 / 200,000 = 3.42"
+        ]
+      },
+      "visualization": {
+        "type": "metric",
+        "config": {
+          "mainValue": "3.42",
+          "label": "SROI (Q3 2024)",
+          "trend": "up",
+          "trendValue": "+12%",
+          "format": "ratio"
+        }
+      }
+    },
+    "metadata": {
+      "executionTimeMs": 1847,
+      "cached": false,
+      "safetyPassed": true,
+      "intent": "metric_query",
+      "templateId": "sroi-current-quarter",
+      "tokensUsed": 1523,
+      "estimatedCostUSD": "0.0034"
+    }
+  },
+  "sroiTrendYear": {
+    "queryId": "q-sroi-002",
+    "question": "Show me SROI trend for the past year",
+    "answer": {
+      "summary": "Your SROI has shown consistent growth over the past year, increasing from 2.85 in Q4 2023 to 3.42 in Q3 2024 (20% growth). The strongest quarter was Q3 2024 at 3.42.",
+      "data": [
+        { "period": "Q4 2023", "sroi": 2.85, "investment": 180000, "socialValue": 513000 },
+        { "period": "Q1 2024", "sroi": 2.95, "investment": 185000, "socialValue": 545750 },
+        { "period": "Q2 2024", "sroi": 3.05, "investment": 195000, "socialValue": 594750 },
+        { "period": "Q3 2024", "sroi": 3.42, "investment": 200000, "socialValue": 684000 }
+      ],
+      "confidence": {
+        "overall": 0.89,
+        "level": "high",
+        "components": {
+          "intentConfidence": 0.93,
+          "dataCompleteness": 0.88,
+          "sampleSizeScore": 0.92,
+          "recencyScore": 0.85,
+          "ambiguityPenalty": 0.87
+        },
+        "weights": {
+          "intent": 0.3,
+          "dataCompleteness": 0.25,
+          "sampleSize": 0.2,
+          "recency": 0.15,
+          "ambiguity": 0.1
+        },
+        "recommendations": []
+      },
+      "lineage": {
+        "sources": [
+          {
+            "sourceType": "database",
+            "sourceId": "postgres-csr-metrics",
+            "tableName": "sroi_calculations",
+            "confidence": 0.92
+          }
+        ],
+        "transformations": [
+          "Filtered to last 4 quarters (Q4 2023 - Q3 2024)",
+          "Aggregated quarterly SROI values",
+          "Sorted chronologically"
+        ]
+      },
+      "visualization": {
+        "type": "chart",
+        "chartType": "line",
+        "config": {
+          "labels": ["Q4 2023", "Q1 2024", "Q2 2024", "Q3 2024"],
+          "datasets": [
+            {
+              "label": "SROI",
+              "data": [2.85, 2.95, 3.05, 3.42],
+              "borderColor": "#10b981",
+              "backgroundColor": "rgba(16, 185, 129, 0.1)"
+            }
+          ]
+        }
+      }
+    },
+    "metadata": {
+      "executionTimeMs": 2145,
+      "cached": false,
+      "safetyPassed": true,
+      "intent": "trend_analysis",
+      "templateId": "sroi-trend-year",
+      "tokensUsed": 1876,
+      "estimatedCostUSD": "0.0042"
+    }
+  },
+  "visAverageScore": {
+    "queryId": "q-vis-001",
+    "question": "What is our average VIS score?",
+    "answer": {
+      "summary": "Your average Volunteer Impact Score (VIS) is 73.4 out of 100, based on 1,247 active volunteers. This indicates strong volunteer engagement and impact across your programs.",
+      "data": [
+        {
+          "metric": "Average VIS",
+          "value": 73.4,
+          "totalVolunteers": 1247,
+          "period": "Current (Nov 2024)"
+        }
+      ],
+      "confidence": {
+        "overall": 0.88,
+        "level": "high",
+        "components": {
+          "intentConfidence": 0.94,
+          "dataCompleteness": 0.86,
+          "sampleSizeScore": 0.92,
+          "recencyScore": 0.80,
+          "ambiguityPenalty": 0.85
+        },
+        "weights": {
+          "intent": 0.3,
+          "dataCompleteness": 0.25,
+          "sampleSize": 0.2,
+          "recency": 0.15,
+          "ambiguity": 0.1
+        },
+        "recommendations": []
+      },
+      "lineage": {
+        "sources": [
+          {
+            "sourceType": "database",
+            "sourceId": "postgres-volunteers",
+            "tableName": "volunteer_scores",
+            "confidence": 0.90
+          }
+        ],
+        "transformations": [
+          "Filtered to active volunteers (last 90 days)",
+          "Calculated average VIS score",
+          "Counted total volunteers"
+        ]
+      },
+      "visualization": {
+        "type": "metric",
+        "config": {
+          "mainValue": "73.4",
+          "label": "Average VIS Score",
+          "sublabel": "1,247 active volunteers",
+          "format": "score"
+        }
+      }
+    },
+    "metadata": {
+      "executionTimeMs": 1654,
+      "cached": false,
+      "safetyPassed": true,
+      "intent": "metric_query",
+      "templateId": "vis-average",
+      "tokensUsed": 1432,
+      "estimatedCostUSD": "0.0032"
+    }
+  },
+  "visTrend3Months": {
+    "queryId": "q-vis-002",
+    "question": "Show VIS trend for last 3 months",
+    "answer": {
+      "summary": "VIS scores have remained stable over the last 3 months, averaging between 72-74 points. September showed the highest score at 74.2.",
+      "data": [
+        { "month": "August 2024", "avgVIS": 72.8, "volunteers": 1189 },
+        { "month": "September 2024", "avgVIS": 74.2, "volunteers": 1234 },
+        { "month": "October 2024", "avgVIS": 73.1, "volunteers": 1247 }
+      ],
+      "confidence": {
+        "overall": 0.86,
+        "level": "high",
+        "components": {
+          "intentConfidence": 0.91,
+          "dataCompleteness": 0.84,
+          "sampleSizeScore": 0.89,
+          "recencyScore": 0.88,
+          "ambiguityPenalty": 0.83
+        },
+        "weights": {
+          "intent": 0.3,
+          "dataCompleteness": 0.25,
+          "sampleSize": 0.2,
+          "recency": 0.15,
+          "ambiguity": 0.1
+        },
+        "recommendations": []
+      },
+      "lineage": {
+        "sources": [
+          {
+            "sourceType": "database",
+            "sourceId": "postgres-volunteers",
+            "tableName": "volunteer_scores",
+            "confidence": 0.88
+          }
+        ],
+        "transformations": [
+          "Filtered to last 3 months (Aug-Oct 2024)",
+          "Grouped by month",
+          "Calculated monthly average VIS"
+        ]
+      },
+      "visualization": {
+        "type": "chart",
+        "chartType": "line",
+        "config": {
+          "labels": ["August 2024", "September 2024", "October 2024"],
+          "datasets": [
+            {
+              "label": "Average VIS",
+              "data": [72.8, 74.2, 73.1],
+              "borderColor": "#3b82f6",
+              "backgroundColor": "rgba(59, 130, 246, 0.1)"
+            }
+          ]
+        }
+      }
+    },
+    "metadata": {
+      "executionTimeMs": 1923,
+      "cached": false,
+      "safetyPassed": true,
+      "intent": "trend_analysis",
+      "templateId": "vis-trend-months",
+      "tokensUsed": 1654,
+      "estimatedCostUSD": "0.0037"
+    }
+  },
+  "outcomesByDimension": {
+    "queryId": "q-outcomes-001",
+    "question": "What are our outcome scores by dimension?",
+    "answer": {
+      "summary": "Across 5 outcome dimensions, your programs show strongest performance in Skills Development (82.5) and weakest in Economic Empowerment (68.3). Overall average is 75.2.",
+      "data": [
+        { "dimension": "Skills Development", "score": 82.5, "participants": 834 },
+        { "dimension": "Social Integration", "score": 78.9, "participants": 672 },
+        { "dimension": "Mental Wellbeing", "score": 76.4, "participants": 589 },
+        { "dimension": "Community Engagement", "score": 71.8, "participants": 543 },
+        { "dimension": "Economic Empowerment", "score": 68.3, "participants": 421 }
+      ],
+      "confidence": {
+        "overall": 0.85,
+        "level": "high",
+        "components": {
+          "intentConfidence": 0.90,
+          "dataCompleteness": 0.82,
+          "sampleSizeScore": 0.88,
+          "recencyScore": 0.83,
+          "ambiguityPenalty": 0.82
+        },
+        "weights": {
+          "intent": 0.3,
+          "dataCompleteness": 0.25,
+          "sampleSize": 0.2,
+          "recency": 0.15,
+          "ambiguity": 0.1
+        },
+        "recommendations": [
+          "Consider increasing support for Economic Empowerment programs"
+        ]
+      },
+      "lineage": {
+        "sources": [
+          {
+            "sourceType": "database",
+            "sourceId": "postgres-outcomes",
+            "tableName": "outcome_scores",
+            "confidence": 0.87
+          }
+        ],
+        "transformations": [
+          "Grouped by outcome dimension",
+          "Calculated average score per dimension",
+          "Counted participants per dimension",
+          "Sorted by score descending"
+        ]
+      },
+      "visualization": {
+        "type": "chart",
+        "chartType": "bar",
+        "config": {
+          "labels": ["Skills Dev", "Social Int", "Mental WB", "Community", "Economic"],
+          "datasets": [
+            {
+              "label": "Outcome Score",
+              "data": [82.5, 78.9, 76.4, 71.8, 68.3],
+              "backgroundColor": "#10b981"
+            }
+          ]
+        }
+      }
+    },
+    "metadata": {
+      "executionTimeMs": 2034,
+      "cached": false,
+      "safetyPassed": true,
+      "intent": "breakdown_analysis",
+      "templateId": "outcomes-by-dimension",
+      "tokensUsed": 1789,
+      "estimatedCostUSD": "0.0040"
+    }
+  },
+  "activeParticipants": {
+    "queryId": "q-participants-001",
+    "question": "How many active participants do we have?",
+    "answer": {
+      "summary": "You currently have 2,347 active participants across all programs. This represents a 15% increase from the previous quarter (2,041 participants).",
+      "data": [
+        {
+          "metric": "Active Participants",
+          "count": 2347,
+          "period": "Current (Nov 2024)",
+          "change": "+15%",
+          "previousCount": 2041
+        }
+      ],
+      "confidence": {
+        "overall": 0.93,
+        "level": "high",
+        "components": {
+          "intentConfidence": 0.96,
+          "dataCompleteness": 0.94,
+          "sampleSizeScore": 0.95,
+          "recencyScore": 0.90,
+          "ambiguityPenalty": 0.89
+        },
+        "weights": {
+          "intent": 0.3,
+          "dataCompleteness": 0.25,
+          "sampleSize": 0.2,
+          "recency": 0.15,
+          "ambiguity": 0.1
+        },
+        "recommendations": []
+      },
+      "lineage": {
+        "sources": [
+          {
+            "sourceType": "database",
+            "sourceId": "postgres-participants",
+            "tableName": "participant_sessions",
+            "confidence": 0.95
+          }
+        ],
+        "transformations": [
+          "Filtered to active participants (activity in last 90 days)",
+          "Counted unique participant IDs",
+          "Compared to previous quarter"
+        ]
+      },
+      "visualization": {
+        "type": "metric",
+        "config": {
+          "mainValue": "2,347",
+          "label": "Active Participants",
+          "trend": "up",
+          "trendValue": "+15%",
+          "format": "count"
+        }
+      }
+    },
+    "metadata": {
+      "executionTimeMs": 1432,
+      "cached": false,
+      "safetyPassed": true,
+      "intent": "metric_query",
+      "templateId": "active-participants-count",
+      "tokensUsed": 1287,
+      "estimatedCostUSD": "0.0029"
+    }
+  }
+}
