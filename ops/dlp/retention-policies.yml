@@ -1,0 +1,251 @@
+# Data Retention Policies
+# Defines retention periods and deletion rules per data category
+
+policies:
+  # Audit logs - 7 years (SOC2, ISO27001)
+  - id: ret-001
+    name: "Audit Logs Retention"
+    category: audit_logs
+    retention_period: 7y
+    legal_basis:
+      - SOC2-CC7.2
+      - ISO27001-A.12.4.1
+      - GDPR-Art17(3)(e)  # Public interest/archiving
+    scope:
+      buckets:
+        - teei-audit-logs
+      file_patterns:
+        - "*.log"
+        - "audit-*.json"
+    actions:
+      on_expiry: archive_to_glacier
+      after_archive: 10y  # Delete after 10 years total
+    exceptions:
+      - condition: legal_hold
+        action: preserve_indefinitely
+      - condition: active_investigation
+        action: extend_retention
+        extension: 2y
+
+  # Access logs - 2 years
+  - id: ret-002
+    name: "Access Logs Retention"
+    category: access_logs
+    retention_period: 2y
+    legal_basis:
+      - ISO27001-A.12.4.1
+      - PCI-DSS-10.7
+    scope:
+      buckets:
+        - teei-access-logs
+    actions:
+      on_expiry: delete
+    exceptions:
+      - condition: security_incident
+        action: preserve
+        duration: 5y
+
+  # User data - 3 years after account deletion (GDPR)
+  - id: ret-003
+    name: "User Data Retention"
+    category: user_data
+    retention_period: 90d  # 90 days after account deletion
+    legal_basis:
+      - GDPR-Art17  # Right to erasure
+      - CCPA-1798.105  # Right to deletion
+    scope:
+      buckets:
+        - teei-user-data
+      tags:
+        data_type: user_profile
+    actions:
+      on_expiry: hard_delete
+      verification: require_manual_approval  # GDPR safety
+    exceptions:
+      - condition: legal_hold
+        action: preserve_indefinitely
+      - condition: contract_dispute
+        action: extend_retention
+        extension: 1y
+
+  # Financial records - 7 years (IRS, HMRC)
+  - id: ret-004
+    name: "Financial Records Retention"
+    category: financial
+    retention_period: 7y
+    legal_basis:
+      - IRS-Rev-Rul-97-22
+      - UK-HMRC-6years
+      - SOX-802
+    scope:
+      buckets:
+        - teei-invoices
+        - teei-payments
+      tags:
+        data_type: financial
+    actions:
+      on_expiry: archive_to_glacier
+      after_archive: 10y  # Delete after 10 years total
+    exceptions:
+      - condition: legal_hold
+        action: preserve_indefinitely
+
+  # AI training data - 5 years (AI Act Article 12)
+  - id: ret-005
+    name: "AI Training Data Retention"
+    category: ai_training
+    retention_period: 5y
+    legal_basis:
+      - EU-AI-Act-Art12  # Record-keeping
+      - EU-AI-Act-Art17  # Quality management
+    scope:
+      buckets:
+        - teei-ai-training-data
+        - teei-model-artifacts
+      tags:
+        data_type: ai_training
+    actions:
+      on_expiry: archive_to_glacier
+      metadata_retention: 10y  # Keep metadata longer
+    exceptions:
+      - condition: model_in_production
+        action: preserve
+      - condition: regulatory_inquiry
+        action: extend_retention
+        extension: 2y
+
+  # Evidence archives (SOC2, ISO27001) - 3 years
+  - id: ret-006
+    name: "Compliance Evidence Retention"
+    category: compliance_evidence
+    retention_period: 3y
+    legal_basis:
+      - SOC2-CC3.2
+      - ISO27001-A.18.1.3
+    scope:
+      buckets:
+        - teei-evidence-archive
+      prefixes:
+        - "soc2/"
+        - "iso27001/"
+        - "gdpr/"
+    actions:
+      on_expiry: archive_to_glacier
+      after_archive: 7y  # Delete after 7 years total
+    exceptions:
+      - condition: audit_in_progress
+        action: preserve
+      - condition: certification_renewal
+        action: extend_retention
+        extension: 1y
+
+  # DLP scan results - 1 year
+  - id: ret-007
+    name: "DLP Scan Results Retention"
+    category: security_scans
+    retention_period: 1y
+    legal_basis:
+      - SOC2-CC6.7
+      - GDPR-Art32
+    scope:
+      buckets:
+        - teei-dlp-results
+    actions:
+      on_expiry: delete
+    exceptions:
+      - condition: findings_critical
+        action: extend_retention
+        extension: 2y
+
+  # Quarantined data - 90 days
+  - id: ret-008
+    name: "Quarantined Data Retention"
+    category: quarantine
+    retention_period: 90d
+    legal_basis:
+      - Internal-Policy
+    scope:
+      buckets:
+        - teei-quarantine
+      tags:
+        quarantine: "true"
+    actions:
+      on_expiry: hard_delete
+      notification: notify_security_team
+    exceptions:
+      - condition: legal_hold
+        action: preserve_indefinitely
+      - condition: under_investigation
+        action: extend_retention
+        extension: 180d
+
+  # Backup data - 30 days (short-term), 1 year (long-term)
+  - id: ret-009
+    name: "Backup Data Retention"
+    category: backups
+    retention_period:
+      daily: 30d
+      weekly: 90d
+      monthly: 1y
+      annual: 7y
+    legal_basis:
+      - Business-Continuity
+      - ISO22301
+    scope:
+      buckets:
+        - teei-backups
+    actions:
+      on_expiry: delete
+      verification: verify_restore_before_delete
+    exceptions:
+      - condition: legal_hold
+        action: preserve_indefinitely
+
+  # Temporary data (exports, reports) - 7 days
+  - id: ret-010
+    name: "Temporary Data Retention"
+    category: temporary
+    retention_period: 7d
+    legal_basis:
+      - Internal-Policy
+    scope:
+      buckets:
+        - teei-temp
+      prefixes:
+        - "exports/"
+        - "tmp/"
+    actions:
+      on_expiry: hard_delete
+      auto_cleanup: enabled
+    exceptions: []
+
+enforcement:
+  # Automated enforcement schedule
+  scan_frequency: daily
+  scan_time: "02:00 UTC"
+
+  # Notification settings
+  notify_before_deletion: 30d
+  notify_recipients:
+    - data-steward@teei.io
+    - legal@teei.io
+
+  # Approval workflow
+  require_approval_for:
+    - hard_delete
+    - user_data
+    - financial
+
+  # Audit trail
+  log_all_actions: true
+  audit_log_retention: 10y
+
+  # Grace period for recovery
+  soft_delete_grace_period: 14d
+
+metadata:
+  version: "1.0.0"
+  updated: "2025-11-15"
+  author: "Worker 4 Phase H2 - Retention Policy Author"
+  approved_by: "DPO, Legal, CISO"
+  next_review: "2026-11-15"

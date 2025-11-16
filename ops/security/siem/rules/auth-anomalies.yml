@@ -1,0 +1,189 @@
+# SIEM Rules: Authentication Anomalies
+# ECS-normalized detection rules for suspicious authentication patterns
+
+rules:
+  - id: auth-001
+    name: "Multiple Failed Login Attempts"
+    description: "Detects 5+ failed login attempts within 5 minutes from same source"
+    severity: medium
+    category: authentication
+    ecs_mapping:
+      event.category: authentication
+      event.type: start
+      event.outcome: failure
+    conditions:
+      - field: event.outcome
+        operator: equals
+        value: failure
+      - field: user.name
+        operator: exists
+    aggregation:
+      field: source.ip
+      threshold: 5
+      window: 5m
+    actions:
+      - type: alert
+        severity: medium
+      - type: block_ip
+        duration: 30m
+
+  - id: auth-002
+    name: "Login from Unusual Geolocation"
+    description: "User login from country not seen in last 90 days"
+    severity: high
+    category: authentication
+    ecs_mapping:
+      event.category: authentication
+      event.type: start
+      event.outcome: success
+    conditions:
+      - field: source.geo.country_iso_code
+        operator: not_in_baseline
+        baseline_window: 90d
+    actions:
+      - type: alert
+        severity: high
+      - type: require_mfa
+
+  - id: auth-003
+    name: "Impossible Travel"
+    description: "Logins from geographically distant locations within 1 hour"
+    severity: critical
+    category: authentication
+    ecs_mapping:
+      event.category: authentication
+      event.type: start
+      event.outcome: success
+    conditions:
+      - field: source.geo.location
+        operator: impossible_travel
+        threshold_distance_km: 500
+        threshold_time: 1h
+    actions:
+      - type: alert
+        severity: critical
+      - type: suspend_session
+      - type: require_reverification
+
+  - id: auth-004
+    name: "Privilege Escalation Attempt"
+    description: "User attempting to access resources above their role"
+    severity: high
+    category: authorization
+    ecs_mapping:
+      event.category: iam
+      event.type: access
+      event.outcome: failure
+    conditions:
+      - field: event.outcome
+        operator: equals
+        value: failure
+      - field: user.roles
+        operator: not_contains
+        value: admin
+      - field: url.path
+        operator: matches
+        pattern: "^/admin/.*"
+    aggregation:
+      field: user.id
+      threshold: 3
+      window: 10m
+    actions:
+      - type: alert
+        severity: high
+      - type: audit_log
+
+  - id: auth-005
+    name: "Brute Force Password Attack"
+    description: "Rapid password attempts across multiple accounts"
+    severity: critical
+    category: authentication
+    ecs_mapping:
+      event.category: authentication
+      event.type: start
+      event.outcome: failure
+    conditions:
+      - field: event.outcome
+        operator: equals
+        value: failure
+    aggregation:
+      field: source.ip
+      distinct_field: user.name
+      threshold: 10
+      window: 5m
+    actions:
+      - type: alert
+        severity: critical
+      - type: block_ip
+        duration: 24h
+      - type: trigger_incident
+
+  - id: auth-006
+    name: "SSO Token Abuse"
+    description: "Same SSO token used from multiple IPs simultaneously"
+    severity: high
+    category: authentication
+    ecs_mapping:
+      event.category: authentication
+      event.type: info
+    conditions:
+      - field: user.session_id
+        operator: exists
+    aggregation:
+      field: user.session_id
+      distinct_field: source.ip
+      threshold: 3
+      window: 1m
+    actions:
+      - type: alert
+        severity: high
+      - type: invalidate_session
+
+  - id: auth-007
+    name: "After-Hours Admin Access"
+    description: "Admin access outside business hours (Mon-Fri 9am-6pm UTC)"
+    severity: medium
+    category: authentication
+    ecs_mapping:
+      event.category: authentication
+      event.type: start
+      event.outcome: success
+    conditions:
+      - field: user.roles
+        operator: contains
+        value: admin
+      - field: "@timestamp"
+        operator: outside_business_hours
+        timezone: UTC
+        business_hours: "Mon-Fri 09:00-18:00"
+    actions:
+      - type: alert
+        severity: medium
+      - type: require_justification
+
+  - id: auth-008
+    name: "Dormant Account Activation"
+    description: "Login to account that hasn't been used in 90+ days"
+    severity: medium
+    category: authentication
+    ecs_mapping:
+      event.category: authentication
+      event.type: start
+      event.outcome: success
+    conditions:
+      - field: user.last_login
+        operator: older_than
+        value: 90d
+    actions:
+      - type: alert
+        severity: medium
+      - type: require_reverification
+
+metadata:
+  version: "1.0.0"
+  updated: "2025-11-15"
+  author: "Worker 4 Phase H2 - SIEM Rules Engineer"
+  compliance:
+    - SOC2-CC6.1  # Logical access controls
+    - SOC2-CC6.6  # Authentication mechanisms
+    - ISO27001-A.9.2  # User access management
