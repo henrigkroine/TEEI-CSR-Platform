@@ -1,0 +1,125 @@
+# SLO Definition: API Gateway
+# Service: teei-api-gateway
+# Owner: Worker 1 - Team 1 (SLO Automation)
+# Created: 2025-11-16
+
+apiVersion: sloth.slok.dev/v1
+kind: PrometheusServiceLevel
+metadata:
+  name: api-gateway-availability
+  namespace: monitoring
+  labels:
+    team: platform
+    service: api-gateway
+    tier: critical
+spec:
+  service: "api-gateway"
+  labels:
+    owner: "worker1-team1"
+    environment: "production"
+
+  # SLO 1: Availability (Error Rate)
+  slos:
+    - name: "api-gateway-requests-availability"
+      objective: 99.9
+      description: "99.9% of API Gateway requests should return non-5xx responses"
+      sli:
+        events:
+          errorQuery: |
+            sum(rate(http_server_requests_total{
+              service="api-gateway",
+              status=~"5.."
+            }[{{.window}}]))
+          totalQuery: |
+            sum(rate(http_server_requests_total{
+              service="api-gateway"
+            }[{{.window}}]))
+      alerting:
+        name: APIGatewayHighErrorRate
+        labels:
+          severity: critical
+          component: api-gateway
+        annotations:
+          summary: "API Gateway error rate exceeds SLO"
+          description: "Error rate for API Gateway is {{ $value | humanizePercentage }}, SLO is 99.9%"
+          runbook: "https://docs.teei.io/runbooks/api-gateway-errors"
+        pageAlert:
+          labels:
+            severity: page
+            notify: pagerduty
+        ticketAlert:
+          labels:
+            severity: ticket
+            notify: slack
+
+    # SLO 2: Latency
+    - name: "api-gateway-requests-latency"
+      objective: 95.0
+      description: "95% of API Gateway requests should complete in <500ms (P95)"
+      sli:
+        events:
+          errorQuery: |
+            (
+              sum(rate(http_server_request_duration_seconds_bucket{
+                service="api-gateway",
+                le="0.5"
+              }[{{.window}}]))
+            ) / (
+              sum(rate(http_server_request_duration_seconds_count{
+                service="api-gateway"
+              }[{{.window}}]))
+            )
+      alerting:
+        name: APIGatewayHighLatency
+        labels:
+          severity: warning
+          component: api-gateway
+        annotations:
+          summary: "API Gateway P95 latency exceeds SLO"
+          description: "P95 latency for API Gateway is {{ $value }}ms, SLO is <500ms"
+          runbook: "https://docs.teei.io/runbooks/api-gateway-latency"
+
+  # Multi-burn-rate alerting windows
+  # Fast burn (14.4x) - 2% budget consumed in 1h = page
+  # Slow burn (6x) - 5% budget consumed in 6h = ticket
+  alerting:
+    multiwindow:
+      - name: "api-gateway-error-budget-burn-critical"
+        severity: critical
+        shortWindow: 1h
+        longWindow: 6h
+        burnRateFactor: 14.4
+        annotations:
+          summary: "CRITICAL: API Gateway error budget burning at 14.4x rate"
+          description: "Error budget will be exhausted in {{ $value }} hours at current rate"
+          action: "Investigate immediately, consider rollback if recent deployment"
+
+      - name: "api-gateway-error-budget-burn-warning"
+        severity: warning
+        shortWindow: 6h
+        longWindow: 3d
+        burnRateFactor: 6.0
+        annotations:
+          summary: "WARNING: API Gateway error budget burning at 6x rate"
+          description: "Error budget consumption is elevated, monitor closely"
+          action: "Review recent changes, prepare for potential rollback"
+
+---
+# Additional metadata for Grafana dashboards
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-gateway-slo-metadata
+  namespace: monitoring
+data:
+  service: "api-gateway"
+  description: "API Gateway SLO definitions for availability and latency"
+  owner: "worker1-team1"
+  errorBudget: "0.1%"  # 99.9% SLO = 0.1% error budget
+  budgetPeriod: "30d"
+  targets: |
+    {
+      "availability": 99.9,
+      "latency_p95": 500,
+      "latency_p99": 1000
+    }

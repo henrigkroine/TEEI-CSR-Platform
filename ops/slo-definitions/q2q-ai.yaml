@@ -1,0 +1,158 @@
+# SLO Definition: Q2Q AI Service
+# Service: teei-q2q-ai
+# Owner: Worker 1 - Team 1 (SLO Automation)
+# Created: 2025-11-16
+
+apiVersion: sloth.slok.dev/v1
+kind: PrometheusServiceLevel
+metadata:
+  name: q2q-ai-availability
+  namespace: monitoring
+  labels:
+    team: ai-ml
+    service: q2q-ai
+    tier: critical
+spec:
+  service: "q2q-ai"
+  labels:
+    owner: "worker1-team1"
+    environment: "production"
+
+  slos:
+    # SLO 1: Availability (Error Rate)
+    - name: "q2q-ai-requests-availability"
+      objective: 99.5
+      description: "99.5% of Q2Q AI requests should return non-5xx responses"
+      sli:
+        events:
+          errorQuery: |
+            sum(rate(http_server_requests_total{
+              service="q2q-ai",
+              status=~"5.."
+            }[{{.window}}]))
+          totalQuery: |
+            sum(rate(http_server_requests_total{
+              service="q2q-ai"
+            }[{{.window}}]))
+      alerting:
+        name: Q2QAIHighErrorRate
+        labels:
+          severity: critical
+          component: q2q-ai
+        annotations:
+          summary: "Q2Q AI service error rate exceeds SLO"
+          description: "Error rate is {{ $value | humanizePercentage }}, SLO is 99.5%"
+          runbook: "https://docs.teei.io/runbooks/q2q-ai-errors"
+
+    # SLO 2: Latency (P95 < 5s for AI processing)
+    - name: "q2q-ai-requests-latency"
+      objective: 95.0
+      description: "95% of Q2Q AI requests should complete in <5s (P95)"
+      sli:
+        events:
+          errorQuery: |
+            histogram_quantile(0.95,
+              sum(rate(http_server_request_duration_seconds_bucket{
+                service="q2q-ai"
+              }[{{.window}}])) by (le)
+            ) < bool 5.0
+      alerting:
+        name: Q2QAIHighLatency
+        labels:
+          severity: warning
+          component: q2q-ai
+        annotations:
+          summary: "Q2Q AI P95 latency exceeds SLO"
+          description: "P95 latency is {{ $value }}s, SLO is <5s"
+          runbook: "https://docs.teei.io/runbooks/q2q-ai-latency"
+
+    # SLO 3: Evidence Classification Accuracy
+    - name: "q2q-ai-classification-quality"
+      objective: 95.0
+      description: "95% of evidence classifications should meet confidence threshold"
+      sli:
+        events:
+          errorQuery: |
+            sum(rate(q2q_evidence_classification_total{
+              service="q2q-ai",
+              confidence="low"
+            }[{{.window}}]))
+          totalQuery: |
+            sum(rate(q2q_evidence_classification_total{
+              service="q2q-ai"
+            }[{{.window}}]))
+      alerting:
+        name: Q2QAILowConfidenceRate
+        labels:
+          severity: warning
+          component: q2q-ai-quality
+        annotations:
+          summary: "Q2Q AI classification confidence degraded"
+          description: "Low-confidence rate is {{ $value | humanizePercentage }}, threshold is 5%"
+          runbook: "https://docs.teei.io/runbooks/q2q-ai-quality"
+
+    # SLO 4: LLM API Success Rate
+    - name: "q2q-ai-llm-success"
+      objective: 98.0
+      description: "98% of LLM API calls should succeed"
+      sli:
+        events:
+          errorQuery: |
+            sum(rate(llm_api_requests_total{
+              service="q2q-ai",
+              status="error"
+            }[{{.window}}]))
+          totalQuery: |
+            sum(rate(llm_api_requests_total{
+              service="q2q-ai"
+            }[{{.window}}]))
+      alerting:
+        name: Q2QAILLMFailureRate
+        labels:
+          severity: critical
+          component: q2q-ai-llm
+        annotations:
+          summary: "Q2Q AI LLM API failure rate elevated"
+          description: "LLM failure rate is {{ $value | humanizePercentage }}, SLO is 98% success"
+          runbook: "https://docs.teei.io/runbooks/llm-api-failures"
+
+  alerting:
+    multiwindow:
+      - name: "q2q-ai-error-budget-burn-critical"
+        severity: critical
+        shortWindow: 1h
+        longWindow: 6h
+        burnRateFactor: 14.4
+        annotations:
+          summary: "CRITICAL: Q2Q AI error budget burning at 14.4x rate"
+          description: "Immediate investigation required, check LLM API health"
+
+      - name: "q2q-ai-error-budget-burn-warning"
+        severity: warning
+        shortWindow: 6h
+        longWindow: 3d
+        burnRateFactor: 6.0
+        annotations:
+          summary: "WARNING: Q2Q AI error budget burning at 6x rate"
+          description: "Monitor LLM rate limits and model performance"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: q2q-ai-slo-metadata
+  namespace: monitoring
+data:
+  service: "q2q-ai"
+  description: "Q2Q AI service SLOs for availability, latency, classification quality, and LLM success"
+  owner: "worker1-team1"
+  errorBudget: "0.5%"  # 99.5% SLO = 0.5% error budget
+  budgetPeriod: "30d"
+  targets: |
+    {
+      "availability": 99.5,
+      "latency_p95": 5000,
+      "latency_p99": 10000,
+      "classification_confidence": 95.0,
+      "llm_success": 98.0
+    }

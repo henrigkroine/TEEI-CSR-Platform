@@ -1,0 +1,390 @@
+# Prometheus Alert Rules: SLO Burn-Rate Alerts
+# Owner: Worker 1 - Team 1 (burn-rate-engineer)
+# Created: 2025-11-16
+# Multi-burn-rate alerting based on Google SRE best practices
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-slo-alerts
+  namespace: monitoring
+  labels:
+    app: prometheus
+    component: alert-rules
+data:
+  slo-burn-rate-alerts.yaml: |
+    groups:
+      # ===========================================
+      # API Gateway SLO Alerts
+      # ===========================================
+      - name: api-gateway-slo-burn-rate
+        interval: 30s
+        rules:
+          # Critical: 14.4x burn rate (2% budget in 1h)
+          - alert: APIGatewayErrorBudgetBurnCritical
+            expr: |
+              (
+                (1 - (
+                  sum(rate(http_server_requests_total{service="api-gateway",status!~"5.."}[1h]))
+                  /
+                  sum(rate(http_server_requests_total{service="api-gateway"}[1h]))
+                )) > (14.4 * 0.001)
+              )
+              and
+              (
+                (1 - (
+                  sum(rate(http_server_requests_total{service="api-gateway",status!~"5.."}[6h]))
+                  /
+                  sum(rate(http_server_requests_total{service="api-gateway"}[6h]))
+                )) > (14.4 * 0.001)
+              )
+            for: 2m
+            labels:
+              severity: critical
+              service: api-gateway
+              slo: availability
+              team: platform
+              notify: pagerduty
+            annotations:
+              summary: "CRITICAL: API Gateway error budget burning at 14.4x rate"
+              description: "Error rate is {{ $value | humanizePercentage }}, budget will exhaust in ~3 days at current rate"
+              dashboard: "https://grafana.teei.io/d/slo-api-gateway"
+              runbook: "https://docs.teei.io/runbooks/slo-burn-critical"
+              action: "1. Check recent deployments (last 1h)\n2. Review error logs in Loki\n3. Prepare rollback\n4. Page on-call engineer"
+
+          # Warning: 6x burn rate (5% budget in 6h)
+          - alert: APIGatewayErrorBudgetBurnWarning
+            expr: |
+              (
+                (1 - (
+                  sum(rate(http_server_requests_total{service="api-gateway",status!~"5.."}[6h]))
+                  /
+                  sum(rate(http_server_requests_total{service="api-gateway"}[6h]))
+                )) > (6 * 0.001)
+              )
+              and
+              (
+                (1 - (
+                  sum(rate(http_server_requests_total{service="api-gateway",status!~"5.."}[3d]))
+                  /
+                  sum(rate(http_server_requests_total{service="api-gateway"}[3d]))
+                )) > (6 * 0.001)
+              )
+            for: 15m
+            labels:
+              severity: warning
+              service: api-gateway
+              slo: availability
+              team: platform
+              notify: slack
+            annotations:
+              summary: "WARNING: API Gateway error budget burning at 6x rate"
+              description: "Error rate elevated, monitor closely"
+              dashboard: "https://grafana.teei.io/d/slo-api-gateway"
+
+      # ===========================================
+      # Reporting Service SLO Alerts
+      # ===========================================
+      - name: reporting-slo-burn-rate
+        interval: 30s
+        rules:
+          # Critical: 14.4x burn rate
+          - alert: ReportingErrorBudgetBurnCritical
+            expr: |
+              (
+                (1 - (
+                  sum(rate(http_server_requests_total{service="reporting",status!~"5.."}[1h]))
+                  /
+                  sum(rate(http_server_requests_total{service="reporting"}[1h]))
+                )) > (14.4 * 0.002)
+              )
+              and
+              (
+                (1 - (
+                  sum(rate(http_server_requests_total{service="reporting",status!~"5.."}[6h]))
+                  /
+                  sum(rate(http_server_requests_total{service="reporting"}[6h]))
+                )) > (14.4 * 0.002)
+              )
+            for: 2m
+            labels:
+              severity: critical
+              service: reporting
+              slo: availability
+              team: platform
+              notify: pagerduty
+            annotations:
+              summary: "CRITICAL: Reporting service error budget burning at 14.4x rate"
+              description: "Error rate is {{ $value | humanizePercentage }}, budget exhaustion imminent"
+              dashboard: "https://grafana.teei.io/d/slo-reporting"
+              runbook: "https://docs.teei.io/runbooks/slo-burn-critical"
+
+          # Warning: 6x burn rate
+          - alert: ReportingErrorBudgetBurnWarning
+            expr: |
+              (
+                (1 - (
+                  sum(rate(http_server_requests_total{service="reporting",status!~"5.."}[6h]))
+                  /
+                  sum(rate(http_server_requests_total{service="reporting"}[6h]))
+                )) > (6 * 0.002)
+              )
+              and
+              (
+                (1 - (
+                  sum(rate(http_server_requests_total{service="reporting",status!~"5.."}[3d]))
+                  /
+                  sum(rate(http_server_requests_total{service="reporting"}[3d]))
+                )) > (6 * 0.002)
+              )
+            for: 15m
+            labels:
+              severity: warning
+              service: reporting
+              slo: availability
+              team: platform
+              notify: slack
+            annotations:
+              summary: "WARNING: Reporting service error budget burning at 6x rate"
+              description: "Monitor closely, prepare rollback plan"
+
+      # ===========================================
+      # Q2Q AI Service SLO Alerts
+      # ===========================================
+      - name: q2q-ai-slo-burn-rate
+        interval: 30s
+        rules:
+          # Critical: 14.4x burn rate
+          - alert: Q2QAIErrorBudgetBurnCritical
+            expr: |
+              (
+                (1 - (
+                  sum(rate(http_server_requests_total{service="q2q-ai",status!~"5.."}[1h]))
+                  /
+                  sum(rate(http_server_requests_total{service="q2q-ai"}[1h]))
+                )) > (14.4 * 0.005)
+              )
+              and
+              (
+                (1 - (
+                  sum(rate(http_server_requests_total{service="q2q-ai",status!~"5.."}[6h]))
+                  /
+                  sum(rate(http_server_requests_total{service="q2q-ai"}[6h]))
+                )) > (14.4 * 0.005)
+              )
+            for: 2m
+            labels:
+              severity: critical
+              service: q2q-ai
+              slo: availability
+              team: ai-ml
+              notify: pagerduty
+            annotations:
+              summary: "CRITICAL: Q2Q AI error budget burning at 14.4x rate"
+              description: "Check LLM API health and rate limits immediately"
+              dashboard: "https://grafana.teei.io/d/slo-q2q-ai"
+
+          # LLM API Failure Rate
+          - alert: Q2QAILLMFailureRateHigh
+            expr: |
+              (
+                sum(rate(llm_api_requests_total{service="q2q-ai",status="error"}[5m]))
+                /
+                sum(rate(llm_api_requests_total{service="q2q-ai"}[5m]))
+              ) > 0.02
+            for: 5m
+            labels:
+              severity: critical
+              service: q2q-ai
+              component: llm-api
+              team: ai-ml
+              notify: pagerduty
+            annotations:
+              summary: "Q2Q AI LLM failure rate exceeds 2%"
+              description: "LLM API calls failing at {{ $value | humanizePercentage }}"
+              action: "1. Check OpenAI/Claude API status\n2. Verify API keys\n3. Check rate limits\n4. Review error logs"
+
+      # ===========================================
+      # Corporate Cockpit SLO Alerts
+      # ===========================================
+      - name: cockpit-slo-burn-rate
+        interval: 30s
+        rules:
+          # Critical: 14.4x burn rate
+          - alert: CockpitErrorBudgetBurnCritical
+            expr: |
+              (
+                (1 - (
+                  sum(rate(http_server_requests_total{service="corp-cockpit",status!~"5.."}[1h]))
+                  /
+                  sum(rate(http_server_requests_total{service="corp-cockpit"}[1h]))
+                )) > (14.4 * 0.001)
+              )
+              and
+              (
+                (1 - (
+                  sum(rate(http_server_requests_total{service="corp-cockpit",status!~"5.."}[6h]))
+                  /
+                  sum(rate(http_server_requests_total{service="corp-cockpit"}[6h]))
+                )) > (14.4 * 0.001)
+              )
+            for: 2m
+            labels:
+              severity: critical
+              service: corp-cockpit
+              slo: availability
+              team: frontend
+              notify: pagerduty
+            annotations:
+              summary: "CRITICAL: Cockpit error budget burning at 14.4x rate"
+              description: "Frontend critically degraded, investigate immediately"
+              dashboard: "https://grafana.teei.io/d/slo-cockpit"
+
+          # Web Vitals: LCP degraded
+          - alert: CockpitLCPDegraded
+            expr: |
+              (
+                sum(rate(web_vitals_lcp_seconds_bucket{service="corp-cockpit",le="2.5"}[5m]))
+                /
+                sum(rate(web_vitals_lcp_seconds_count{service="corp-cockpit"}[5m]))
+              ) < 0.75
+            for: 10m
+            labels:
+              severity: warning
+              service: corp-cockpit
+              metric: lcp
+              team: frontend
+              notify: slack
+            annotations:
+              summary: "Cockpit LCP performance degraded"
+              description: "Only {{ $value | humanizePercentage }} of loads have LCP <2.5s (target: 75%)"
+              action: "1. Check CDN performance\n2. Review recent asset changes\n3. Analyze RUM data"
+
+          # Web Vitals: INP degraded
+          - alert: CockpitINPDegraded
+            expr: |
+              (
+                sum(rate(web_vitals_inp_milliseconds_bucket{service="corp-cockpit",le="200"}[5m]))
+                /
+                sum(rate(web_vitals_inp_milliseconds_count{service="corp-cockpit"}[5m]))
+              ) < 0.75
+            for: 10m
+            labels:
+              severity: warning
+              service: corp-cockpit
+              metric: inp
+              team: frontend
+              notify: slack
+            annotations:
+              summary: "Cockpit INP performance degraded"
+              description: "Only {{ $value | humanizePercentage }} of interactions have INP <200ms (target: 75%)"
+
+      # ===========================================
+      # Impact-In Connector SLO Alerts
+      # ===========================================
+      - name: impact-in-slo-burn-rate
+        interval: 30s
+        rules:
+          # Critical: 14.4x burn rate
+          - alert: ImpactInErrorBudgetBurnCritical
+            expr: |
+              (
+                (1 - (
+                  sum(rate(impact_in_delivery_total{service="impact-in",status="success"}[1h]))
+                  /
+                  sum(rate(impact_in_delivery_total{service="impact-in"}[1h]))
+                )) > (14.4 * 0.01)
+              )
+              and
+              (
+                (1 - (
+                  sum(rate(impact_in_delivery_total{service="impact-in",status="success"}[6h]))
+                  /
+                  sum(rate(impact_in_delivery_total{service="impact-in"}[6h]))
+                )) > (14.4 * 0.01)
+              )
+            for: 2m
+            labels:
+              severity: critical
+              service: impact-in
+              slo: delivery-success
+              team: integrations
+              notify: pagerduty
+            annotations:
+              summary: "CRITICAL: Impact-In delivery failure rate exceeds SLO"
+              description: "Multiple partner platforms may be affected"
+              dashboard: "https://grafana.teei.io/d/slo-impact-in"
+
+          # Per-platform alerts
+          - alert: ImpactInBenevityFailuresHigh
+            expr: |
+              (
+                sum(rate(impact_in_delivery_total{service="impact-in",platform="benevity",status="failed"}[10m]))
+                /
+                sum(rate(impact_in_delivery_total{service="impact-in",platform="benevity"}[10m]))
+              ) > 0.05
+            for: 10m
+            labels:
+              severity: warning
+              service: impact-in
+              platform: benevity
+              notify: slack
+            annotations:
+              summary: "Benevity connector failure rate elevated"
+              description: "{{ $value | humanizePercentage }} of Benevity deliveries failing"
+
+          - alert: ImpactInGooderaFailuresHigh
+            expr: |
+              (
+                sum(rate(impact_in_delivery_total{service="impact-in",platform="goodera",status="failed"}[10m]))
+                /
+                sum(rate(impact_in_delivery_total{service="impact-in",platform="goodera"}[10m]))
+              ) > 0.05
+            for: 10m
+            labels:
+              severity: warning
+              service: impact-in
+              platform: goodera
+              notify: slack
+            annotations:
+              summary: "Goodera connector failure rate elevated"
+              description: "{{ $value | humanizePercentage }} of Goodera deliveries failing, check OAuth tokens"
+
+          - alert: ImpactInWorkdayFailuresHigh
+            expr: |
+              (
+                sum(rate(impact_in_delivery_total{service="impact-in",platform="workday",status="failed"}[10m]))
+                /
+                sum(rate(impact_in_delivery_total{service="impact-in",platform="workday"}[10m]))
+              ) > 0.05
+            for: 10m
+            labels:
+              severity: warning
+              service: impact-in
+              platform: workday
+              notify: slack
+            annotations:
+              summary: "Workday connector failure rate elevated"
+              description: "{{ $value | humanizePercentage }} of Workday deliveries failing, check SOAP endpoint"
+
+      # ===========================================
+      # Cross-Service SLO Summary
+      # ===========================================
+      - name: slo-budget-summary
+        interval: 1m
+        rules:
+          # Alert if ANY service is exhausting error budget
+          - alert: ErrorBudgetCriticalExhaustion
+            expr: |
+              count(
+                (1 - (sum(rate(http_server_requests_total{status!~"5.."}[30d])) by (service) / sum(rate(http_server_requests_total[30d])) by (service))) < 0.001
+              ) > 0
+            for: 5m
+            labels:
+              severity: critical
+              team: sre
+              notify: pagerduty
+            annotations:
+              summary: "One or more services have exhausted monthly error budget"
+              description: "{{ $labels.service }} error budget depleted, implement change freeze"
+              action: "1. Identify affected service\n2. Implement change freeze\n3. Review incident response plan\n4. Schedule post-mortem"

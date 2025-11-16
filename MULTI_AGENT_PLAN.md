@@ -1761,3 +1761,474 @@ Polish Corporate Cockpit to production-grade with zero TypeScript debt, SSE resi
 **Orchestrator**: Tech Lead (Worker 3)
 **Next Review**: After Phase 1 (TS Zero-Debt) completion
 
+---
+
+# Worker 1 Phase J: Post-GA Reliability, GreenOps & Continuous Verification
+
+**Status**: 🚧 In Progress
+**Branch**: `claude/phaseJ-postga-greenops-01NJ8HwK5R7Bn2fCiBVDtf7R`
+**Started**: 2025-11-16
+**Priority**: P0 - Post-GA Operational Excellence
+**Target Completion**: TBD
+
+---
+
+## Mission
+
+Reduce risk and total cost of ownership post-GA via SLO burn-rate automation, carbon-aware scheduling, continuous DR verification, and secrets/attestation hardening across us-east-1 and eu-central-1 clusters.
+
+### Strategic Goals
+
+1. **Automate SLO Enforcement**: Error-budget burn-rate alerts with Argo Rollouts auto-rollback
+2. **Carbon Optimization**: Energy-aware workload placement with GDPR residency guardrails
+3. **Cost Control**: KEDA autoscaling + AI budget throttling at gateway
+4. **DR Confidence**: Monthly automated US↔EU failover drills with signed evidence
+5. **Supply Chain Security**: SLSA-3 attestations, SBOM publishing, signed images
+6. **Observability Maturity**: All dashboards/alerts as code with trace-to-logs correlation
+
+---
+
+## 30-Agent Team Structure (6 Teams × 5 Agents)
+
+### Team 1: SLO & Error-Budget Automation (5 agents)
+**Lead**: slo-architect
+**Status**: ⏳ Pending
+
+| Agent | Trigger | Deliverable | Status |
+|-------|---------|-------------|--------|
+| **slo-architect** | SLO definitions needed | SLO specs for API-Gateway, Reporting, Q2Q-AI, Cockpit, Impact-In | ⏳ Pending |
+| **burn-rate-engineer** | Alert rules needed | Prometheus burn-rate alerts (14.4× critical, 6× warning) | ⏳ Pending |
+| **rollouts-integrator** | Canary gates needed | Argo Rollouts AnalysisTemplates for SLO-gated promotion | ⏳ Pending |
+| **dashboard-builder** | Viz needed | Grafana dashboards with 7-day burn visualization | ⏳ Pending |
+| **slo-validator** | Testing needed | Simulate SLO breach, verify <2min rollback | ⏳ Pending |
+
+**Deliverables**:
+- `/ops/slo-definitions/api-gateway.yaml` - P95 latency <500ms, error rate <0.1%
+- `/ops/slo-definitions/reporting.yaml` - P95 latency <2s, error rate <0.2%
+- `/ops/slo-definitions/q2q-ai.yaml` - P95 latency <5s, error rate <0.5%
+- `/ops/slo-definitions/cockpit.yaml` - LCP <2.5s, error rate <0.1%
+- `/ops/slo-definitions/impact-in.yaml` - Delivery success >99%
+- `/k8s/rollouts/api-gateway/analysis-template.yaml` - SLO health gate
+- `/k8s/rollouts/reporting/analysis-template.yaml`
+- `/k8s/rollouts/q2q-ai/analysis-template.yaml`
+- `/observability/grafana/dashboards/slo-api-gateway.json`
+- `/observability/grafana/dashboards/slo-reporting.json`
+- `/observability/grafana/dashboards/slo-q2q-ai.json`
+- `/observability/grafana/dashboards/slo-cockpit.json`
+- `/observability/grafana/dashboards/slo-impact-in.json`
+
+**Acceptance**:
+- ✅ Auto-rollback <2 min on SLO breach
+- ✅ P95 latency targets met for all services
+- ✅ Dashboards show 7-day burn visualization
+- ✅ Canary promotion gates verify SLO health
+
+---
+
+### Team 2: GreenOps & Carbon-Aware Scheduling (5 agents)
+**Lead**: carbon-architect
+**Status**: ⏳ Pending
+
+| Agent | Trigger | Deliverable | Status |
+|-------|---------|-------------|--------|
+| **carbon-architect** | Emission tracking needed | Region/AZ CO₂e coefficients, energy-mix data pipeline | ⏳ Pending |
+| **scheduler-policy-dev** | Workload placement needed | KEDA/Karpenter policies for low-carbon regions | ⏳ Pending |
+| **residency-guardian** | GDPR constraints needed | Residency enforcement for EU tenants | ⏳ Pending |
+| **finops-dashboard-dev** | Viz needed | Grafana CO₂e dashboard per service/tenant/region | ⏳ Pending |
+| **greenops-simulator** | Validation needed | Policy simulation showing ≥20% CO₂e reduction | ⏳ Pending |
+
+**Deliverables**:
+- `/scripts/finops/co2e-ingest.sh` - Fetch Electricity Maps API data
+- `/scripts/finops/co2e-calculator.ts` - Compute emissions per workload
+- `/k8s/policies/greenops/batch-jobs.yaml` - Prefer low-CO₂e region
+- `/k8s/policies/greenops/embeddings.yaml` - Time-shift to off-peak
+- `/k8s/policies/greenops/etl.yaml` - Region-aware scheduling
+- `/services/data-residency/src/policy/eu-strict.ts` - GDPR guardrails
+- `/observability/grafana/dashboards/finops-carbon.json` - CO₂e metrics
+- `/reports/worker1_phaseJ/GREENOPS_SIMULATION.md` - Policy simulation results
+
+**Acceptance**:
+- ✅ Dashboard shows CO₂e per service/tenant/region
+- ✅ Policy simulation proves ≥20% CO₂e reduction potential
+- ✅ GDPR residency validation passes (EU tenants stay in EU)
+- ✅ No performance regression from scheduling changes
+
+---
+
+### Team 3: Cost Guardrails & Autoscaling (5 agents)
+**Lead**: finops-engineer
+**Status**: ⏳ Pending
+
+| Agent | Trigger | Deliverable | Status |
+|-------|---------|-------------|--------|
+| **keda-scaler** | Autoscaling needed | KEDA triggers for NATS/HTTP/CPU | ⏳ Pending |
+| **budget-enforcer** | Cost control needed | Per-tenant AI budget plugin at API Gateway | ⏳ Pending |
+| **throttle-ui-dev** | Budget alerts needed | 429 responses with budget reason headers | ⏳ Pending |
+| **finops-dashboard-dev** | Viz needed | AI budget dashboard with tenant breakdown | ⏳ Pending |
+| **load-tester** | Validation needed | Simulate 100-user ramp, verify ≤85% utilization | ⏳ Pending |
+
+**Deliverables**:
+- `/k8s/base/keda/q2q-ai-scaler.yaml` - NATS queue depth trigger
+- `/k8s/base/keda/reporting-scaler.yaml` - HTTP request rate trigger
+- `/k8s/base/keda/impact-calculator-scaler.yaml` - CPU/memory triggers
+- `/services/gateway/src/plugins/ai-budget.ts` - Budget enforcement middleware
+- `/services/gateway/src/plugins/ai-budget.test.ts` - Unit tests
+- `/observability/grafana/dashboards/finops-ai-budget.json` - Budget tracking
+- `/scripts/load-tests/k6-budget-enforcement.js` - Load test script
+
+**Acceptance**:
+- ✅ Resource utilization ≤85% during 100-user ramp
+- ✅ Budget alerts at 50/75/90% thresholds
+- ✅ Throttling returns 429 with X-Budget-Reason header
+- ✅ KEDA scales services based on load
+
+---
+
+### Team 4: Continuous DR Verification (5 agents)
+**Lead**: dr-architect
+**Status**: ⏳ Pending
+
+| Agent | Trigger | Deliverable | Status |
+|-------|---------|-------------|--------|
+| **dr-architect** | DR strategy needed | Failover design, RTO/RPO targets, evidence capture plan | ⏳ Pending |
+| **failover-automation** | Script needed | Automated US↔EU failover script with health checks | ⏳ Pending |
+| **evidence-signer** | Attestation needed | GPG/Cosign signing for evidence bundles | ⏳ Pending |
+| **runbook-writer** | Documentation needed | DR runbook with screenshots, decision trees | ⏳ Pending |
+| **gameday-scheduler** | Testing needed | Monthly automated drill with RTO/RPO measurement | ⏳ Pending |
+
+**Deliverables**:
+- `/scripts/dr/failover.sh` - Automated failover orchestration
+- `/scripts/dr/evidence-sign.sh` - Sign evidence with GPG + SHA256
+- `/scripts/dr/health-check.sh` - Multi-region health validation
+- `/scripts/dr/status-page-flip.sh` - Update status page within 60s
+- `/docs/runbooks/Runbook_DR_CV.md` - Comprehensive DR runbook
+- `/k8s/jobs/dr-gameday.yaml` - Monthly CronJob for automated drills
+- `/reports/worker1_phaseJ/DR_DRILL_EVIDENCE/` - Signed evidence bundles
+
+**Acceptance**:
+- ✅ RTO ≤15 minutes (measured in automated drill)
+- ✅ RPO ≤10 seconds (replication lag target)
+- ✅ Evidence bundle signed (SHA256 + GPG)
+- ✅ Status page flip within 60 seconds
+- ✅ Runbook tested and validated
+
+---
+
+### Team 5: Secrets Rotation, SBOM & SLSA-3 (5 agents)
+**Lead**: supply-chain-lead
+**Status**: ⏳ Pending
+
+| Agent | Trigger | Deliverable | Status |
+|-------|---------|-------------|--------|
+| **secrets-rotator** | Rotation policy needed | 90-day rotation enforcement for Vault/AWS SM | ⏳ Pending |
+| **sbom-generator** | SBOM needed | SBOM generation + S3 publish for all images | ⏳ Pending |
+| **attestation-engineer** | Provenance needed | Cosign attestations per image build | ⏳ Pending |
+| **policy-enforcer** | OPA rules needed | Kyverno policies: block unsigned images | ⏳ Pending |
+| **audit-validator** | Compliance needed | Rotation audit showing 100% keys <90 days old | ⏳ Pending |
+
+**Deliverables**:
+- `/ops/slsa/attest-build.sh` - SLSA-3 provenance attestation
+- `/ops/sbom/generate.sh` - Syft-based SBOM generation
+- `/ops/sbom/publish.sh` - Upload SBOM to S3 with versioning
+- `/k8s/policies/kyverno/signed-images.yaml` - Block unsigned images
+- `/k8s/policies/kyverno/recent-sbom.yaml` - Require SBOM <30 days old
+- `/scripts/infra/secrets-rotation-audit.sh` - Audit key age
+- `/scripts/infra/rotate-vault-secrets.sh` - Automated rotation script
+
+**Acceptance**:
+- ✅ Pipeline blocks unknown provenance images
+- ✅ Rotation audit shows 100% keys <90 days old
+- ✅ SBOM published to S3 for all production images
+- ✅ Cosign signature verification passes in CI
+
+---
+
+### Team 6: Observability-as-Code Convergence (5 agents)
+**Lead**: observability-lead
+**Status**: ⏳ Pending
+
+| Agent | Trigger | Deliverable | Status |
+|-------|---------|-------------|--------|
+| **dashboard-codifier** | IaC needed | Codify all Grafana dashboards as JSON | ⏳ Pending |
+| **alert-codifier** | Alert rules needed | Prometheus/Loki alert rules as YAML | ⏳ Pending |
+| **trace-logs-linker** | Correlation needed | Trace-to-logs links in Grafana | ⏳ Pending |
+| **sampling-engineer** | Log volume control needed | Loki sampling rules for high-volume logs | ⏳ Pending |
+| **provisioning-tester** | Validation needed | Fresh cluster provisioning test | ⏳ Pending |
+
+**Deliverables**:
+- `/observability/grafana/provisioning/dashboards/*.json` - All dashboards as code
+- `/observability/grafana/provisioning/datasources/*.yaml` - Datasource configs
+- `/observability/grafana/provisioning/alerting/*.yaml` - Alert rules
+- `/observability/prometheus/rules/slo-alerts.yaml` - SLO burn-rate alerts
+- `/observability/loki/rules/sampling.yaml` - Log sampling rules
+- `/observability/loki/rules/alerts.yaml` - Log-based alerts
+- `/scripts/infra/provision-observability.sh` - Provisioning automation
+- `/reports/worker1_phaseJ/OBSERVABILITY_DRIFT_AUDIT.md` - Drift detection report
+
+**Acceptance**:
+- ✅ Zero "manual dashboard" drift
+- ✅ Provisioning job succeeds cleanly on fresh cluster
+- ✅ Trace-to-logs links functional in all dashboards
+- ✅ Log sampling reduces volume by ≥40% without data loss
+
+---
+
+## Execution Plan (Sequential with Parallelization)
+
+### Week 1: Foundation & SLO Automation
+**Days 1-5**
+
+**Parallel Track A** (Team 1: SLO Automation):
+1. Day 1: Define SLO specs (all 5 services)
+2. Day 2: Implement burn-rate alert rules
+3. Day 3: Create Argo Rollouts AnalysisTemplates
+4. Day 4: Build Grafana SLO dashboards
+5. Day 5: Validate with simulated SLO breach
+
+**Parallel Track B** (Team 6: Observability Setup):
+1. Day 1-2: Codify existing Grafana dashboards
+2. Day 3: Codify Prometheus alert rules
+3. Day 4: Add trace-to-logs links
+4. Day 5: Implement log sampling rules
+
+**Deliverables**: SLO automation complete, observability as code
+
+---
+
+### Week 2: GreenOps & Cost Control
+**Days 6-10**
+
+**Parallel Track A** (Team 2: GreenOps):
+1. Day 6: Build CO₂e data ingestion pipeline
+2. Day 7: Create carbon-aware scheduling policies
+3. Day 8: Implement GDPR residency guardrails
+4. Day 9: Build FinOps carbon dashboard
+5. Day 10: Run policy simulation
+
+**Parallel Track B** (Team 3: Cost Guardrails):
+1. Day 6-7: Implement KEDA autoscaling
+2. Day 8: Build AI budget enforcement plugin
+3. Day 9: Create budget dashboard
+4. Day 10: Run load tests (100-user ramp)
+
+**Deliverables**: Carbon optimization policies, cost controls active
+
+---
+
+### Week 3: DR & Supply Chain Security
+**Days 11-15**
+
+**Parallel Track A** (Team 4: DR Verification):
+1. Day 11: Design DR strategy and evidence capture
+2. Day 12-13: Build automated failover script
+3. Day 14: Implement evidence signing
+4. Day 15: Write DR runbook, schedule GameDay
+
+**Parallel Track B** (Team 5: Secrets & SBOM):
+1. Day 11: Implement secrets rotation automation
+2. Day 12: Build SBOM generation pipeline
+3. Day 13: Add Cosign attestations
+4. Day 14: Create Kyverno policies
+5. Day 15: Run rotation audit
+
+**Deliverables**: DR automation ready, supply chain security enforced
+
+---
+
+### Week 4: Integration, Testing & Documentation
+**Days 16-20**
+
+**All Teams**:
+1. Day 16: Integration testing across all slices
+2. Day 17: Quality gate validation
+3. Day 18: Security review (policies, secrets, attestations)
+4. Day 19: Documentation finalization
+5. Day 20: Phase report + PR preparation
+
+**Deliverables**: All quality gates pass, comprehensive documentation
+
+---
+
+## Quality Gates (Block Merge on Fail)
+
+### Infrastructure Validation
+- [ ] `kustomize build k8s/overlays/us-east-1 | kubeconform -strict` - Clean YAML
+- [ ] `kustomize build k8s/overlays/eu-central-1 | kubeconform -strict` - Clean YAML
+- [ ] All images scanned: 0 HIGH/CRITICAL CVEs
+
+### Policy Enforcement
+- [ ] Kyverno policy tests pass: deny unsigned images
+- [ ] Kyverno policy tests pass: deny privileged pods
+- [ ] Kyverno policy tests pass: deny nodePorts
+
+### DR & Security
+- [ ] DR drill script dry-run passes
+- [ ] Evidence signing verified (GPG + SHA256)
+- [ ] Secrets rotation audit: 100% keys <90 days old
+- [ ] SBOM generation succeeds for all images
+
+### Observability
+- [ ] Grafana provisioning succeeds on fresh cluster
+- [ ] Zero dashboard drift detected
+- [ ] Trace-to-logs correlation functional
+- [ ] Log sampling reduces volume ≥40%
+
+### Documentation
+- [ ] `/reports/worker1_phaseJ/POST_GA_GREENOPS_CV_READOUT.md` complete
+- [ ] All runbooks tested and validated
+- [ ] Acceptance criteria checklist 100% complete
+
+---
+
+## Commands & Runbook
+
+### SLO Validation
+```bash
+# Test SLO breach detection
+kubectl apply -f ops/slo-definitions/api-gateway.yaml
+kubectl apply -f k8s/rollouts/api-gateway/analysis-template.yaml
+# Trigger canary, simulate latency spike, verify auto-rollback
+```
+
+### GreenOps Simulation
+```bash
+# Simulate carbon-aware scheduling
+./scripts/finops/co2e-ingest.sh
+./scripts/finops/co2e-calculator.ts --simulate --region eu-central-1
+# Verify ≥20% CO₂e reduction in reports/worker1_phaseJ/GREENOPS_SIMULATION.md
+```
+
+### DR Drill
+```bash
+# Automated failover drill
+./scripts/dr/failover.sh --from us-east-1 --to eu-central-1 --evidence ./reports/phaseJ/evidence
+# Verify RTO ≤15min, RPO ≤10s
+```
+
+### SLSA & SBOM
+```bash
+# Build with attestation
+./ops/slsa/attest-build.sh --image teei-api-gateway:v1.2.3
+./ops/sbom/generate.sh --image teei-api-gateway:v1.2.3
+./ops/sbom/publish.sh --sbom api-gateway-sbom.json
+# Verify Kyverno blocks unsigned images
+```
+
+### Observability Provisioning
+```bash
+# Test provisioning on fresh cluster
+./scripts/infra/provision-observability.sh --cluster staging
+# Verify zero drift
+```
+
+---
+
+## Acceptance Criteria
+
+### J1: Error-Budget SLO Automation
+- [ ] SLO definitions for 5 services (API-Gateway, Reporting, Q2Q-AI, Cockpit, Impact-In)
+- [ ] Burn-rate alerts: 14.4× critical, 6× warning
+- [ ] Argo Rollouts canary gates verify SLO health
+- [ ] Auto-rollback <2 min on SLO breach
+- [ ] Grafana dashboards with 7-day burn visualization
+
+### J2: GreenOps & Carbon-Aware Placement
+- [ ] CO₂e data pipeline operational
+- [ ] Carbon-aware scheduling policies for batch/embeddings/ETL
+- [ ] GDPR residency enforcement for EU tenants
+- [ ] FinOps carbon dashboard shows CO₂e per service/tenant/region
+- [ ] Policy simulation proves ≥20% CO₂e reduction potential
+
+### J3: Cost Guardrails & Autoscaling
+- [ ] KEDA triggers for NATS/HTTP/CPU on high-variance services
+- [ ] Per-tenant AI budget enforcement at API Gateway
+- [ ] Budget alerts at 50/75/90% thresholds
+- [ ] Throttling returns 429 with X-Budget-Reason header
+- [ ] Resource utilization ≤85% during 100-user ramp
+
+### J4: Continuous DR Verification
+- [ ] Automated US↔EU failover script
+- [ ] RTO ≤15 minutes, RPO ≤10 seconds
+- [ ] Evidence bundle signed (SHA256 + GPG)
+- [ ] Status page flip within 60 seconds
+- [ ] DR runbook tested and validated
+- [ ] Monthly automated GameDay scheduled
+
+### J5: Secrets Rotation, SBOM & SLSA-3
+- [ ] 90-day rotation enforcement (Vault/AWS SM)
+- [ ] Cosign attestations per image build
+- [ ] SBOM generation and S3 publishing
+- [ ] Kyverno policies: block unsigned/unstamped images
+- [ ] Rotation audit: 100% keys <90 days old
+
+### J6: Observability-as-Code Convergence
+- [ ] All dashboards codified (zero drift)
+- [ ] All alert rules as YAML
+- [ ] Trace-to-logs links functional
+- [ ] Log sampling rules reduce volume ≥40%
+- [ ] Provisioning succeeds on fresh cluster
+
+---
+
+## Progress Tracking
+
+**Overall**: 0 / 75 tasks complete (0%)
+
+| Team | Focus | Tasks | Complete | % | Status |
+|------|-------|-------|----------|---|--------|
+| Team 1: SLO Automation | Error-budget burn-rate | 15 | 0 | 0% | ⏳ Pending |
+| Team 2: GreenOps | Carbon-aware scheduling | 15 | 0 | 0% | ⏳ Pending |
+| Team 3: Cost Control | KEDA + AI budgets | 10 | 0 | 0% | ⏳ Pending |
+| Team 4: DR Verification | Automated failover | 15 | 0 | 0% | ⏳ Pending |
+| Team 5: Supply Chain | Secrets + SBOM + SLSA | 10 | 0 | 0% | ⏳ Pending |
+| Team 6: Observability | Dashboards/alerts as code | 10 | 0 | 0% | ⏳ Pending |
+
+**Last Updated**: 2025-11-16 by Tech Lead Orchestrator (Worker 1)
+
+---
+
+## Risk Register
+
+| Risk | Impact | Probability | Mitigation |
+|------|--------|-------------|------------|
+| SLO breach during canary rollout | High | Low | Automated rollback, comprehensive testing |
+| Carbon data API unavailable | Medium | Low | Cache last-known values, fallback to defaults |
+| DR failover exceeds RTO | High | Medium | Pre-warm standby, optimize health checks |
+| SBOM generation pipeline failure | Medium | Low | Retry logic, manual fallback procedure |
+| Kyverno policy blocks legitimate images | Medium | Low | Staging validation, policy audit trail |
+| Log sampling loses critical errors | High | Low | Whitelist critical log patterns |
+| Secrets rotation breaks services | High | Low | Gradual rollout, automated rollback |
+
+---
+
+## Integration Points
+
+### With Worker 2 (Backend Services)
+- KEDA autoscaling for Q2Q-AI, Reporting, Impact Calculator
+- AI budget enforcement at API Gateway
+- Trace correlation for backend services
+
+### With Worker 3 (Corporate Cockpit)
+- SLO monitoring for Cockpit LCP/INP metrics
+- Carbon dashboard embedded in FinOps view
+- Budget alerts in admin console
+
+---
+
+## Non-Negotiables
+
+1. **Least Privilege**: All service accounts follow principle of least privilege
+2. **Signed Commits**: All commits GPG-signed by agents
+3. **Required Reviews**: Minimum 1 review for infrastructure changes
+4. **Quality Gates**: All gates must pass before merge
+5. **Documentation**: Every script, policy, and dashboard must be documented
+6. **Testing**: DR drill must succeed before merge
+7. **Compliance**: GDPR residency enforced for EU tenants
+8. **Security**: No unsigned images in production
+
+---
+
+**Version**: 1.0
+**Orchestrator**: Tech Lead (Worker 1)
+**Next Review**: After Week 1 (SLO Automation + Observability)
+

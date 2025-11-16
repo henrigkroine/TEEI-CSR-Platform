@@ -1,0 +1,224 @@
+# Argo Rollouts AnalysisTemplate: API Gateway SLO Health Gate
+# Owner: Worker 1 - Team 1 (rollouts-integrator)
+# Created: 2025-11-16
+# Purpose: Gate canary promotion on SLO compliance
+
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: api-gateway-slo-health
+  namespace: teei-platform
+  labels:
+    app: api-gateway
+    component: canary-analysis
+spec:
+  # Metrics to evaluate during canary rollout
+  metrics:
+    # Metric 1: Error Rate SLO (must be < 0.1%)
+    - name: error-rate
+      initialDelay: 30s
+      interval: 30s
+      successCondition: result < 0.001  # 0.1% error rate threshold
+      failureLimit: 3
+      provider:
+        prometheus:
+          address: http://prometheus.monitoring.svc.cluster.local:9090
+          query: |
+            sum(rate(http_server_requests_total{
+              service="api-gateway",
+              status=~"5..",
+              version="{{ args.canary-version }}"
+            }[5m]))
+            /
+            sum(rate(http_server_requests_total{
+              service="api-gateway",
+              version="{{ args.canary-version }}"
+            }[5m]))
+
+    # Metric 2: P95 Latency SLO (must be < 500ms)
+    - name: p95-latency
+      initialDelay: 30s
+      interval: 30s
+      successCondition: result < 0.5  # 500ms in seconds
+      failureLimit: 3
+      provider:
+        prometheus:
+          address: http://prometheus.monitoring.svc.cluster.local:9090
+          query: |
+            histogram_quantile(0.95,
+              sum(rate(http_server_request_duration_seconds_bucket{
+                service="api-gateway",
+                version="{{ args.canary-version }}"
+              }[5m])) by (le)
+            )
+
+    # Metric 3: P99 Latency (nice-to-have, warn only)
+    - name: p99-latency
+      initialDelay: 30s
+      interval: 30s
+      successCondition: result < 1.0  # 1000ms
+      failureLimit: 5
+      provider:
+        prometheus:
+          address: http://prometheus.monitoring.svc.cluster.local:9090
+          query: |
+            histogram_quantile(0.99,
+              sum(rate(http_server_request_duration_seconds_bucket{
+                service="api-gateway",
+                version="{{ args.canary-version }}"
+              }[5m])) by (le)
+            )
+
+    # Metric 4: Request Volume (ensure canary is receiving traffic)
+    - name: request-volume
+      initialDelay: 10s
+      interval: 30s
+      successCondition: result > 10  # At least 10 req/s
+      failureLimit: 3
+      provider:
+        prometheus:
+          address: http://prometheus.monitoring.svc.cluster.local:9090
+          query: |
+            sum(rate(http_server_requests_total{
+              service="api-gateway",
+              version="{{ args.canary-version }}"
+            }[1m]))
+
+    # Metric 5: CPU Utilization (prevent resource exhaustion)
+    - name: cpu-utilization
+      initialDelay: 30s
+      interval: 30s
+      successCondition: result < 0.85  # < 85% CPU
+      failureLimit: 3
+      provider:
+        prometheus:
+          address: http://prometheus.monitoring.svc.cluster.local:9090
+          query: |
+            avg(rate(container_cpu_usage_seconds_total{
+              pod=~"api-gateway-.*",
+              container="api-gateway",
+              image=~".*{{ args.canary-version }}.*"
+            }[5m]))
+
+    # Metric 6: Memory Utilization
+    - name: memory-utilization
+      initialDelay: 30s
+      interval: 30s
+      successCondition: result < 0.90  # < 90% memory
+      failureLimit: 3
+      provider:
+        prometheus:
+          address: http://prometheus.monitoring.svc.cluster.local:9090
+          query: |
+            avg(container_memory_working_set_bytes{
+              pod=~"api-gateway-.*",
+              container="api-gateway",
+              image=~".*{{ args.canary-version }}.*"
+            })
+            /
+            avg(container_spec_memory_limit_bytes{
+              pod=~"api-gateway-.*",
+              container="api-gateway",
+              image=~".*{{ args.canary-version }}.*"
+            })
+
+  # Arguments passed from Rollout
+  args:
+    - name: canary-version
+      valueFrom:
+        podTemplateHashValue: Latest
+
+---
+# Rollout definition for API Gateway
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: api-gateway
+  namespace: teei-platform
+  labels:
+    app: api-gateway
+spec:
+  replicas: 6
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: api-gateway
+  template:
+    metadata:
+      labels:
+        app: api-gateway
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+        - name: api-gateway
+          image: teei-api-gateway:latest
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          resources:
+            requests:
+              cpu: 500m
+              memory: 512Mi
+            limits:
+              cpu: 2000m
+              memory: 2Gi
+  strategy:
+    canary:
+      # Canary deployment strategy with SLO gates
+      steps:
+        # Step 1: Deploy to 5% of traffic
+        - setWeight: 5
+        - pause: {duration: 2m}
+        - analysis:
+            templates:
+              - templateName: api-gateway-slo-health
+            args:
+              - name: canary-version
+                valueFrom:
+                  podTemplateHashValue: Latest
+
+        # Step 2: Increase to 25% if SLO healthy
+        - setWeight: 25
+        - pause: {duration: 5m}
+        - analysis:
+            templates:
+              - templateName: api-gateway-slo-health
+            args:
+              - name: canary-version
+                valueFrom:
+                  podTemplateHashValue: Latest
+
+        # Step 3: Increase to 50%
+        - setWeight: 50
+        - pause: {duration: 10m}
+        - analysis:
+            templates:
+              - templateName: api-gateway-slo-health
+            args:
+              - name: canary-version
+                valueFrom:
+                  podTemplateHashValue: Latest
+
+        # Step 4: Final promotion to 100%
+        - setWeight: 100
+
+      # Automatic rollback on SLO breach
+      analysis:
+        successfulRunHistoryLimit: 3
+        unsuccessfulRunHistoryLimit: 3
+
+      # Traffic routing
+      trafficRouting:
+        istio:
+          virtualService:
+            name: api-gateway-vsvc
+            routes:
+              - primary
+
+      # Auto-rollback settings
+      abortScaleDownDelaySeconds: 30
