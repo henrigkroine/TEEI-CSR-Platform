@@ -31,6 +31,20 @@ Contract testing ensures:
    - `POST /v1/screen/text` - Screen content for violations
    - `GET /v1/review-queue` - Get pending reviews
 
+4. **Gateway → Reporting Service (Trust API - Evidence)**
+   - `GET /trust/v1/evidence/:reportId` - Get evidence with citations
+   - `POST /trust/v1/evidence/verify` - Verify citation integrity
+
+5. **Gateway → Reporting Service (Trust API - Ledger)**
+   - `GET /trust/v1/ledger/:reportId` - Get ledger entries
+   - `POST /trust/v1/ledger/:reportId/append` - Append ledger entry
+   - `GET /trust/v1/ledger/:reportId/verify` - Verify ledger chain
+
+6. **Corp Cockpit → Reporting Service (Deck Export)**
+   - `POST /deck/export` - Create export job
+   - `GET /deck/export/jobs/:jobId` - Get job status
+   - `GET /deck/export/download/:filename` - Download deck file
+
 ### Planned Contracts
 
 - Gateway → Kintell Connector
@@ -67,6 +81,15 @@ pnpm vitest gateway-to-q2q.pact.test.ts
 
 # Test Gateway → Safety contract
 pnpm vitest gateway-to-safety.pact.test.ts
+
+# Test Trust API contracts (Evidence + Ledger)
+pnpm pact:trust
+
+# Test Deck Export API contract
+pnpm pact:deck
+
+# Run all contract tests
+pnpm pact:all
 ```
 
 ## Generated Artifacts
@@ -77,7 +100,10 @@ Contract tests generate Pact files in `./pacts/` directory:
 pacts/
 ├── api-gateway-unified-profile-service.json
 ├── api-gateway-q2q-ai-service.json
-└── api-gateway-safety-moderation-service.json
+├── api-gateway-safety-moderation-service.json
+├── api-gateway-reporting-service.json (Trust API - Evidence)
+├── api-gateway-reporting-service-ledger.json (Trust API - Ledger)
+└── corp-cockpit-reporting-service.json (Deck Export)
 ```
 
 These JSON files contain:
@@ -155,11 +181,40 @@ describe('Unified Profile Service - Provider Verification', () => {
 
 Each interaction can specify a "state" that the provider must be in:
 
+**Profile & User States:**
 - `user exists` - Test user is present in database
 - `user does not exist` - User ID is not in database
+
+**Service Health States:**
 - `service is available` - Service is running and healthy
 - `taxonomy is available` - Q2Q taxonomy is loaded
 - `reviews are pending` - Review queue has items
+
+**Reporting States:**
+- `company has outcome data for period` - Company has metrics data
+- `company has insufficient outcome data` - Limited data available
+- `reports have been generated` - Report generation history exists
+
+**Trust API States:**
+- `report exists with citations` - Report with valid citations
+- `report exists without citations` - Report with no evidence
+- `report does not exist` - Report ID not found
+- `citations exist and are valid` - Citations pass integrity check
+- `citation has been tampered with` - Citation failed integrity check
+- `report has ledger entries` - Report has audit trail
+- `report ledger has broken chain` - Ledger integrity violation detected
+- `report ledger is valid` - Ledger chain is valid
+- `report ledger does not exist` - No ledger found for report
+
+**Deck Export States:**
+- `company has metrics data` - Company has data for deck generation
+- `company has annual metrics data` - Company has full year data
+- `export job is pending` - Job created, not started
+- `export job is in progress` - Job currently processing
+- `export job is completed` - Job finished successfully
+- `export job has failed` - Job failed with error
+- `export job does not exist` - Job ID not found
+- `deck file is available for download` - File ready for download
 
 ### State Handlers
 

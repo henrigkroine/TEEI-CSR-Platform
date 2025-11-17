@@ -42,7 +42,11 @@ export type EventType =
   | 'nlq.query.completed'
   | 'nlq.query.failed'
   | 'nlq.query.rejected'
-  | 'nlq.cache.invalidated';
+  | 'nlq.cache.invalidated'
+  // Reporting events
+  | 'reporting.citation.edited'
+  | 'reporting.redaction.completed'
+  | 'reporting.evidence_gate.violation';
 
 /**
  * Envelope for all events published to event bus

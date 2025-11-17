@@ -24,6 +24,8 @@ on:
           - dashboard
           - reporting
           - ingestion
+          - evidence-gates
+          - trust-api
       duration:
         description: 'Test duration (e.g., 5m, 10m)'
         required: false
@@ -100,6 +102,52 @@ jobs:
           API_TOKEN: ${{ env.API_TOKEN }}
           TEST_DURATION: ${{ env.TEST_DURATION }}
           MAX_VUS: ${{ env.MAX_VUS }}
+
+      - name: Run evidence gates performance test
+        if: ${{ inputs.test_suite == 'all' }}
+        run: |
+          k6 run tests/load/k6-evidence-gates.js \
+            --out json=results/evidence-gates-load.json \
+            --summary-export=results/evidence-gates-summary.json
+        env:
+          BASE_URL: ${{ env.BASE_URL }}
+          TEST_TOKEN: ${{ env.API_TOKEN }}
+          TEST_COMPANY_ID: load-test-company
+
+      - name: Run trust API performance test
+        if: ${{ inputs.test_suite == 'all' }}
+        run: |
+          k6 run tests/load/k6-trust-api.js \
+            --out json=results/trust-api-load.json \
+            --summary-export=results/trust-api-summary.json
+        env:
+          BASE_URL: ${{ env.BASE_URL }}
+          TEST_TOKEN: ${{ env.API_TOKEN }}
+          TEST_REPORT_ID: report-trust-test-001
+          TEST_COMPANY_ID: company-trust-test-001
+
+      - name: Run evidence gates test only
+        if: ${{ inputs.test_suite == 'evidence-gates' }}
+        run: |
+          k6 run tests/load/k6-evidence-gates.js \
+            --out json=results/evidence-gates-load.json \
+            --summary-export=results/evidence-gates-summary.json
+        env:
+          BASE_URL: ${{ env.BASE_URL }}
+          TEST_TOKEN: ${{ env.API_TOKEN }}
+          TEST_COMPANY_ID: load-test-company
+
+      - name: Run trust API test only
+        if: ${{ inputs.test_suite == 'trust-api' }}
+        run: |
+          k6 run tests/load/k6-trust-api.js \
+            --out json=results/trust-api-load.json \
+            --summary-export=results/trust-api-summary.json
+        env:
+          BASE_URL: ${{ env.BASE_URL }}
+          TEST_TOKEN: ${{ env.API_TOKEN }}
+          TEST_REPORT_ID: report-trust-test-001
+          TEST_COMPANY_ID: company-trust-test-001
 
       - name: Upload test results
         if: always()

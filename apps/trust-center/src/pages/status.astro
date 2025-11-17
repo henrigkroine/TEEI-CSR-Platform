@@ -1,0 +1,21 @@
+---
+import TrustLayout from '@layouts/TrustLayout.astro';
+import { StatusDashboard } from '@components/trust/StatusDashboard';
+---
+
+<TrustLayout
+  title="System Status - TEEI Trust Center"
+  description="Real-time uptime and performance monitoring for TEEI Platform services."
+>
+  <div class="max-w-6xl mx-auto">
+    <h1 class="text-4xl font-bold text-gray-900 dark:text-white mb-4">
+      System Status
+    </h1>
+
+    <p class="text-lg text-gray-600 dark:text-gray-300 mb-8">
+      Real-time uptime and performance metrics for all TEEI services.
+    </p>
+
+    <StatusDashboard client:load />
+  </div>
+</TrustLayout>

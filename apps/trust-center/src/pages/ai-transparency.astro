@@ -1,0 +1,217 @@
+---
+import TrustLayout from '@layouts/TrustLayout.astro';
+---
+
+<TrustLayout
+  title="AI Transparency - TEEI Trust Center"
+  description="Learn about TEEI's AI models, data usage, and ethical AI practices."
+>
+  <div class="max-w-4xl mx-auto">
+    <h1 class="text-4xl font-bold text-gray-900 dark:text-white mb-4">
+      AI Transparency
+    </h1>
+
+    <p class="text-lg text-gray-600 dark:text-gray-300 mb-8">
+      Our commitment to responsible AI development and transparent model usage.
+    </p>
+
+    <section aria-labelledby="overview-heading" class="mb-12">
+      <h2 id="overview-heading" class="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
+        AI in the TEEI Platform
+      </h2>
+
+      <div class="card bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+        <p class="text-gray-700 dark:text-gray-300 mb-4">
+          The TEEI Platform uses AI to enhance impact measurement and reporting. We believe in
+          transparent, ethical AI that augments human decision-making rather than replacing it.
+        </p>
+        <p class="text-gray-700 dark:text-gray-300">
+          All AI-generated content is clearly labeled and requires human review before publication.
+        </p>
+      </div>
+    </section>
+
+    <section aria-labelledby="use-cases-heading" class="mb-12">
+      <h2 id="use-cases-heading" class="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
+        AI Use Cases
+      </h2>
+
+      <div class="space-y-6">
+        <div class="card">
+          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-3">
+            Q2Q Pipeline (Qualitative to Quantitative)
+          </h3>
+          <p class="text-gray-600 dark:text-gray-300 mb-3">
+            Converts qualitative feedback (stories, testimonials) into quantitative insights
+            to support impact measurement.
+          </p>
+          <ul class="list-disc list-inside space-y-1 text-sm text-gray-600 dark:text-gray-300">
+            <li>Model: Claude 3.5 Sonnet (Anthropic)</li>
+            <li>Purpose: Evidence extraction and sentiment analysis</li>
+            <li>Human oversight: All extractions reviewed by impact analysts</li>
+            <li>Data usage: Feedback text only, no PII sent to model</li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-3">
+            Gen-AI Reporting
+          </h3>
+          <p class="text-gray-600 dark:text-gray-300 mb-3">
+            Generates narrative reports from structured impact data with strict citation requirements.
+          </p>
+          <ul class="list-disc list-inside space-y-1 text-sm text-gray-600 dark:text-gray-300">
+            <li>Model: GPT-4 Turbo (OpenAI)</li>
+            <li>Purpose: Narrative generation for quarterly and annual reports</li>
+            <li>Citation requirement: Minimum 1 citation per paragraph</li>
+            <li>PII handling: Pre-LLM redaction, post-LLM leak detection</li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-3">
+            Insight Scoring
+          </h3>
+          <p class="text-gray-600 dark:text-gray-300 mb-3">
+            Assigns confidence ratings to AI-extracted insights for quality assurance.
+          </p>
+          <ul class="list-disc list-inside space-y-1 text-sm text-gray-600 dark:text-gray-300">
+            <li>Model: Custom ensemble (Random Forest + BERT)</li>
+            <li>Purpose: Quality scoring of evidence snippets</li>
+            <li>Training data: Manually labeled dataset of 10,000+ snippets</li>
+            <li>Accuracy: 94.2% on validation set</li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-3">
+            Safety Moderation
+          </h3>
+          <p class="text-gray-600 dark:text-gray-300 mb-3">
+            Filters inappropriate content from user-generated feedback and comments.
+          </p>
+          <ul class="list-disc list-inside space-y-1 text-sm text-gray-600 dark:text-gray-300">
+            <li>Model: OpenAI Moderation API + custom rules</li>
+            <li>Purpose: Content safety and policy enforcement</li>
+            <li>Categories: Hate speech, violence, self-harm, sexual content</li>
+            <li>Human review: All flagged content reviewed within 24 hours</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section aria-labelledby="principles-heading" class="mb-12">
+      <h2 id="principles-heading" class="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
+        Ethical AI Principles
+      </h2>
+
+      <div class="space-y-6">
+        <div class="card">
+          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
+            Human Oversight
+          </h3>
+          <p class="text-gray-600 dark:text-gray-300">
+            All AI-generated outputs require human review before being used in reports or
+            decision-making. AI is a tool to augment, not replace, human judgment.
+          </p>
+        </div>
+
+        <div class="card">
+          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
+            Transparency & Disclosure
+          </h3>
+          <p class="text-gray-600 dark:text-gray-300">
+            AI-generated content is clearly labeled. Users can see which parts of a report
+            were AI-assisted and which were human-authored.
+          </p>
+        </div>
+
+        <div class="card">
+          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
+            Bias Mitigation
+          </h3>
+          <p class="text-gray-600 dark:text-gray-300">
+            We regularly audit AI models for bias and fairness. Training data is diverse and
+            representative, with ongoing monitoring for demographic parity.
+          </p>
+        </div>
+
+        <div class="card">
+          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
+            Privacy-First Design
+          </h3>
+          <p class="text-gray-600 dark:text-gray-300">
+            PII is redacted before any data is sent to AI models. We do not use customer data
+            to train third-party models without explicit consent.
+          </p>
+        </div>
+
+        <div class="card">
+          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
+            Explainability
+          </h3>
+          <p class="text-gray-600 dark:text-gray-300">
+            AI decisions include confidence scores and explanations. Users can trace how insights
+            were derived from source data through our lineage tracking system.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section aria-labelledby="data-usage-heading" class="mb-12">
+      <h2 id="data-usage-heading" class="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
+        Data Usage & Training
+      </h2>
+
+      <div class="card">
+        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-3">
+          Model Training Policy
+        </h3>
+        <ul class="list-disc list-inside space-y-2 text-gray-600 dark:text-gray-300">
+          <li>
+            <strong>Third-party models:</strong> We use enterprise APIs with zero data retention
+            (OpenAI Zero Retention, Anthropic Enterprise Tier)
+          </li>
+          <li>
+            <strong>Custom models:</strong> Trained only on anonymized, aggregated data with
+            explicit customer consent
+          </li>
+          <li>
+            <strong>No cross-tenant learning:</strong> Customer data is never used to improve
+            services for other customers
+          </li>
+          <li>
+            <strong>Opt-out available:</strong> Customers can opt out of contributing to model
+            improvement at any time
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <section aria-labelledby="audit-heading">
+      <h2 id="audit-heading" class="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
+        AI Audits & Governance
+      </h2>
+
+      <div class="card">
+        <p class="text-gray-600 dark:text-gray-300 mb-4">
+          We conduct quarterly audits of all AI systems for:
+        </p>
+        <ul class="list-disc list-inside space-y-2 text-gray-600 dark:text-gray-300">
+          <li>Accuracy and performance metrics</li>
+          <li>Bias detection across demographic groups</li>
+          <li>Data handling and privacy compliance</li>
+          <li>Adherence to ethical AI principles</li>
+        </ul>
+
+        <div class="mt-6 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+          <p class="text-sm text-gray-700 dark:text-gray-300">
+            <strong>Last AI Audit:</strong> 2025-Q1<br />
+            <strong>Next Scheduled Audit:</strong> 2025-Q2<br />
+            <strong>Audit Reports:</strong> Available to enterprise customers upon request
+          </p>
+        </div>
+      </div>
+    </section>
+  </div>
+</TrustLayout>

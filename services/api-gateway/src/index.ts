@@ -5,6 +5,8 @@ import { config } from 'dotenv';
 import { registerProxyRoutes } from './routes/proxy.js';
 import { registerHealthRoutes } from './routes/health.js';
 import { registerPrivacyRoutes } from './routes/privacy.js';
+import { registerTrustRoutes } from './routes/trust.js';
+import { registerStatusRoutes } from './routes/status.js';
 import { createHealthManager, setupHealthRoutes } from './health/index.js';
 
 // Load environment variables
@@ -168,7 +170,8 @@ async function initializeGateway() {
           upskilling: '/v1/upskilling/*',
           q2q: '/v1/q2q/*',
           safety: '/v1/safety/*',
-          privacy: '/v1/privacy/*'
+          privacy: '/v1/privacy/*',
+          trust: '/v1/trust/*'
         },
         apiVersion: 'v1',
         deprecation: {
@@ -182,6 +185,12 @@ async function initializeGateway() {
 
     // Register GDPR privacy routes
     await registerPrivacyRoutes(fastify);
+
+    // Register Trust API routes
+    await registerTrustRoutes(fastify);
+
+    // Register Status API routes (public, no auth)
+    await registerStatusRoutes(fastify);
 
     // Register proxy routes (must be last to avoid conflicts)
     await registerProxyRoutes(fastify);

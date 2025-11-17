@@ -8,6 +8,7 @@ export * from './upskilling/index.js';
 export * from './orchestration/index.js';
 export * from './safety/index.js';
 export * from './nlq/index.js';
+export * from './reporting/index.js';
 
 // Convenience type for all events
 import type {
@@ -38,6 +39,11 @@ import type {
   NLQQueryRejected,
   NLQCacheInvalidated,
 } from './nlq/index.js';
+import type {
+  CitationEditedEvent,
+  RedactionCompletedEvent,
+  EvidenceGateViolationEvent,
+} from './reporting/index.js';
 
 export type DomainEvent =
   | BuddyMatchCreated
@@ -58,4 +64,7 @@ export type DomainEvent =
   | NLQQueryCompleted
   | NLQQueryFailed
   | NLQQueryRejected
-  | NLQCacheInvalidated;
+  | NLQCacheInvalidated
+  | CitationEditedEvent
+  | RedactionCompletedEvent
+  | EvidenceGateViolationEvent;

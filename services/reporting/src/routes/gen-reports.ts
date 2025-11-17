@@ -2,7 +2,7 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { createServiceLogger } from '@teei/shared-utils';
 import { createLLMClient, LLMClient } from '../lib/llm-client.js';
-import { createCitationExtractor, CitationExtractor } from '../lib/citations.js';
+import { createCitationExtractor, CitationExtractor, EvidenceGateViolation } from '../lib/citations.js';
 import { createRedactionEnforcer, RedactionEnforcer } from '../lib/redaction.js';
 import {
   createLineageTracker,
@@ -13,6 +13,7 @@ import {
 } from '../lib/lineage.js';
 import { getTemplateManager, SectionType, Locale } from '../lib/prompts/index.js';
 import { getCostAggregator } from '../middleware/cost-tracking.js';
+import { getAuditIntegration } from '../lib/audit-integration.js';
 
 const logger = createServiceLogger('reporting:gen-reports');
 
@@ -157,12 +158,31 @@ class ReportGenerator {
       }
     }
 
+    const redactionDurationMs = Date.now() - redactionStartTime;
+
     logger.info(`PII redaction complete`, {
       totalSnippets: evidenceSnippets.length,
       totalRedactions,
-      redactionTimeMs: Date.now() - redactionStartTime,
+      redactionTimeMs: redactionDurationMs,
       companyId: request.companyId,
     });
+
+    // Emit redaction completed audit event
+    try {
+      const auditIntegration = getAuditIntegration();
+      await auditIntegration.emitRedactionCompleted({
+        reportId: `report-${Date.now()}-${request.companyId}`, // Temporary ID, will be replaced by actual reportId later
+        companyId: request.companyId,
+        snippetsProcessed: evidenceSnippets.length,
+        piiDetectedCount: totalRedactions,
+        piiRemovedCount: totalRedactions,
+        leaksDetected: 0, // If we got here, no leaks were detected
+        success: true,
+        durationMs: redactionDurationMs,
+      });
+    } catch (error: any) {
+      logger.warn(`Failed to emit redaction completed event: ${error.message}`);
+    }
 
     // Step 3: Fetch metrics for the company/period
     // TODO: Query metrics_company_period table
@@ -233,6 +253,22 @@ class ReportGenerator {
           paragraphCount: validation.paragraphCount,
           citationDensity: validation.citationDensity,
         });
+
+        // Emit evidence gate violation event
+        try {
+          const auditIntegration = getAuditIntegration();
+          await auditIntegration.emitEvidenceGateViolation({
+            reportId: `report-${Date.now()}-${request.companyId}`,
+            companyId: request.companyId,
+            violations: validation.violations || [],
+            totalCitationCount: validation.citationCount,
+            totalParagraphCount: validation.paragraphCount,
+            citationDensity: validation.citationDensity,
+            rejected: true,
+          });
+        } catch (error: any) {
+          logger.warn(`Failed to emit evidence gate violation event: ${error.message}`);
+        }
 
         // In strict mode, fail the entire generation if citations are invalid
         throw new Error(
@@ -385,6 +421,15 @@ export async function genReportsRoutes(
   const redactionEnforcer = createRedactionEnforcer();
   const lineageTracker = createLineageTracker();
 
+  // Initialize audit integration
+  const auditIntegration = getAuditIntegration();
+  try {
+    await auditIntegration.connect();
+    logger.info('Audit integration connected');
+  } catch (error: any) {
+    logger.warn(`Failed to connect audit integration: ${error.message}. Audit events will be skipped.`);
+  }
+
   const reportGenerator = new ReportGenerator(
     llmClient,
     citationExtractor,
@@ -414,6 +459,25 @@ export async function genReportsRoutes(
           reply.code(400).send({
             error: 'Validation error',
             details: error.errors,
+          });
+        } else if (error instanceof EvidenceGateViolation) {
+          // NEW: Handle evidence gate violations with 422 Unprocessable Entity
+          logger.warn('Evidence gate violation detected', {
+            violationCount: error.violations.length,
+            totalCitationCount: error.totalCitationCount,
+            totalParagraphCount: error.totalParagraphCount,
+            citationDensity: error.citationDensity,
+          });
+
+          reply.code(422).send({
+            error: 'EVIDENCE_REQUIRED',
+            message: error.message,
+            violations: error.violations,
+            metadata: {
+              totalCitationCount: error.totalCitationCount,
+              totalParagraphCount: error.totalParagraphCount,
+              citationDensity: error.citationDensity.toFixed(2),
+            },
           });
         } else {
           reply.code(500).send({

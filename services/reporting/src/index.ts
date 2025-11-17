@@ -2,6 +2,7 @@ import Fastify from 'fastify';
 import { createServiceLogger } from '@teei/shared-utils';
 import { genReportsRoutes } from './routes/gen-reports.js';
 import { exportRoutes } from './routes/export.js';
+import { trustRoutes } from './routes/trust.js';
 import { createHealthManager, setupHealthRoutes } from './health/index.js';
 import { costTrackingMiddleware } from './middleware/cost-tracking.js';
 
@@ -26,6 +27,7 @@ async function start() {
   // Register routes with API versioning
   app.register(genReportsRoutes, { prefix: '/v1' });
   app.register(exportRoutes, { prefix: '/v1' });
+  app.register(trustRoutes);
 
   // Start server
   try {
@@ -42,6 +44,9 @@ async function start() {
     logger.info(`  GET  /v1/export/csrd - Export CSRD data (CSV/JSON)`);
     logger.info(`  POST /v1/export/pdf - Export report to PDF`);
     logger.info(`  GET  /v1/export/pdf/:reportId/preview - Preview PDF metadata`);
+    logger.info(`  GET  /trust/v1/evidence/:reportId - Get evidence lineage`);
+    logger.info(`  GET  /trust/v1/ledger/:reportId - Get integrity ledger`);
+    logger.info(`  GET  /trust/v1/policies - Get retention/residency policies`);
     logger.info('');
     logger.info('Environment:');
     logger.info(`  LLM Provider: ${process.env.LLM_PROVIDER || 'openai'}`);

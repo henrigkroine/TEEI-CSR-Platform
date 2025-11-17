@@ -79,6 +79,94 @@ k6 run tests/load/reporting-load.js
 k6 run tests/load/ingestion-load.js
 ```
 
+### 4. Evidence Gates Load Test
+
+**File**: `k6-evidence-gates.js`
+
+**Simulates**: Evidence-based report generation with citation validation
+
+**Test scenarios**:
+- Valid reports with proper citations (40%)
+- Invalid reports with missing citations (30%)
+- PII redaction enforcement (15%)
+- Citation density validation (15%)
+
+**Load profile**:
+- Ramp to 50 concurrent users over 1.5 minutes
+- Sustain 50 users for 2 minutes
+- Spike to 100 users for 1 minute
+- Total duration: ~6 minutes
+
+**Thresholds**:
+- P95 response time < 500ms
+- P99 response time < 1000ms
+- Evidence gate error rate < 1%
+- Citation validation P95 < 100ms
+- PII redaction P95 < 50ms
+
+**Run**:
+```bash
+pnpm k6:evidence
+# Or directly:
+k6 run tests/load/k6-evidence-gates.js
+```
+
+**Environment variables**:
+```bash
+export BASE_URL=http://localhost:3000
+export TEST_TOKEN=your-bearer-token
+export TEST_COMPANY_ID=company-load-test-001
+```
+
+### 5. Trust API Load Test
+
+**File**: `k6-trust-api.js`
+
+**Simulates**: Trust API endpoint usage (evidence, ledger, policies, boardroom)
+
+**Endpoints tested**:
+- GET `/trust/v1/evidence/:reportId` (30%)
+- GET `/trust/v1/ledger/:reportId` (20%)
+- GET `/trust/v1/policies` (20%)
+- GET `/trust/v1/boardroom/:reportId/status` (15%)
+- Full trust flow (all endpoints) (15%)
+
+**Load profile**:
+- Constant 20 users for 2 minutes
+- Spike to 100 users over 30 seconds
+- Sustain 100 users for 1 minute
+- Total duration: ~4 minutes
+
+**Thresholds**:
+- P95 response time < 300ms
+- P99 response time < 800ms
+- Trust API latency P95 < 200ms
+- Ledger verification P95 < 150ms
+- Evidence retrieval P95 < 200ms
+- Policy lookup P95 < 100ms
+
+**Run**:
+```bash
+pnpm k6:trust
+# Or directly:
+k6 run tests/load/k6-trust-api.js
+```
+
+**Environment variables**:
+```bash
+export BASE_URL=http://localhost:3000
+export TEST_TOKEN=your-bearer-token
+export TEST_REPORT_ID=report-trust-test-001
+export TEST_COMPANY_ID=company-trust-test-001
+```
+
+### Run All Trust Tests
+
+```bash
+# Run both evidence gates and trust API tests
+pnpm k6:all
+```
+
 ## Installation
 
 ### Install k6
@@ -199,6 +287,27 @@ Each test defines performance thresholds:
 - ✅ Single event ingestion P95 < 500ms
 - ✅ Batch ingestion P95 < 2000ms
 - ✅ Error rate < 1% (ingestion must be reliable)
+
+### Evidence Gates Test
+
+- ✅ P95 response time < 500ms
+- ✅ P99 response time < 1000ms
+- ✅ Evidence gate error rate < 1%
+- ✅ Citation validation P95 < 100ms
+- ✅ PII redaction P95 < 50ms
+- ✅ Valid report generation P95 < 800ms
+- ✅ Invalid report rejection P95 < 200ms
+
+### Trust API Test
+
+- ✅ P95 response time < 300ms
+- ✅ P99 response time < 800ms
+- ✅ Trust API latency P95 < 200ms
+- ✅ Ledger verification P95 < 150ms
+- ✅ Evidence retrieval P95 < 200ms
+- ✅ Policy lookup P95 < 100ms
+- ✅ Boardroom status P95 < 150ms
+- ✅ Error rate < 1%
 
 ## Interpreting Results
 

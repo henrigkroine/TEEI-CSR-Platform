@@ -1,0 +1,177 @@
+---
+import TrustLayout from '@layouts/TrustLayout.astro';
+---
+
+<TrustLayout
+  title="Privacy - TEEI Trust Center"
+  description="How TEEI protects and handles your data in compliance with GDPR and other privacy regulations."
+>
+  <div class="max-w-4xl mx-auto">
+    <h1 class="text-4xl font-bold text-gray-900 dark:text-white mb-4">
+      Privacy
+    </h1>
+
+    <p class="text-lg text-gray-600 dark:text-gray-300 mb-8">
+      How we protect and handle your data in compliance with GDPR and other regulations.
+    </p>
+
+    <section aria-labelledby="principles-heading" class="mb-12">
+      <h2 id="principles-heading" class="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
+        Privacy Principles
+      </h2>
+
+      <div class="space-y-6">
+        <div class="card">
+          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
+            Data Minimization
+          </h3>
+          <p class="text-gray-600 dark:text-gray-300">
+            We collect only the data necessary to provide our services and deliver value to our users.
+            Personal information is limited to what's essential for impact measurement and reporting.
+          </p>
+        </div>
+
+        <div class="card">
+          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
+            Purpose Limitation
+          </h3>
+          <p class="text-gray-600 dark:text-gray-300">
+            Data is used solely for the purposes disclosed at collection. We do not sell or share
+            personal data with third parties for marketing purposes.
+          </p>
+        </div>
+
+        <div class="card">
+          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
+            Transparency
+          </h3>
+          <p class="text-gray-600 dark:text-gray-300">
+            Clear communication about what data we collect, why we collect it, and how it's used.
+            Users have full visibility into their data processing activities.
+          </p>
+        </div>
+
+        <div class="card">
+          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
+            User Control
+          </h3>
+          <p class="text-gray-600 dark:text-gray-300">
+            Users maintain control over their data with rights to access, correct, delete, and export
+            their information at any time.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section aria-labelledby="gdpr-heading" class="mb-12">
+      <h2 id="gdpr-heading" class="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
+        GDPR Compliance
+      </h2>
+
+      <div class="card">
+        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-3">
+          Your Data Rights
+        </h3>
+        <ul class="list-disc list-inside space-y-2 text-gray-600 dark:text-gray-300">
+          <li><strong>Right to Access:</strong> Request a copy of your personal data</li>
+          <li><strong>Right to Rectification:</strong> Correct inaccurate or incomplete data</li>
+          <li><strong>Right to Erasure:</strong> Request deletion of your personal data</li>
+          <li><strong>Right to Portability:</strong> Export your data in a machine-readable format</li>
+          <li><strong>Right to Restrict Processing:</strong> Limit how we use your data</li>
+          <li><strong>Right to Object:</strong> Object to certain types of data processing</li>
+        </ul>
+
+        <div class="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+          <p class="text-sm text-gray-700 dark:text-gray-300 mb-2">
+            To exercise any of these rights, contact our Data Protection Officer:
+          </p>
+          <a
+            href="mailto:privacy@teei-platform.com"
+            class="inline-flex items-center text-primary hover:underline font-medium"
+          >
+            privacy@teei-platform.com
+          </a>
+          <p class="text-sm text-gray-600 dark:text-gray-400 mt-3">
+            We will respond to all requests within 30 days as required by GDPR.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section aria-labelledby="data-processing-heading" class="mb-12">
+      <h2 id="data-processing-heading" class="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
+        Data Processing & Storage
+      </h2>
+
+      <div class="space-y-6">
+        <div class="card">
+          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-3">Data Residency</h3>
+          <p class="text-gray-600 dark:text-gray-300 mb-3">
+            Customer data is stored in the region specified in your contract:
+          </p>
+          <ul class="list-disc list-inside space-y-1 text-gray-600 dark:text-gray-300">
+            <li>EU customers: Frankfurt, Germany (AWS eu-central-1)</li>
+            <li>UK customers: London, UK (AWS eu-west-2)</li>
+            <li>US customers: Virginia, USA (AWS us-east-1)</li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-3">Retention Policies</h3>
+          <p class="text-gray-600 dark:text-gray-300 mb-3">
+            Data retention periods by category:
+          </p>
+          <ul class="list-disc list-inside space-y-1 text-gray-600 dark:text-gray-300">
+            <li>User profiles: Duration of account + 30 days</li>
+            <li>Impact metrics: 7 years (for audit and compliance)</li>
+            <li>Logs and analytics: 90 days</li>
+            <li>Backup data: 30 days</li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-3">Data Categories</h3>
+          <p class="text-gray-600 dark:text-gray-300 mb-3">
+            We process the following categories of data:
+          </p>
+          <ul class="list-disc list-inside space-y-1 text-gray-600 dark:text-gray-300">
+            <li>Identity data (name, email, user ID)</li>
+            <li>Company and organization data</li>
+            <li>Impact measurement data (SROI, VIS scores)</li>
+            <li>Volunteer activity data (anonymized)</li>
+            <li>Usage and analytics data</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section aria-labelledby="cookies-heading">
+      <h2 id="cookies-heading" class="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
+        Cookies & Tracking
+      </h2>
+
+      <div class="card">
+        <p class="text-gray-600 dark:text-gray-300 mb-4">
+          We use essential cookies to maintain your session and provide core functionality.
+          All analytics cookies require explicit consent.
+        </p>
+
+        <div class="space-y-3">
+          <div>
+            <h4 class="font-medium text-gray-900 dark:text-white">Essential Cookies</h4>
+            <p class="text-sm text-gray-600 dark:text-gray-400">
+              Required for authentication and session management. Cannot be disabled.
+            </p>
+          </div>
+
+          <div>
+            <h4 class="font-medium text-gray-900 dark:text-white">Analytics Cookies</h4>
+            <p class="text-sm text-gray-600 dark:text-gray-400">
+              Help us understand usage patterns and improve the platform. Opt-in only.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</TrustLayout>

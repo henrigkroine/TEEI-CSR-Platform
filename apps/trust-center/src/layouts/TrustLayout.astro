@@ -1,0 +1,152 @@
+---
+import '../styles/global.css';
+
+interface Props {
+  title: string;
+  description?: string;
+  lang?: string;
+}
+
+const {
+  title,
+  description = 'TEEI Trust Center - Security, Privacy, and Transparency',
+  lang = 'en'
+} = Astro.props;
+
+const currentPath = Astro.url.pathname;
+---
+
+<!doctype html>
+<html lang={lang}>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="description" content={description} />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+    <!-- Trust Center Meta Tags -->
+    <meta name="application-name" content="TEEI Trust Center" />
+    <meta name="theme-color" content="#2563eb" />
+
+    <!-- Favicon and Icons -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+    <!-- SEO -->
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+
+    <title>{title}</title>
+  </head>
+  <body>
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+
+    <div id="app" class="min-h-screen flex flex-col">
+      <header role="banner" class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50 shadow-sm">
+        <nav role="navigation" aria-label="Main navigation" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div class="flex justify-between items-center">
+            <a href="/" class="text-xl font-semibold text-primary hover:opacity-80 transition-opacity" aria-label="TEEI Trust Center - Home">
+              <span aria-hidden="true">TEEI Trust Center</span>
+            </a>
+
+            <div class="flex gap-6 items-center">
+              <a
+                href="/"
+                class="text-sm font-medium transition-colors hover:text-primary"
+                class:list={[currentPath === '/' ? 'text-primary' : 'text-gray-600 dark:text-gray-300']}
+                aria-current={currentPath === '/' ? 'page' : undefined}
+              >
+                Home
+              </a>
+              <a
+                href="/status"
+                class="text-sm font-medium transition-colors hover:text-primary"
+                class:list={[currentPath === '/status' ? 'text-primary' : 'text-gray-600 dark:text-gray-300']}
+                aria-current={currentPath === '/status' ? 'page' : undefined}
+              >
+                Status
+              </a>
+              <a
+                href="/security"
+                class="text-sm font-medium transition-colors hover:text-primary"
+                class:list={[currentPath === '/security' ? 'text-primary' : 'text-gray-600 dark:text-gray-300']}
+                aria-current={currentPath === '/security' ? 'page' : undefined}
+              >
+                Security
+              </a>
+              <a
+                href="/privacy"
+                class="text-sm font-medium transition-colors hover:text-primary"
+                class:list={[currentPath === '/privacy' ? 'text-primary' : 'text-gray-600 dark:text-gray-300']}
+                aria-current={currentPath === '/privacy' ? 'page' : undefined}
+              >
+                Privacy
+              </a>
+              <a
+                href="/ai-transparency"
+                class="text-sm font-medium transition-colors hover:text-primary"
+                class:list={[currentPath === '/ai-transparency' ? 'text-primary' : 'text-gray-600 dark:text-gray-300']}
+                aria-current={currentPath === '/ai-transparency' ? 'page' : undefined}
+              >
+                AI Transparency
+              </a>
+              <a
+                href="/sub-processors"
+                class="text-sm font-medium transition-colors hover:text-primary"
+                class:list={[currentPath === '/sub-processors' ? 'text-primary' : 'text-gray-600 dark:text-gray-300']}
+                aria-current={currentPath === '/sub-processors' ? 'page' : undefined}
+              >
+                Sub-processors
+              </a>
+              <a
+                href="/incidents"
+                class="text-sm font-medium transition-colors hover:text-primary"
+                class:list={[currentPath === '/incidents' ? 'text-primary' : 'text-gray-600 dark:text-gray-300']}
+                aria-current={currentPath === '/incidents' ? 'page' : undefined}
+              >
+                Incidents
+              </a>
+            </div>
+          </div>
+        </nav>
+      </header>
+
+      <main id="main-content" tabindex="-1" class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <slot />
+      </main>
+
+      <footer role="contentinfo" class="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <p class="text-center text-sm text-gray-600 dark:text-gray-400">
+            &copy; {new Date().getFullYear()} TEEI Platform. All rights reserved.
+          </p>
+          <nav aria-label="Footer navigation" class="flex gap-6 justify-center mt-4">
+            <a href="/privacy" class="text-sm text-gray-600 dark:text-gray-400 hover:text-primary transition-colors underline">
+              Privacy Policy
+            </a>
+            <a href="/security" class="text-sm text-gray-600 dark:text-gray-400 hover:text-primary transition-colors underline">
+              Security
+            </a>
+            <a href="https://teei-platform.com/contact" class="text-sm text-gray-600 dark:text-gray-400 hover:text-primary transition-colors underline">
+              Contact Us
+            </a>
+          </nav>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>
+
+<style>
+  /* Additional custom styles if needed */
+  @media (max-width: 768px) {
+    nav div:last-child {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      justify-content: center;
+    }
+  }
+</style>

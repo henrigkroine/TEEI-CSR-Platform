@@ -1,0 +1,16 @@
+# Pact artifacts
+pacts/*.json
+
+# Logs
+logs/
+*.log
+
+# Coverage
+coverage/
+
+# Node modules (handled by root .gitignore but explicit here)
+node_modules/
+
+# Build artifacts
+dist/
+.turbo/

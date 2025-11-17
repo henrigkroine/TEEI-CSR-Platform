@@ -22,8 +22,16 @@ import {
 import {
   generatePPTX,
   createExecutiveSummaryTemplate,
+  createQuarterlyTemplate,
+  createAnnualTemplate,
+  createInvestorTemplate,
+  createImpactTemplate,
   type PPTXOptions,
   type PPTXSlide,
+  type QuarterlyData,
+  type AnnualData,
+  type InvestorData,
+  type ImpactData,
 } from '../utils/pptxGenerator.js';
 
 /**
@@ -34,6 +42,7 @@ interface ExportRequest {
   companyId: string;
   reportId?: string;
   period: string;
+  template: 'quarterly' | 'annual' | 'investor' | 'impact' | 'executive'; // Template selection
   narrative: {
     tone: 'formal' | 'conversational' | 'technical';
     length: 'brief' | 'standard' | 'detailed';
@@ -380,33 +389,65 @@ async function generatePPTXDeck(
   data: any,
   narrative: string
 ): Promise<string> {
-  // Create slides using template
-  const slides = createExecutiveSummaryTemplate({
-    title: `${data.companyName} - Impact Report`,
-    period: data.period,
-    company: data.companyName,
-    metrics: data.metrics,
-    key_achievements: data.key_achievements,
-    charts: [
-      {
-        type: 'bar',
-        title: 'Impact Metrics Overview',
-        labels: ['SROI', 'Beneficiaries', 'Hours', 'Value ($k)'],
-        datasets: [
+  // Validate template selection
+  const validTemplates = ['quarterly', 'annual', 'investor', 'impact', 'executive'];
+  if (!validTemplates.includes(request.template)) {
+    throw new Error(`Invalid template: ${request.template}. Must be one of: ${validTemplates.join(', ')}`);
+  }
+
+  // Create slides using selected template
+  let slides: PPTXSlide[];
+
+  switch (request.template) {
+    case 'quarterly':
+      slides = createQuarterlyTemplate(buildQuarterlyData(data, request));
+      break;
+
+    case 'annual':
+      slides = createAnnualTemplate(buildAnnualData(data, request, narrative));
+      break;
+
+    case 'investor':
+      slides = createInvestorTemplate(buildInvestorData(data, request, narrative));
+      break;
+
+    case 'impact':
+      slides = createImpactTemplate(buildImpactData(data, request));
+      break;
+
+    case 'executive':
+    default:
+      // Legacy executive summary template
+      slides = createExecutiveSummaryTemplate({
+        title: `${data.companyName} - Impact Report`,
+        period: data.period,
+        company: data.companyName,
+        metrics: data.metrics,
+        key_achievements: data.key_achievements,
+        charts: [
           {
-            label: 'Q4 2024',
-            data: [
-              data.metrics.sroi,
-              data.metrics.beneficiaries / 100,
-              data.metrics.volunteer_hours / 100,
-              data.metrics.social_value / 1000,
+            type: 'bar',
+            title: 'Impact Metrics Overview',
+            labels: ['SROI', 'Beneficiaries', 'Hours', 'Value ($k)'],
+            datasets: [
+              {
+                label: 'Q4 2024',
+                data: [
+                  data.metrics.sroi,
+                  data.metrics.beneficiaries / 100,
+                  data.metrics.volunteer_hours / 100,
+                  data.metrics.social_value / 1000,
+                ],
+                backgroundColor: '#3b82f6',
+              },
             ],
-            backgroundColor: '#3b82f6',
           },
         ],
-      },
-    ],
-  });
+      });
+      break;
+  }
+
+  console.log(`[Exports] Generated ${slides.length} slides using ${request.template} template`);
 
   // Generate PPTX options
   const options: PPTXOptions = {
@@ -432,6 +473,215 @@ async function generatePPTXDeck(
   console.log('[Exports] Generated PPTX:', mockUrl);
 
   return mockUrl;
+}
+
+/**
+ * Build quarterly template data
+ */
+function buildQuarterlyData(data: any, request: ExportRequest): QuarterlyData {
+  // Parse period (e.g., "Q1 2025")
+  const periodMatch = request.period.match(/Q(\d) (\d{4})/);
+  const quarter = periodMatch ? parseInt(periodMatch[1]) : 1;
+  const year = periodMatch ? parseInt(periodMatch[2]) : new Date().getFullYear();
+
+  return {
+    company: data.companyName,
+    period: request.period,
+    quarter: { year, quarter },
+    metrics: {
+      sroi: data.metrics.sroi,
+      beneficiaries: data.metrics.beneficiaries,
+      volunteer_hours: data.metrics.volunteer_hours,
+      social_value: data.metrics.social_value,
+      engagement_rate: 0.85, // Mock - in production, fetch from DB
+    },
+    top_achievements: data.key_achievements.slice(0, 3),
+    quarterly_trend: {
+      type: 'line',
+      title: 'SROI Quarterly Trend',
+      labels: ['Q1', 'Q2', 'Q3', 'Q4'],
+      datasets: [
+        {
+          label: year.toString(),
+          data: [2.8, 3.1, 3.3, data.metrics.sroi],
+          borderColor: '#3b82f6',
+          backgroundColor: 'rgba(59, 130, 246, 0.1)',
+        },
+      ],
+    },
+    dimensions: [
+      { name: 'Social Impact', score: 8.2, change: 5.3 },
+      { name: 'Environmental', score: 7.5, change: -2.1 },
+      { name: 'Governance', score: 9.1, change: 1.8 },
+    ],
+    evidenceIds: data.evidenceIds,
+    includeEvidenceAppendix: request.includeEvidenceAppendix,
+  };
+}
+
+/**
+ * Build annual template data
+ */
+function buildAnnualData(data: any, request: ExportRequest, narrative: string): AnnualData {
+  const year = new Date().getFullYear();
+
+  return {
+    company: data.companyName,
+    year,
+    metrics: {
+      sroi: data.metrics.sroi,
+      beneficiaries: data.metrics.beneficiaries,
+      volunteer_hours: data.metrics.volunteer_hours,
+      social_value: data.metrics.social_value,
+      programs_count: 12, // Mock
+    },
+    timeline: [
+      { quarter: 'Q1', milestone: 'Launched new volunteer programs' },
+      { quarter: 'Q2', milestone: 'Expanded to 3 new communities' },
+      { quarter: 'Q3', milestone: 'Achieved 1000+ volunteer hours' },
+      { quarter: 'Q4', milestone: 'Record SROI performance' },
+    ],
+    csrd_narrative: narrative,
+    sdg_alignment: [
+      { goal_number: 1, goal_name: 'No Poverty', contribution: 'Economic empowerment programs' },
+      { goal_number: 4, goal_name: 'Quality Education', contribution: 'Skills training initiatives' },
+      { goal_number: 8, goal_name: 'Decent Work', contribution: 'Job placement support' },
+    ],
+    citations: [
+      { slideNumber: 3, references: ['EV-001', 'EV-002', 'EV-003'] },
+      { slideNumber: 4, references: ['EV-004', 'EV-005'] },
+    ],
+    evidenceIds: data.evidenceIds,
+  };
+}
+
+/**
+ * Build investor template data
+ */
+function buildInvestorData(data: any, request: ExportRequest, narrative: string): InvestorData {
+  return {
+    company: data.companyName,
+    period: request.period,
+    sroi_headline: data.metrics.sroi,
+    financial_impact: {
+      total_investment: 500000, // Mock
+      social_value_created: data.metrics.social_value,
+      cost_per_beneficiary: data.metrics.social_value / data.metrics.beneficiaries,
+      efficiency_ratio: 0.92, // Mock
+    },
+    growth_metrics: [
+      {
+        type: 'line',
+        title: 'SROI Growth Trajectory',
+        labels: ['2021', '2022', '2023', '2024'],
+        datasets: [
+          {
+            label: 'SROI',
+            data: [1.8, 2.3, 2.9, data.metrics.sroi],
+            borderColor: '#10b981',
+            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+          },
+        ],
+      },
+      {
+        type: 'bar',
+        title: 'Beneficiary Growth',
+        labels: ['2021', '2022', '2023', '2024'],
+        datasets: [
+          {
+            label: 'Beneficiaries',
+            data: [450, 680, 920, data.metrics.beneficiaries],
+            backgroundColor: '#8b5cf6',
+          },
+        ],
+      },
+    ],
+    risk_mitigation: [
+      { risk: 'Data quality', mitigation: 'Automated validation pipelines', status: 'mitigated' },
+      { risk: 'Program attrition', mitigation: 'Enhanced engagement tracking', status: 'monitoring' },
+      { risk: 'Impact measurement', mitigation: 'Third-party audits', status: 'mitigated' },
+    ],
+    executive_summary: narrative,
+    evidenceIds: data.evidenceIds?.slice(0, 3), // Limited evidence
+  };
+}
+
+/**
+ * Build impact deep dive template data
+ */
+function buildImpactData(data: any, request: ExportRequest): ImpactData {
+  return {
+    company: data.companyName,
+    period: request.period,
+    dimensions: [
+      {
+        name: 'Social Impact',
+        score: 8.5,
+        evidence_count: 24,
+        breakdown: [
+          { metric: 'Beneficiary satisfaction', value: 4.7, evidence_ids: ['EV-001', 'EV-002'] },
+          { metric: 'Community engagement', value: 78.5, evidence_ids: ['EV-003', 'EV-004'] },
+          { metric: 'Outcome achievement', value: 92.3, evidence_ids: ['EV-005'] },
+        ],
+        lineage_chart: {
+          type: 'line',
+          title: 'Social Impact Evidence Flow',
+          labels: ['Raw', 'Validated', 'Aggregated', 'Scored'],
+          datasets: [
+            {
+              label: 'Evidence Count',
+              data: [45, 38, 28, 24],
+              borderColor: '#3b82f6',
+            },
+          ],
+        },
+      },
+      {
+        name: 'Environmental',
+        score: 7.2,
+        evidence_count: 18,
+        breakdown: [
+          { metric: 'Carbon footprint reduction', value: 12.5, evidence_ids: ['EV-006', 'EV-007'] },
+          { metric: 'Resource efficiency', value: 85.0, evidence_ids: ['EV-008'] },
+        ],
+      },
+      {
+        name: 'Governance',
+        score: 9.1,
+        evidence_count: 15,
+        breakdown: [
+          { metric: 'Policy compliance', value: 100, evidence_ids: ['EV-009', 'EV-010'] },
+          { metric: 'Transparency score', value: 94.5, evidence_ids: ['EV-011'] },
+        ],
+      },
+    ],
+    evidenceAppendix: data.evidenceIds.map((id: string, idx: number) => ({
+      evidence_id: id,
+      type: idx % 3 === 0 ? 'Survey' : idx % 3 === 1 ? 'Observation' : 'Document',
+      description: `Evidence record for ${id} - detailed description of the evidence and its validation`,
+      source: 'Program Database',
+      date: '2024-12-15',
+    })),
+    citations_per_slide: 3,
+    explainer_boxes: [
+      {
+        title: 'Overview',
+        content: 'This deep dive provides granular analysis of impact across all dimensions, backed by validated evidence and full lineage tracking.',
+      },
+      {
+        title: 'Social Impact Explainer',
+        content: 'Social impact measures our direct effect on beneficiaries and communities, including satisfaction, engagement, and outcome achievement.',
+      },
+      {
+        title: 'Environmental Explainer',
+        content: 'Environmental dimension tracks our sustainability practices and resource efficiency.',
+      },
+      {
+        title: 'Governance Explainer',
+        content: 'Governance ensures compliance, transparency, and ethical operation of all programs.',
+      },
+    ],
+  };
 }
 
 /**

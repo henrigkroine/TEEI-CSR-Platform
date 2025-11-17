@@ -1,0 +1,671 @@
+openapi: 3.0.3
+info:
+  title: TEEI Deck Export API
+  version: 1.0.0
+  description: |
+    Executive deck export service for generating branded PowerPoint presentations.
+    Exports quarterly, annual, investor, and impact deep-dive reports as PPTX files
+    with customizable templates, watermarking, and evidence links.
+  contact:
+    name: TEEI Platform Team
+    email: platform@teei.io
+
+servers:
+  - url: https://api.teei.io/v1
+    description: Production
+  - url: https://staging-api.teei.io/v1
+    description: Staging
+  - url: http://localhost:3010/v1
+    description: Local development
+
+security:
+  - bearerAuth: []
+
+paths:
+  /deck/export:
+    post:
+      summary: Export executive deck as PPTX
+      description: |
+        Creates an asynchronous export job to generate a PowerPoint deck.
+        Returns a job ID for tracking progress and downloading the final file.
+        Supports multiple templates, locales, and customization options.
+      operationId: exportDeck
+      tags:
+        - Export
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeckExportRequest'
+            examples:
+              quarterly:
+                summary: Quarterly deck export
+                value:
+                  companyId: "550e8400-e29b-41d4-a716-446655440000"
+                  template: "quarterly"
+                  periodStart: "2024-01-01T00:00:00Z"
+                  periodEnd: "2024-03-31T23:59:59Z"
+                  locale: "en"
+                  tiles:
+                    - "impact-summary"
+                    - "sroi-chart"
+                    - "vis-chart"
+                    - "participant-trends"
+                  watermark: "CONFIDENTIAL"
+                  includeEvidenceLinks: true
+              annual:
+                summary: Annual investor deck
+                value:
+                  companyId: "550e8400-e29b-41d4-a716-446655440000"
+                  template: "annual"
+                  periodStart: "2024-01-01T00:00:00Z"
+                  periodEnd: "2024-12-31T23:59:59Z"
+                  locale: "en"
+                  tiles:
+                    - "cover"
+                    - "impact-summary"
+                    - "sroi-narrative"
+                    - "sroi-chart"
+                    - "vis-chart"
+                    - "outcome-trends"
+                    - "cohort-comparison"
+                    - "evidence-summary"
+                  branding:
+                    primaryColor: "#0066CC"
+                    logoUrl: "https://cdn.teei.io/logos/acme-corp.png"
+                  watermark: "INVESTOR CONFIDENTIAL"
+      responses:
+        '202':
+          description: Export job created successfully
+          headers:
+            X-Job-Id:
+              description: Export job identifier
+              schema:
+                type: string
+              example: "job_9876abcd1234efgh"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExportJobResponse'
+              examples:
+                created:
+                  summary: Job created
+                  value:
+                    success: true
+                    jobId: "job_9876abcd1234efgh"
+                    status: "queued"
+                    estimatedDurationSeconds: 45
+                    statusUrl: "/deck/export/job_9876abcd1234efgh/status"
+                    message: "Export job queued. Check status for progress."
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /deck/export/{jobId}/status:
+    get:
+      summary: Check export job status
+      description: |
+        Retrieves current status of an export job.
+        Polls this endpoint to track progress until status is 'completed' or 'failed'.
+      operationId: getExportStatus
+      tags:
+        - Export
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          description: Export job identifier
+          schema:
+            type: string
+          example: "job_9876abcd1234efgh"
+      responses:
+        '200':
+          description: Job status retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExportStatusResponse'
+              examples:
+                queued:
+                  summary: Job queued
+                  value:
+                    jobId: "job_9876abcd1234efgh"
+                    status: "queued"
+                    progress: 0
+                    createdAt: "2024-11-14T10:00:00Z"
+                    message: "Export job is queued"
+                processing:
+                  summary: Job processing
+                  value:
+                    jobId: "job_9876abcd1234efgh"
+                    status: "processing"
+                    progress: 60
+                    createdAt: "2024-11-14T10:00:00Z"
+                    startedAt: "2024-11-14T10:00:15Z"
+                    message: "Rendering slides (6/10 completed)"
+                completed:
+                  summary: Job completed
+                  value:
+                    jobId: "job_9876abcd1234efgh"
+                    status: "completed"
+                    progress: 100
+                    createdAt: "2024-11-14T10:00:00Z"
+                    startedAt: "2024-11-14T10:00:15Z"
+                    completedAt: "2024-11-14T10:00:45Z"
+                    downloadUrl: "/deck/export/job_9876abcd1234efgh/download"
+                    expiresAt: "2024-11-15T10:00:45Z"
+                    fileSize: 2457600
+                    message: "Deck ready for download"
+                failed:
+                  summary: Job failed
+                  value:
+                    jobId: "job_9876abcd1234efgh"
+                    status: "failed"
+                    progress: 40
+                    createdAt: "2024-11-14T10:00:00Z"
+                    startedAt: "2024-11-14T10:00:15Z"
+                    failedAt: "2024-11-14T10:00:30Z"
+                    error: "Insufficient evidence for period"
+                    message: "Export failed. Insufficient evidence snippets found for the specified period."
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /deck/export/{jobId}/download:
+    get:
+      summary: Download generated deck
+      description: |
+        Downloads the completed PPTX file.
+        File is available for 24 hours after generation, then automatically deleted.
+      operationId: downloadDeck
+      tags:
+        - Export
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          description: Export job identifier
+          schema:
+            type: string
+          example: "job_9876abcd1234efgh"
+      responses:
+        '200':
+          description: Deck downloaded successfully
+          headers:
+            Content-Disposition:
+              description: Attachment filename
+              schema:
+                type: string
+              example: "attachment; filename=\"TEEI_Impact_Deck_Q1_2024.pptx\""
+            Content-Type:
+              description: MIME type
+              schema:
+                type: string
+              example: "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+            Content-Length:
+              description: File size in bytes
+              schema:
+                type: integer
+              example: 2457600
+            X-File-Hash:
+              description: SHA-256 hash of file for verification
+              schema:
+                type: string
+              example: "d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5"
+          content:
+            application/vnd.openxmlformats-officedocument.presentationml.presentation:
+              schema:
+                type: string
+                format: binary
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '410':
+          description: File expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Gone"
+                message: "Export file has expired. Re-generate the deck."
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /deck/templates:
+    get:
+      summary: List available deck templates
+      description: |
+        Returns available deck templates with metadata about slides and customization options.
+      operationId: listTemplates
+      tags:
+        - Templates
+      responses:
+        '200':
+          description: Templates retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TemplatesResponse'
+              examples:
+                standard:
+                  summary: Available templates
+                  value:
+                    templates:
+                      - id: "quarterly"
+                        name: "Quarterly Impact Report"
+                        description: "Concise quarterly summary for stakeholders"
+                        defaultSlides: 8
+                        availableTiles:
+                          - "cover"
+                          - "impact-summary"
+                          - "sroi-chart"
+                          - "vis-chart"
+                          - "participant-trends"
+                          - "outcome-highlights"
+                        supportedLocales: ["en", "es", "fr", "uk", "no"]
+                        estimatedDurationSeconds: 30
+                      - id: "annual"
+                        name: "Annual CSR Report"
+                        description: "Comprehensive annual impact report with full narratives"
+                        defaultSlides: 15
+                        availableTiles:
+                          - "cover"
+                          - "executive-summary"
+                          - "impact-summary"
+                          - "sroi-narrative"
+                          - "sroi-chart"
+                          - "vis-chart"
+                          - "outcome-trends"
+                          - "cohort-comparison"
+                          - "evidence-summary"
+                          - "appendix"
+                        supportedLocales: ["en", "es", "fr", "uk", "no"]
+                        estimatedDurationSeconds: 60
+                      - id: "investor"
+                        name: "Investor Update"
+                        description: "High-level metrics for investor communications"
+                        defaultSlides: 6
+                        availableTiles:
+                          - "cover"
+                          - "impact-highlights"
+                          - "sroi-chart"
+                          - "key-metrics"
+                        supportedLocales: ["en"]
+                        estimatedDurationSeconds: 20
+                      - id: "impact-deep-dive"
+                        name: "Impact Deep Dive"
+                        description: "Detailed analysis with full evidence lineage"
+                        defaultSlides: 20
+                        availableTiles:
+                          - "cover"
+                          - "methodology"
+                          - "impact-summary"
+                          - "sroi-narrative"
+                          - "sroi-chart"
+                          - "vis-chart"
+                          - "outcome-trends"
+                          - "cohort-comparison"
+                          - "evidence-summary"
+                          - "citation-appendix"
+                          - "data-quality"
+                        supportedLocales: ["en", "es", "fr"]
+                        estimatedDurationSeconds: 90
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: RS256 JWT token with company_id claim
+
+  schemas:
+    DeckExportRequest:
+      type: object
+      required:
+        - companyId
+        - template
+        - periodStart
+        - periodEnd
+      properties:
+        companyId:
+          type: string
+          format: uuid
+          description: Company identifier
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        template:
+          type: string
+          enum: [quarterly, annual, investor, impact-deep-dive]
+          description: Deck template to use
+          example: "quarterly"
+        periodStart:
+          type: string
+          format: date-time
+          description: Period start (ISO 8601)
+          example: "2024-01-01T00:00:00Z"
+        periodEnd:
+          type: string
+          format: date-time
+          description: Period end (ISO 8601)
+          example: "2024-03-31T23:59:59Z"
+        locale:
+          type: string
+          enum: [en, es, fr, uk, no]
+          default: en
+          description: Report language/locale
+          example: "en"
+        tiles:
+          type: array
+          items:
+            type: string
+          description: Specific slides to include (overrides template defaults)
+          example: ["cover", "impact-summary", "sroi-chart", "vis-chart"]
+        watermark:
+          type: string
+          maxLength: 50
+          description: Watermark text for all slides
+          example: "CONFIDENTIAL"
+        includeEvidenceLinks:
+          type: boolean
+          default: false
+          description: Include evidence links in slide notes
+          example: true
+        branding:
+          type: object
+          description: Custom branding options
+          properties:
+            primaryColor:
+              type: string
+              pattern: '^#[0-9A-Fa-f]{6}$'
+              description: Primary brand color (hex)
+              example: "#0066CC"
+            logoUrl:
+              type: string
+              format: uri
+              description: Company logo URL (PNG/SVG, max 500KB)
+              example: "https://cdn.teei.io/logos/acme-corp.png"
+            fontFamily:
+              type: string
+              enum: [Arial, Helvetica, Calibri, Georgia, Times New Roman]
+              default: Arial
+              description: Preferred font family
+              example: "Arial"
+
+    ExportJobResponse:
+      type: object
+      required:
+        - success
+        - jobId
+        - status
+        - statusUrl
+      properties:
+        success:
+          type: boolean
+          description: Whether job was created successfully
+          example: true
+        jobId:
+          type: string
+          description: Export job identifier
+          example: "job_9876abcd1234efgh"
+        status:
+          type: string
+          enum: [queued, processing, completed, failed]
+          description: Current job status
+          example: "queued"
+        estimatedDurationSeconds:
+          type: integer
+          description: Estimated processing time
+          example: 45
+        statusUrl:
+          type: string
+          description: URL to check job status
+          example: "/deck/export/job_9876abcd1234efgh/status"
+        message:
+          type: string
+          description: Human-readable status message
+          example: "Export job queued. Check status for progress."
+
+    ExportStatusResponse:
+      type: object
+      required:
+        - jobId
+        - status
+        - progress
+        - createdAt
+      properties:
+        jobId:
+          type: string
+          description: Export job identifier
+          example: "job_9876abcd1234efgh"
+        status:
+          type: string
+          enum: [queued, processing, completed, failed]
+          description: Current job status
+          example: "processing"
+        progress:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Progress percentage
+          example: 60
+        createdAt:
+          type: string
+          format: date-time
+          description: When job was created
+          example: "2024-11-14T10:00:00Z"
+        startedAt:
+          type: string
+          format: date-time
+          description: When processing started
+          example: "2024-11-14T10:00:15Z"
+        completedAt:
+          type: string
+          format: date-time
+          description: When job completed (if status=completed)
+          example: "2024-11-14T10:00:45Z"
+        failedAt:
+          type: string
+          format: date-time
+          description: When job failed (if status=failed)
+          example: "2024-11-14T10:00:30Z"
+        downloadUrl:
+          type: string
+          description: Download URL (if status=completed)
+          example: "/deck/export/job_9876abcd1234efgh/download"
+        expiresAt:
+          type: string
+          format: date-time
+          description: When download link expires (if status=completed)
+          example: "2024-11-15T10:00:45Z"
+        fileSize:
+          type: integer
+          description: File size in bytes (if status=completed)
+          example: 2457600
+        error:
+          type: string
+          description: Error type (if status=failed)
+          example: "Insufficient evidence for period"
+        message:
+          type: string
+          description: Human-readable status message
+          example: "Rendering slides (6/10 completed)"
+
+    TemplatesResponse:
+      type: object
+      required:
+        - templates
+      properties:
+        templates:
+          type: array
+          items:
+            $ref: '#/components/schemas/Template'
+
+    Template:
+      type: object
+      required:
+        - id
+        - name
+        - description
+        - defaultSlides
+        - availableTiles
+        - supportedLocales
+        - estimatedDurationSeconds
+      properties:
+        id:
+          type: string
+          description: Template identifier
+          example: "quarterly"
+        name:
+          type: string
+          description: Template display name
+          example: "Quarterly Impact Report"
+        description:
+          type: string
+          description: Template description
+          example: "Concise quarterly summary for stakeholders"
+        defaultSlides:
+          type: integer
+          description: Default number of slides
+          example: 8
+        availableTiles:
+          type: array
+          items:
+            type: string
+          description: Available slide tiles
+          example: ["cover", "impact-summary", "sroi-chart"]
+        supportedLocales:
+          type: array
+          items:
+            type: string
+          description: Supported locales
+          example: ["en", "es", "fr"]
+        estimatedDurationSeconds:
+          type: integer
+          description: Estimated generation time
+          example: 30
+
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Error message
+          example: "Validation error"
+        message:
+          type: string
+          description: Detailed error message
+          example: "Invalid template ID"
+        details:
+          type: object
+          description: Additional error details
+          additionalProperties: true
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            validation:
+              value:
+                error: "Validation error"
+                message: "Invalid template ID. Must be one of: quarterly, annual, investor, impact-deep-dive"
+                details:
+                  field: "template"
+                  providedValue: "custom"
+
+    Unauthorized:
+      description: Missing or invalid authentication
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Unauthorized"
+            message: "Invalid or expired JWT token"
+
+    Forbidden:
+      description: Insufficient permissions or quota exceeded
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            quota:
+              value:
+                error: "Forbidden"
+                message: "Monthly export quota exceeded (10/10 used). Quota resets on 2024-12-01"
+                details:
+                  quotaLimit: 10
+                  quotaUsed: 10
+                  resetDate: "2024-12-01"
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Not Found"
+            message: "Export job not found or expired"
+
+    TooManyRequests:
+      description: Rate limit exceeded
+      headers:
+        X-RateLimit-Limit:
+          description: Maximum requests per hour
+          schema:
+            type: integer
+        X-RateLimit-Remaining:
+          description: Remaining requests (0)
+          schema:
+            type: integer
+        X-RateLimit-Reset:
+          description: Time when rate limit resets
+          schema:
+            type: integer
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Too Many Requests"
+            message: "Rate limit exceeded. Maximum 5 export jobs per hour"
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Internal Server Error"
+            message: "Deck export failed"
+
+tags:
+  - name: Export
+    description: Deck export and download operations
+  - name: Templates
+    description: Available deck templates and metadata
