@@ -43,6 +43,10 @@
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "chromatic": "chromatic --exit-zero-on-changes",
+    "demo:create": "tsx scripts/demo/create.ts",
+    "demo:refresh": "tsx scripts/demo/refresh.ts",
+    "demo:teardown": "tsx scripts/demo/teardown.ts",
+    "demo:list": "tsx scripts/demo/list.ts",
     "clean": "pnpm -r clean && rm -rf node_modules"
   },
   "keywords": [

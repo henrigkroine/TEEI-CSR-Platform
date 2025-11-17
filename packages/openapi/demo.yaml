@@ -1,0 +1,582 @@
+openapi: 3.0.3
+info:
+  title: TEEI Demo Factory API
+  version: 1.0.0
+  description: |
+    Demo Factory API for creating, managing, and tearing down demo tenants
+    with realistic seeded data for demonstrations and testing.
+
+    ## Safety Features
+    - Enforces `demo-` prefix on all tenant IDs
+    - Blocks outbound webhooks from demo tenants
+    - Automatic TTL (30 days)
+    - Deterministic pseudonymization (no real PII)
+
+  contact:
+    name: TEEI Platform Team
+    email: platform@teei.example.com
+
+servers:
+  - url: https://api.teei.example.com/v1
+    description: Production API
+  - url: http://localhost:3000/v1
+    description: Local development
+
+tags:
+  - name: demo
+    description: Demo tenant lifecycle operations
+
+paths:
+  /demo/tenants:
+    post:
+      summary: Create demo tenant
+      description: Create a new demo tenant with seeded data
+      tags: [demo]
+      operationId: createDemoTenant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDemoTenantRequest'
+            examples:
+              small:
+                summary: Small demo tenant
+                value:
+                  tenantName: acme-small
+                  size: small
+                  regions: [US]
+                  vertical: technology
+                  adminEmail: admin@example.com
+              medium:
+                summary: Medium demo tenant with multiple regions
+                value:
+                  tenantName: globex-medium
+                  size: medium
+                  regions: [US, EU, UK]
+                  vertical: finance
+                  timeRangeMonths: 24
+                  adminEmail: admin@example.com
+      responses:
+        '201':
+          description: Demo tenant created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tenant:
+                    $ref: '#/components/schemas/DemoTenant'
+                  seedResult:
+                    $ref: '#/components/schemas/SeedResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    get:
+      summary: List demo tenants
+      description: List all demo tenants (admin only)
+      tags: [demo]
+      operationId: listDemoTenants
+      responses:
+        '200':
+          description: List of demo tenants
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tenants:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DemoTenant'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /demo/{tenantId}:
+    get:
+      summary: Get demo tenant
+      description: Get demo tenant status and metadata
+      tags: [demo]
+      operationId: getDemoTenant
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Demo tenant details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DemoTenant'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    delete:
+      summary: Delete demo tenant
+      description: Delete demo tenant and all associated data
+      tags: [demo]
+      operationId: deleteDemoTenant
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Demo tenant deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeleteDemoTenantResult'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /demo/{tenantId}/refresh:
+    post:
+      summary: Refresh demo tenant
+      description: Regenerate demo tenant data
+      tags: [demo]
+      operationId: refreshDemoTenant
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshDemoTenantRequest'
+      responses:
+        '200':
+          description: Demo tenant refreshed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SeedResult'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /demo/{tenantId}/warm:
+    post:
+      summary: Warm analytics tiles
+      description: Pre-compute analytics tiles for demo tenant
+      tags: [demo]
+      operationId: warmTiles
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WarmTilesRequest'
+      responses:
+        '200':
+          description: Tiles warmed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WarmTilesResult'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /demo/{tenantId}/export:
+    post:
+      summary: Export demo tenant data
+      description: Export demo tenant data as downloadable bundle
+      tags: [demo]
+      operationId: exportDemoTenant
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExportDemoTenantRequest'
+      responses:
+        '200':
+          description: Export data bundle
+          content:
+            application/json:
+              schema:
+                type: object
+            application/jsonlines:
+              schema:
+                type: string
+            application/sql:
+              schema:
+                type: string
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+components:
+  parameters:
+    TenantId:
+      name: tenantId
+      in: path
+      required: true
+      description: Demo tenant ID (must start with 'demo-')
+      schema:
+        type: string
+        pattern: '^demo-[a-z0-9-]+$'
+      example: demo-acme-corp
+
+  schemas:
+    CreateDemoTenantRequest:
+      type: object
+      required:
+        - tenantName
+        - size
+        - regions
+        - adminEmail
+      properties:
+        tenantName:
+          type: string
+          pattern: '^[a-z0-9-]+$'
+          minLength: 3
+          maxLength: 50
+          description: Desired tenant name (will be prefixed with 'demo-')
+          example: acme-corp
+        size:
+          $ref: '#/components/schemas/DemoSize'
+        regions:
+          type: array
+          items:
+            $ref: '#/components/schemas/DemoRegion'
+          minItems: 1
+          maxItems: 3
+        vertical:
+          $ref: '#/components/schemas/IndustryVertical'
+        timeRangeMonths:
+          type: integer
+          minimum: 1
+          maximum: 36
+          default: 12
+          description: Time range for historical data (months)
+        includeSeasonality:
+          type: boolean
+          default: true
+          description: Include seasonality patterns in data
+        locale:
+          $ref: '#/components/schemas/Locale'
+        adminEmail:
+          type: string
+          format: email
+          description: Admin user email for access
+        metadata:
+          type: object
+          additionalProperties:
+            type: string
+
+    DemoSize:
+      type: string
+      enum: [small, medium, large]
+      description: |
+        Data volume size:
+        - small: ~1,100 events, ~50 users, ~1 min seed time
+        - medium: ~25,000 events, ~500 users, ~4 min seed time
+        - large: ~126,000 events, ~2,000 users, ~15 min seed time
+
+    DemoRegion:
+      type: string
+      enum: [US, UK, EU, APAC, LATAM, MULTI]
+
+    IndustryVertical:
+      type: string
+      enum:
+        - technology
+        - finance
+        - healthcare
+        - retail
+        - manufacturing
+        - nonprofit
+        - education
+        - consulting
+
+    Locale:
+      type: string
+      enum: [en, es, fr, uk, no]
+      default: en
+
+    DemoTenant:
+      type: object
+      properties:
+        tenantId:
+          type: string
+          example: demo-acme-corp
+        name:
+          type: string
+          example: acme-corp
+        status:
+          $ref: '#/components/schemas/DemoTenantStatus'
+        size:
+          $ref: '#/components/schemas/DemoSize'
+        regions:
+          type: array
+          items:
+            $ref: '#/components/schemas/DemoRegion'
+        vertical:
+          $ref: '#/components/schemas/IndustryVertical'
+        createdAt:
+          type: string
+          format: date-time
+        lastRefreshedAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+          description: TTL expiration (30 days from creation)
+        seedProgress:
+          type: integer
+          minimum: 0
+          maximum: 100
+        seedStats:
+          type: object
+          properties:
+            usersCreated:
+              type: integer
+            eventsCreated:
+              type: integer
+            tilesWarmed:
+              type: integer
+            reportsGenerated:
+              type: integer
+        errorMessage:
+          type: string
+        adminEmail:
+          type: string
+          format: email
+        metadata:
+          type: object
+          additionalProperties:
+            type: string
+
+    DemoTenantStatus:
+      type: string
+      enum:
+        - creating
+        - seeding
+        - warming
+        - ready
+        - error
+        - deleting
+        - deleted
+
+    RefreshDemoTenantRequest:
+      type: object
+      properties:
+        fullRefresh:
+          type: boolean
+          default: false
+          description: Regenerate all data (vs incremental)
+        warmTiles:
+          type: boolean
+          default: true
+          description: Warm analytics tiles after refresh
+
+    ExportDemoTenantRequest:
+      type: object
+      required:
+        - format
+      properties:
+        format:
+          type: string
+          enum: [json, jsonl, sql]
+        includeEvents:
+          type: boolean
+          default: false
+        includeTiles:
+          type: boolean
+          default: true
+        includeReports:
+          type: boolean
+          default: true
+
+    WarmTilesRequest:
+      type: object
+      required:
+        - tenantId
+      properties:
+        tenantId:
+          type: string
+        tileTypes:
+          type: array
+          items:
+            type: string
+          description: Specific tile types to warm (optional, defaults to all)
+        force:
+          type: boolean
+          default: false
+          description: Force re-computation even if cached
+
+    WarmTilesResult:
+      type: object
+      properties:
+        tenantId:
+          type: string
+        tilesWarmed:
+          type: array
+          items:
+            type: string
+        tilesFailed:
+          type: array
+          items:
+            type: string
+        durationMs:
+          type: integer
+
+    SeedResult:
+      type: object
+      properties:
+        tenantId:
+          type: string
+        status:
+          type: string
+          enum: [success, partial, failed]
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SeedEventResult'
+        totalEvents:
+          type: integer
+        totalDurationMs:
+          type: integer
+        warnings:
+          type: array
+          items:
+            type: string
+        errors:
+          type: array
+          items:
+            type: string
+
+    SeedEventResult:
+      type: object
+      properties:
+        eventType:
+          type: string
+        count:
+          type: integer
+        uniqueSubjects:
+          type: integer
+        dateRange:
+          type: object
+          properties:
+            start:
+              type: string
+              format: date-time
+            end:
+              type: string
+              format: date-time
+        durationMs:
+          type: integer
+
+    DeleteDemoTenantResult:
+      type: object
+      properties:
+        tenantId:
+          type: string
+        success:
+          type: boolean
+        resourcesDeleted:
+          type: object
+          properties:
+            users:
+              type: integer
+            events:
+              type: integer
+            tiles:
+              type: integer
+            reports:
+              type: integer
+            other:
+              type: integer
+        durationMs:
+          type: integer
+        errorMessage:
+          type: string
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              message:
+                type: string
+
+    Forbidden:
+      description: Forbidden (only demo- tenants allowed)
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: Forbidden
+              message:
+                type: string
+                example: Only demo tenants (demo-* prefix) can be accessed via demo endpoints
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+
+    RateLimited:
+      description: Too many requests
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              message:
+                type: string
+              retryAfter:
+                type: integer
+                description: Seconds until retry allowed
+
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              message:
+                type: string
