@@ -1,0 +1,25 @@
+# =============================================================================
+# Test Case: Privileged Container
+# =============================================================================
+# Expected Outcome: REJECTED by deny-privileged-pods policy
+# Reason: Container requests privileged mode
+#
+# To test:
+#   kubectl apply -f privileged-pod.yaml
+#   Expected: Error - privileged containers are not allowed
+# =============================================================================
+apiVersion: v1
+kind: Pod
+metadata:
+  name: privileged-pod
+  namespace: default
+  labels:
+    app: test-privileged
+    test-case: "privileged-deny-policy"
+spec:
+  containers:
+  - name: alpine
+    image: alpine:latest
+    command: ["sleep", "3600"]
+    securityContext:
+      privileged: true  # Should be rejected - no exceptions

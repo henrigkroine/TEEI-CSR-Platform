@@ -1,0 +1,330 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: greenops-carbon-hints
+  namespace: teei-platform
+  labels:
+    app: greenops
+    component: scheduling-policy
+    part-of: teei-csr-platform
+  annotations:
+    description: "Carbon-aware scheduling policy for batch workloads"
+    version: "1.0.0"
+    last-updated: "2025-11-16"
+data:
+  # Carbon intensity thresholds (gCO2/kWh)
+  carbon-thresholds.yaml: |
+    # Carbon intensity classifications
+    thresholds:
+      clean:
+        max: 200
+        description: "Very clean grid - high renewable energy"
+        renewable_pct_min: 40
+
+      moderate:
+        min: 200
+        max: 400
+        description: "Moderate carbon intensity - mixed energy sources"
+        renewable_pct_min: 20
+
+      high:
+        min: 400
+        max: 600
+        description: "High carbon intensity - fossil fuel dominant"
+
+      very_high:
+        min: 600
+        description: "Very high carbon intensity - avoid if possible"
+
+  # Workload classification and carbon policies
+  workload-policies.yaml: |
+    # Workload classes define how carbon-aware scheduling applies
+    workload_classes:
+      urgent:
+        description: "Time-sensitive workloads - ignore carbon constraints"
+        labels:
+          workload-type: urgent
+        carbon_policy:
+          enforce_threshold: false
+          max_delay_minutes: 0
+          preferred_regions: []
+        examples:
+          - "Real-time API requests"
+          - "User-facing queries"
+          - "Critical alerts"
+
+      standard:
+        description: "Regular batch jobs - optimize carbon when possible"
+        labels:
+          workload-type: standard
+        carbon_policy:
+          enforce_threshold: true
+          max_threshold_gCO2_kWh: 400
+          max_delay_minutes: 60
+          preferred_regions:
+            - eu-central-1  # Generally cleaner grid
+        examples:
+          - "Report generation"
+          - "Data exports"
+          - "Notification delivery"
+
+      deferrable:
+        description: "Non-urgent batch jobs - strict carbon optimization"
+        labels:
+          workload-type: deferrable
+        carbon_policy:
+          enforce_threshold: true
+          max_threshold_gCO2_kWh: 250
+          max_delay_minutes: 720  # 12 hours
+          renewable_pct_min: 30
+          preferred_regions:
+            - eu-central-1
+            - us-west-2  # High hydro/solar
+          fallback_regions:
+            - us-east-1
+        examples:
+          - "ML model training"
+          - "Analytics backfill"
+          - "Embeddings generation"
+          - "Archive processing"
+
+  # Region carbon profiles
+  region-profiles.yaml: |
+    # AWS region carbon intensity profiles (based on grid zone)
+    regions:
+      us-east-1:
+        name: "US East (Virginia)"
+        grid_zone: "US-VA"
+        data_residency:
+          gdpr_compliant: false
+          us_only: true
+        carbon_profile:
+          avg_gCO2_kWh: 450
+          typical_range: [350, 550]
+          peak_clean_hours: [11, 12, 13, 14]  # UTC - solar peak
+          grid_mix:
+            coal: 35
+            gas: 40
+            nuclear: 15
+            renewables: 10
+        cost_multiplier: 1.0
+
+      us-west-2:
+        name: "US West (Oregon)"
+        grid_zone: "US-NW-PACW"
+        data_residency:
+          gdpr_compliant: false
+          us_only: true
+        carbon_profile:
+          avg_gCO2_kWh: 280
+          typical_range: [180, 380]
+          peak_clean_hours: [18, 19, 20, 21]  # UTC - hydro peak
+          grid_mix:
+            hydro: 50
+            gas: 25
+            wind: 15
+            solar: 5
+            coal: 5
+        cost_multiplier: 1.05
+
+      eu-central-1:
+        name: "EU (Frankfurt)"
+        grid_zone: "DE"
+        data_residency:
+          gdpr_compliant: true
+          eu_only: true
+        carbon_profile:
+          avg_gCO2_kWh: 320
+          typical_range: [200, 450]
+          peak_clean_hours: [10, 11, 12, 13, 14]  # UTC - solar + wind
+          grid_mix:
+            wind: 25
+            solar: 10
+            coal: 30
+            gas: 20
+            nuclear: 10
+            hydro: 5
+        cost_multiplier: 1.10
+
+      eu-west-1:
+        name: "EU (Ireland)"
+        grid_zone: "IE"
+        data_residency:
+          gdpr_compliant: true
+          eu_only: true
+        carbon_profile:
+          avg_gCO2_kWh: 380
+          typical_range: [250, 500]
+          peak_clean_hours: [12, 13, 14, 15]  # UTC - wind peak
+          grid_mix:
+            wind: 35
+            gas: 45
+            coal: 10
+            hydro: 5
+            other: 5
+        cost_multiplier: 1.08
+
+  # Time-shifting policies
+  time-shift-policies.yaml: |
+    # Rules for delaying batch jobs to cleaner energy windows
+    time_shifting:
+      enabled: true
+
+      # Look-ahead window for carbon forecasts
+      forecast_window_hours: 24
+
+      # Scheduling windows (UTC)
+      windows:
+        night_low_demand:
+          start_hour: 2
+          end_hour: 6
+          description: "Low grid demand - potential for cleaner energy"
+          priority: 2
+
+        solar_peak:
+          start_hour: 11
+          end_hour: 15
+          description: "Peak solar generation hours"
+          priority: 1
+          applicable_regions: [us-east-1, us-west-2, eu-central-1]
+
+        wind_peak:
+          start_hour: 18
+          end_hour: 22
+          description: "Peak wind generation hours"
+          priority: 1
+          applicable_regions: [eu-west-1, us-west-2]
+
+      # Delay policies per workload class
+      delay_policies:
+        urgent:
+          max_delay_minutes: 0
+          check_forecast: false
+
+        standard:
+          max_delay_minutes: 60
+          check_forecast: true
+          min_carbon_savings_pct: 10  # Only delay if >=10% savings
+
+        deferrable:
+          max_delay_minutes: 720  # 12 hours
+          check_forecast: true
+          min_carbon_savings_pct: 5
+
+  # GDPR residency override rules
+  gdpr-residency-overrides.yaml: |
+    # GDPR data residency rules override carbon optimization
+    gdpr_residency:
+      enabled: true
+
+      # Enforcement mode
+      mode: strict  # Options: strict, advisory, disabled
+
+      # EU tenant data residency rules
+      eu_tenants:
+        allowed_regions:
+          - eu-central-1
+          - eu-west-1
+          - eu-west-2
+          - eu-west-3
+          - eu-north-1
+
+        # Override carbon preferences for compliance
+        override_carbon_hints: true
+
+        # Audit all residency decisions
+        audit_enabled: true
+        audit_log_retention_days: 365
+
+      # US-only tenants
+      us_tenants:
+        allowed_regions:
+          - us-east-1
+          - us-east-2
+          - us-west-1
+          - us-west-2
+
+        override_carbon_hints: false  # Can optimize carbon within US
+        audit_enabled: true
+        audit_log_retention_days: 90
+
+      # Global tenants (no restrictions)
+      global_tenants:
+        allowed_regions: []  # Empty = all regions allowed
+        override_carbon_hints: false
+        audit_enabled: false
+
+  # Carbon budget tracking
+  carbon-budgets.yaml: |
+    # Monthly carbon budgets per service
+    budgets:
+      q2q-ai:
+        monthly_budget_kgCO2e: 500
+        alert_threshold_pct: 80
+        enforcement: advisory  # Options: advisory, throttle, block
+
+      reporting:
+        monthly_budget_kgCO2e: 200
+        alert_threshold_pct: 85
+        enforcement: advisory
+
+      analytics:
+        monthly_budget_kgCO2e: 1000
+        alert_threshold_pct: 90
+        enforcement: throttle  # Slow down when budget exceeded
+
+      batch-processing:
+        monthly_budget_kgCO2e: 800
+        alert_threshold_pct: 75
+        enforcement: block  # Stop scheduling when budget exceeded
+
+  # Scheduler configuration
+  scheduler-config.yaml: |
+    # Carbon-aware scheduler settings
+    scheduler:
+      enabled: true
+      name: carbon-aware-scheduler
+
+      # Polling interval for carbon data
+      poll_interval_seconds: 60
+
+      # Decision algorithm
+      algorithm: weighted_score  # Options: threshold, weighted_score, ml_predict
+
+      # Scoring weights for weighted_score algorithm
+      weights:
+        carbon_intensity: 0.5
+        cost: 0.2
+        latency: 0.2
+        availability: 0.1
+
+      # Fallback behavior when carbon data unavailable
+      fallback:
+        mode: region_default  # Options: region_default, allow_all, block_all
+        default_region: us-east-1
+
+      # Metrics and observability
+      metrics:
+        enabled: true
+        prometheus_endpoint: /metrics
+        export_interval_seconds: 30
+        labels:
+          - service_name
+          - region
+          - workload_class
+          - carbon_threshold
+
+---
+# Example usage annotation for workloads
+# Add these annotations to Job/CronJob/Deployment specs:
+#
+# metadata:
+#   annotations:
+#     greenops.teei.io/workload-class: "deferrable"
+#     greenops.teei.io/max-delay-minutes: "720"
+#     greenops.teei.io/carbon-threshold-gCO2-kWh: "250"
+#     greenops.teei.io/renewable-pct-min: "30"
+#     greenops.teei.io/preferred-regions: "eu-central-1,us-west-2"
+#     greenops.teei.io/gdpr-restricted: "true"
+#     greenops.teei.io/allowed-regions: "eu-central-1"

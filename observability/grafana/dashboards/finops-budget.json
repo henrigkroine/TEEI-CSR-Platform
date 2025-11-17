@@ -1,0 +1,760 @@
+{
+  "dashboard": {
+    "title": "FinOps Budget Tracking - Actual vs. Forecast",
+    "tags": ["teei", "finops", "budget", "forecasting", "cost-optimization"],
+    "timezone": "utc",
+    "schemaVersion": 16,
+    "version": 1,
+    "refresh": "5m",
+    "editable": true,
+    "panels": [
+      {
+        "id": 1,
+        "title": "Actual vs. Forecast (30-Day Comparison)",
+        "type": "timeseries",
+        "gridPos": {
+          "h": 10,
+          "w": 24,
+          "x": 0,
+          "y": 0
+        },
+        "targets": [
+          {
+            "datasource": "Prometheus",
+            "expr": "sum(increase(aws_cost_usd[1d]))",
+            "legendFormat": "Actual Daily Cost",
+            "refId": "A"
+          },
+          {
+            "datasource": "ClickHouse",
+            "rawSql": "SELECT\n  prediction_date AS time,\n  predicted_cost\nFROM teei_observability.cost_forecasts\nWHERE forecast_date = (SELECT max(forecast_date) FROM teei_observability.cost_forecasts)\nORDER BY time",
+            "legendFormat": "Forecasted Cost",
+            "refId": "B"
+          },
+          {
+            "datasource": "ClickHouse",
+            "rawSql": "SELECT\n  prediction_date AS time,\n  upper_bound\nFROM teei_observability.cost_forecasts\nWHERE forecast_date = (SELECT max(forecast_date) FROM teei_observability.cost_forecasts)\nORDER BY time",
+            "legendFormat": "Upper Bound (95% CI)",
+            "refId": "C"
+          },
+          {
+            "datasource": "ClickHouse",
+            "rawSql": "SELECT\n  prediction_date AS time,\n  lower_bound\nFROM teei_observability.cost_forecasts\nWHERE forecast_date = (SELECT max(forecast_date) FROM teei_observability.cost_forecasts)\nORDER BY time",
+            "legendFormat": "Lower Bound (95% CI)",
+            "refId": "D"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyUSD",
+            "decimals": 2,
+            "custom": {
+              "lineWidth": 2,
+              "fillOpacity": 0,
+              "spanNulls": true,
+              "showPoints": "never",
+              "axisPlacement": "auto"
+            }
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Actual Daily Cost"
+              },
+              "properties": [
+                {
+                  "id": "color",
+                  "value": {
+                    "mode": "fixed",
+                    "fixedColor": "blue"
+                  }
+                },
+                {
+                  "id": "custom.lineWidth",
+                  "value": 3
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Forecasted Cost"
+              },
+              "properties": [
+                {
+                  "id": "color",
+                  "value": {
+                    "mode": "fixed",
+                    "fixedColor": "green"
+                  }
+                },
+                {
+                  "id": "custom.lineStyle",
+                  "value": {
+                    "dash": [10, 5]
+                  }
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byRegexp",
+                "options": ".*(Upper|Lower) Bound.*"
+              },
+              "properties": [
+                {
+                  "id": "color",
+                  "value": {
+                    "mode": "fixed",
+                    "fixedColor": "gray"
+                  }
+                },
+                {
+                  "id": "custom.fillOpacity",
+                  "value": 10
+                },
+                {
+                  "id": "custom.lineWidth",
+                  "value": 1
+                }
+              ]
+            }
+          ]
+        },
+        "options": {
+          "tooltip": {
+            "mode": "multi"
+          },
+          "legend": {
+            "displayMode": "table",
+            "placement": "bottom",
+            "calcs": ["mean", "lastNotNull", "max"]
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "Variance % (Actual vs. Forecast)",
+        "type": "stat",
+        "gridPos": {
+          "h": 6,
+          "w": 8,
+          "x": 0,
+          "y": 10
+        },
+        "targets": [
+          {
+            "datasource": "Prometheus",
+            "expr": "(\n  sum(increase(aws_cost_usd[24h]))\n  -\n  sum(cost_forecast_7d_total_usd) / 7\n) / (sum(cost_forecast_7d_total_usd) / 7) * 100",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "decimals": 2,
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "green",
+                  "value": -5
+                },
+                {
+                  "color": "yellow",
+                  "value": 10
+                },
+                {
+                  "color": "orange",
+                  "value": 15
+                },
+                {
+                  "color": "red",
+                  "value": 20
+                }
+              ]
+            },
+            "mappings": [
+              {
+                "type": "special",
+                "options": {
+                  "match": "null",
+                  "result": {
+                    "text": "No Data"
+                  }
+                }
+              }
+            ]
+          },
+          "overrides": []
+        },
+        "options": {
+          "orientation": "horizontal",
+          "textMode": "value_and_name",
+          "colorMode": "background",
+          "graphMode": "area",
+          "justifyMode": "center",
+          "text": {
+            "titleSize": 16,
+            "valueSize": 48
+          }
+        }
+      },
+      {
+        "id": 3,
+        "title": "Monthly Budget Status",
+        "type": "stat",
+        "gridPos": {
+          "h": 6,
+          "w": 8,
+          "x": 8,
+          "y": 10
+        },
+        "targets": [
+          {
+            "datasource": "Prometheus",
+            "expr": "sum(increase(aws_cost_usd[30d]))",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyUSD",
+            "decimals": 2,
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "yellow",
+                  "value": 40000
+                },
+                {
+                  "color": "orange",
+                  "value": 45000
+                },
+                {
+                  "color": "red",
+                  "value": 50000
+                }
+              ]
+            },
+            "max": 50000,
+            "min": 0
+          },
+          "overrides": []
+        },
+        "options": {
+          "orientation": "horizontal",
+          "textMode": "value_and_name",
+          "colorMode": "background",
+          "graphMode": "area",
+          "justifyMode": "center",
+          "text": {
+            "titleSize": 16,
+            "valueSize": 36
+          }
+        },
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "renameByName": {
+                "Value": "Spent (30d)"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Forecast Accuracy (MAPE)",
+        "type": "gauge",
+        "gridPos": {
+          "h": 6,
+          "w": 8,
+          "x": 16,
+          "y": 10
+        },
+        "targets": [
+          {
+            "datasource": "Prometheus",
+            "expr": "cost_forecast_mape_percent",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "decimals": 2,
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "yellow",
+                  "value": 10
+                },
+                {
+                  "color": "red",
+                  "value": 15
+                }
+              ]
+            },
+            "max": 20,
+            "min": 0
+          },
+          "overrides": []
+        },
+        "options": {
+          "orientation": "horizontal",
+          "showThresholdLabels": true,
+          "showThresholdMarkers": true,
+          "text": {
+            "valueSize": 32
+          }
+        }
+      },
+      {
+        "id": 5,
+        "title": "Cost per Service (Last 7 Days)",
+        "type": "barchart",
+        "gridPos": {
+          "h": 9,
+          "w": 12,
+          "x": 0,
+          "y": 16
+        },
+        "targets": [
+          {
+            "datasource": "Prometheus",
+            "expr": "topk(10, sum(increase(aws_cost_usd[7d])) by (service))",
+            "legendFormat": "{{ service }}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyUSD",
+            "decimals": 2,
+            "color": {
+              "mode": "palette-classic"
+            }
+          },
+          "overrides": []
+        },
+        "options": {
+          "orientation": "horizontal",
+          "xField": "Time",
+          "colorByField": "Time",
+          "showValue": "always",
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": false
+          },
+          "tooltip": {
+            "mode": "single"
+          }
+        }
+      },
+      {
+        "id": 6,
+        "title": "Monthly Burn Rate (Daily Average)",
+        "type": "timeseries",
+        "gridPos": {
+          "h": 9,
+          "w": 12,
+          "x": 12,
+          "y": 16
+        },
+        "targets": [
+          {
+            "datasource": "Prometheus",
+            "expr": "sum(increase(aws_cost_usd[1d]))",
+            "legendFormat": "Daily Cost",
+            "refId": "A"
+          },
+          {
+            "datasource": "Prometheus",
+            "expr": "avg_over_time(sum(increase(aws_cost_usd[1d]))[7d:1d])",
+            "legendFormat": "7-Day Moving Average",
+            "refId": "B"
+          },
+          {
+            "datasource": "Prometheus",
+            "expr": "vector(1667)",
+            "legendFormat": "Budget Target ($50k/month = $1,667/day)",
+            "refId": "C"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyUSD",
+            "decimals": 2,
+            "custom": {
+              "lineWidth": 2,
+              "fillOpacity": 10,
+              "spanNulls": false,
+              "showPoints": "never",
+              "axisPlacement": "auto"
+            }
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Daily Cost"
+              },
+              "properties": [
+                {
+                  "id": "custom.fillOpacity",
+                  "value": 30
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Budget Target ($50k/month = $1,667/day)"
+              },
+              "properties": [
+                {
+                  "id": "color",
+                  "value": {
+                    "mode": "fixed",
+                    "fixedColor": "red"
+                  }
+                },
+                {
+                  "id": "custom.lineStyle",
+                  "value": {
+                    "dash": [10, 5]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "options": {
+          "tooltip": {
+            "mode": "multi"
+          },
+          "legend": {
+            "displayMode": "table",
+            "placement": "bottom",
+            "calcs": ["mean", "lastNotNull"]
+          }
+        }
+      },
+      {
+        "id": 7,
+        "title": "30-Day Forecast Projection",
+        "type": "stat",
+        "gridPos": {
+          "h": 6,
+          "w": 12,
+          "x": 0,
+          "y": 25
+        },
+        "targets": [
+          {
+            "datasource": "Prometheus",
+            "expr": "sum(cost_forecast_30d_total_usd)",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyUSD",
+            "decimals": 2,
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "yellow",
+                  "value": 50000
+                },
+                {
+                  "color": "red",
+                  "value": 55000
+                }
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "options": {
+          "orientation": "horizontal",
+          "textMode": "value_and_name",
+          "colorMode": "background",
+          "graphMode": "area",
+          "justifyMode": "center",
+          "text": {
+            "titleSize": 18,
+            "valueSize": 42
+          }
+        },
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "renameByName": {
+                "Value": "Projected 30-Day Cost"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Cost per Tenant (Last 7 Days)",
+        "type": "table",
+        "gridPos": {
+          "h": 6,
+          "w": 12,
+          "x": 12,
+          "y": 25
+        },
+        "targets": [
+          {
+            "datasource": "Prometheus",
+            "expr": "topk(10, sum(increase(aws_cost_usd{tenant_id!=\"untagged\"}[7d])) by (tenant_id))",
+            "format": "table",
+            "instant": true,
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyUSD",
+            "decimals": 2,
+            "custom": {
+              "align": "auto",
+              "displayMode": "color-background"
+            },
+            "thresholds": {
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "yellow",
+                  "value": 2000
+                },
+                {
+                  "color": "orange",
+                  "value": 5000
+                },
+                {
+                  "color": "red",
+                  "value": 10000
+                }
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {
+                "Time": true,
+                "__name__": true
+              },
+              "renameByName": {
+                "tenant_id": "Tenant ID",
+                "Value": "7-Day Cost (USD)"
+              }
+            }
+          }
+        ],
+        "options": {
+          "showHeader": true,
+          "sortBy": [
+            {
+              "displayName": "7-Day Cost (USD)",
+              "desc": true
+            }
+          ]
+        }
+      },
+      {
+        "id": 9,
+        "title": "Cost Variance Trend (7-Day Rolling)",
+        "type": "timeseries",
+        "gridPos": {
+          "h": 8,
+          "w": 24,
+          "x": 0,
+          "y": 31
+        },
+        "targets": [
+          {
+            "datasource": "ClickHouse",
+            "rawSql": "WITH\n  actual_costs AS (\n    SELECT\n      date,\n      sum(cost_usd) AS actual_cost\n    FROM teei_observability.aws_costs\n    WHERE date >= today() - 30\n    GROUP BY date\n  ),\n  forecasts AS (\n    SELECT\n      prediction_date AS date,\n      predicted_cost\n    FROM teei_observability.cost_forecasts\n    WHERE forecast_date >= today() - 30\n      AND prediction_date >= today() - 30\n  )\nSELECT\n  a.date AS time,\n  ((a.actual_cost - f.predicted_cost) / f.predicted_cost) * 100 AS variance_pct\nFROM actual_costs a\nLEFT JOIN forecasts f ON a.date = f.date\nWHERE f.predicted_cost IS NOT NULL\nORDER BY time",
+            "legendFormat": "Variance %",
+            "refId": "A"
+          },
+          {
+            "datasource": "Prometheus",
+            "expr": "vector(10)",
+            "legendFormat": "Warning Threshold (+10%)",
+            "refId": "B"
+          },
+          {
+            "datasource": "Prometheus",
+            "expr": "vector(20)",
+            "legendFormat": "Critical Threshold (+20%)",
+            "refId": "C"
+          },
+          {
+            "datasource": "Prometheus",
+            "expr": "vector(-10)",
+            "legendFormat": "Under-Budget (-10%)",
+            "refId": "D"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "decimals": 2,
+            "custom": {
+              "lineWidth": 2,
+              "fillOpacity": 20,
+              "spanNulls": false,
+              "showPoints": "never",
+              "axisPlacement": "auto"
+            }
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Variance %"
+              },
+              "properties": [
+                {
+                  "id": "color",
+                  "value": {
+                    "mode": "fixed",
+                    "fixedColor": "blue"
+                  }
+                },
+                {
+                  "id": "custom.lineWidth",
+                  "value": 3
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byRegexp",
+                "options": ".*Threshold.*"
+              },
+              "properties": [
+                {
+                  "id": "custom.lineStyle",
+                  "value": {
+                    "dash": [5, 5]
+                  }
+                },
+                {
+                  "id": "custom.fillOpacity",
+                  "value": 0
+                }
+              ]
+            }
+          ]
+        },
+        "options": {
+          "tooltip": {
+            "mode": "multi"
+          },
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom"
+          }
+        }
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "service",
+          "type": "query",
+          "datasource": "Prometheus",
+          "query": "label_values(aws_cost_usd, service)",
+          "refresh": 1,
+          "multi": true,
+          "includeAll": true,
+          "allValue": ".*"
+        },
+        {
+          "name": "tenant_id",
+          "type": "query",
+          "datasource": "Prometheus",
+          "query": "label_values(aws_cost_usd, tenant_id)",
+          "refresh": 1,
+          "multi": true,
+          "includeAll": true,
+          "allValue": ".*"
+        }
+      ]
+    },
+    "annotations": {
+      "list": [
+        {
+          "name": "Budget Alerts",
+          "datasource": "Prometheus",
+          "enable": true,
+          "iconColor": "red",
+          "expr": "ALERTS{alertname=~\".*Cost.*|.*Budget.*\"}",
+          "step": "60s",
+          "tagKeys": "alertname,severity"
+        },
+        {
+          "name": "Deployments",
+          "datasource": "Prometheus",
+          "enable": true,
+          "iconColor": "blue",
+          "expr": "deployment_events",
+          "step": "60s"
+        }
+      ]
+    },
+    "time": {
+      "from": "now-30d",
+      "to": "now"
+    },
+    "timepicker": {
+      "refresh_intervals": ["1m", "5m", "15m", "30m", "1h", "2h", "1d"]
+    }
+  },
+  "overwrite": true
+}

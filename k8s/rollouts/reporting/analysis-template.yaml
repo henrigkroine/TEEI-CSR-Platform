@@ -1,0 +1,145 @@
+# Argo Rollouts AnalysisTemplate: Reporting Service SLO Health Gate
+# Owner: Worker 1 - Team 1 (rollouts-integrator)
+# Created: 2025-11-16
+
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: reporting-slo-health
+  namespace: teei-platform
+  labels:
+    app: reporting
+    component: canary-analysis
+spec:
+  metrics:
+    # Error Rate SLO: < 0.2%
+    - name: error-rate
+      initialDelay: 30s
+      interval: 30s
+      successCondition: result < 0.002
+      failureLimit: 3
+      provider:
+        prometheus:
+          address: http://prometheus.monitoring.svc.cluster.local:9090
+          query: |
+            sum(rate(http_server_requests_total{
+              service="reporting",
+              status=~"5..",
+              version="{{ args.canary-version }}"
+            }[5m]))
+            /
+            sum(rate(http_server_requests_total{
+              service="reporting",
+              version="{{ args.canary-version }}"
+            }[5m]))
+
+    # P95 Latency SLO: < 2s
+    - name: p95-latency
+      initialDelay: 30s
+      interval: 30s
+      successCondition: result < 2.0
+      failureLimit: 3
+      provider:
+        prometheus:
+          address: http://prometheus.monitoring.svc.cluster.local:9090
+          query: |
+            histogram_quantile(0.95,
+              sum(rate(http_server_request_duration_seconds_bucket{
+                service="reporting",
+                version="{{ args.canary-version }}"
+              }[5m])) by (le)
+            )
+
+    # Gen-AI Report Success Rate: > 98%
+    - name: genai-success-rate
+      initialDelay: 60s
+      interval: 60s
+      successCondition: result > 0.98
+      failureLimit: 3
+      provider:
+        prometheus:
+          address: http://prometheus.monitoring.svc.cluster.local:9090
+          query: |
+            sum(rate(genai_report_generation_total{
+              service="reporting",
+              status="success",
+              version="{{ args.canary-version }}"
+            }[5m]))
+            /
+            sum(rate(genai_report_generation_total{
+              service="reporting",
+              version="{{ args.canary-version }}"
+            }[5m]))
+
+    # Database Connection Pool Health
+    - name: db-pool-active-connections
+      initialDelay: 30s
+      interval: 30s
+      successCondition: result < 0.80  # < 80% pool utilization
+      failureLimit: 3
+      provider:
+        prometheus:
+          address: http://prometheus.monitoring.svc.cluster.local:9090
+          query: |
+            avg(db_pool_active_connections{
+              service="reporting",
+              version="{{ args.canary-version }}"
+            })
+            /
+            avg(db_pool_max_connections{
+              service="reporting",
+              version="{{ args.canary-version }}"
+            })
+
+  args:
+    - name: canary-version
+      valueFrom:
+        podTemplateHashValue: Latest
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: reporting
+  namespace: teei-platform
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app: reporting
+  template:
+    metadata:
+      labels:
+        app: reporting
+        version: v1
+    spec:
+      containers:
+        - name: reporting
+          image: teei-reporting:latest
+          ports:
+            - containerPort: 3000
+          resources:
+            requests:
+              cpu: 1000m
+              memory: 1Gi
+            limits:
+              cpu: 4000m
+              memory: 4Gi
+  strategy:
+    canary:
+      steps:
+        - setWeight: 10
+        - pause: {duration: 3m}
+        - analysis:
+            templates:
+              - templateName: reporting-slo-health
+        - setWeight: 30
+        - pause: {duration: 10m}
+        - analysis:
+            templates:
+              - templateName: reporting-slo-health
+        - setWeight: 100
+      trafficRouting:
+        istio:
+          virtualService:
+            name: reporting-vsvc

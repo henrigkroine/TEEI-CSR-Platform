@@ -1,0 +1,212 @@
+# ============================================================================
+# Loki Sampling Validation Queries
+# ============================================================================
+# Purpose: Validate log sampling rules effectiveness
+# Last Updated: 2025-11-16
+# Owner: Worker 1 Team 6 (Observability)
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+# 1. TOTAL LOG VOLUME (Before/After Comparison)
+# ----------------------------------------------------------------------------
+
+# Total log volume - last 7 days
+sum(count_over_time({job=~".+"}[7d]))
+
+# Total log volume - last 24 hours
+sum(count_over_time({job=~".+"}[24h]))
+
+# Total log volume - last 1 hour
+sum(count_over_time({job=~".+"}[1h]))
+
+# Log volume by service (top 10)
+topk(10, sum by (job) (count_over_time({job=~".+"}[7d])))
+
+# ----------------------------------------------------------------------------
+# 2. LOG LEVEL DISTRIBUTION (Verify Sampling Rates)
+# ----------------------------------------------------------------------------
+
+# Breakdown by log level - 7 days
+sum by (level) (count_over_time({job=~".+"}[7d]))
+
+# Breakdown by log level - 24 hours
+sum by (level) (count_over_time({job=~".+"}[24h]))
+
+# INFO log count (should be ~10% after sampling)
+sum(count_over_time({level="info"}[7d]))
+
+# DEBUG log count (should be ~5% after sampling)
+sum(count_over_time({level="debug"}[7d]))
+
+# ERROR log count (should be 100% - no sampling)
+sum(count_over_time({level="error"}[7d]))
+
+# WARN log count (should be 100% - no sampling)
+sum(count_over_time({level="warn"}[7d]))
+
+# ----------------------------------------------------------------------------
+# 3. CRITICAL PATTERN RETENTION (Must be 100%)
+# ----------------------------------------------------------------------------
+
+# SLO breach events
+sum(count_over_time({msg=~"(?i).*slo breach.*"}[7d]))
+
+# Deployment events
+sum(count_over_time({msg=~"(?i).*deployment.*"}[7d]))
+
+# Security events
+sum(count_over_time({msg=~"(?i).*(security|authentication failed).*"}[7d]))
+
+# Database errors
+sum(count_over_time({msg=~"(?i).*(database|db).*(error|failure).*"}[7d]))
+
+# Out of memory events
+sum(count_over_time({msg=~"(?i).*(out of memory|oom).*"}[7d]))
+
+# Circuit breaker events
+sum(count_over_time({msg=~"(?i).*(circuit breaker|rate limit exceeded).*"}[7d]))
+
+# Certificate errors
+sum(count_over_time({msg=~"(?i).*(certificate|tls).*(error|expired).*"}[7d]))
+
+# Audit logs
+sum(count_over_time({msg=~"(?i).*(audit|compliance).*"}[7d]))
+
+# ----------------------------------------------------------------------------
+# 4. SERVICE-LEVEL ANALYSIS
+# ----------------------------------------------------------------------------
+
+# Log volume by service and level
+sum by (job, level) (count_over_time({job=~".+"}[7d]))
+
+# High-volume services (top 10)
+topk(10, sum by (job) (rate({job=~".+"}[5m])))
+
+# Services with high ERROR rates
+topk(10, sum by (job) (rate({level="error"}[5m])))
+
+# Services with most INFO logs (candidates for sampling)
+topk(10, sum by (job) (count_over_time({level="info"}[7d])))
+
+# ----------------------------------------------------------------------------
+# 5. SAMPLING EFFECTIVENESS METRICS
+# ----------------------------------------------------------------------------
+
+# Logs per second before/after sampling
+sum(rate({job=~".+"}[5m]))
+
+# Bytes ingested per second
+sum(rate({job=~".+"}[5m])) * avg(avg_over_time({job=~".+"}[5m]))
+
+# INFO logs per second (should drop by 90%)
+sum(rate({level="info"}[5m]))
+
+# DEBUG logs per second (should drop by 95%)
+sum(rate({level="debug"}[5m]))
+
+# ERROR/WARN logs per second (should remain unchanged)
+sum(rate({level=~"error|warn"}[5m]))
+
+# ----------------------------------------------------------------------------
+# 6. HEALTH CHECK NOISE REDUCTION
+# ----------------------------------------------------------------------------
+
+# Health check log volume (should be ~1% after aggressive sampling)
+sum(count_over_time({msg=~"(?i).*(health check|/health|/ready).*"}[7d]))
+
+# Health check logs per second
+sum(rate({msg=~"(?i).*(health check|/health|/ready).*"}[5m]))
+
+# ----------------------------------------------------------------------------
+# 7. PROMETHEUS METRICS (Sampling Activity)
+# ----------------------------------------------------------------------------
+
+# These queries work on Loki's internal metrics (exposed as Prometheus metrics)
+# Query via Prometheus or Grafana:
+
+# Total lines received by Loki
+loki_distributor_lines_received_total
+
+# Lines dropped due to INFO sampling
+loki_distributor_lines_received_total{reason="info_sampling"}
+
+# Lines dropped due to DEBUG sampling
+loki_distributor_lines_received_total{reason="debug_sampling"}
+
+# Lines dropped due to TRACE sampling
+loki_distributor_lines_received_total{reason="trace_sampling"}
+
+# Lines dropped due to health check sampling
+loki_distributor_lines_received_total{reason="healthcheck_sampling"}
+
+# Drop rate by reason
+rate(loki_distributor_lines_received_total[5m])
+
+# ----------------------------------------------------------------------------
+# 8. COST ESTIMATION QUERIES
+# ----------------------------------------------------------------------------
+
+# Average log size (bytes)
+avg(avg_over_time({job=~".+"}[7d]))
+
+# Total data ingested (estimated GB/day)
+sum(count_over_time({job=~".+"}[24h])) * avg(avg_over_time({job=~".+"}[24h])) / 1024 / 1024 / 1024
+
+# Data ingested by service (top consumers)
+topk(10, sum by (job) (count_over_time({job=~".+"}[24h]) * avg(avg_over_time({job=~".+"}[24h]))))
+
+# ----------------------------------------------------------------------------
+# 9. COMPARISON QUERIES (Before vs After)
+# ----------------------------------------------------------------------------
+
+# Use these queries with time range selectors to compare:
+# Before: [date1:date2] (e.g., [2025-11-10T00:00:00Z:2025-11-11T00:00:00Z])
+# After:  [date3:date4] (e.g., [2025-11-16T00:00:00Z:2025-11-17T00:00:00Z])
+
+# Total volume comparison
+sum(count_over_time({job=~".+"}[24h] @ 1731196800))  # Before (replace timestamp)
+sum(count_over_time({job=~".+"}[24h] @ 1731801600))  # After (replace timestamp)
+
+# Reduction percentage
+((before - after) / before) * 100
+
+# ----------------------------------------------------------------------------
+# 10. ALERTING QUERIES
+# ----------------------------------------------------------------------------
+
+# Alert if ERROR log retention drops below 100%
+# (Compare ERROR count before/after sampling - should be identical)
+sum(count_over_time({level="error"}[7d]))
+
+# Alert if sampling reduces logs by less than 40%
+# (Total volume should drop ≥40% from baseline)
+(1 - (sum(count_over_time({job=~".+"}[7d])) / <baseline_count>)) * 100 < 40
+
+# ============================================================================
+# VALIDATION METHODOLOGY
+# ============================================================================
+#
+# 1. Establish Baseline (Before Sampling):
+#    - Run total volume query: sum(count_over_time({job=~".+"}[7d]))
+#    - Run level breakdown: sum by (level) (count_over_time({job=~".+"}[7d]))
+#    - Record ERROR/WARN counts
+#
+# 2. Deploy Sampling Rules:
+#    - Apply sampling.yaml ConfigMap
+#    - Restart Loki pods
+#    - Wait 10 minutes for rules to take effect
+#
+# 3. Measure After Sampling:
+#    - Run same queries as baseline
+#    - Compare total volume (should be ≤60% of baseline)
+#    - Verify ERROR/WARN counts unchanged (100% retention)
+#
+# 4. Calculate Reduction:
+#    - Reduction % = ((before - after) / before) * 100
+#    - Target: ≥40% reduction
+#
+# 5. Validate Critical Patterns:
+#    - Query for SLO breaches, deployments, security events
+#    - Verify 100% retention (counts should match pre-sampling)
+#
+# ============================================================================

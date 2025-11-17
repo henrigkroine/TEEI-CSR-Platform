@@ -1,0 +1,170 @@
+# Argo Rollouts AnalysisTemplate: Q2Q AI Service SLO Health Gate
+# Owner: Worker 1 - Team 1 (rollouts-integrator)
+# Created: 2025-11-16
+
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: q2q-ai-slo-health
+  namespace: teei-platform
+  labels:
+    app: q2q-ai
+    component: canary-analysis
+spec:
+  metrics:
+    # Error Rate SLO: < 0.5%
+    - name: error-rate
+      initialDelay: 30s
+      interval: 30s
+      successCondition: result < 0.005
+      failureLimit: 3
+      provider:
+        prometheus:
+          address: http://prometheus.monitoring.svc.cluster.local:9090
+          query: |
+            sum(rate(http_server_requests_total{
+              service="q2q-ai",
+              status=~"5..",
+              version="{{ args.canary-version }}"
+            }[5m]))
+            /
+            sum(rate(http_server_requests_total{
+              service="q2q-ai",
+              version="{{ args.canary-version }}"
+            }[5m]))
+
+    # P95 Latency SLO: < 5s
+    - name: p95-latency
+      initialDelay: 30s
+      interval: 30s
+      successCondition: result < 5.0
+      failureLimit: 3
+      provider:
+        prometheus:
+          address: http://prometheus.monitoring.svc.cluster.local:9090
+          query: |
+            histogram_quantile(0.95,
+              sum(rate(http_server_request_duration_seconds_bucket{
+                service="q2q-ai",
+                version="{{ args.canary-version }}"
+              }[5m])) by (le)
+            )
+
+    # LLM API Success Rate: > 98%
+    - name: llm-api-success-rate
+      initialDelay: 60s
+      interval: 60s
+      successCondition: result > 0.98
+      failureLimit: 2  # More sensitive for LLM failures
+      provider:
+        prometheus:
+          address: http://prometheus.monitoring.svc.cluster.local:9090
+          query: |
+            sum(rate(llm_api_requests_total{
+              service="q2q-ai",
+              status="success",
+              version="{{ args.canary-version }}"
+            }[5m]))
+            /
+            sum(rate(llm_api_requests_total{
+              service="q2q-ai",
+              version="{{ args.canary-version }}"
+            }[5m]))
+
+    # Classification Confidence: > 95%
+    - name: classification-confidence
+      initialDelay: 60s
+      interval: 60s
+      successCondition: result > 0.95
+      failureLimit: 3
+      provider:
+        prometheus:
+          address: http://prometheus.monitoring.svc.cluster.local:9090
+          query: |
+            sum(rate(q2q_evidence_classification_total{
+              service="q2q-ai",
+              confidence=~"high|medium",
+              version="{{ args.canary-version }}"
+            }[5m]))
+            /
+            sum(rate(q2q_evidence_classification_total{
+              service="q2q-ai",
+              version="{{ args.canary-version }}"
+            }[5m]))
+
+    # Token Usage (cost control)
+    - name: token-usage-rate
+      initialDelay: 60s
+      interval: 60s
+      successCondition: result < 10000  # Max 10K tokens/min
+      failureLimit: 5
+      provider:
+        prometheus:
+          address: http://prometheus.monitoring.svc.cluster.local:9090
+          query: |
+            sum(rate(llm_tokens_total{
+              service="q2q-ai",
+              version="{{ args.canary-version }}"
+            }[1m]))
+
+  args:
+    - name: canary-version
+      valueFrom:
+        podTemplateHashValue: Latest
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: q2q-ai
+  namespace: teei-platform
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: q2q-ai
+  template:
+    metadata:
+      labels:
+        app: q2q-ai
+        version: v1
+    spec:
+      containers:
+        - name: q2q-ai
+          image: teei-q2q-ai:latest
+          ports:
+            - containerPort: 3001
+          resources:
+            requests:
+              cpu: 2000m
+              memory: 2Gi
+            limits:
+              cpu: 8000m
+              memory: 8Gi
+          env:
+            - name: LLM_RATE_LIMIT
+              value: "100"  # requests per minute
+  strategy:
+    canary:
+      steps:
+        # Conservative rollout for AI service
+        - setWeight: 5
+        - pause: {duration: 5m}
+        - analysis:
+            templates:
+              - templateName: q2q-ai-slo-health
+        - setWeight: 20
+        - pause: {duration: 15m}
+        - analysis:
+            templates:
+              - templateName: q2q-ai-slo-health
+        - setWeight: 50
+        - pause: {duration: 30m}
+        - analysis:
+            templates:
+              - templateName: q2q-ai-slo-health
+        - setWeight: 100
+      trafficRouting:
+        istio:
+          virtualService:
+            name: q2q-ai-vsvc

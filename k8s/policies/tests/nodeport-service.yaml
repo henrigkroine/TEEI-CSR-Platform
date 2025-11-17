@@ -1,0 +1,50 @@
+# =============================================================================
+# Test Case: NodePort Service
+# =============================================================================
+# Expected Outcome: REJECTED by deny-nodeport-services policy (in default ns)
+# Reason: NodePort services expose ports on all cluster nodes
+#
+# To test:
+#   kubectl apply -f nodeport-service.yaml
+#   Expected: Error - NodePort services are not allowed
+#
+# Note: Same service in 'monitoring' namespace would be ALLOWED (exception)
+# =============================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: nodeport-service
+  namespace: default  # Would be allowed in 'monitoring' namespace
+  labels:
+    app: test-nodeport
+    test-case: "nodeport-deny-policy"
+spec:
+  type: NodePort  # Should be rejected - use ClusterIP or LoadBalancer
+  selector:
+    app: web
+  ports:
+  - port: 80
+    targetPort: 8080
+    nodePort: 30080
+---
+# =============================================================================
+# Exception Example: NodePort in Monitoring Namespace
+# =============================================================================
+# This would be ALLOWED due to namespace exception
+# =============================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus-nodeport
+  namespace: monitoring  # Exception namespace
+  labels:
+    app: prometheus
+    test-case: "nodeport-exception"
+spec:
+  type: NodePort  # Allowed in monitoring namespace
+  selector:
+    app: prometheus
+  ports:
+  - port: 9090
+    targetPort: 9090
+    nodePort: 30090

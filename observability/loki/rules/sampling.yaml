@@ -1,0 +1,129 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: loki-sampling-rules
+  namespace: teei-platform
+  labels:
+    app: teei-loki
+    component: logging
+    part-of: teei-observability
+data:
+  sampling.yaml: |
+    # ============================================================================
+    # Loki Log Sampling Rules
+    # ============================================================================
+    # Purpose: Reduce log volume by ≥40% while retaining 100% of critical logs
+    # Last Updated: 2025-11-16
+    # Owner: Worker 1 Team 6 (Observability)
+    # ============================================================================
+
+    # CRITICAL PATTERN WHITELIST (Keep 100% - No Sampling)
+    # ----------------------------------------------------------------------------
+    # These patterns are NEVER sampled - always kept at 100% retention
+
+    - action: keep
+      selector: '{level=~"error|warn|fatal"}'
+      description: "Keep all ERROR, WARN, and FATAL logs"
+
+    - action: keep
+      selector: '{msg=~"(?i).*slo breach.*"}'
+      description: "Keep all SLO breach events"
+
+    - action: keep
+      selector: '{msg=~"(?i).*deployment.*"}'
+      description: "Keep all deployment events"
+
+    - action: keep
+      selector: '{msg=~"(?i).*(security|authentication failed|unauthorized|forbidden).*"}'
+      description: "Keep all security-related events"
+
+    - action: keep
+      selector: '{msg=~"(?i).*(database|db).*(error|failure|timeout|connection failed).*"}'
+      description: "Keep all database errors"
+
+    - action: keep
+      selector: '{msg=~"(?i).*(out of memory|oom|memory leak).*"}'
+      description: "Keep all memory-related errors"
+
+    - action: keep
+      selector: '{msg=~"(?i).*(circuit breaker|rate limit exceeded|quota exceeded).*"}'
+      description: "Keep all circuit breaker and rate limit events"
+
+    - action: keep
+      selector: '{msg=~"(?i).*(panic|crash|fatal error|segfault).*"}'
+      description: "Keep all critical failures"
+
+    - action: keep
+      selector: '{msg=~"(?i).*(certificate|tls|ssl).*(error|expired|invalid).*"}'
+      description: "Keep all TLS/SSL certificate errors"
+
+    - action: keep
+      selector: '{msg=~"(?i).*(audit|compliance|gdpr|pii).*"}'
+      description: "Keep all audit and compliance logs"
+
+    # INFO LOG SAMPLING (Keep 10% - Sample Rate 0.1)
+    # ----------------------------------------------------------------------------
+    # Drop 90% of INFO logs to reduce volume
+
+    - action: drop
+      drop_counter_reason: info_sampling
+      rate: 0.9
+      selector: '{level="info"}'
+      description: "Sample INFO logs at 10% (drop 90%)"
+
+    # DEBUG LOG SAMPLING (Keep 5% - Sample Rate 0.05)
+    # ----------------------------------------------------------------------------
+    # Drop 95% of DEBUG logs (most verbose)
+
+    - action: drop
+      drop_counter_reason: debug_sampling
+      rate: 0.95
+      selector: '{level="debug"}'
+      description: "Sample DEBUG logs at 5% (drop 95%)"
+
+    # TRACE LOG SAMPLING (Keep 2% - Sample Rate 0.02)
+    # ----------------------------------------------------------------------------
+    # Drop 98% of TRACE logs (extremely verbose)
+
+    - action: drop
+      drop_counter_reason: trace_sampling
+      rate: 0.98
+      selector: '{level="trace"}'
+      description: "Sample TRACE logs at 2% (drop 98%)"
+
+    # HEALTH CHECK NOISE REDUCTION
+    # ----------------------------------------------------------------------------
+    # Aggressively sample health check logs (keep only 1%)
+
+    - action: drop
+      drop_counter_reason: healthcheck_sampling
+      rate: 0.99
+      selector: '{msg=~"(?i).*(health check|healthcheck|/health|/ready|/live).*"}'
+      description: "Sample health check logs at 1% (drop 99%)"
+
+    # ============================================================================
+    # SAMPLING VALIDATION QUERIES
+    # ============================================================================
+    # Use these LogQL queries to validate sampling effectiveness:
+    #
+    # 1. Total volume reduction:
+    #    sum(count_over_time({job=~".+"}[7d]))
+    #
+    # 2. ERROR/WARN retention (should be 100%):
+    #    sum(count_over_time({level=~"error|warn"}[7d]))
+    #
+    # 3. INFO sampling rate (should be ~10%):
+    #    sum(count_over_time({level="info"}[7d]))
+    #
+    # 4. Critical pattern retention (should be 100%):
+    #    sum(count_over_time({msg=~"(?i).*slo breach.*"}[7d]))
+    #    sum(count_over_time({msg=~"(?i).*deployment.*"}[7d]))
+    #    sum(count_over_time({msg=~"(?i).*database.*error.*"}[7d]))
+    #
+    # 5. Sampling effectiveness by service:
+    #    sum by (job) (count_over_time({job=~".+"}[7d]))
+    #
+    # 6. Drop counter metrics (sampling activity):
+    #    loki_distributor_lines_received_total{reason="info_sampling"}
+    #    loki_distributor_lines_received_total{reason="debug_sampling"}
+    # ============================================================================

@@ -1,0 +1,169 @@
+# SLO Definition: Corporate Cockpit (Frontend)
+# Service: teei-corp-cockpit-astro
+# Owner: Worker 1 - Team 1 (SLO Automation)
+# Created: 2025-11-16
+
+apiVersion: sloth.slok.dev/v1
+kind: PrometheusServiceLevel
+metadata:
+  name: cockpit-frontend-performance
+  namespace: monitoring
+  labels:
+    team: frontend
+    service: corp-cockpit
+    tier: critical
+spec:
+  service: "corp-cockpit"
+  labels:
+    owner: "worker1-team1"
+    environment: "production"
+
+  slos:
+    # SLO 1: Availability (Error Rate from server)
+    - name: "cockpit-requests-availability"
+      objective: 99.9
+      description: "99.9% of Cockpit requests should return non-5xx responses"
+      sli:
+        events:
+          errorQuery: |
+            sum(rate(http_server_requests_total{
+              service="corp-cockpit",
+              status=~"5.."
+            }[{{.window}}]))
+          totalQuery: |
+            sum(rate(http_server_requests_total{
+              service="corp-cockpit"
+            }[{{.window}}]))
+      alerting:
+        name: CockpitHighErrorRate
+        labels:
+          severity: critical
+          component: corp-cockpit
+        annotations:
+          summary: "Cockpit error rate exceeds SLO"
+          description: "Error rate is {{ $value | humanizePercentage }}, SLO is 99.9%"
+          runbook: "https://docs.teei.io/runbooks/cockpit-errors"
+
+    # SLO 2: Largest Contentful Paint (LCP < 2.5s)
+    - name: "cockpit-web-vitals-lcp"
+      objective: 75.0
+      description: "75% of page loads should have LCP <2.5s (Good)"
+      sli:
+        events:
+          errorQuery: |
+            sum(rate(web_vitals_lcp_seconds_bucket{
+              service="corp-cockpit",
+              le="2.5"
+            }[{{.window}}]))
+          totalQuery: |
+            sum(rate(web_vitals_lcp_seconds_count{
+              service="corp-cockpit"
+            }[{{.window}}]))
+      alerting:
+        name: CockpitLCPSlow
+        labels:
+          severity: warning
+          component: corp-cockpit-perf
+        annotations:
+          summary: "Cockpit LCP performance degraded"
+          description: "{{ $value | humanizePercentage }} of loads have LCP <2.5s, target is 75%"
+          runbook: "https://docs.teei.io/runbooks/cockpit-web-vitals"
+
+    # SLO 3: Interaction to Next Paint (INP < 200ms)
+    - name: "cockpit-web-vitals-inp"
+      objective: 75.0
+      description: "75% of interactions should have INP <200ms (Good)"
+      sli:
+        events:
+          errorQuery: |
+            sum(rate(web_vitals_inp_milliseconds_bucket{
+              service="corp-cockpit",
+              le="200"
+            }[{{.window}}]))
+          totalQuery: |
+            sum(rate(web_vitals_inp_milliseconds_count{
+              service="corp-cockpit"
+            }[{{.window}}]))
+      alerting:
+        name: CockpitINPSlow
+        labels:
+          severity: warning
+          component: corp-cockpit-perf
+        annotations:
+          summary: "Cockpit INP performance degraded"
+          description: "{{ $value | humanizePercentage }} of interactions have INP <200ms, target is 75%"
+          runbook: "https://docs.teei.io/runbooks/cockpit-web-vitals"
+
+    # SLO 4: Cumulative Layout Shift (CLS < 0.1)
+    - name: "cockpit-web-vitals-cls"
+      objective: 75.0
+      description: "75% of page loads should have CLS <0.1 (Good)"
+      sli:
+        events:
+          errorQuery: |
+            sum(rate(web_vitals_cls_score_bucket{
+              service="corp-cockpit",
+              le="0.1"
+            }[{{.window}}]))
+          totalQuery: |
+            sum(rate(web_vitals_cls_score_count{
+              service="corp-cockpit"
+            }[{{.window}}]))
+      alerting:
+        name: CockpitCLSPoor
+        labels:
+          severity: warning
+          component: corp-cockpit-perf
+        annotations:
+          summary: "Cockpit CLS performance degraded"
+          description: "{{ $value | humanizePercentage }} of loads have CLS <0.1, target is 75%"
+          runbook: "https://docs.teei.io/runbooks/cockpit-web-vitals"
+
+  alerting:
+    multiwindow:
+      - name: "cockpit-error-budget-burn-critical"
+        severity: critical
+        shortWindow: 1h
+        longWindow: 6h
+        burnRateFactor: 14.4
+        annotations:
+          summary: "CRITICAL: Cockpit error budget burning at 14.4x rate"
+          description: "Frontend performance critically degraded"
+
+      - name: "cockpit-error-budget-burn-warning"
+        severity: warning
+        shortWindow: 6h
+        longWindow: 3d
+        burnRateFactor: 6.0
+        annotations:
+          summary: "WARNING: Cockpit error budget burning at 6x rate"
+          description: "Review recent frontend deployments"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cockpit-slo-metadata
+  namespace: monitoring
+data:
+  service: "corp-cockpit"
+  description: "Corporate Cockpit SLOs for availability and Core Web Vitals"
+  owner: "worker1-team1"
+  errorBudget: "0.1%"  # 99.9% SLO = 0.1% error budget
+  budgetPeriod: "30d"
+  webVitalsThresholds: |
+    {
+      "lcp_good": 2500,
+      "lcp_poor": 4000,
+      "inp_good": 200,
+      "inp_poor": 500,
+      "cls_good": 0.1,
+      "cls_poor": 0.25
+    }
+  targets: |
+    {
+      "availability": 99.9,
+      "lcp_good_percent": 75,
+      "inp_good_percent": 75,
+      "cls_good_percent": 75
+    }

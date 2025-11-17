@@ -1,0 +1,280 @@
+# Prometheus Alert Rules: FinOps Budget & Cost Variance Alerts
+# Owner: Worker 1 - Phase J (cost-forecaster)
+# Created: 2025-11-16
+# Cost monitoring with predictive forecasting and budget variance detection
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-budget-alerts
+  namespace: monitoring
+  labels:
+    app: prometheus
+    component: alert-rules
+    category: finops
+data:
+  budget-alerts.yaml: |
+    groups:
+      # ===========================================
+      # Cost Variance Alerts (Actual vs. Forecast)
+      # ===========================================
+      - name: cost-variance-alerts
+        interval: 1m
+        rules:
+          # Critical: Cost variance >20% from forecast
+          - alert: CostVarianceCritical
+            expr: |
+              (
+                (
+                  sum(increase(aws_cost_usd[24h]))
+                  -
+                  sum(cost_forecast_7d_total_usd) / 7
+                ) / (sum(cost_forecast_7d_total_usd) / 7)
+              ) * 100 > 20
+            for: 15m
+            labels:
+              severity: critical
+              team: finops
+              notify: pagerduty
+              category: cost-overrun
+            annotations:
+              summary: "CRITICAL: AWS costs 20%+ above forecast"
+              description: "Daily cost variance is {{ $value | humanize }}% above prediction. Actual: ${{ with query \"sum(increase(aws_cost_usd[24h]))\" }}{{ . | first | value | humanize }}{{ end }}, Forecast: ${{ with query \"sum(cost_forecast_7d_total_usd) / 7\" }}{{ . | first | value | humanize }}{{ end }}"
+              dashboard: "https://grafana.teei.io/d/finops-budget"
+              runbook: "https://docs.teei.io/runbooks/cost-variance-critical"
+              action: |
+                1. Review top cost drivers in last 24h (by service/tenant)
+                2. Check for resource provisioning errors (oversized instances)
+                3. Verify autoscaling configurations (KEDA/HPA)
+                4. Identify and terminate unused resources
+                5. Page FinOps lead for budget approval
+
+          # Warning: Cost variance >10% from forecast
+          - alert: CostVarianceWarning
+            expr: |
+              (
+                (
+                  sum(increase(aws_cost_usd[24h]))
+                  -
+                  sum(cost_forecast_7d_total_usd) / 7
+                ) / (sum(cost_forecast_7d_total_usd) / 7)
+              ) * 100 > 10
+            for: 30m
+            labels:
+              severity: warning
+              team: finops
+              notify: slack
+              category: cost-overrun
+            annotations:
+              summary: "WARNING: AWS costs 10%+ above forecast"
+              description: "Daily cost variance is {{ $value | humanize }}% above prediction. Monitor closely for budget overrun."
+              dashboard: "https://grafana.teei.io/d/finops-budget"
+              runbook: "https://docs.teei.io/runbooks/cost-variance-warning"
+              action: |
+                1. Review cost breakdown in FinOps dashboard
+                2. Identify top 5 cost-increasing services
+                3. Check for recent scaling events or deployments
+                4. Notify team leads of budget status
+
+      # ===========================================
+      # Budget Burn Rate Alerts
+      # ===========================================
+      - name: budget-burn-rate-alerts
+        interval: 1m
+        rules:
+          # Critical: Monthly budget will exhaust in <7 days
+          - alert: MonthlyBudgetExhaustionCritical
+            expr: |
+              (
+                (
+                  sum(cost_forecast_30d_total_usd)
+                  >
+                  scalar(monthly_budget_usd)
+                )
+                and
+                (
+                  (scalar(monthly_budget_usd) - sum(increase(aws_cost_usd[30d])))
+                  /
+                  (sum(increase(aws_cost_usd[24h])))
+                ) < 7
+              )
+            for: 10m
+            labels:
+              severity: critical
+              team: finops
+              notify: pagerduty
+              category: budget-exhaustion
+            annotations:
+              summary: "CRITICAL: Monthly budget will exhaust in <7 days"
+              description: "Current burn rate: ${{ with query \"sum(increase(aws_cost_usd[24h]))\" }}{{ . | first | value | humanize }}{{ end }}/day. Remaining budget: ${{ with query \"scalar(monthly_budget_usd) - sum(increase(aws_cost_usd[30d]))\" }}{{ . | first | value | humanize }}{{ end }}. Days until exhaustion: {{ $value | humanize }}"
+              dashboard: "https://grafana.teei.io/d/finops-budget"
+              runbook: "https://docs.teei.io/runbooks/budget-exhaustion-critical"
+              action: |
+                1. IMMEDIATELY freeze non-critical resource provisioning
+                2. Review and terminate idle resources (databases, instances)
+                3. Scale down non-production environments
+                4. Request emergency budget increase from CFO
+                5. Implement cost-saving measures (reserved instances, spot)
+
+          # Warning: Projected to exceed monthly budget by >10%
+          - alert: MonthlyBudgetProjectedOverrun
+            expr: |
+              (
+                sum(cost_forecast_30d_total_usd)
+                >
+                scalar(monthly_budget_usd) * 1.1
+              )
+            for: 1h
+            labels:
+              severity: warning
+              team: finops
+              notify: slack
+              category: budget-overrun
+            annotations:
+              summary: "WARNING: Projected to exceed monthly budget by 10%+"
+              description: "30-day forecast: ${{ with query \"sum(cost_forecast_30d_total_usd)\" }}{{ . | first | value | humanize }}{{ end }}. Budget: ${{ with query \"scalar(monthly_budget_usd)\" }}{{ . | first | value | humanize }}{{ end }}. Overrun: {{ $value | humanize }}%"
+              dashboard: "https://grafana.teei.io/d/finops-budget"
+              runbook: "https://docs.teei.io/runbooks/budget-projected-overrun"
+              action: |
+                1. Review forecast accuracy (MAPE should be ≤10%)
+                2. Analyze cost trends by service and tenant
+                3. Plan cost optimization initiatives
+                4. Communicate budget risk to leadership
+
+      # ===========================================
+      # Per-Tenant Cost Alerts
+      # ===========================================
+      - name: tenant-cost-alerts
+        interval: 5m
+        rules:
+          # Critical: Single tenant consuming >30% of total costs
+          - alert: TenantCostAnomalyCritical
+            expr: |
+              (
+                sum(increase(aws_cost_usd{tenant_id!="untagged"}[24h])) by (tenant_id)
+                /
+                sum(increase(aws_cost_usd[24h]))
+              ) * 100 > 30
+            for: 30m
+            labels:
+              severity: critical
+              team: finops
+              notify: pagerduty
+              category: tenant-cost-anomaly
+            annotations:
+              summary: "CRITICAL: Tenant {{ $labels.tenant_id }} consuming 30%+ of total costs"
+              description: "Tenant cost share: {{ $value | humanize }}%. Daily cost: ${{ with query \"sum(increase(aws_cost_usd{tenant_id='{{ $labels.tenant_id }}'}[24h]))\" }}{{ . | first | value | humanize }}{{ end }}"
+              dashboard: "https://grafana.teei.io/d/finops-carbon?var-tenant={{ $labels.tenant_id }}"
+              runbook: "https://docs.teei.io/runbooks/tenant-cost-anomaly"
+              action: |
+                1. Investigate tenant {{ $labels.tenant_id }} workload patterns
+                2. Check for runaway processes or infinite loops
+                3. Review tenant resource quotas and limits
+                4. Contact tenant admin to verify usage legitimacy
+                5. Consider implementing tenant cost caps
+
+          # Warning: Tenant cost increased >50% day-over-day
+          - alert: TenantCostSpikeWarning
+            expr: |
+              (
+                (
+                  sum(increase(aws_cost_usd{tenant_id!="untagged"}[24h])) by (tenant_id)
+                  -
+                  sum(increase(aws_cost_usd{tenant_id!="untagged"}[24h] offset 24h)) by (tenant_id)
+                ) / sum(increase(aws_cost_usd{tenant_id!="untagged"}[24h] offset 24h)) by (tenant_id)
+              ) * 100 > 50
+            for: 2h
+            labels:
+              severity: warning
+              team: finops
+              notify: slack
+              category: tenant-cost-spike
+            annotations:
+              summary: "WARNING: Tenant {{ $labels.tenant_id }} cost increased 50%+ (day-over-day)"
+              description: "Cost increase: {{ $value | humanize }}%. Current: ${{ with query \"sum(increase(aws_cost_usd{tenant_id='{{ $labels.tenant_id }}'}[24h]))\" }}{{ . | first | value | humanize }}{{ end }}, Previous: ${{ with query \"sum(increase(aws_cost_usd{tenant_id='{{ $labels.tenant_id }}'}[24h] offset 24h))\" }}{{ . | first | value | humanize }}{{ end }}"
+              dashboard: "https://grafana.teei.io/d/finops-carbon?var-tenant={{ $labels.tenant_id }}"
+              runbook: "https://docs.teei.io/runbooks/tenant-cost-spike"
+              action: |
+                1. Compare tenant activity levels (requests, data volume)
+                2. Check for new services or features enabled
+                3. Review autoscaling metrics for over-provisioning
+                4. Notify tenant of cost increase
+
+      # ===========================================
+      # Forecasting Model Health
+      # ===========================================
+      - name: forecast-model-health
+        interval: 5m
+        rules:
+          # Critical: MAPE >15% (model accuracy degraded)
+          - alert: ForecastModelAccuracyDegraded
+            expr: cost_forecast_mape_percent > 15
+            for: 1h
+            labels:
+              severity: critical
+              team: finops
+              notify: slack
+              category: model-health
+            annotations:
+              summary: "CRITICAL: Cost forecast model accuracy degraded (MAPE >15%)"
+              description: "Current MAPE: {{ $value | humanize }}%. Target: ≤10%. Model predictions may be unreliable."
+              dashboard: "https://grafana.teei.io/d/finops-budget"
+              runbook: "https://docs.teei.io/runbooks/forecast-model-retrain"
+              action: |
+                1. Review recent cost patterns for anomalies
+                2. Check if cost behavior has fundamentally changed
+                3. Retrain model with updated hyperparameters
+                4. Consider switching to alternative algorithm (ARIMA ↔ Prophet)
+                5. Increase training data window (90d → 180d)
+
+          # Warning: Forecast data stale (>36h since last update)
+          - alert: ForecastDataStale
+            expr: (time() - cost_forecast_timestamp) / 3600 > 36
+            for: 30m
+            labels:
+              severity: warning
+              team: finops
+              notify: slack
+              category: data-freshness
+            annotations:
+              summary: "WARNING: Cost forecast data is stale (>36h old)"
+              description: "Last forecast: {{ with query \"cost_forecast_timestamp\" }}{{ . | first | value | humanizeTimestamp }}{{ end }} ({{ $value | humanize }} hours ago)"
+              dashboard: "https://grafana.teei.io/d/finops-budget"
+              runbook: "https://docs.teei.io/runbooks/forecast-data-stale"
+              action: |
+                1. Check cost-forecast.py cron job status
+                2. Review script logs for errors
+                3. Verify ClickHouse connectivity
+                4. Manually run forecasting pipeline: /scripts/finops/cost-forecast.py
+
+      # ===========================================
+      # Untagged Resource Costs
+      # ===========================================
+      - name: untagged-cost-alerts
+        interval: 10m
+        rules:
+          # Warning: >10% of costs from untagged resources
+          - alert: UntaggedResourceCostsHigh
+            expr: |
+              (
+                sum(increase(aws_cost_usd{tenant_id="untagged"}[7d]))
+                /
+                sum(increase(aws_cost_usd[7d]))
+              ) * 100 > 10
+            for: 1h
+            labels:
+              severity: warning
+              team: platform
+              notify: slack
+              category: cost-attribution
+            annotations:
+              summary: "WARNING: 10%+ of costs from untagged resources"
+              description: "Untagged cost share: {{ $value | humanize }}%. 7-day untagged costs: ${{ with query \"sum(increase(aws_cost_usd{tenant_id='untagged'}[7d]))\" }}{{ . | first | value | humanize }}{{ end }}"
+              dashboard: "https://grafana.teei.io/d/finops-carbon"
+              runbook: "https://docs.teei.io/runbooks/cost-tagging-compliance"
+              action: |
+                1. Identify top untagged resources using AWS Cost Explorer
+                2. Apply tenant_id tags to resources
+                3. Update IaC (Terraform/Pulumi) with required tags
+                4. Enforce tag compliance via AWS Organizations SCPs
+                5. Set up automated tagging for new resources

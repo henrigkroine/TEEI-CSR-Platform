@@ -1,0 +1,39 @@
+{
+  "metadata": {
+    "simulationDate": "2025-11-16T11:17:47.901Z",
+    "periodStart": "2025-10-01T00:00:00Z",
+    "periodEnd": "2025-10-31T00:00:00Z",
+    "totalDays": 30,
+    "totalJobs": 1000
+  },
+  "baseline": {
+    "strategy": "Baseline (Random Scheduling)",
+    "totalJobs": 1000,
+    "totalEmissionsGCO2e": 119990.54,
+    "totalEmissionsKgCO2e": 119.99,
+    "averageDelayMinutes": 0,
+    "maxDelayMinutes": 0,
+    "gdprViolations": 0,
+    "totalEnergyKWh": 374.8,
+    "averageCarbonIntensity": 319.79
+  },
+  "carbonAware": {
+    "strategy": "Carbon-Aware Scheduling",
+    "totalJobs": 1000,
+    "totalEmissionsGCO2e": 89947.06,
+    "totalEmissionsKgCO2e": 89.95,
+    "averageDelayMinutes": 194.7,
+    "maxDelayMinutes": 719,
+    "gdprViolations": 0,
+    "totalEnergyKWh": 374.8,
+    "averageCarbonIntensity": 246.49
+  },
+  "comparison": {
+    "absoluteSavingsGCO2e": 30043.48,
+    "absoluteSavingsKgCO2e": 30.04,
+    "percentageReduction": 25.04,
+    "averageDelayIncreaseMinutes": 194.7,
+    "targetAchieved": true,
+    "gdprCompliant": true
+  }
+}

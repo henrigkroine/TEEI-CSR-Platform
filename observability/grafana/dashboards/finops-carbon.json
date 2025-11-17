@@ -1,5 +1,6 @@
 {
   "dashboard": {
+<<<<<<< HEAD
     "title": "Carbon Emissions (CO\u2082e) Dashboard",
     "tags": ["finops", "carbon", "sustainability", "co2e"],
     "timezone": "utc",
@@ -16,10 +17,38 @@
             "refId": "A",
             "rawSql": "SELECT sum(co2e_kg) FROM finops.co2e_emissions WHERE date >= today() - INTERVAL 30 DAY",
             "format": "table"
+=======
+    "title": "FinOps × Carbon Metrics - Cost & Environmental Impact",
+    "tags": ["teei", "finops", "carbon", "sustainability", "cost-optimization"],
+    "timezone": "utc",
+    "schemaVersion": 16,
+    "version": 1,
+    "refresh": "1m",
+    "editable": true,
+    "panels": [
+      {
+        "id": 1,
+        "title": "Cost per Tenant (AWS Breakdown)",
+        "type": "table",
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 0
+        },
+        "targets": [
+          {
+            "datasource": "Prometheus",
+            "expr": "sum(aws_cost_usd{service=~\"$service\"}) by (tenant_id, aws_service)",
+            "format": "table",
+            "instant": true,
+            "refId": "A"
+>>>>>>> origin/claude/phaseJ-postga-greenops-01NJ8HwK5R7Bn2fCiBVDtf7R
           }
         ],
         "fieldConfig": {
           "defaults": {
+<<<<<<< HEAD
             "unit": "kg",
             "decimals": 2,
             "color": {"mode": "thresholds"},
@@ -32,10 +61,62 @@
               ]
             }
           }
+=======
+            "unit": "currencyUSD",
+            "decimals": 2,
+            "custom": {
+              "align": "auto",
+              "displayMode": "color-background"
+            },
+            "thresholds": {
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "yellow",
+                  "value": 500
+                },
+                {
+                  "color": "red",
+                  "value": 1000
+                }
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {
+                "Time": true,
+                "__name__": true
+              },
+              "renameByName": {
+                "tenant_id": "Tenant ID",
+                "aws_service": "AWS Service",
+                "Value": "Cost (USD)"
+              }
+            }
+          }
+        ],
+        "options": {
+          "showHeader": true,
+          "sortBy": [
+            {
+              "displayName": "Cost (USD)",
+              "desc": true
+            }
+          ]
+>>>>>>> origin/claude/phaseJ-postga-greenops-01NJ8HwK5R7Bn2fCiBVDtf7R
         }
       },
       {
         "id": 2,
+<<<<<<< HEAD
         "title": "Emissions by Region",
         "type": "piechart",
         "gridPos": {"x": 6, "y": 0, "w": 6, "h": 4},
@@ -44,10 +125,115 @@
             "refId": "A",
             "rawSql": "SELECT region, sum(co2e_kg) as co2e FROM finops.co2e_emissions WHERE date >= today() - INTERVAL 30 DAY GROUP BY region",
             "format": "table"
+=======
+        "title": "Cost per Region (Distribution)",
+        "type": "piechart",
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 0
+        },
+        "targets": [
+          {
+            "datasource": "Prometheus",
+            "expr": "sum(aws_cost_usd{service=~\"$service\"}) by (region)",
+            "legendFormat": "{{ region }}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyUSD",
+            "decimals": 2
+          },
+          "overrides": []
+        },
+        "options": {
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"]
+          },
+          "pieType": "donut",
+          "tooltip": {
+            "mode": "multi"
+          },
+          "legend": {
+            "displayMode": "table",
+            "placement": "right",
+            "values": ["value", "percent"]
+          }
+        }
+      },
+      {
+        "id": 3,
+        "title": "gCO₂e per 1k Requests (Carbon Intensity)",
+        "type": "timeseries",
+        "gridPos": {
+          "h": 9,
+          "w": 12,
+          "x": 0,
+          "y": 8
+        },
+        "targets": [
+          {
+            "datasource": "ClickHouse",
+            "rawSql": "SELECT\n  toStartOfHour(timestamp) AS time,\n  service,\n  avg(co2e_grams / requests * 1000) AS gco2e_per_1k_requests\nFROM workload_emissions\nWHERE timestamp >= now() - INTERVAL 24 HOUR\nGROUP BY time, service\nORDER BY time",
+            "legendFormat": "{{ service }}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "none",
+            "custom": {
+              "lineWidth": 2,
+              "fillOpacity": 10,
+              "spanNulls": false,
+              "showPoints": "never",
+              "axisPlacement": "auto"
+            },
+            "decimals": 3,
+            "thresholds": {
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "yellow",
+                  "value": 5
+                },
+                {
+                  "color": "red",
+                  "value": 10
+                }
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "options": {
+          "tooltip": {
+            "mode": "multi"
+          },
+          "legend": {
+            "displayMode": "table",
+            "placement": "bottom",
+            "calcs": ["mean", "max"]
+          }
+        },
+        "yAxes": [
+          {
+            "label": "gCO₂e per 1k Requests",
+            "format": "none",
+            "decimals": 3
+>>>>>>> origin/claude/phaseJ-postga-greenops-01NJ8HwK5R7Bn2fCiBVDtf7R
           }
         ]
       },
       {
+<<<<<<< HEAD
         "id": 3,
         "title": "Carbon Intensity by Region",
         "type": "bargauge",
@@ -83,10 +269,28 @@
             "refId": "A",
             "rawSql": "SELECT avg(renewable_percentage) FROM finops.co2e_emissions WHERE date >= today() - INTERVAL 30 DAY",
             "format": "table"
+=======
+        "id": 4,
+        "title": "Cost vs. Carbon Correlation (Scatter Plot)",
+        "type": "timeseries",
+        "gridPos": {
+          "h": 9,
+          "w": 12,
+          "x": 12,
+          "y": 8
+        },
+        "targets": [
+          {
+            "datasource": "ClickHouse",
+            "rawSql": "SELECT\n  service AS metric,\n  sum(cost_usd) AS cost,\n  sum(co2e_grams) AS carbon\nFROM workload_emissions\nWHERE timestamp >= now() - INTERVAL 24 HOUR\nGROUP BY service",
+            "format": "table",
+            "refId": "A"
+>>>>>>> origin/claude/phaseJ-postga-greenops-01NJ8HwK5R7Bn2fCiBVDtf7R
           }
         ],
         "fieldConfig": {
           "defaults": {
+<<<<<<< HEAD
             "unit": "percent",
             "min": 0,
             "max": 100,
@@ -116,10 +320,140 @@
         "yaxes": [
           {"format": "kg", "label": "CO\u2082e (kg)"},
           {"format": "short"}
+=======
+            "custom": {
+              "drawStyle": "points",
+              "lineWidth": 0,
+              "fillOpacity": 0,
+              "pointSize": 8,
+              "showPoints": "always",
+              "axisPlacement": "auto"
+            }
+          },
+          "overrides": []
+        },
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "renameByName": {
+                "cost": "Cost (USD)",
+                "carbon": "Carbon (gCO₂e)"
+              }
+            }
+          }
+        ],
+        "options": {
+          "tooltip": {
+            "mode": "multi"
+          },
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom"
+          }
+        },
+        "yAxes": [
+          {
+            "label": "Carbon (gCO₂e)",
+            "format": "none"
+          }
+        ],
+        "xAxes": [
+          {
+            "label": "Cost (USD)",
+            "format": "currencyUSD"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Grid Carbon Intensity Timeline (gCO₂/kWh)",
+        "type": "timeseries",
+        "gridPos": {
+          "h": 9,
+          "w": 24,
+          "x": 0,
+          "y": 17
+        },
+        "targets": [
+          {
+            "datasource": "ClickHouse",
+            "rawSql": "SELECT\n  toStartOfHour(timestamp) AS time,\n  region,\n  avg(grid_intensity_gco2_per_kwh) AS intensity\nFROM co2e_emissions\nWHERE timestamp >= now() - INTERVAL 7 DAY\nGROUP BY time, region\nORDER BY time",
+            "legendFormat": "{{ region }}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "none",
+            "custom": {
+              "lineWidth": 2,
+              "fillOpacity": 20,
+              "gradientMode": "opacity",
+              "spanNulls": false,
+              "showPoints": "never",
+              "axisPlacement": "auto"
+            },
+            "decimals": 1,
+            "color": {
+              "mode": "palette-classic"
+            }
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "us-east-1"
+              },
+              "properties": [
+                {
+                  "id": "color",
+                  "value": {
+                    "mode": "fixed",
+                    "fixedColor": "red"
+                  }
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "eu-central-1"
+              },
+              "properties": [
+                {
+                  "id": "color",
+                  "value": {
+                    "mode": "fixed",
+                    "fixedColor": "green"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "options": {
+          "tooltip": {
+            "mode": "multi"
+          },
+          "legend": {
+            "displayMode": "table",
+            "placement": "bottom",
+            "calcs": ["mean", "min", "max"]
+          }
+        },
+        "yAxes": [
+          {
+            "label": "Grid Intensity (gCO₂/kWh)",
+            "format": "none",
+            "decimals": 1
+          }
+>>>>>>> origin/claude/phaseJ-postga-greenops-01NJ8HwK5R7Bn2fCiBVDtf7R
         ]
       },
       {
         "id": 6,
+<<<<<<< HEAD
         "title": "Energy Consumption (kWh)",
         "type": "graph",
         "gridPos": {"x": 12, "y": 4, "w": 12, "h": 6},
@@ -133,10 +467,84 @@
         "yaxes": [
           {"format": "kWh", "label": "Energy"},
           {"format": "short"}
+=======
+        "title": "Carbon Savings Projection (Monthly)",
+        "type": "stat",
+        "gridPos": {
+          "h": 6,
+          "w": 12,
+          "x": 0,
+          "y": 26
+        },
+        "targets": [
+          {
+            "datasource": "ClickHouse",
+            "rawSql": "SELECT\n  sum((baseline_co2e_grams - optimized_co2e_grams) * 30) AS monthly_savings_grams\nFROM (\n  SELECT\n    avg(co2e_grams) AS baseline_co2e_grams,\n    avg(co2e_grams * 0.85) AS optimized_co2e_grams\n  FROM workload_emissions\n  WHERE timestamp >= now() - INTERVAL 24 HOUR\n)",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "none",
+            "decimals": 0,
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {
+                  "color": "red",
+                  "value": null
+                },
+                {
+                  "color": "yellow",
+                  "value": 5000
+                },
+                {
+                  "color": "green",
+                  "value": 10000
+                }
+              ]
+            },
+            "mappings": [
+              {
+                "type": "special",
+                "options": {
+                  "match": "null",
+                  "result": {
+                    "text": "No Data"
+                  }
+                }
+              }
+            ]
+          },
+          "overrides": []
+        },
+        "options": {
+          "orientation": "horizontal",
+          "textMode": "value_and_name",
+          "colorMode": "background",
+          "graphMode": "area",
+          "justifyMode": "center",
+          "text": {
+            "valueSize": 48
+          }
+        },
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "renameByName": {
+                "monthly_savings_grams": "Projected Monthly Savings (gCO₂e)"
+              }
+            }
+          }
+>>>>>>> origin/claude/phaseJ-postga-greenops-01NJ8HwK5R7Bn2fCiBVDtf7R
         ]
       },
       {
         "id": 7,
+<<<<<<< HEAD
         "title": "Emissions by Service",
         "type": "table",
         "gridPos": {"x": 0, "y": 10, "w": 12, "h": 6},
@@ -160,4 +568,117 @@
     "schemaVersion": 27,
     "version": 1
   }
+=======
+        "title": "Regional Carbon Comparison (Current Hour)",
+        "type": "bargauge",
+        "gridPos": {
+          "h": 6,
+          "w": 12,
+          "x": 12,
+          "y": 26
+        },
+        "targets": [
+          {
+            "datasource": "ClickHouse",
+            "rawSql": "SELECT\n  region,\n  sum(co2e_grams) AS total_co2e\nFROM workload_emissions\nWHERE timestamp >= now() - INTERVAL 1 HOUR\nGROUP BY region\nORDER BY total_co2e DESC",
+            "format": "table",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "none",
+            "decimals": 2,
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "yellow",
+                  "value": 100
+                },
+                {
+                  "color": "orange",
+                  "value": 500
+                },
+                {
+                  "color": "red",
+                  "value": 1000
+                }
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "renameByName": {
+                "region": "Region",
+                "total_co2e": "Total gCO₂e"
+              }
+            }
+          }
+        ],
+        "options": {
+          "orientation": "horizontal",
+          "displayMode": "gradient",
+          "showUnfilled": true,
+          "text": {
+            "valueSize": 18
+          }
+        }
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "service",
+          "type": "query",
+          "datasource": "Prometheus",
+          "query": "label_values(http_requests_total, service)",
+          "refresh": 1,
+          "multi": true,
+          "includeAll": true,
+          "allValue": ".*"
+        },
+        {
+          "name": "region",
+          "type": "query",
+          "datasource": "ClickHouse",
+          "query": "SELECT DISTINCT region FROM workload_emissions",
+          "refresh": 1,
+          "multi": true,
+          "includeAll": true,
+          "allValue": ".*"
+        }
+      ]
+    },
+    "annotations": {
+      "list": [
+        {
+          "name": "Carbon-Aware Shifts",
+          "datasource": "ClickHouse",
+          "enable": true,
+          "iconColor": "green",
+          "query": "SELECT timestamp, concat('Shifted to ', target_region) AS text FROM workload_shifts WHERE timestamp >= $__from AND timestamp <= $__to"
+        }
+      ]
+    },
+    "time": {
+      "from": "now-24h",
+      "to": "now"
+    },
+    "timepicker": {
+      "refresh_intervals": ["30s", "1m", "5m", "15m", "30m", "1h", "2h", "1d"]
+    }
+  },
+  "overwrite": true
+>>>>>>> origin/claude/phaseJ-postga-greenops-01NJ8HwK5R7Bn2fCiBVDtf7R
 }

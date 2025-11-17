@@ -1,0 +1,56 @@
+TEEI-CSR-Platform Argo Rollouts Architecture
+=============================================
+
+k8s/rollouts/
+├── api-gateway/          [✅ Existing - Phase J1]
+│   └── analysis-template.yaml
+│       ├── 6 SLO metrics (error rate, P95/P99 latency, volume, CPU, memory)
+│       └── Canary: 5% → 25% → 50% → 100%
+│
+├── reporting/            [✅ Existing - Phase J1]
+│   └── analysis-template.yaml
+│       ├── 4 SLO metrics (error rate, P95 latency, Gen-AI success, DB pool)
+│       └── Canary: 10% → 30% → 100%
+│
+├── q2q-ai/              [✅ Existing - Phase J1]
+│   └── analysis-template.yaml
+│       ├── 5 SLO metrics (error rate, P95 latency, LLM success, classification, tokens)
+│       └── Canary: 5% → 20% → 50% → 100%
+│
+├── corp-cockpit/        [🆕 NEW - Phase J6.2]
+│   └── analysis-template.yaml
+│       ├── 8 SLO metrics (Web Vitals: LCP, INP, CLS + JS/API errors + SSR perf)
+│       └── Canary: 10% → 30% → 50% → 100%
+│       └── Focus: Frontend user experience quality
+│
+├── impact-in/           [🆕 NEW - Phase J6.2]
+│   └── analysis-template.yaml
+│       ├── 9 SLO metrics (delivery success, P95/P99 latency, retries, partner API, queue)
+│       └── Canary: 10% → 40% → 100%
+│       └── Focus: External partner delivery reliability
+│
+└── unified-profile/     [🆕 NEW - Phase J6.2]
+    └── analysis-template.yaml
+        ├── 10 SLO metrics (error rate, P95/P99 latency, aggregation, cache, DB, external fetch)
+        └── Canary: 20% → 50% → 100%
+        └── Focus: Low-latency profile retrieval
+
+ROLLOUT STATS:
+==============
+Total Services:        6 tier-1 services
+Total SLO Metrics:     42 unique health gates
+Total Rollout Config:  1,860 lines of YAML
+Auto-Rollback:         ✅ All services (failureLimit: 3)
+Traffic Routing:       Istio VirtualService (L7 splitting)
+Monitoring:            Prometheus (5m rate windows)
+
+DEPLOYMENT TIMELINE:
+====================
+Service          | Initial | Mid-Stage | Final | Total Time
+-----------------|---------|-----------|-------|------------
+API Gateway      | 5%  2m  | 25%  5m   | 50% 10m | ~17m
+Reporting        | 10% 3m  | 30% 10m   | -       | ~13m
+Q2Q-AI          | 5%  5m  | 20% 15m   | 50% 30m | ~50m
+Corp Cockpit     | 10% 5m  | 30% 10m   | 50% 15m | ~30m
+Impact-In        | 10% 10m | 40% 20m   | -       | ~30m
+Unified-Profile  | 20% 5m  | 50% 15m   | -       | ~20m

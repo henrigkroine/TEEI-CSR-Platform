@@ -1,0 +1,192 @@
+# SLO Definition: Impact-In Connector Service
+# Service: teei-impact-in
+# Owner: Worker 1 - Team 1 (SLO Automation)
+# Created: 2025-11-16
+
+apiVersion: sloth.slok.dev/v1
+kind: PrometheusServiceLevel
+metadata:
+  name: impact-in-delivery-success
+  namespace: monitoring
+  labels:
+    team: integrations
+    service: impact-in
+    tier: high
+spec:
+  service: "impact-in"
+  labels:
+    owner: "worker1-team1"
+    environment: "production"
+
+  slos:
+    # SLO 1: Delivery Success Rate (>99%)
+    - name: "impact-in-delivery-success"
+      objective: 99.0
+      description: "99% of Impact-In deliveries should succeed"
+      sli:
+        events:
+          errorQuery: |
+            sum(rate(impact_in_delivery_total{
+              service="impact-in",
+              status=~"failed|error"
+            }[{{.window}}]))
+          totalQuery: |
+            sum(rate(impact_in_delivery_total{
+              service="impact-in"
+            }[{{.window}}]))
+      alerting:
+        name: ImpactInHighFailureRate
+        labels:
+          severity: critical
+          component: impact-in
+        annotations:
+          summary: "Impact-In delivery failure rate exceeds SLO"
+          description: "Failure rate is {{ $value | humanizePercentage }}, SLO is 99% success"
+          runbook: "https://docs.teei.io/runbooks/impact-in-failures"
+
+    # SLO 2: Benevity Connector Success
+    - name: "impact-in-benevity-success"
+      objective: 98.0
+      description: "98% of Benevity deliveries should succeed"
+      sli:
+        events:
+          errorQuery: |
+            sum(rate(impact_in_delivery_total{
+              service="impact-in",
+              platform="benevity",
+              status="failed"
+            }[{{.window}}]))
+          totalQuery: |
+            sum(rate(impact_in_delivery_total{
+              service="impact-in",
+              platform="benevity"
+            }[{{.window}}]))
+      alerting:
+        name: ImpactInBenevityFailures
+        labels:
+          severity: warning
+          component: impact-in-benevity
+        annotations:
+          summary: "Benevity connector failure rate elevated"
+          description: "Check Benevity API health and credentials"
+
+    # SLO 3: Goodera Connector Success
+    - name: "impact-in-goodera-success"
+      objective: 98.0
+      description: "98% of Goodera deliveries should succeed"
+      sli:
+        events:
+          errorQuery: |
+            sum(rate(impact_in_delivery_total{
+              service="impact-in",
+              platform="goodera",
+              status="failed"
+            }[{{.window}}]))
+          totalQuery: |
+            sum(rate(impact_in_delivery_total{
+              service="impact-in",
+              platform="goodera"
+            }[{{.window}}]))
+      alerting:
+        name: ImpactInGooderaFailures
+        labels:
+          severity: warning
+          component: impact-in-goodera
+        annotations:
+          summary: "Goodera connector failure rate elevated"
+          description: "Check Goodera OAuth tokens and API availability"
+
+    # SLO 4: Workday Connector Success
+    - name: "impact-in-workday-success"
+      objective: 98.0
+      description: "98% of Workday deliveries should succeed"
+      sli:
+        events:
+          errorQuery: |
+            sum(rate(impact_in_delivery_total{
+              service="impact-in",
+              platform="workday",
+              status="failed"
+            }[{{.window}}]))
+          totalQuery: |
+            sum(rate(impact_in_delivery_total{
+              service="impact-in",
+              platform="workday"
+            }[{{.window}}]))
+      alerting:
+        name: ImpactInWorkdayFailures
+        labels:
+          severity: warning
+          component: impact-in-workday
+        annotations:
+          summary: "Workday connector failure rate elevated"
+          description: "Check Workday SOAP endpoint and WS-Security headers"
+
+    # SLO 5: Delivery Latency (P95 < 10s)
+    - name: "impact-in-delivery-latency"
+      objective: 95.0
+      description: "95% of deliveries should complete in <10s (P95)"
+      sli:
+        events:
+          errorQuery: |
+            histogram_quantile(0.95,
+              sum(rate(impact_in_delivery_duration_seconds_bucket{
+                service="impact-in"
+              }[{{.window}}])) by (le)
+            ) < bool 10.0
+      alerting:
+        name: ImpactInHighLatency
+        labels:
+          severity: warning
+          component: impact-in
+        annotations:
+          summary: "Impact-In delivery latency exceeds SLO"
+          description: "P95 latency is {{ $value }}s, SLO is <10s"
+          runbook: "https://docs.teei.io/runbooks/impact-in-latency"
+
+  alerting:
+    multiwindow:
+      - name: "impact-in-error-budget-burn-critical"
+        severity: critical
+        shortWindow: 1h
+        longWindow: 6h
+        burnRateFactor: 14.4
+        annotations:
+          summary: "CRITICAL: Impact-In error budget burning at 14.4x rate"
+          description: "Multiple partner platforms may be affected"
+
+      - name: "impact-in-error-budget-burn-warning"
+        severity: warning
+        shortWindow: 6h
+        longWindow: 3d
+        burnRateFactor: 6.0
+        annotations:
+          summary: "WARNING: Impact-In error budget burning at 6x rate"
+          description: "Review partner API health and retry queues"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: impact-in-slo-metadata
+  namespace: monitoring
+data:
+  service: "impact-in"
+  description: "Impact-In connector SLOs for delivery success and latency"
+  owner: "worker1-team1"
+  errorBudget: "1.0%"  # 99% SLO = 1.0% error budget
+  budgetPeriod: "30d"
+  platforms: |
+    {
+      "benevity": {"slo": 98.0, "timeout": 10},
+      "goodera": {"slo": 98.0, "timeout": 10},
+      "workday": {"slo": 98.0, "timeout": 15}
+    }
+  targets: |
+    {
+      "overall_success": 99.0,
+      "benevity_success": 98.0,
+      "goodera_success": 98.0,
+      "workday_success": 98.0,
+      "latency_p95": 10000
+    }

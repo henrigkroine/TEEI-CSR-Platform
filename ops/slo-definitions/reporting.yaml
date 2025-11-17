@@ -1,0 +1,132 @@
+# SLO Definition: Reporting Service
+# Service: teei-reporting
+# Owner: Worker 1 - Team 1 (SLO Automation)
+# Created: 2025-11-16
+
+apiVersion: sloth.slok.dev/v1
+kind: PrometheusServiceLevel
+metadata:
+  name: reporting-service-availability
+  namespace: monitoring
+  labels:
+    team: platform
+    service: reporting
+    tier: critical
+spec:
+  service: "reporting"
+  labels:
+    owner: "worker1-team1"
+    environment: "production"
+
+  slos:
+    # SLO 1: Availability (Error Rate)
+    - name: "reporting-requests-availability"
+      objective: 99.8
+      description: "99.8% of Reporting service requests should return non-5xx responses"
+      sli:
+        events:
+          errorQuery: |
+            sum(rate(http_server_requests_total{
+              service="reporting",
+              status=~"5.."
+            }[{{.window}}]))
+          totalQuery: |
+            sum(rate(http_server_requests_total{
+              service="reporting"
+            }[{{.window}}]))
+      alerting:
+        name: ReportingServiceHighErrorRate
+        labels:
+          severity: critical
+          component: reporting
+        annotations:
+          summary: "Reporting service error rate exceeds SLO"
+          description: "Error rate is {{ $value | humanizePercentage }}, SLO is 99.8%"
+          runbook: "https://docs.teei.io/runbooks/reporting-errors"
+
+    # SLO 2: Latency (P95 < 2s)
+    - name: "reporting-requests-latency"
+      objective: 95.0
+      description: "95% of Reporting requests should complete in <2s (P95)"
+      sli:
+        events:
+          errorQuery: |
+            histogram_quantile(0.95,
+              sum(rate(http_server_request_duration_seconds_bucket{
+                service="reporting"
+              }[{{.window}}])) by (le)
+            ) < bool 2.0
+      alerting:
+        name: ReportingServiceHighLatency
+        labels:
+          severity: warning
+          component: reporting
+        annotations:
+          summary: "Reporting service P95 latency exceeds SLO"
+          description: "P95 latency is {{ $value }}s, SLO is <2s"
+          runbook: "https://docs.teei.io/runbooks/reporting-latency"
+
+    # SLO 3: Gen-AI Report Generation Success Rate
+    - name: "reporting-genai-generation-success"
+      objective: 98.0
+      description: "98% of Gen-AI report generation attempts should succeed"
+      sli:
+        events:
+          errorQuery: |
+            sum(rate(genai_report_generation_total{
+              service="reporting",
+              status="failed"
+            }[{{.window}}]))
+          totalQuery: |
+            sum(rate(genai_report_generation_total{
+              service="reporting"
+            }[{{.window}}]))
+      alerting:
+        name: ReportingGenAIFailureRate
+        labels:
+          severity: warning
+          component: reporting-genai
+        annotations:
+          summary: "Gen-AI report generation failure rate elevated"
+          description: "Failure rate is {{ $value | humanizePercentage }}, SLO is 98% success"
+          runbook: "https://docs.teei.io/runbooks/genai-failures"
+
+  alerting:
+    multiwindow:
+      - name: "reporting-error-budget-burn-critical"
+        severity: critical
+        shortWindow: 1h
+        longWindow: 6h
+        burnRateFactor: 14.4
+        annotations:
+          summary: "CRITICAL: Reporting error budget burning at 14.4x rate"
+          description: "Error budget exhaustion imminent, investigate immediately"
+
+      - name: "reporting-error-budget-burn-warning"
+        severity: warning
+        shortWindow: 6h
+        longWindow: 3d
+        burnRateFactor: 6.0
+        annotations:
+          summary: "WARNING: Reporting error budget burning at 6x rate"
+          description: "Monitor closely, prepare rollback plan"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: reporting-slo-metadata
+  namespace: monitoring
+data:
+  service: "reporting"
+  description: "Reporting service SLOs for availability, latency, and Gen-AI success"
+  owner: "worker1-team1"
+  errorBudget: "0.2%"  # 99.8% SLO = 0.2% error budget
+  budgetPeriod: "30d"
+  targets: |
+    {
+      "availability": 99.8,
+      "latency_p95": 2000,
+      "latency_p99": 5000,
+      "genai_success": 98.0
+    }
