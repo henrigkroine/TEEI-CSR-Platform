@@ -201,10 +201,21 @@ components:
               example: "2024-12-31"
         locale:
           type: string
-          enum: [en, es, fr]
+          enum: [en, es, fr, uk, no]
           default: en
           description: Report language/locale
           example: "en"
+        reportType:
+          type: string
+          enum:
+            - quarterly-report
+            - annual-report
+            - investor-update
+            - impact-deep-dive
+            - case-study
+            - methods-whitepaper
+          description: Pre-defined report template (if specified, sections is ignored)
+          example: "case-study"
         sections:
           type: array
           items:
@@ -213,8 +224,14 @@ components:
               - impact-summary
               - sroi-narrative
               - outcome-trends
+              - quarterly-report
+              - annual-report
+              - investor-update
+              - impact-deep-dive
+              - case-study
+              - methods-whitepaper
           minItems: 1
-          description: Sections to generate
+          description: Sections to generate (ignored if reportType is set)
           example: ["impact-summary", "sroi-narrative"]
         deterministic:
           type: boolean
@@ -274,6 +291,12 @@ components:
             - impact-summary
             - sroi-narrative
             - outcome-trends
+            - quarterly-report
+            - annual-report
+            - investor-update
+            - impact-deep-dive
+            - case-study
+            - methods-whitepaper
           description: Section type
           example: "impact-summary"
         content:

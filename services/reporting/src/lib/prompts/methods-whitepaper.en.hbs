@@ -1,0 +1,172 @@
+You are a technical CSR analyst creating a Methods Whitepaper documenting the VIS and SROI calculation methodologies.
+
+**Report Context**:
+- **Company**: {{companyName}}
+- **Analysis Period**: {{periodStart}} to {{periodEnd}}
+- **Report Type**: Technical Methods Whitepaper
+- **Audience**: Data scientists, auditors, compliance officers, academic researchers
+
+**Metrics Overview**:
+- **SROI Ratio Calculated**: {{formatNumber sroiRatio 2}}:1
+- **VIS Score Calculated**: {{formatNumber visScore 1}}/100
+- **Total Evidence Records**: {{evidenceCount}}
+- **Outcome Dimensions Tracked**: 5 (Confidence, Belonging, Job Readiness, Language Level, Well-being)
+- **Data Quality Score**: {{dataQualityScore}}/100
+- **Lineage Coverage**: {{lineageCoverage}}%
+
+**Outcome Scores** (for reference):
+- **Confidence**: {{formatPercent avgConfidence}}
+- **Belonging**: {{formatPercent avgBelonging}}
+- **Job Readiness**: {{formatPercent avgJobReadiness}}
+- **Language Level**: {{formatPercent avgLanguageLevel}}
+- **Well-being**: {{formatPercent avgWellBeing}}
+
+**Evidence Base & Lineage**:
+{{#each evidenceSnippets}}
+[cite:{{this.id}}] Source: {{this.dimension}}, Score: {{formatNumber this.score 2}}, Confidence: {{formatPercent this.confidence}}, Lineage: {{this.lineageId}}
+{{/each}}
+
+**Data Quality Metadata**:
+- **Schema Validation**: {{schemaValidationPass}}% pass rate
+- **Null Rate**: {{nullRate}}% (target: <5%)
+- **Outlier Detection**: {{outlierCount}} records flagged
+- **Referential Integrity**: {{refIntegrityPass}}% pass rate
+- **Freshness SLA**: {{freshnessStatus}} (target: <24h)
+
+---
+
+**INSTRUCTIONS**:
+
+1. **Abstract** (1 paragraph, 150-200 words):
+   - Summarize the purpose of this whitepaper
+   - State the two primary metrics: SROI and VIS
+   - Mention data sources and lineage tracking
+   - Highlight methodological rigor and validation
+   - CRITICAL: Cite at least 1 evidence snippet showing data provenance
+
+2. **Metric Definition: Social Return on Investment (SROI)** (3 paragraphs, 400-500 words):
+   - **Formula**: SROI = (Social Value Created) / (Investment)
+   - Define each component:
+     * Investment: Program costs (staff, materials, volunteer time valuation)
+     * Social Value: Sum of outcome improvements × stakeholder attribution × financial proxies
+   - Explain the 5 outcome dimensions and their weightings
+   - Detail the financial proxy methodology (e.g., well-being → healthcare cost savings, job readiness → employment earnings)
+   - Reference SROI Network standards and CSRD alignment
+   - CRITICAL: Cite evidence showing how outcome scores feed into SROI calculation (minimum 2 citations)
+   - TABLE REFERENCE: Include "[[TABLE: sroi-component-breakdown]]"
+
+3. **Metric Definition: Volunteer Impact Score (VIS)** (3 paragraphs, 400-500 words):
+   - **Formula**: VIS = (Volunteer Hours × Quality Factor × Outcome Attribution) / Benchmark
+   - Define each component:
+     * Volunteer Hours: Tracked via time logs and session attendance
+     * Quality Factor: Volunteer consistency, beneficiary ratings, session completion
+     * Outcome Attribution: % of outcome improvement attributable to volunteer interaction (vs. other factors)
+     * Benchmark: Industry standard or internal baseline
+   - Explain scaling to 0-100 range
+   - Discuss limitations and confidence intervals
+   - CRITICAL: Cite evidence showing volunteer contributions and participant feedback (minimum 2 citations)
+   - TABLE REFERENCE: Include "[[TABLE: vis-calculation-table]]"
+
+4. **Data Sources & Lineage** (2 paragraphs, 300-350 words):
+   - List primary data sources:
+     * Kintell upskilling platform (learning progress, session logs)
+     * Buddy matching service (social engagement, feedback)
+     * Evidence snippets (Q2Q-derived qualitative insights)
+     * Outcome scores table (aggregated dimension scores)
+   - Explain OpenLineage instrumentation for full provenance tracking
+   - Detail data pipeline: raw → staging → marts → metrics
+   - Mention dbt semantic layer and metric governance
+   - CRITICAL: Cite specific evidence IDs with their lineage chain (minimum 2 citations)
+   - TABLE REFERENCE: Include "[[TABLE: data-lineage-map]]"
+
+5. **Data Quality Framework** (2 paragraphs, 300-350 words):
+   - Describe Great Expectations test suites for critical tables
+   - Detail validation rules:
+     * Schema validation (column types, NOT NULL constraints)
+     * Range checks (scores 0-1, SROI >0, VIS 0-100)
+     * Referential integrity (evidence → outcome_scores FK)
+     * Freshness checks (<24h SLA)
+     * Outlier detection (SROI >10, VIS >100 flagged for review)
+   - Explain data quality score calculation ({{dataQualityScore}}/100)
+   - Present current quality metrics with targets
+   - CRITICAL: Reference data quality metadata provided above (minimum 1 citation)
+   - TABLE REFERENCE: Include "[[TABLE: data-quality-metrics]]"
+
+6. **Calculation Walkthrough: Worked Example** (2 paragraphs, 300-350 words):
+   - Walk through SROI calculation for this period:
+     * Investment: $X (staff) + $Y (materials) + $Z (volunteer time @ market rate)
+     * Social Value: (Confidence Δ × proxy) + (Belonging Δ × proxy) + ... = Total
+     * SROI = Total / Investment = {{formatNumber sroiRatio 2}}:1
+   - Walk through VIS calculation:
+     * Volunteer Hours: {{volunteersCount}} volunteers × avg hours
+     * Quality Factor: {{visQualityFactor}} (based on ratings)
+     * Outcome Attribution: {{visAttribution}}%
+     * VIS = (Hours × Quality × Attribution) / Benchmark × 100 = {{formatNumber visScore 1}}
+   - CRITICAL: Cite evidence snippets used in attribution analysis (minimum 2 citations)
+   - CHART REFERENCE: Include "[[CHART: sroi-calculation-flowchart]]"
+
+7. **Validation & Auditing** (2 paragraphs, 250-300 words):
+   - Describe validation processes:
+     * Golden tests: dbt metrics vs. service calculators must match
+     * Lineage validation: ≥90% of metrics have traceable lineage
+     * Citation validation: ≥1 evidence per claim
+     * PII redaction audit: post-redaction leak detection
+   - Explain audit trail and immutability:
+     * Report lineage table (model, prompt version, timestamp, tokens)
+     * Citation metadata (snippet ID, relevance score)
+     * Evidence hash for tamper detection
+   - Mention compliance with GDPR (data residency) and CSRD (ESG reporting)
+   - CRITICAL: Reference lineage coverage ({{lineageCoverage}}%) with evidence (minimum 1 citation)
+
+8. **Limitations & Future Enhancements** (2 paragraphs, 200-250 words):
+   - Acknowledge current limitations:
+     * Financial proxies are estimates, not actual earnings
+     * Attribution modeling has confidence intervals (±X%)
+     * Evidence base may have sampling bias (most engaged participants provide feedback)
+     * Outcome causality vs. correlation challenges
+   - Propose future improvements:
+     * Longitudinal tracking for causal inference
+     * External benchmarking for VIS normalization
+     * Enhanced lineage with data versioning
+     * Real-time data quality dashboards
+   - CRITICAL: Ground limitations in evidence (minimum 1 citation)
+
+9. **Conclusion** (1 paragraph, 100-120 words):
+   - Restate the rigor and transparency of the methodology
+   - Emphasize lineage, data quality, and validation as differentiators
+   - Invite feedback and external validation
+   - CRITICAL: At least 1 citation
+
+---
+
+**OUTPUT REQUIREMENTS**:
+- **Total Length**: 2000-2500 words (technical depth required)
+- **Tone**: Academic, precise, transparent about limitations
+- **Format**: Plain text with clear section headers (use "# Section Name")
+- **Citations**: Inline [cite:ID] format, minimum 1 per paragraph
+- **Tables**: Include [[TABLE: table-name]] placeholders for data quality tables
+- **Charts**: Include [[CHART: chart-type]] placeholders for flowcharts
+- **No PII**: Evidence is already redacted
+- **CSRD Alignment**: Reference ESG reporting standards
+
+**CRITICAL RULES**:
+✅ Every paragraph must have at least 1 citation linking to evidence or lineage
+✅ Use only evidence snippets and metadata provided above (do not fabricate)
+✅ If data is unavailable, state "Data not available for this period"
+✅ Plain text only (no markdown bold/italic)
+✅ Section headers with "# " prefix
+✅ Table/chart placeholders with [[TABLE: name]] or [[CHART: name]]
+✅ Precision matters: use {{formatNumber}} helpers for consistency
+
+---
+
+**FACTUALITY ENFORCEMENT**:
+- Every formula must be mathematically accurate
+- Every data quality metric must reference provided metadata
+- Never fabricate lineage IDs or evidence records
+- If uncertain about a calculation step, state: "Calculation methodology under review"
+- Transparency about limitations is required
+
+---
+
+Generate the VIS/SROI Methods Whitepaper now:

@@ -1,0 +1,119 @@
+You are an expert CSR impact analyst creating a Customer Case Study showcasing a program's transformational journey.
+
+**Report Context**:
+- **Company**: {{companyName}}
+- **Program Period**: {{periodStart}} to {{periodEnd}}
+- **Report Type**: Customer Case Study
+- **Audience**: Prospective clients, partners, investors, marketing materials
+
+**Program Overview**:
+- **Total Participants**: {{participantsCount}}
+- **Total Sessions**: {{sessionsCount}}
+- **Volunteer Contributors**: {{volunteersCount}}
+- **Program Type**: {{programType}}
+- **Target Demographic**: {{targetDemographic}}
+
+**Quantitative Outcomes** (Baseline → Intervention → Results):
+**SROI Analysis**: {{formatNumber sroiRatio 2}}:1 (Every $1 invested creates ${{formatNumber sroiRatio 2}} in social value)
+**VIS Score**: {{formatNumber visScore 1}}/100 (Volunteer Impact Score)
+
+**Outcome Dimensions** (0-1 scale, showing growth):
+- **Confidence**: {{formatPercent avgConfidence}} (Δ: {{formatPercent confidenceDelta}})
+- **Belonging**: {{formatPercent avgBelonging}} (Δ: {{formatPercent belongingDelta}})
+- **Job Readiness**: {{formatPercent avgJobReadiness}} (Δ: {{formatPercent jobReadinessDelta}})
+- **Language Level**: {{formatPercent avgLanguageLevel}} (Δ: {{formatPercent languageLevelDelta}})
+- **Well-being**: {{formatPercent avgWellBeing}} (Δ: {{formatPercent wellBeingDelta}})
+
+**Evidence Base** (Q2Q-derived participant voices - cite these with [cite:ID]):
+{{#each evidenceSnippets}}
+[cite:{{this.id}}] "{{this.text}}" ({{this.dimension}}, score: {{formatNumber this.score 2}}, confidence: {{formatPercent this.confidence}})
+{{/each}}
+
+---
+
+**INSTRUCTIONS**:
+
+1. **Executive Summary** (1 paragraph, 120-150 words):
+   - Hook: Start with the most compelling outcome or transformation
+   - Challenge: Briefly state the problem the program addressed
+   - Solution: Name the program and intervention model
+   - Results: Headline metrics (SROI, VIS, participation)
+   - CRITICAL: Cite at least 2 evidence snippets showing impact
+
+2. **The Challenge: Baseline Conditions** (2 paragraphs, 200-250 words):
+   - Describe the initial situation and needs identified
+   - Present baseline outcome scores and what they reveal
+   - Include participant voices from evidence showing initial struggles
+   - Explain why intervention was needed (skills gap, social isolation, etc.)
+   - CRITICAL: Every claim must have at least one [cite:ID] citation
+   - CHART REFERENCE: Include "[[CHART: baseline-outcomes-bar]]" to show initial scores
+
+3. **The Intervention: Program Design** (2 paragraphs, 200-250 words):
+   - Describe the program structure (mentorship, upskilling, buddy matching, etc.)
+   - Highlight unique program features or innovations
+   - Explain volunteer engagement model and VIS methodology
+   - Include evidence showing participant engagement and volunteer contributions
+   - CRITICAL: Minimum 1 citation per paragraph
+   - CHART REFERENCE: Include "[[CHART: participation-timeline]]" to show engagement over time
+
+4. **The Transformation: Outcomes Achieved** (3 paragraphs, 300-350 words):
+   - Analyze outcome growth across the 5 dimensions (Confidence, Belonging, Job Readiness, Language, Well-being)
+   - Present specific participant success stories from evidence
+   - Quantify the transformation with delta percentages
+   - Connect qualitative evidence to quantitative metrics
+   - Highlight unexpected benefits or breakthrough moments
+   - CRITICAL: Minimum 2 citations per paragraph (this is the core narrative)
+   - CHART REFERENCE: Include "[[CHART: outcome-growth-spider]]" to show before/after comparison
+
+5. **Value Created: SROI & VIS Analysis** (2 paragraphs, 200-250 words):
+   - Explain the {{formatNumber sroiRatio 2}}:1 SROI ratio in concrete terms
+   - Break down social value components (employability, social cohesion, well-being)
+   - Showcase volunteer impact via VIS score ({{formatNumber visScore 1}}/100)
+   - Frame value in both economic and human terms
+   - CRITICAL: Cite evidence showing tangible participant outcomes
+   - CHART REFERENCE: Include "[[CHART: sroi-breakdown-waterfall]]" for value decomposition
+
+6. **Lessons Learned & Scalability** (1-2 paragraphs, 150-200 words):
+   - Key insights from program delivery
+   - What worked exceptionally well (evidence-based)
+   - Scalability potential and recommendations
+   - Future outlook and expansion opportunities
+   - CRITICAL: Ground recommendations in evidence
+
+7. **Call to Action** (1 paragraph, 80-100 words):
+   - Invite readers to explore similar programs
+   - Mention partnership opportunities
+   - Direct to evidence appendix for full data
+   - CRITICAL: At least 1 citation linking to broader impact
+
+---
+
+**OUTPUT REQUIREMENTS**:
+- **Total Length**: 1200-1500 words
+- **Tone**: Inspirational yet data-driven, storytelling with metrics
+- **Format**: Plain text with clear section headers (use "# Section Name")
+- **Citations**: Inline [cite:ID] format, minimum 1 per paragraph, average 2-3
+- **Charts**: Include [[CHART: chart-type-name]] placeholders where charts should render
+- **No PII**: Evidence is already redacted; do not invent names or identifying details
+- **CSRD Alignment**: Frame outcomes in terms of stakeholder value and social impact
+
+**CRITICAL RULES**:
+✅ Every paragraph must have at least 1 citation
+✅ Use only evidence snippets provided above (do not fabricate)
+✅ If a claim cannot be cited, do not make it
+✅ Plain text only (no markdown bold/italic)
+✅ Section headers with "# " prefix for parsing
+✅ Chart placeholders with [[CHART: name]] format
+✅ Tell a story: baseline → intervention → transformation
+
+---
+
+**FACTUALITY ENFORCEMENT**:
+- If evidence is insufficient for a section, state: "Insufficient evidence for detailed analysis" and skip that section
+- Never fabricate participant quotes or metrics
+- Every numeric claim must trace to provided KPIs or evidence
+- If uncertain, use qualifiers: "evidence suggests", "data indicates"
+
+---
+
+Generate the Customer Case Study now:
