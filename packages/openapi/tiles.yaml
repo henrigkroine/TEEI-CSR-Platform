@@ -1,0 +1,585 @@
+openapi: 3.0.3
+info:
+  title: Impact Tiles API
+  version: 1.0.0
+  description: |
+    Impact Tiles API provides pre-wired metrics tiles for TEEI programs:
+    - Language Learning
+    - Mentorship
+    - Upskilling
+    - WEEI (Women's Economic Empowerment Initiative)
+
+    Tiles aggregate program data with performance-optimized queries (p95 ≤150ms)
+    and support tenant-scoped access with feature-flagged entitlements.
+  contact:
+    name: TEEI Platform Team - Worker 3
+servers:
+  - url: http://localhost:3008/v1/analytics
+    description: Analytics Service (local)
+  - url: http://localhost:3000/v1/analytics
+    description: Via API Gateway (local)
+
+tags:
+  - name: Tiles
+    description: Impact tile endpoints
+  - name: Health
+    description: Health check endpoints
+
+paths:
+  /tiles/{tileType}:
+    get:
+      summary: Get a specific impact tile
+      operationId: getTile
+      tags:
+        - Tiles
+      parameters:
+        - name: tileType
+          in: path
+          required: true
+          description: Type of tile to retrieve
+          schema:
+            type: string
+            enum: [language, mentorship, upskilling, weei]
+        - name: companyId
+          in: query
+          required: true
+          description: Company UUID (tenant scope)
+          schema:
+            type: string
+            format: uuid
+        - name: startDate
+          in: query
+          required: false
+          description: Period start date (ISO 8601 format YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+            example: '2024-01-01'
+        - name: endDate
+          in: query
+          required: false
+          description: Period end date (ISO 8601 format YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+            example: '2024-03-31'
+      responses:
+        '200':
+          description: Tile retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetTileResponse'
+        '400':
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /tiles:
+    get:
+      summary: Get all available tiles for a company
+      operationId: getTilesList
+      tags:
+        - Tiles
+      parameters:
+        - name: companyId
+          in: query
+          required: true
+          description: Company UUID (tenant scope)
+          schema:
+            type: string
+            format: uuid
+        - name: startDate
+          in: query
+          required: false
+          description: Period start date (ISO 8601 format YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          required: false
+          description: Period end date (ISO 8601 format YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+        - name: types
+          in: query
+          required: false
+          description: Comma-separated list of tile types to fetch
+          schema:
+            type: string
+            example: 'language,mentorship,upskilling,weei'
+      responses:
+        '200':
+          description: Tiles retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetTilesListResponse'
+        '400':
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /tiles/health:
+    get:
+      summary: Health check for tiles service
+      operationId: getTilesHealth
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: healthy
+                  availableTileTypes:
+                    type: array
+                    items:
+                      type: string
+                    example: [language, mentorship, upskilling, weei]
+                  timestamp:
+                    type: string
+                    format: date-time
+
+components:
+  schemas:
+    TileMetadata:
+      type: object
+      required:
+        - tileId
+        - companyId
+        - programType
+        - period
+        - calculatedAt
+        - dataFreshness
+      properties:
+        tileId:
+          type: string
+          format: uuid
+        companyId:
+          type: string
+          format: uuid
+        programType:
+          type: string
+          enum: [language, mentorship, upskilling, weei]
+        period:
+          type: object
+          properties:
+            start:
+              type: string
+              format: date
+            end:
+              type: string
+              format: date
+        calculatedAt:
+          type: string
+          format: date-time
+        dataFreshness:
+          type: string
+          enum: [realtime, cached_5m, cached_1h, cached_24h]
+
+    LanguageTileData:
+      type: object
+      required:
+        - sessionsPerWeek
+        - targetSessionsPerWeek
+        - cohortDurationWeeks
+        - targetDurationWeeks
+        - volunteerHours
+        - retention
+      properties:
+        sessionsPerWeek:
+          type: number
+          minimum: 0
+        targetSessionsPerWeek:
+          type: number
+          minimum: 2
+          maximum: 3
+        cohortDurationWeeks:
+          type: number
+          minimum: 0
+        targetDurationWeeks:
+          type: number
+          minimum: 8
+          maximum: 12
+        volunteerHours:
+          type: object
+          properties:
+            total:
+              type: number
+            perSession:
+              type: number
+            uniqueVolunteers:
+              type: integer
+        retention:
+          type: object
+          properties:
+            enrollments:
+              type: integer
+            activeParticipants:
+              type: integer
+            completions:
+              type: integer
+            dropoutRate:
+              type: number
+            retentionRate:
+              type: number
+        languageLevels:
+          type: object
+          nullable: true
+          properties:
+            averageStartLevel:
+              type: string
+            averageCurrentLevel:
+              type: string
+            progressionRate:
+              type: number
+        vis:
+          type: number
+          nullable: true
+        sroi:
+          type: number
+          nullable: true
+
+    MentorshipTileData:
+      type: object
+      required:
+        - bookings
+        - attendance
+        - noShowRate
+        - repeatMentoring
+      properties:
+        bookings:
+          type: object
+          properties:
+            total:
+              type: integer
+            scheduled:
+              type: integer
+            completed:
+              type: integer
+            cancelled:
+              type: integer
+        attendance:
+          type: object
+          properties:
+            attendanceRate:
+              type: number
+            avgSessionDuration:
+              type: number
+            totalSessions:
+              type: integer
+        noShowRate:
+          type: number
+        repeatMentoring:
+          type: object
+          properties:
+            uniqueMentors:
+              type: integer
+            uniqueMentees:
+              type: integer
+            avgSessionsPerMentee:
+              type: number
+            mentorsWithMultipleSessions:
+              type: integer
+            repeatRate:
+              type: number
+        feedback:
+          type: object
+          nullable: true
+          properties:
+            avgMentorRating:
+              type: number
+            avgMenteeRating:
+              type: number
+            feedbackCount:
+              type: integer
+        vis:
+          type: number
+          nullable: true
+        sroi:
+          type: number
+          nullable: true
+
+    UpskillingTileData:
+      type: object
+      required:
+        - funnel
+        - locales
+        - courses
+      properties:
+        funnel:
+          type: object
+          properties:
+            enrollments:
+              type: integer
+            inProgress:
+              type: integer
+            completions:
+              type: integer
+            placements:
+              type: integer
+            completionRate:
+              type: number
+            placementRate:
+              type: number
+        locales:
+          type: object
+          properties:
+            UA:
+              type: integer
+            EN:
+              type: integer
+            DE:
+              type: integer
+            NO:
+              type: integer
+        courses:
+          type: object
+          properties:
+            totalCourses:
+              type: integer
+            activeCourses:
+              type: integer
+            avgCourseDuration:
+              type: number
+            topCourses:
+              type: array
+              items:
+                type: object
+                properties:
+                  courseName:
+                    type: string
+                  enrollments:
+                    type: integer
+                  completionRate:
+                    type: number
+        skills:
+          type: object
+          nullable: true
+          properties:
+            totalSkillsAcquired:
+              type: integer
+            avgSkillsPerLearner:
+              type: number
+            topSkills:
+              type: array
+              items:
+                type: string
+        vis:
+          type: number
+          nullable: true
+        sroi:
+          type: number
+          nullable: true
+
+    WEEITileData:
+      type: object
+      required:
+        - stages
+        - throughput
+        - demoDay
+        - progression
+      properties:
+        stages:
+          type: object
+          properties:
+            ULEARN:
+              $ref: '#/components/schemas/WEEIStage'
+            USTART:
+              $ref: '#/components/schemas/WEEIStage'
+            UGROW:
+              $ref: '#/components/schemas/WEEIStage'
+            ULEAD:
+              $ref: '#/components/schemas/WEEIStage'
+        throughput:
+          type: object
+          properties:
+            totalEnrollments:
+              type: integer
+            totalCompletions:
+              type: integer
+            overallCompletionRate:
+              type: number
+            avgTimeToComplete:
+              type: number
+        demoDay:
+          type: object
+          properties:
+            demoDayCount:
+              type: integer
+            totalPresentations:
+              type: integer
+            uniqueParticipants:
+              type: integer
+            avgPresentationsPerDemoDay:
+              type: number
+        progression:
+          type: object
+          properties:
+            learnToStart:
+              type: number
+            startToGrow:
+              type: number
+            growToLead:
+              type: number
+        businessOutcomes:
+          type: object
+          nullable: true
+          properties:
+            businessesStarted:
+              type: integer
+            jobsCreated:
+              type: integer
+            revenueGenerated:
+              type: number
+        vis:
+          type: number
+          nullable: true
+        sroi:
+          type: number
+          nullable: true
+
+    WEEIStage:
+      type: object
+      properties:
+        enrollments:
+          type: integer
+        completions:
+          type: integer
+        completionRate:
+          type: number
+
+    LanguageTile:
+      type: object
+      required:
+        - metadata
+        - data
+      properties:
+        metadata:
+          $ref: '#/components/schemas/TileMetadata'
+        data:
+          $ref: '#/components/schemas/LanguageTileData'
+
+    MentorshipTile:
+      type: object
+      required:
+        - metadata
+        - data
+      properties:
+        metadata:
+          $ref: '#/components/schemas/TileMetadata'
+        data:
+          $ref: '#/components/schemas/MentorshipTileData'
+
+    UpskillingTile:
+      type: object
+      required:
+        - metadata
+        - data
+      properties:
+        metadata:
+          $ref: '#/components/schemas/TileMetadata'
+        data:
+          $ref: '#/components/schemas/UpskillingTileData'
+
+    WEEITile:
+      type: object
+      required:
+        - metadata
+        - data
+      properties:
+        metadata:
+          $ref: '#/components/schemas/TileMetadata'
+        data:
+          $ref: '#/components/schemas/WEEITileData'
+
+    TileResult:
+      oneOf:
+        - $ref: '#/components/schemas/LanguageTile'
+        - $ref: '#/components/schemas/MentorshipTile'
+        - $ref: '#/components/schemas/UpskillingTile'
+        - $ref: '#/components/schemas/WEEITile'
+
+    GetTileResponse:
+      type: object
+      required:
+        - tile
+        - entitlements
+        - cacheTTL
+      properties:
+        tile:
+          $ref: '#/components/schemas/TileResult'
+        entitlements:
+          type: object
+          properties:
+            canExport:
+              type: boolean
+            canViewDetails:
+              type: boolean
+            canViewBenchmarks:
+              type: boolean
+        cacheTTL:
+          type: integer
+          description: Cache TTL in seconds
+
+    GetTilesListResponse:
+      type: object
+      required:
+        - companyId
+        - tiles
+        - availableTileTypes
+        - period
+      properties:
+        companyId:
+          type: string
+          format: uuid
+        tiles:
+          type: array
+          items:
+            $ref: '#/components/schemas/TileResult'
+        availableTileTypes:
+          type: array
+          items:
+            type: string
+            enum: [language, mentorship, upskilling, weei]
+        period:
+          type: object
+          properties:
+            start:
+              type: string
+              format: date
+            end:
+              type: string
+              format: date
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
