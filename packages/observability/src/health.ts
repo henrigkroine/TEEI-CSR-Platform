@@ -385,28 +385,28 @@ export function registerHealthRoutes(
   healthManager: HealthCheckManager
 ): void {
   // Liveness probe
-  fastify.get('/health/liveness', async (request: any, reply: any) => {
+  fastify.get('/health/liveness', async (_request: any, reply: any) => {
     const health = await healthManager.liveness();
     const statusCode = health.status === HealthStatus.HEALTHY ? 200 : 503;
     reply.code(statusCode).send(health);
   });
 
   // Readiness probe
-  fastify.get('/health/readiness', async (request: any, reply: any) => {
+  fastify.get('/health/readiness', async (_request: any, reply: any) => {
     const health = await healthManager.readiness();
     const statusCode = health.status === HealthStatus.HEALTHY ? 200 : 503;
     reply.code(statusCode).send(health);
   });
 
   // Startup probe
-  fastify.get('/health/startup', async (request: any, reply: any) => {
+  fastify.get('/health/startup', async (_request: any, reply: any) => {
     const health = await healthManager.startup();
     const statusCode = health.status === HealthStatus.HEALTHY ? 200 : 503;
     reply.code(statusCode).send(health);
   });
 
   // Detailed health check
-  fastify.get('/health', async (request: any, reply: any) => {
+  fastify.get('/health', async (_request: any, reply: any) => {
     const health = await healthManager.health();
     const statusCode = health.status === HealthStatus.UNHEALTHY ? 503 : 200;
     reply.code(statusCode).send(health);

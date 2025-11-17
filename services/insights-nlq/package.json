@@ -14,17 +14,28 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
+<<<<<<< HEAD
     "@teei/event-contracts": "workspace:*",
     "@teei/shared-schema": "workspace:*",
     "@teei/shared-utils": "workspace:*",
     "@teei/shared-auth": "workspace:*",
     "@teei/observability": "workspace:*",
     "@anthropic-ai/sdk": "^0.32.1",
+=======
+    "@anthropic-ai/sdk": "^0.30.0",
+>>>>>>> origin/claude/worker5-data-trust-catalog-01MP5u1wgV11fa33LqqEQWbp
     "@clickhouse/client": "^0.2.5",
     "@fastify/cors": "^8.4.2",
     "@fastify/jwt": "^7.2.3",
     "@fastify/rate-limit": "^9.1.0",
     "@google/generative-ai": "^0.21.0",
+<<<<<<< HEAD
+=======
+    "@teei/event-contracts": "workspace:*",
+    "@teei/shared-auth": "workspace:*",
+    "@teei/shared-schema": "workspace:*",
+    "@teei/shared-utils": "workspace:*",
+>>>>>>> origin/claude/worker5-data-trust-catalog-01MP5u1wgV11fa33LqqEQWbp
     "drizzle-orm": "^0.29.3",
     "fastify": "^4.25.2",
     "ioredis": "^5.3.2",

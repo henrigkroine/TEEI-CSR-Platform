@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useEffect, useState } from 'react';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -13,7 +13,10 @@ import {
   type ChartOptions,
 } from 'chart.js';
 import { Line, Bar, Pie, Doughnut } from 'react-chartjs-2';
+<<<<<<< HEAD
 import { useEffect, useState } from 'react';
+=======
+>>>>>>> origin/claude/worker5-data-trust-catalog-01MP5u1wgV11fa33LqqEQWbp
 import { applyChartThemeDefaults, generateChartColors } from '../lib/themes/chartColors';
 
 // Register Chart.js components

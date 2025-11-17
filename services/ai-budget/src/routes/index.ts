@@ -32,7 +32,8 @@ export async function budgetRoutes(fastify: FastifyInstance) {
       };
     } catch (error) {
       fastify.log.error(error, 'Failed to get budget status');
-      return reply.code(500).send({ error: 'Failed to get budget status' });
+      reply.code(500).send({ error: 'Failed to get budget status' } as any);
+      return;
     }
   });
 
@@ -156,7 +157,7 @@ export async function budgetRoutes(fastify: FastifyInstance) {
    * GET /api/ai-budget/top-consumers
    * Get top AI token consumers (analytics endpoint)
    */
-  fastify.get('/top-consumers', async (request, reply) => {
+  fastify.get('/top-consumers', async (_request, reply) => {
     try {
       const topConsumers = await budgetDb.getTopConsumers(10);
 

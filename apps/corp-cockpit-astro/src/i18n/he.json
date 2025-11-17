@@ -15,6 +15,15 @@
     "adminStudio": "אולפן מנהל",
     "usage": "שימוש ואימוץ"
   },
+  "navigation": {
+    "home": "בית",
+    "sroi": "תשואה חברתית על השקעה",
+    "vis": "ניקוד השפעת מתנדבים",
+    "q2q": "איכותי לכמותי",
+    "trends": "מגמות",
+    "governance": "ממשל תאגידי",
+    "sso": "כניסה אחת"
+  },
   "boardroom": {
     "title": "מצב חדר ישיבות",
     "enterMode": "כניסה למצב חדר ישיבות",
@@ -67,6 +76,19 @@
       "filterCritical": "קריטי",
       "live": "חי"
     }
+  },
+  "admin": {
+    "title": "קונסולת ניהול",
+    "api_keys": "מפתחות API",
+    "integrations": "אינטגרציות",
+    "users": "משתמשים",
+    "permissions": "הרשאות",
+    "audit_log": "יומן ביקורת",
+    "scheduler": "מתזמן",
+    "data_residency": "מיקום נתונים",
+    "sla_dashboard": "לוח רמת שירות",
+    "domain_allowlist": "רשימת דומיינים מורשים",
+    "embed_tokens": "אסימוני הטמעה"
   },
   "usage": {
     "title": "ניתוח שימוש ואימוץ",
@@ -125,9 +147,50 @@
       "noStuckUsers": "✅ לא זוהו משתמשים תקועים - כולם זורמים בצורה חלקה!"
     }
   },
+<<<<<<< HEAD
   "common": {
     "loading": "טוען...",
     "error": "שגיאה",
+=======
+  "dashboard": {
+    "title": "סקירת לוח הבקרה",
+    "metrics": "מדדים",
+    "charts": "תרשימים",
+    "recent_activity": "פעילות אחרונה",
+    "filter_by_date": "סנן לפי תאריך",
+    "export": "ייצא",
+    "share": "שתף"
+  },
+  "scheduler": {
+    "title": "מתזמן חבילת דירקטוריון",
+    "new_schedule": "לוח זמנים חדש",
+    "edit_schedule": "ערוך לוח זמנים",
+    "execution_history": "היסטוריית ביצוע",
+    "recipients": "נמענים",
+    "frequency": "תדירות",
+    "next_run": "הרצה הבאה",
+    "status": "סטטוס",
+    "enabled": "פעיל",
+    "disabled": "כבוי"
+  },
+  "analytics": {
+    "funnel": "משפך המרה",
+    "retention": "שימור",
+    "engagement": "מעורבות",
+    "nps": "ציון נטו מקדם",
+    "cohorts": "קבוצות",
+    "conversion_rate": "שיעור המרה",
+    "dropoff": "נשירה",
+    "active_users": "משתמשים פעילים"
+  },
+  "common": {
+    "app_name": "לוח בקרה תאגידי",
+    "welcome": "ברוך הבא",
+    "loading": "טוען...",
+    "error": "שגיאה",
+    "success": "הצלחה",
+    "warning": "אזהרה",
+>>>>>>> origin/claude/worker5-data-trust-catalog-01MP5u1wgV11fa33LqqEQWbp
     "noData": "אין נתונים זמינים",
     "refresh": "רענן",
     "save": "שמור",
@@ -136,7 +199,33 @@
     "delete": "מחק",
     "edit": "ערוך",
     "close": "סגור",
+<<<<<<< HEAD
     "viewDetails": "הצג פרטים",
     "viewAsTable": "הצג כטבלה (נגיש)"
+=======
+    "back": "חזרה",
+    "next": "הבא",
+    "previous": "קודם",
+    "viewDetails": "הצג פרטים",
+    "viewAsTable": "הצג כטבלה (נגיש)"
+  },
+  "errors": {
+    "generic": "משהו השתבש. אנא נסה שוב.",
+    "network": "שגיאת רשת. בדוק את החיבור שלך.",
+    "unauthorized": "לא מורשה. אנא התחבר.",
+    "forbidden": "אסור. אין לך הרשאה.",
+    "not_found": "לא נמצא. הדף לא קיים.",
+    "server_error": "שגיאת שרת. אנא נסה שוב מאוחר יותר."
+  },
+  "accessibility": {
+    "skip_to_content": "דלג לתוכן",
+    "toggle_menu": "החלף תפריט",
+    "close": "סגור",
+    "open": "פתח",
+    "language": "שפה",
+    "theme": "ערכת נושא",
+    "high_contrast": "ניגודיות גבוהה",
+    "screen_reader_mode": "מצב קורא מסך"
+>>>>>>> origin/claude/worker5-data-trust-catalog-01MP5u1wgV11fa33LqqEQWbp
   }
 }

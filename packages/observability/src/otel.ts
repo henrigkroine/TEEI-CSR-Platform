@@ -36,7 +36,6 @@ import {
   propagation,
   Tracer
 } from '@opentelemetry/api';
-import { W3CTraceContextPropagator } from '@opentelemetry/core';
 
 export interface OTelConfig {
   serviceName: string;
@@ -135,8 +134,8 @@ export function initializeOTel(config: OTelConfig): NodeSDK {
   sdk = new NodeSDK({
     resource,
     traceExporter: traceProcessor ? undefined : new ConsoleSpanExporter(),
-    spanProcessor: traceProcessor,
-    metricReader,
+    spanProcessor: traceProcessor as any,
+    metricReader: metricReader as any,
     instrumentations: [
       getNodeAutoInstrumentations({
         // Customize instrumentation options
@@ -298,7 +297,7 @@ export function addSpanEvent(name: string, attributes?: Record<string, any>): vo
 export function recordException(error: Error, attributes?: Record<string, any>): void {
   const activeSpan = trace.getActiveSpan();
   if (activeSpan) {
-    activeSpan.recordException(error, attributes);
+    activeSpan.recordException(error, attributes as any);
     activeSpan.setStatus({
       code: SpanStatusCode.ERROR,
       message: error.message
@@ -353,7 +352,7 @@ export function traced<T extends (...args: any[]) => Promise<any>>(
   fn: T
 ): T {
   return (async (...args: any[]) => {
-    return traceAsync(spanName, async (span) => {
+    return traceAsync(spanName, async (_span) => {
       return fn(...args);
     });
   }) as T;

@@ -65,7 +65,7 @@ export async function monitorPDFExport(
 ): Promise<PDFExportMetrics> {
   return traceAsync(
     'synthetic.pdf_export',
-    async (span) => {
+    async (_span) => {
       addSpanAttributes({
         'tenant.id': tenantId,
         'report.id': reportId,

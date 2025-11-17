@@ -537,7 +537,10 @@ export default function BoardroomView({
         /* Smooth scrolling */
         .boardroom-container {
           scroll-behavior: smooth;
+<<<<<<< HEAD
         }
+=======
+>>>>>>> origin/claude/worker5-data-trust-catalog-01MP5u1wgV11fa33LqqEQWbp
       `}</style>
     </div>
   );

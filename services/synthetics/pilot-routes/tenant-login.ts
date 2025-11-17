@@ -93,7 +93,7 @@ export async function monitorTenantLogin(
 ): Promise<MonitorResult> {
   return traceAsync(
     'synthetic.tenant_login',
-    async (span) => {
+    async (_span) => {
       addSpanAttributes({
         'tenant.id': tenant.tenantId,
         'tenant.name': tenant.tenantName,
@@ -144,7 +144,7 @@ export async function monitorTenantLogin(
           timeout: 10000,
           validateStatus: () => true,
           // Measure timing details
-          onDownloadProgress: (progressEvent) => {
+          onDownloadProgress: (_progressEvent) => {
             // Record progress for detailed metrics
           },
         });
@@ -351,7 +351,7 @@ export async function runScheduledMonitor(): Promise<void> {
     exporterType: 'otlp',
   });
 
-  const results = await monitorAllTenants();
+  void await monitorAllTenants();
 
   // Export results to Grafana/OTel backend
   // (handled automatically by OTel SDK via span attributes)

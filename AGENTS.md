@@ -95,6 +95,193 @@
 
 ---
 
+## Worker 5: Data Trust & Catalog Team
+
+**Tech Lead Orchestrator**: Coordinates 30 specialist agents across 5 teams
+
+**Status**: 🚧 In Progress | **Started**: 2025-11-16
+**Branch**: `claude/worker5-data-trust-catalog-01MP5u1wgV11fa33LqqEQWbp`
+
+**Mission**: Establish end-to-end data governance, quality, and lineage for the TEEI CSR Platform. Ship OpenLineage events, Great Expectations test suites, governed semantic layer (dbt/metrics), and lightweight catalog UI integrated into Cockpit.
+
+---
+
+### Team Structure (30 Agents / 5 Leads)
+
+#### Team 1: Data Engineering (5 agents)
+**Lead**: data-eng-lead
+- **Agent 1.1**: pipeline-instrumentation-dev (MUST BE USED when adding OL emitters to services/impact-in, services/reporting, services/analytics, services/q2q-ai. Blocks merge if OL events missing from critical pipelines)
+- **Agent 1.2**: clickhouse-sink-engineer (MUST BE USED for lineage_events, dataset_profiles tables + compaction jobs. Blocks if retention policies undefined)
+- **Agent 1.3**: postgres-lineage-enhancer (MUST BE USED when extending metric_lineage/report_lineage schemas. Blocks if migrations missing)
+- **Agent 1.4**: ingestion-monitor (MUST BE USED for data pipeline observability. Enforces freshness SLAs)
+- **Agent 1.5**: transformation-tracker (MUST BE USED for tracking dbt run lineage. Blocks if transformation jobs lack OL events)
+
+#### Team 2: Data Quality (8 agents)
+**Lead**: dq-lead
+- **Agent 2.1**: ge-suite-author-critical (MUST BE USED when adding/altering GE suites for users, companies, program_enrollments. Blocks merge if suite coverage <90% on critical tables)
+- **Agent 2.2**: ge-suite-author-kintell (MUST BE USED for kintell_sessions, learning_progress GE suites. Blocks if schema checks missing)
+- **Agent 2.3**: ge-suite-author-buddy (MUST BE USED for buddy_matches, buddy_events, buddy_feedback GE suites. Blocks if referential integrity tests missing)
+- **Agent 2.4**: ge-suite-author-metrics (MUST BE USED for outcome_scores, evidence_snippets, metrics_company_period GE suites. Blocks if numeric range tests missing)
+- **Agent 2.5**: ge-suite-author-reports (MUST BE USED for report_lineage, report_citations GE suites. Blocks if NOT NULL tests missing)
+- **Agent 2.6**: dq-anomaly-hunter-drift (MUST BE USED when schema drift >5% detected. Proactive agent, runs on schedule)
+- **Agent 2.7**: dq-anomaly-hunter-nulls (MUST BE USED when null spike >10% detected. Proactive agent, runs on schedule)
+- **Agent 2.8**: dq-anomaly-hunter-outliers (MUST BE USED when outlier metrics detected (SROI >10, VIS >100). Proactive agent, runs on schedule)
+
+#### Team 3: Lineage & Catalog (8 agents)
+**Lead**: lineage-lead
+- **Agent 3.1**: lineage-emitter-impact-in (MUST BE USED when instrumenting services/impact-in with OL events. Blocks if connector jobs lack dataset lineage)
+- **Agent 3.2**: lineage-emitter-reporting (MUST BE USED when instrumenting services/reporting with OL events. Blocks if report generation lacks input dataset tracking)
+- **Agent 3.3**: lineage-emitter-q2q-ai (MUST BE USED when instrumenting services/q2q-ai with OL events. Blocks if Q2Q pipeline lacks evidence lineage)
+- **Agent 3.4**: lineage-emitter-analytics (MUST BE USED when instrumenting services/analytics with OL events. Blocks if SROI/VIS calculations lack lineage)
+- **Agent 3.5**: lineage-sink-builder-clickhouse (MUST BE USED for ClickHouse lineage_events table + retention. Blocks if compaction job missing)
+- **Agent 3.6**: lineage-sink-builder-postgres (MUST BE USED for PostgreSQL dataset_profiles table. Blocks if freshness tracking missing)
+- **Agent 3.7**: catalog-ui-integrator-cockpit (MUST BE USED when adding /cockpit/[companyId]/catalog page. Blocks if dataset cards lack freshness badges)
+- **Agent 3.8**: catalog-ui-integrator-lineage (MUST BE USED for lineage sparkline + drill-through to Evidence Explorer. Blocks if metric→evidence linking broken)
+
+#### Team 4: Semantic Layer & Metrics (6 agents)
+**Lead**: semantics-lead
+- **Agent 4.1**: dbt-modeler-staging (MUST BE USED for dbt stg_* models (raw → cleaned). Blocks if source freshness checks missing)
+- **Agent 4.2**: dbt-modeler-marts (MUST BE USED for dbt marts (dims/facts). Blocks if exposures undefined)
+- **Agent 4.3**: dbt-modeler-metrics (MUST BE USED for dbt metrics (SROI/VIS). Blocks if metrics diverge from service calculators)
+- **Agent 4.4**: metrics-governor-sroi (MUST BE USED for SROI metric spec + freshness policies. Blocks if golden tests fail)
+- **Agent 4.5**: metrics-governor-vis (MUST BE USED for VIS metric spec + freshness policies. Blocks if golden tests fail)
+- **Agent 4.6**: dbt-docs-generator (MUST BE USED for dbt docs artifact generation. Blocks if exposures missing for Cockpit queries)
+
+#### Team 5: Platform & Compliance (3 agents)
+**Lead**: platform-lead
+- **Agent 5.1**: ci-wiring-engineer-dq (MUST BE USED for pnpm dq:ci script + CI job. Blocks if critical GE suites not enforced)
+- **Agent 5.2**: ci-wiring-engineer-dbt (MUST BE USED for dbt test/run CI jobs. Blocks if dbt docs not published)
+- **Agent 5.3**: residency-policy-engineer (MUST BE USED for GDPR category tagging + TTL policies. Blocks if DSAR hooks missing)
+
+---
+
+### Delivery Slices (J1–J7)
+
+**J1: OpenLineage Instrumentation** (Agents 3.1–3.6, 1.1, 1.5)
+- OL emitters in 4 services (impact-in, reporting, q2q-ai, analytics)
+- ClickHouse + PostgreSQL sinks with compaction/retention
+- Event types: START_RUN, COMPLETE_RUN, FAIL_RUN, dataset IN/OUT, column lineage
+- **Acceptance**: ≥90% critical pipelines emit OL events; dataset→metric lineage resolvable
+
+**J2: Great Expectations Coverage** (Agents 2.1–2.5, Team 2 Lead)
+- GE suites for 8 critical tables (users, companies, program_enrollments, kintell_sessions, buddy_matches, evidence_snippets, outcome_scores, metrics_company_period)
+- Schema + nulls + ranges + uniqueness + referential integrity tests
+- CI script `pnpm dq:ci` fails if critical suites <90% pass
+- **Acceptance**: 100% critical tables have GE suites; ≥90% test pass rate; runbook published
+
+**J3: dbt Semantic Layer** (Agents 4.1–4.6, Team 4 Lead)
+- dbt project: analytics/dbt/ with stg/marts/metrics models
+- Metrics registry: sroi, vis, engagement_rate, hours_volunteered, evidence_density
+- Freshness checks + exposures for Cockpit queries
+- **Acceptance**: dbt metrics match service calculators (golden tests pass); docs artifact published
+
+**J4: Catalog UI in Cockpit** (Agents 3.7–3.8, 1.4)
+- New page: /cockpit/[companyId]/catalog with dataset cards
+- Display: dataset name, freshness, last load, test status, lineage sparkline
+- Drill-through: metric → evidence lineage → Evidence Explorer
+- **Acceptance**: ≥12 governed datasets listed; freshness + quality badges live; drill-through functional
+
+**J5: Retention & Residency Policies** (Agent 5.3, Team 1 Lead)
+- Tag datasets with GDPR category (PII, sensitive, public) + residency (EU/US/UK)
+- TTL policies per category; DSAR hooks for selective deletion
+- **Acceptance**: All critical tables tagged; TTL policies enforced; DSAR integration tested
+
+**J6: Data SLOs & Dashboards** (Agent 1.4, Team 5 Lead)
+- Grafana: "Data Trust" dashboard (freshness, test pass %, lineage coverage %)
+- SLOs: freshness <24h, test pass ≥90%, lineage coverage ≥90%
+- Burn-rate alerts to on-call
+- **Acceptance**: Dashboards live; alerts functional; SLO badges in Catalog UI
+
+**J7: Docs & Runbooks** (All Leads, Team 5)
+- /docs/data/ (GE playbook, OL guide, dbt standards, residency matrix)
+- /reports/worker5_data_trust_readout.md (coverage table, lineage screenshots)
+- **Acceptance**: All 4 runbooks published; readout includes coverage ≥90% evidence
+
+---
+
+### Orchestration Workflow
+
+**Phase 1: Foundation** (Week 1)
+1. data-eng-lead: Set up OL sink infrastructure (ClickHouse tables, retention jobs)
+2. dq-lead: Initialize GE project + checkpoint configs
+3. semantics-lead: Bootstrap dbt project structure (stg/marts/metrics dirs)
+4. platform-lead: Wire CI jobs (dq:ci, dbt:test, dbt:run)
+
+**Phase 2: Instrumentation & Suites** (Week 2)
+1. Team 3 (Lineage): Add OL emitters to 4 services (impact-in, reporting, q2q-ai, analytics)
+2. Team 2 (DQ): Author GE suites for 8 critical tables
+3. Team 4 (Semantics): Create dbt staging models (stg_*)
+
+**Phase 3: Semantic Layer & UI** (Week 3)
+1. Team 4 (Semantics): Build dbt marts + metrics; generate docs
+2. Team 3 (Catalog): Implement Catalog UI in Cockpit (/catalog page)
+3. Team 2 (DQ): Deploy anomaly hunters (drift/nulls/outliers monitors)
+
+**Phase 4: Compliance & Dashboards** (Week 4)
+1. Team 5 (Platform): Tag datasets with GDPR categories + residency
+2. Team 1 (Data Eng): Set up Data Trust Grafana dashboard + SLO alerts
+3. All Leads: Documentation review + /reports/worker5_data_trust_readout.md
+
+**Phase 5: Testing & Validation** (Week 5)
+1. All Teams: Execute golden tests (dbt metrics vs service calculators)
+2. platform-lead: Run CI gate validation (GE suites, dbt tests, OL coverage)
+3. All Leads: PR review, screenshots, demo prep
+
+---
+
+### Quality Gates & Guardrails
+
+**Blocking Conditions** (Fail CI):
+- ❌ GE suite coverage <90% on any critical table
+- ❌ GE suite missing for any critical table
+- ❌ dbt metrics diverge from service calculators (golden test fail)
+- ❌ OL events missing from critical pipelines (impact-in, reporting, q2q-ai, analytics)
+- ❌ Catalog UI missing freshness or quality badges
+- ❌ DSAR hooks missing for PII tables
+- ❌ Retention policies undefined for GDPR-categorized datasets
+
+**Enforcement**:
+- Existing PR gates apply: lint, typecheck, unit ≥80%, E2E ≥60%, security audits, a11y (where UI touched)
+- New gates: `pnpm dq:ci` (GE suites), `pnpm dbt:test` (dbt tests), `pnpm lineage:validate` (OL coverage)
+
+**No Secrets Policy**:
+- Use existing Vault/Secrets Manager injections
+- No API keys, DB passwords, or PII in repo
+
+---
+
+### Success Criteria
+
+✅ **J1 (OpenLineage)**: ≥90% critical pipelines emit OL events; dataset→metric lineage resolvable; ClickHouse sink operational
+✅ **J2 (Great Expectations)**: 100% critical tables have GE suites; ≥90% test pass rate; `pnpm dq:ci` wired
+✅ **J3 (dbt Semantic Layer)**: dbt metrics match service calculators (golden tests pass); docs artifact published; exposures defined
+✅ **J4 (Catalog UI)**: ≥12 governed datasets listed; freshness + quality badges live; drill-through to Evidence Explorer functional
+✅ **J5 (Retention & Residency)**: All critical tables tagged with GDPR category + residency; TTL policies enforced; DSAR integration tested
+✅ **J6 (Data SLOs)**: Grafana dashboard live; SLOs tracked (freshness <24h, test pass ≥90%, lineage coverage ≥90%); alerts functional
+✅ **J7 (Docs)**: 4 runbooks published (GE, OL, dbt, residency); /reports/worker5_data_trust_readout.md includes coverage ≥90% evidence; screenshots included
+
+---
+
+### Communication Protocol
+
+- **Daily**: Lead standup (5 mins) - blockers escalated immediately
+- **Commits**: Small, atomic, tested slices - no monolithic PRs
+- **Documentation**: Update /reports/worker5_data_trust_readout.md after each milestone
+- **Agent Artifacts**: All agents write-to-file in /reports/ + update /MULTI_AGENT_PLAN.md
+
+---
+
+### Agent Coordination Rules
+
+1. **Orchestrator-only planning** - No specialist does Tech Lead's orchestration
+2. **No implementation overlap** - Clear ownership per agent
+3. **Dependencies mapped** - Blocked work escalated early (e.g., dbt depends on GE schema validation)
+4. **Test coverage required** - No merges without tests (unit ≥80%, E2E ≥60%)
+5. **Documentation mandatory** - Every GE suite, dbt model, OL emitter, policy documented
+6. **Least-privilege tools** - Agents use minimum required tools (no unnecessary Bash/Grep by UI agents)
+
+---
+
 ## Phase 1-3 Teams (Historical Reference)
 
 <details>

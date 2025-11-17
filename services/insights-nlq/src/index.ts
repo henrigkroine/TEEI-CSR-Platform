@@ -162,6 +162,7 @@ async function start() {
     fastify.log.error({ error }, 'Failed to start server');
     process.exit(1);
   }
+<<<<<<< HEAD
   const app = Fastify({
     logger: logger as any,
     requestIdHeader: 'x-request-id',
@@ -246,6 +247,8 @@ async function start() {
 
   process.on('SIGINT', shutdown);
   process.on('SIGTERM', shutdown);
+=======
+>>>>>>> origin/claude/worker5-data-trust-catalog-01MP5u1wgV11fa33LqqEQWbp
 }
 
 start();

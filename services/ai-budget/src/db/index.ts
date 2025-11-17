@@ -1,7 +1,6 @@
 import pg from 'pg';
 import type {
   AITokenBudget,
-  AITokenUsage,
   AIModel,
   BudgetCheckResult,
 } from '../types/index.js';
@@ -50,6 +49,9 @@ export class BudgetDatabase {
       }
 
       const budget = result.rows[0];
+      if (!budget) {
+        throw new Error('Budget record not found after existence check');
+      }
 
       // If hard limit reached, deny immediately
       if (budget.hard_limit_reached) {
@@ -236,12 +238,13 @@ export class BudgetDatabase {
       token_count_input: parseInt(row.token_count_input.toString()),
       token_count_output: parseInt(row.token_count_output.toString()),
       reset_date: row.reset_date.toISOString(),
-      status:
+      status: (
         row.hard_limit_reached ? 'exceeded'
         : parseFloat(row.current_usage_usd.toString()) >=
             parseFloat(row.monthly_limit_usd.toString()) * 0.8 ?
           'warning'
-        : 'ok',
+        : 'ok'
+      ) as 'ok' | 'warning' | 'exceeded',
       soft_limit_notified: row.soft_limit_notified,
       hard_limit_reached: row.hard_limit_reached,
     }));

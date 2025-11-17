@@ -146,7 +146,7 @@ export class ModelRegistry {
         attributionFactor: override?.sroi?.attributionFactor ?? GLOBAL_DEFAULTS.sroi.attributionFactor!,
         dropOffRate: override?.sroi?.dropOffRate ?? GLOBAL_DEFAULTS.sroi.dropOffRate!,
         discountRate: override?.sroi?.discountRate ?? GLOBAL_DEFAULTS.sroi.discountRate!,
-        financialProxies: override?.sroi?.financialProxies,
+        financialProxies: override?.sroi?.financialProxies || GLOBAL_DEFAULTS.sroi.financialProxies!,
       },
       vis: {
         weights: override?.vis?.weights || GLOBAL_DEFAULTS.vis.weights!,

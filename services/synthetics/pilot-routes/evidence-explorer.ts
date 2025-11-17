@@ -75,7 +75,7 @@ export async function monitorEvidenceExplorer(
 ): Promise<EvidenceExplorerMetrics> {
   return traceAsync(
     'synthetic.evidence_explorer',
-    async (span) => {
+    async (_span) => {
       addSpanAttributes({
         'tenant.id': tenantId,
         'monitor.route': 'evidence-explorer',
