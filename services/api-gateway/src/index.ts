@@ -183,6 +183,11 @@ async function initializeGateway() {
     // Register GDPR privacy routes
     await registerPrivacyRoutes(fastify);
 
+    // Register Admin Studio v2 routes
+    const { adminRoutes } = await import('./routes/admin/index.js');
+    await fastify.register(adminRoutes);
+    fastify.log.info('Admin Studio v2 routes registered');
+
     // Register proxy routes (must be last to avoid conflicts)
     await registerProxyRoutes(fastify);
 

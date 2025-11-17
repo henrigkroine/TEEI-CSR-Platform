@@ -37,6 +37,78 @@ export enum Action {
 }
 
 /**
+ * Admin roles for Admin Studio v2
+ */
+export enum AdminRole {
+  OWNER = 'owner', // Full access to all admin functions
+  BILLING_ADMIN = 'billing_admin', // Manage plans, entitlements, invoices
+  IDENTITY_ADMIN = 'identity_admin', // Manage SSO, SCIM, users, groups
+  VIEWER = 'viewer', // Read-only access to admin settings
+}
+
+/**
+ * Admin role permissions map
+ */
+export const ADMIN_ROLE_PERMISSIONS = {
+  [AdminRole.OWNER]: {
+    canManageTenants: true,
+    canSuspendTenants: true,
+    canTerminateTenants: true,
+    canManageSSO: true,
+    canManageSCIM: true,
+    canManageBilling: true,
+    canManageResidency: true,
+    canRotateSecrets: true,
+    canCreateSnapshots: true,
+    canViewAuditLogs: true,
+  },
+  [AdminRole.BILLING_ADMIN]: {
+    canManageTenants: false,
+    canSuspendTenants: false,
+    canTerminateTenants: false,
+    canManageSSO: false,
+    canManageSCIM: false,
+    canManageBilling: true,
+    canManageResidency: false,
+    canRotateSecrets: false,
+    canCreateSnapshots: false,
+    canViewAuditLogs: true,
+  },
+  [AdminRole.IDENTITY_ADMIN]: {
+    canManageTenants: false,
+    canSuspendTenants: false,
+    canTerminateTenants: false,
+    canManageSSO: true,
+    canManageSCIM: true,
+    canManageBilling: false,
+    canManageResidency: false,
+    canRotateSecrets: false,
+    canCreateSnapshots: false,
+    canViewAuditLogs: true,
+  },
+  [AdminRole.VIEWER]: {
+    canManageTenants: false,
+    canSuspendTenants: false,
+    canTerminateTenants: false,
+    canManageSSO: false,
+    canManageSCIM: false,
+    canManageBilling: false,
+    canManageResidency: false,
+    canRotateSecrets: false,
+    canCreateSnapshots: false,
+    canViewAuditLogs: true,
+  },
+} as const;
+
+/**
+ * Check if admin has permission
+ */
+export function hasAdminPermission(role: AdminRole, permission: keyof typeof ADMIN_ROLE_PERMISSIONS[AdminRole.OWNER]): boolean {
+  const permissions = ADMIN_ROLE_PERMISSIONS[role];
+  return permissions ? permissions[permission] : false;
+}
+
+/**
  * Entitlement check request
  */
 export const EntitlementCheckRequestSchema = z.object({

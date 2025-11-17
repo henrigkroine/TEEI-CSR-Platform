@@ -35,6 +35,10 @@ await fastify.register(billingRoutes);
 await fastify.register(subscriptionRoutes);
 await fastify.register(webhookRoutes);
 
+// Register admin entitlements routes
+const { entitlementsAdminRoutes } = await import('./routes/entitlements-admin.js');
+await fastify.register(entitlementsAdminRoutes);
+
 // Start server
 const start = async () => {
   try {

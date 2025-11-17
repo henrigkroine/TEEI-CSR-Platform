@@ -1,0 +1,453 @@
+---
+/**
+ * Admin Studio v2 - Main Dashboard
+ * Central hub for tenant lifecycle, SCIM, SSO, entitlements, and residency management
+ */
+
+import MainLayout from '../../../layouts/MainLayout.astro';
+
+const { lang } = Astro.params;
+const validLangs = ['en', 'uk', 'no'];
+if (!validLangs.includes(lang as string)) {
+  return Astro.redirect('/en/admin');
+}
+
+// TODO: Get from auth context
+const adminUser = {
+  name: 'Admin User',
+  email: 'admin@example.com',
+  role: 'owner', // owner | billing_admin | identity_admin | viewer
+};
+
+const pageTitle = 'Admin Studio v2';
+---
+
+<MainLayout title={pageTitle} lang={lang as 'en' | 'uk' | 'no'}>
+  <div class="admin-studio-container">
+    <!-- Header -->
+    <header class="admin-header">
+      <div class="admin-header-content">
+        <div>
+          <h1 class="admin-title">Admin Studio v2</h1>
+          <p class="admin-subtitle">
+            Tenant lifecycle, identity provisioning, and entitlement management
+          </p>
+        </div>
+        <div class="admin-user-badge">
+          <div class="admin-user-info">
+            <span class="admin-user-name">{adminUser.name}</span>
+            <span class="admin-user-role">{adminUser.role}</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Navigation Grid -->
+    <div class="admin-nav-grid">
+      <!-- Tenant Management -->
+      <a href={`/${lang}/admin/tenants`} class="admin-card" data-permission="canManageTenants">
+        <div class="admin-card-icon">🏢</div>
+        <div class="admin-card-content">
+          <h2 class="admin-card-title">Tenant Lifecycle</h2>
+          <p class="admin-card-desc">
+            Create, suspend, terminate, and manage tenant accounts. Rotate secrets and export snapshots.
+          </p>
+          <div class="admin-card-features">
+            <span class="feature-tag">Create</span>
+            <span class="feature-tag">Suspend</span>
+            <span class="feature-tag">Terminate</span>
+            <span class="feature-tag">Snapshots</span>
+          </div>
+        </div>
+      </a>
+
+      <!-- SCIM Provisioning -->
+      <a href={`/${lang}/admin/scim`} class="admin-card" data-permission="canManageSCIM">
+        <div class="admin-card-icon">👥</div>
+        <div class="admin-card-content">
+          <h2 class="admin-card-title">SCIM Provisioning</h2>
+          <p class="admin-card-desc">
+            SCIM 2.0 user and group management. Idempotent provisioning with audit trails.
+          </p>
+          <div class="admin-card-features">
+            <span class="feature-tag">Users</span>
+            <span class="feature-tag">Groups</span>
+            <span class="feature-tag">Filters</span>
+            <span class="feature-tag">Audit</span>
+          </div>
+        </div>
+      </a>
+
+      <!-- SSO Configuration -->
+      <a href={`/${lang}/admin/sso`} class="admin-card" data-permission="canManageSSO">
+        <div class="admin-card-icon">🔐</div>
+        <div class="admin-card-content">
+          <h2 class="admin-card-title">SSO Configuration</h2>
+          <p class="admin-card-desc">
+            SAML and OIDC identity provider setup. Upload metadata, test connections, manage certificates.
+          </p>
+          <div class="admin-card-features">
+            <span class="feature-tag">SAML</span>
+            <span class="feature-tag">OIDC</span>
+            <span class="feature-tag">Test</span>
+            <span class="feature-tag">Metadata</span>
+          </div>
+        </div>
+      </a>
+
+      <!-- Entitlements & Plans -->
+      <a href={`/${lang}/admin/entitlements`} class="admin-card" data-permission="canManageBilling">
+        <div class="admin-card-icon">💰</div>
+        <div class="admin-card-content">
+          <h2 class="admin-card-title">Entitlements & Plans</h2>
+          <p class="admin-card-desc">
+            Manage subscription plans, toggle features, attach L2I add-ons, and view active connectors.
+          </p>
+          <div class="admin-card-features">
+            <span class="feature-tag">Plans</span>
+            <span class="feature-tag">Features</span>
+            <span class="feature-tag">Add-ons</span>
+            <span class="feature-tag">Quotas</span>
+          </div>
+        </div>
+      </a>
+
+      <!-- Data Residency -->
+      <a href={`/${lang}/admin/residency`} class="admin-card" data-permission="canManageResidency">
+        <div class="admin-card-icon">🌍</div>
+        <div class="admin-card-content">
+          <h2 class="admin-card-title">Data Residency</h2>
+          <p class="admin-card-desc">
+            Assign regional policies (US/EU/UK), lock tenant regions, validate compliance.
+          </p>
+          <div class="admin-card-features">
+            <span class="feature-tag">US-East</span>
+            <span class="feature-tag">EU-Central</span>
+            <span class="feature-tag">UK-South</span>
+            <span class="feature-tag">Lock</span>
+          </div>
+        </div>
+      </a>
+
+      <!-- Audit Logs -->
+      <a href={`/${lang}/admin/audit`} class="admin-card" data-permission="canViewAuditLogs">
+        <div class="admin-card-icon">📜</div>
+        <div class="admin-card-content">
+          <h2 class="admin-card-title">Audit Logs</h2>
+          <p class="admin-card-desc">
+            Query admin activity, track changes, export compliance reports. Full audit trail for SOC 2.
+          </p>
+          <div class="admin-card-features">
+            <span class="feature-tag">Activity</span>
+            <span class="feature-tag">Search</span>
+            <span class="feature-tag">Export</span>
+            <span class="feature-tag">SOC 2</span>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="admin-stats">
+      <div class="stat-card">
+        <div class="stat-label">Active Tenants</div>
+        <div class="stat-value">47</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">SCIM Users</div>
+        <div class="stat-value">1,234</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">SSO Configs</div>
+        <div class="stat-value">23</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Audit Events (24h)</div>
+        <div class="stat-value">567</div>
+      </div>
+    </div>
+
+    <!-- API Documentation Link -->
+    <div class="admin-footer">
+      <div class="admin-footer-content">
+        <div>
+          <h3 class="footer-title">Developer Resources</h3>
+          <p class="footer-desc">
+            Access API docs, SDKs, and integration guides for Admin Studio v2.
+          </p>
+        </div>
+        <div class="footer-links">
+          <a href="/docs/admin/api" class="footer-link">API Reference</a>
+          <a href="/docs/admin/scim" class="footer-link">SCIM Guide</a>
+          <a href="/docs/admin/sso" class="footer-link">SSO Setup</a>
+          <a href="https://github.com/teei/admin-studio-examples" class="footer-link" target="_blank" rel="noopener">
+            Examples ↗
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    .admin-studio-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    .admin-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 12px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      color: white;
+    }
+
+    .admin-header-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .admin-title {
+      font-size: 2rem;
+      font-weight: 700;
+      margin: 0 0 0.5rem 0;
+    }
+
+    .admin-subtitle {
+      font-size: 1rem;
+      opacity: 0.95;
+      margin: 0;
+    }
+
+    .admin-user-badge {
+      background: rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(10px);
+      border-radius: 8px;
+      padding: 0.75rem 1.5rem;
+    }
+
+    .admin-user-info {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+    }
+
+    .admin-user-name {
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    .admin-user-role {
+      font-size: 0.8rem;
+      opacity: 0.9;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .admin-nav-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .admin-card {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 1.5rem;
+      text-decoration: none;
+      color: inherit;
+      transition: all 0.2s ease;
+      display: flex;
+      gap: 1rem;
+    }
+
+    .admin-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.15);
+      border-color: #667eea;
+    }
+
+    .admin-card:focus {
+      outline: 2px solid #667eea;
+      outline-offset: 2px;
+    }
+
+    .admin-card-icon {
+      font-size: 2.5rem;
+      flex-shrink: 0;
+    }
+
+    .admin-card-content {
+      flex: 1;
+    }
+
+    .admin-card-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin: 0 0 0.5rem 0;
+      color: #111827;
+    }
+
+    .admin-card-desc {
+      font-size: 0.9rem;
+      color: #6b7280;
+      margin: 0 0 1rem 0;
+      line-height: 1.5;
+    }
+
+    .admin-card-features {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .feature-tag {
+      background: #f3f4f6;
+      color: #4b5563;
+      padding: 0.25rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+
+    .admin-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .stat-card {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 1.25rem;
+      text-align: center;
+    }
+
+    .stat-label {
+      font-size: 0.85rem;
+      color: #6b7280;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+    }
+
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #111827;
+    }
+
+    .admin-footer {
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 2rem;
+    }
+
+    .admin-footer-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 2rem;
+    }
+
+    .footer-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin: 0 0 0.5rem 0;
+    }
+
+    .footer-desc {
+      font-size: 0.9rem;
+      color: #6b7280;
+      margin: 0;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 1rem;
+    }
+
+    .footer-link {
+      background: white;
+      border: 1px solid #e5e7eb;
+      color: #4b5563;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+
+    .footer-link:hover {
+      background: #667eea;
+      color: white;
+      border-color: #667eea;
+    }
+
+    @media (max-width: 768px) {
+      .admin-studio-container {
+        padding: 1rem;
+      }
+
+      .admin-header-content {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+      }
+
+      .admin-user-info {
+        align-items: flex-start;
+      }
+
+      .admin-nav-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .admin-footer-content {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .footer-links {
+        flex-wrap: wrap;
+      }
+    }
+  </style>
+
+  <script>
+    // RBAC: Hide cards based on admin role permissions
+    const adminRole = document.body.dataset.adminRole || 'viewer';
+
+    const ROLE_PERMISSIONS: Record<string, string[]> = {
+      owner: [
+        'canManageTenants',
+        'canManageSCIM',
+        'canManageSSO',
+        'canManageBilling',
+        'canManageResidency',
+        'canViewAuditLogs',
+      ],
+      billing_admin: ['canManageBilling', 'canViewAuditLogs'],
+      identity_admin: ['canManageSCIM', 'canManageSSO', 'canViewAuditLogs'],
+      viewer: ['canViewAuditLogs'],
+    };
+
+    const permissions = ROLE_PERMISSIONS[adminRole] || [];
+
+    document.querySelectorAll('.admin-card').forEach((card) => {
+      const permission = (card as HTMLElement).dataset.permission;
+      if (permission && !permissions.includes(permission)) {
+        (card as HTMLElement).style.opacity = '0.5';
+        (card as HTMLElement).style.pointerEvents = 'none';
+        (card as HTMLElement).setAttribute('aria-disabled', 'true');
+      }
+    });
+  </script>
+</MainLayout>

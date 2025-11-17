@@ -1,0 +1,1679 @@
+openapi: 3.1.0
+info:
+  title: TEEI Admin Studio v2 API
+  version: 2.0.0
+  description: |
+    Admin Studio v2 API for tenant lifecycle, SCIM provisioning, SSO configuration,
+    data residency controls, and entitlement management.
+
+    **Authentication**: All endpoints require Bearer token with admin role.
+
+    **Rate Limits**:
+    - Read operations: 100 req/min
+    - Write operations: 20 req/min
+    - SCIM operations: 60 req/min (per RFC 7644)
+  contact:
+    name: TEEI Platform Team
+    email: platform@teei.io
+
+servers:
+  - url: https://api.teei.io/admin/v2
+    description: Production
+  - url: https://api-staging.teei.io/admin/v2
+    description: Staging
+  - url: http://localhost:3000/admin/v2
+    description: Local development
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: SCIM
+    description: SCIM 2.0 provisioning endpoints (RFC 7644)
+  - name: SSO
+    description: SAML/OIDC configuration and testing
+  - name: Tenants
+    description: Tenant lifecycle management
+  - name: Entitlements
+    description: Plans, features, and usage limits
+  - name: Residency
+    description: Data residency and compliance policies
+  - name: Audit
+    description: Audit logs and admin activity tracking
+
+paths:
+  # ==================== SCIM 2.0 Endpoints ====================
+  /scim/v2/Users:
+    get:
+      tags: [SCIM]
+      summary: List users (SCIM 2.0)
+      operationId: listScimUsers
+      description: |
+        RFC 7644 compliant user listing with filtering, sorting, and pagination.
+        Supports SCIM filter expressions (e.g., `userName eq "john@example.com"`).
+      parameters:
+        - name: filter
+          in: query
+          schema:
+            type: string
+          description: SCIM filter expression
+          example: 'userName eq "john@example.com"'
+        - name: startIndex
+          in: query
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+        - name: count
+          in: query
+          schema:
+            type: integer
+            default: 100
+            maximum: 1000
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            default: meta.created
+        - name: sortOrder
+          in: query
+          schema:
+            type: string
+            enum: [ascending, descending]
+            default: ascending
+      responses:
+        '200':
+          description: User list response
+          content:
+            application/scim+json:
+              schema:
+                $ref: '#/components/schemas/ScimListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+    post:
+      tags: [SCIM]
+      summary: Create user (SCIM 2.0)
+      operationId: createScimUser
+      description: Idempotent user creation with automatic role assignment
+      requestBody:
+        required: true
+        content:
+          application/scim+json:
+            schema:
+              $ref: '#/components/schemas/ScimUser'
+      responses:
+        '201':
+          description: User created
+          headers:
+            Location:
+              schema:
+                type: string
+              description: URL of created user
+            ETag:
+              schema:
+                type: string
+              description: Entity tag for version control
+          content:
+            application/scim+json:
+              schema:
+                $ref: '#/components/schemas/ScimUser'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /scim/v2/Users/{id}:
+    get:
+      tags: [SCIM]
+      summary: Get user by ID
+      operationId: getScimUser
+      parameters:
+        - $ref: '#/components/parameters/UserIdParam'
+        - name: If-None-Match
+          in: header
+          schema:
+            type: string
+          description: ETag for conditional request
+      responses:
+        '200':
+          description: User found
+          headers:
+            ETag:
+              schema:
+                type: string
+          content:
+            application/scim+json:
+              schema:
+                $ref: '#/components/schemas/ScimUser'
+        '304':
+          description: Not modified (ETag match)
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [SCIM]
+      summary: Replace user (SCIM 2.0)
+      operationId: replaceScimUser
+      parameters:
+        - $ref: '#/components/parameters/UserIdParam'
+        - name: If-Match
+          in: header
+          schema:
+            type: string
+          description: ETag for optimistic locking
+      requestBody:
+        required: true
+        content:
+          application/scim+json:
+            schema:
+              $ref: '#/components/schemas/ScimUser'
+      responses:
+        '200':
+          description: User replaced
+          content:
+            application/scim+json:
+              schema:
+                $ref: '#/components/schemas/ScimUser'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+
+    patch:
+      tags: [SCIM]
+      summary: Update user (SCIM 2.0 PATCH)
+      operationId: patchScimUser
+      parameters:
+        - $ref: '#/components/parameters/UserIdParam'
+      requestBody:
+        required: true
+        content:
+          application/scim+json:
+            schema:
+              $ref: '#/components/schemas/ScimPatchOp'
+      responses:
+        '200':
+          description: User updated
+          content:
+            application/scim+json:
+              schema:
+                $ref: '#/components/schemas/ScimUser'
+
+    delete:
+      tags: [SCIM]
+      summary: Soft-delete user
+      operationId: deleteScimUser
+      description: Marks user as inactive (soft delete) with audit trail
+      parameters:
+        - $ref: '#/components/parameters/UserIdParam'
+      responses:
+        '204':
+          description: User deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /scim/v2/Groups:
+    get:
+      tags: [SCIM]
+      summary: List groups (SCIM 2.0)
+      operationId: listScimGroups
+      parameters:
+        - name: filter
+          in: query
+          schema:
+            type: string
+        - name: startIndex
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: count
+          in: query
+          schema:
+            type: integer
+            default: 100
+      responses:
+        '200':
+          description: Group list
+          content:
+            application/scim+json:
+              schema:
+                $ref: '#/components/schemas/ScimListResponse'
+
+    post:
+      tags: [SCIM]
+      summary: Create group
+      operationId: createScimGroup
+      requestBody:
+        required: true
+        content:
+          application/scim+json:
+            schema:
+              $ref: '#/components/schemas/ScimGroup'
+      responses:
+        '201':
+          description: Group created
+          content:
+            application/scim+json:
+              schema:
+                $ref: '#/components/schemas/ScimGroup'
+
+  /scim/v2/Groups/{id}:
+    get:
+      tags: [SCIM]
+      summary: Get group by ID
+      operationId: getScimGroup
+      parameters:
+        - $ref: '#/components/parameters/GroupIdParam'
+      responses:
+        '200':
+          description: Group found
+          content:
+            application/scim+json:
+              schema:
+                $ref: '#/components/schemas/ScimGroup'
+
+    patch:
+      tags: [SCIM]
+      summary: Update group membership
+      operationId: patchScimGroup
+      parameters:
+        - $ref: '#/components/parameters/GroupIdParam'
+      requestBody:
+        required: true
+        content:
+          application/scim+json:
+            schema:
+              $ref: '#/components/schemas/ScimPatchOp'
+      responses:
+        '200':
+          description: Group updated
+          content:
+            application/scim+json:
+              schema:
+                $ref: '#/components/schemas/ScimGroup'
+
+  # ==================== SSO Configuration ====================
+  /sso/configs:
+    get:
+      tags: [SSO]
+      summary: List SSO configurations
+      operationId: listSsoConfigs
+      parameters:
+        - name: tenantId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: SSO config list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SsoConfig'
+
+    post:
+      tags: [SSO]
+      summary: Create SSO configuration
+      operationId: createSsoConfig
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SsoConfigCreate'
+      responses:
+        '201':
+          description: SSO config created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SsoConfig'
+
+  /sso/configs/{configId}:
+    get:
+      tags: [SSO]
+      summary: Get SSO configuration
+      operationId: getSsoConfig
+      parameters:
+        - $ref: '#/components/parameters/ConfigIdParam'
+      responses:
+        '200':
+          description: SSO config found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SsoConfig'
+
+    put:
+      tags: [SSO]
+      summary: Update SSO configuration
+      operationId: updateSsoConfig
+      parameters:
+        - $ref: '#/components/parameters/ConfigIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SsoConfigUpdate'
+      responses:
+        '200':
+          description: SSO config updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SsoConfig'
+
+    delete:
+      tags: [SSO]
+      summary: Delete SSO configuration
+      operationId: deleteSsoConfig
+      parameters:
+        - $ref: '#/components/parameters/ConfigIdParam'
+      responses:
+        '204':
+          description: SSO config deleted
+
+  /sso/configs/{configId}/test:
+    post:
+      tags: [SSO]
+      summary: Test SSO configuration
+      operationId: testSsoConfig
+      description: Validates SAML/OIDC metadata and connectivity
+      parameters:
+        - $ref: '#/components/parameters/ConfigIdParam'
+      responses:
+        '200':
+          description: SSO test results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SsoTestResult'
+
+  /sso/metadata/{tenantId}:
+    get:
+      tags: [SSO]
+      summary: Get SP metadata XML
+      operationId: getSpMetadata
+      description: Service Provider metadata for IdP configuration
+      parameters:
+        - name: tenantId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: SAML SP metadata
+          content:
+            application/xml:
+              schema:
+                type: string
+
+  # ==================== Tenant Lifecycle ====================
+  /tenants:
+    get:
+      tags: [Tenants]
+      summary: List tenants
+      operationId: listTenants
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, suspended, terminated, provisioning]
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 200
+      responses:
+        '200':
+          description: Tenant list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantListResponse'
+
+    post:
+      tags: [Tenants]
+      summary: Create tenant
+      operationId: createTenant
+      description: Provisions new tenant with isolated resources
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TenantCreate'
+      responses:
+        '201':
+          description: Tenant created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tenant'
+
+  /tenants/{tenantId}:
+    get:
+      tags: [Tenants]
+      summary: Get tenant details
+      operationId: getTenant
+      parameters:
+        - $ref: '#/components/parameters/TenantIdParam'
+      responses:
+        '200':
+          description: Tenant found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tenant'
+
+    patch:
+      tags: [Tenants]
+      summary: Update tenant
+      operationId: updateTenant
+      parameters:
+        - $ref: '#/components/parameters/TenantIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TenantUpdate'
+      responses:
+        '200':
+          description: Tenant updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tenant'
+
+  /tenants/{tenantId}/suspend:
+    post:
+      tags: [Tenants]
+      summary: Suspend tenant
+      operationId: suspendTenant
+      description: Temporarily disables tenant access with audit trail
+      parameters:
+        - $ref: '#/components/parameters/TenantIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+                  minLength: 10
+                notifyUsers:
+                  type: boolean
+                  default: true
+      responses:
+        '200':
+          description: Tenant suspended
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tenant'
+
+  /tenants/{tenantId}/reactivate:
+    post:
+      tags: [Tenants]
+      summary: Reactivate tenant
+      operationId: reactivateTenant
+      parameters:
+        - $ref: '#/components/parameters/TenantIdParam'
+      responses:
+        '200':
+          description: Tenant reactivated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tenant'
+
+  /tenants/{tenantId}/terminate:
+    post:
+      tags: [Tenants]
+      summary: Terminate tenant
+      operationId: terminateTenant
+      description: |
+        Permanently terminates tenant. DANGER: Irreversible operation.
+        Requires export snapshot before termination.
+      parameters:
+        - $ref: '#/components/parameters/TenantIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason, confirmationToken, snapshotId]
+              properties:
+                reason:
+                  type: string
+                confirmationToken:
+                  type: string
+                  description: Must match tenant ID
+                snapshotId:
+                  type: string
+                  description: ID of export snapshot created before termination
+      responses:
+        '200':
+          description: Tenant termination initiated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  jobId:
+                    type: string
+                  estimatedCompletionTime:
+                    type: string
+                    format: date-time
+
+  /tenants/{tenantId}/secrets/rotate:
+    post:
+      tags: [Tenants]
+      summary: Rotate tenant secrets
+      operationId: rotateTenantSecrets
+      description: Rotates API keys, signing keys, and encryption keys
+      parameters:
+        - $ref: '#/components/parameters/TenantIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                secretTypes:
+                  type: array
+                  items:
+                    type: string
+                    enum: [api_key, signing_key, encryption_key]
+                gracePeriodHours:
+                  type: integer
+                  default: 24
+                  description: Hours until old keys expire
+      responses:
+        '200':
+          description: Secrets rotated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  rotatedKeys:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        type:
+                          type: string
+                        oldKeyId:
+                          type: string
+                        newKeyId:
+                          type: string
+                        expiresAt:
+                          type: string
+                          format: date-time
+
+  /tenants/{tenantId}/snapshot:
+    post:
+      tags: [Tenants]
+      summary: Create tenant data snapshot
+      operationId: createTenantSnapshot
+      description: Exports full tenant data to JSON (users, configs, metrics)
+      parameters:
+        - $ref: '#/components/parameters/TenantIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                includeMetrics:
+                  type: boolean
+                  default: true
+                includePii:
+                  type: boolean
+                  default: false
+                  description: Requires explicit approval
+      responses:
+        '202':
+          description: Snapshot job started
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  snapshotId:
+                    type: string
+                  jobId:
+                    type: string
+                  estimatedCompletionTime:
+                    type: string
+                    format: date-time
+
+  /tenants/{tenantId}/snapshot/{snapshotId}:
+    get:
+      tags: [Tenants]
+      summary: Get snapshot status and download URL
+      operationId: getTenantSnapshot
+      parameters:
+        - $ref: '#/components/parameters/TenantIdParam'
+        - name: snapshotId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Snapshot details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantSnapshot'
+
+  # ==================== Entitlements & Plans ====================
+  /entitlements/plans:
+    get:
+      tags: [Entitlements]
+      summary: List available plans
+      operationId: listPlans
+      responses:
+        '200':
+          description: Plan list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Plan'
+
+  /entitlements/tenants/{tenantId}:
+    get:
+      tags: [Entitlements]
+      summary: Get tenant entitlements
+      operationId: getTenantEntitlements
+      parameters:
+        - $ref: '#/components/parameters/TenantIdParam'
+      responses:
+        '200':
+          description: Entitlement details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantEntitlements'
+
+    put:
+      tags: [Entitlements]
+      summary: Update tenant entitlements
+      operationId: updateTenantEntitlements
+      parameters:
+        - $ref: '#/components/parameters/TenantIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EntitlementUpdate'
+      responses:
+        '200':
+          description: Entitlements updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantEntitlements'
+
+  /entitlements/tenants/{tenantId}/features/{featureId}:
+    put:
+      tags: [Entitlements]
+      summary: Toggle feature for tenant
+      operationId: toggleTenantFeature
+      parameters:
+        - $ref: '#/components/parameters/TenantIdParam'
+        - name: featureId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [enabled]
+              properties:
+                enabled:
+                  type: boolean
+                quotaOverride:
+                  type: integer
+                  description: Optional quota override
+      responses:
+        '200':
+          description: Feature toggled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeatureStatus'
+
+  /entitlements/tenants/{tenantId}/connectors:
+    get:
+      tags: [Entitlements]
+      summary: List active connectors
+      operationId: listTenantConnectors
+      description: Returns connectors available based on plan and add-ons
+      parameters:
+        - $ref: '#/components/parameters/TenantIdParam'
+      responses:
+        '200':
+          description: Active connectors
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Connector'
+
+  /entitlements/tenants/{tenantId}/addons:
+    post:
+      tags: [Entitlements]
+      summary: Attach L2I add-on
+      operationId: attachAddon
+      description: Attaches Learn-to-Impact or other add-on packages
+      parameters:
+        - $ref: '#/components/parameters/TenantIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [addonId]
+              properties:
+                addonId:
+                  type: string
+                  enum: [l2i_kintell, l2i_buddy, l2i_full, advanced_analytics, white_label]
+                startDate:
+                  type: string
+                  format: date
+      responses:
+        '201':
+          description: Add-on attached
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddonAttachment'
+
+  # ==================== Data Residency ====================
+  /residency/policies:
+    get:
+      tags: [Residency]
+      summary: List residency policies
+      operationId: listResidencyPolicies
+      responses:
+        '200':
+          description: Policy list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ResidencyPolicy'
+
+  /residency/tenants/{tenantId}:
+    get:
+      tags: [Residency]
+      summary: Get tenant residency policy
+      operationId: getTenantResidency
+      parameters:
+        - $ref: '#/components/parameters/TenantIdParam'
+      responses:
+        '200':
+          description: Residency policy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantResidency'
+
+    put:
+      tags: [Residency]
+      summary: Assign residency policy
+      operationId: assignResidencyPolicy
+      description: |
+        Assigns data residency region (US-East, EU-Central, UK).
+        DANGER: Cannot be changed after lock.
+      parameters:
+        - $ref: '#/components/parameters/TenantIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [region]
+              properties:
+                region:
+                  type: string
+                  enum: [us-east-1, eu-central-1, uk-south-1]
+                lock:
+                  type: boolean
+                  default: false
+                  description: Prevents future changes
+                migrationJobId:
+                  type: string
+                  description: Required if changing regions
+      responses:
+        '200':
+          description: Residency updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantResidency'
+
+  /residency/tenants/{tenantId}/validate:
+    post:
+      tags: [Residency]
+      summary: Validate residency compliance
+      operationId: validateResidencyCompliance
+      description: Checks if data is within declared region boundaries
+      parameters:
+        - $ref: '#/components/parameters/TenantIdParam'
+      responses:
+        '200':
+          description: Validation results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResidencyValidation'
+
+  # ==================== Audit Logs ====================
+  /audit/logs:
+    get:
+      tags: [Audit]
+      summary: Query audit logs
+      operationId: queryAuditLogs
+      parameters:
+        - name: tenantId
+          in: query
+          schema:
+            type: string
+        - name: actor
+          in: query
+          schema:
+            type: string
+        - name: action
+          in: query
+          schema:
+            type: string
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+            maximum: 500
+      responses:
+        '200':
+          description: Audit log entries
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditLogResponse'
+
+  /audit/events/{eventId}:
+    get:
+      tags: [Audit]
+      summary: Get audit event details
+      operationId: getAuditEvent
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Audit event
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditEvent'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Admin JWT token with required roles
+
+  parameters:
+    TenantIdParam:
+      name: tenantId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    UserIdParam:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+
+    GroupIdParam:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+
+    ConfigIdParam:
+      name: configId
+      in: path
+      required: true
+      schema:
+        type: string
+
+  schemas:
+    # ==================== SCIM Schemas ====================
+    ScimUser:
+      type: object
+      required: [schemas, userName]
+      properties:
+        schemas:
+          type: array
+          items:
+            type: string
+          example: ["urn:ietf:params:scim:schemas:core:2.0:User"]
+        id:
+          type: string
+          readOnly: true
+        externalId:
+          type: string
+        userName:
+          type: string
+          format: email
+        name:
+          type: object
+          properties:
+            formatted:
+              type: string
+            givenName:
+              type: string
+            familyName:
+              type: string
+        emails:
+          type: array
+          items:
+            type: object
+            properties:
+              value:
+                type: string
+                format: email
+              primary:
+                type: boolean
+        active:
+          type: boolean
+          default: true
+        roles:
+          type: array
+          items:
+            type: object
+            properties:
+              value:
+                type: string
+              display:
+                type: string
+        meta:
+          $ref: '#/components/schemas/ScimMeta'
+
+    ScimGroup:
+      type: object
+      required: [schemas, displayName]
+      properties:
+        schemas:
+          type: array
+          items:
+            type: string
+          example: ["urn:ietf:params:scim:schemas:core:2.0:Group"]
+        id:
+          type: string
+          readOnly: true
+        displayName:
+          type: string
+        members:
+          type: array
+          items:
+            type: object
+            properties:
+              value:
+                type: string
+              $ref:
+                type: string
+              display:
+                type: string
+        meta:
+          $ref: '#/components/schemas/ScimMeta'
+
+    ScimMeta:
+      type: object
+      readOnly: true
+      properties:
+        resourceType:
+          type: string
+        created:
+          type: string
+          format: date-time
+        lastModified:
+          type: string
+          format: date-time
+        version:
+          type: string
+        location:
+          type: string
+
+    ScimListResponse:
+      type: object
+      required: [schemas, totalResults, Resources]
+      properties:
+        schemas:
+          type: array
+          items:
+            type: string
+          example: ["urn:ietf:params:scim:api:messages:2.0:ListResponse"]
+        totalResults:
+          type: integer
+        startIndex:
+          type: integer
+        itemsPerPage:
+          type: integer
+        Resources:
+          type: array
+          items:
+            oneOf:
+              - $ref: '#/components/schemas/ScimUser'
+              - $ref: '#/components/schemas/ScimGroup'
+
+    ScimPatchOp:
+      type: object
+      required: [schemas, Operations]
+      properties:
+        schemas:
+          type: array
+          items:
+            type: string
+          example: ["urn:ietf:params:scim:api:messages:2.0:PatchOp"]
+        Operations:
+          type: array
+          items:
+            type: object
+            required: [op]
+            properties:
+              op:
+                type: string
+                enum: [add, remove, replace]
+              path:
+                type: string
+              value:
+                oneOf:
+                  - type: string
+                  - type: object
+                  - type: array
+
+    # ==================== SSO Schemas ====================
+    SsoConfig:
+      type: object
+      properties:
+        id:
+          type: string
+        tenantId:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+          enum: [saml, oidc]
+        enabled:
+          type: boolean
+        samlConfig:
+          $ref: '#/components/schemas/SamlConfig'
+        oidcConfig:
+          $ref: '#/components/schemas/OidcConfig'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    SamlConfig:
+      type: object
+      properties:
+        entityId:
+          type: string
+        ssoUrl:
+          type: string
+          format: uri
+        certificate:
+          type: string
+          description: PEM-encoded X.509 certificate
+        signRequests:
+          type: boolean
+        wantAssertionsSigned:
+          type: boolean
+
+    OidcConfig:
+      type: object
+      properties:
+        issuer:
+          type: string
+          format: uri
+        clientId:
+          type: string
+        clientSecret:
+          type: string
+          writeOnly: true
+        authorizationEndpoint:
+          type: string
+          format: uri
+        tokenEndpoint:
+          type: string
+          format: uri
+        userInfoEndpoint:
+          type: string
+          format: uri
+        jwksUri:
+          type: string
+          format: uri
+
+    SsoConfigCreate:
+      type: object
+      required: [tenantId, name, type]
+      properties:
+        tenantId:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+          enum: [saml, oidc]
+        samlConfig:
+          $ref: '#/components/schemas/SamlConfig'
+        oidcConfig:
+          $ref: '#/components/schemas/OidcConfig'
+
+    SsoConfigUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        enabled:
+          type: boolean
+        samlConfig:
+          $ref: '#/components/schemas/SamlConfig'
+        oidcConfig:
+          $ref: '#/components/schemas/OidcConfig'
+
+    SsoTestResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        tests:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              passed:
+                type: boolean
+              message:
+                type: string
+        errors:
+          type: array
+          items:
+            type: string
+
+    # ==================== Tenant Schemas ====================
+    Tenant:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+        status:
+          type: string
+          enum: [active, suspended, terminated, provisioning]
+        plan:
+          type: string
+        residencyRegion:
+          type: string
+        residencyLocked:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        suspendedAt:
+          type: string
+          format: date-time
+        terminatedAt:
+          type: string
+          format: date-time
+        metadata:
+          type: object
+          additionalProperties: true
+
+    TenantCreate:
+      type: object
+      required: [name, slug, plan, residencyRegion]
+      properties:
+        name:
+          type: string
+          minLength: 3
+        slug:
+          type: string
+          pattern: '^[a-z0-9-]+$'
+        plan:
+          type: string
+        residencyRegion:
+          type: string
+          enum: [us-east-1, eu-central-1, uk-south-1]
+        adminEmail:
+          type: string
+          format: email
+        metadata:
+          type: object
+
+    TenantUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        metadata:
+          type: object
+
+    TenantListResponse:
+      type: object
+      properties:
+        tenants:
+          type: array
+          items:
+            $ref: '#/components/schemas/Tenant'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    TenantSnapshot:
+      type: object
+      properties:
+        id:
+          type: string
+        tenantId:
+          type: string
+        status:
+          type: string
+          enum: [pending, processing, completed, failed]
+        downloadUrl:
+          type: string
+          format: uri
+        sizeBytes:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+
+    # ==================== Entitlement Schemas ====================
+    Plan:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        tier:
+          type: string
+          enum: [starter, professional, enterprise]
+        features:
+          type: array
+          items:
+            $ref: '#/components/schemas/Feature'
+        quotas:
+          type: object
+          additionalProperties:
+            type: integer
+
+    Feature:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        enabled:
+          type: boolean
+
+    TenantEntitlements:
+      type: object
+      properties:
+        tenantId:
+          type: string
+        plan:
+          $ref: '#/components/schemas/Plan'
+        addons:
+          type: array
+          items:
+            $ref: '#/components/schemas/Addon'
+        customFeatures:
+          type: array
+          items:
+            $ref: '#/components/schemas/FeatureStatus'
+        usage:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              used:
+                type: integer
+              limit:
+                type: integer
+              unit:
+                type: string
+
+    EntitlementUpdate:
+      type: object
+      properties:
+        planId:
+          type: string
+        featureOverrides:
+          type: array
+          items:
+            type: object
+            properties:
+              featureId:
+                type: string
+              enabled:
+                type: boolean
+              quotaOverride:
+                type: integer
+
+    FeatureStatus:
+      type: object
+      properties:
+        featureId:
+          type: string
+        enabled:
+          type: boolean
+        quota:
+          type: integer
+        used:
+          type: integer
+
+    Connector:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+          enum: [benevity, goodera, workday, salesforce, servicenow]
+        status:
+          type: string
+          enum: [available, active, disabled]
+        requiredAddon:
+          type: string
+
+    Addon:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        features:
+          type: array
+          items:
+            type: string
+
+    AddonAttachment:
+      type: object
+      properties:
+        id:
+          type: string
+        tenantId:
+          type: string
+        addon:
+          $ref: '#/components/schemas/Addon'
+        attachedAt:
+          type: string
+          format: date-time
+        startDate:
+          type: string
+          format: date
+
+    # ==================== Residency Schemas ====================
+    ResidencyPolicy:
+      type: object
+      properties:
+        region:
+          type: string
+        displayName:
+          type: string
+        datacenters:
+          type: array
+          items:
+            type: string
+        complianceFrameworks:
+          type: array
+          items:
+            type: string
+
+    TenantResidency:
+      type: object
+      properties:
+        tenantId:
+          type: string
+        region:
+          type: string
+        locked:
+          type: boolean
+        assignedAt:
+          type: string
+          format: date-time
+        lockedAt:
+          type: string
+          format: date-time
+        lastValidation:
+          $ref: '#/components/schemas/ResidencyValidation'
+
+    ResidencyValidation:
+      type: object
+      properties:
+        compliant:
+          type: boolean
+        checkedAt:
+          type: string
+          format: date-time
+        violations:
+          type: array
+          items:
+            type: object
+            properties:
+              resource:
+                type: string
+              location:
+                type: string
+              severity:
+                type: string
+                enum: [critical, warning]
+
+    # ==================== Audit Schemas ====================
+    AuditEvent:
+      type: object
+      properties:
+        id:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        actor:
+          type: object
+          properties:
+            id:
+              type: string
+            email:
+              type: string
+            ip:
+              type: string
+        action:
+          type: string
+        resource:
+          type: string
+        resourceId:
+          type: string
+        tenantId:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+        outcome:
+          type: string
+          enum: [success, failure]
+
+    AuditLogResponse:
+      type: object
+      properties:
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditEvent'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    # ==================== Common Schemas ====================
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        totalPages:
+          type: integer
+
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
+            scimType:
+              type: string
+              description: SCIM error type (for SCIM endpoints)
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Conflict:
+      description: Resource conflict
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    PreconditionFailed:
+      description: ETag mismatch
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    TooManyRequests:
+      description: Rate limit exceeded
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds until rate limit resets
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
