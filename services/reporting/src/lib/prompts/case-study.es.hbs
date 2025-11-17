@@ -1,0 +1,75 @@
+Eres un experto narrador y analista de impacto que crea un estudio de caso de cliente convincente para comunicaciones con las partes interesadas.
+
+**Contexto del Estudio de Caso**:
+- **Empresa**: {{companyName}}
+- **Período**: {{periodStart}} a {{periodEnd}}
+- **Tipo de Informe**: Estudio de Caso de Cliente
+- **Audiencia**: Clientes potenciales, inversores, miembros de la junta, materiales de marketing
+- **Propósito**: Demostrar el impacto medible del programa de integración a través de una narrativa basada en datos
+
+**Visión General del Programa**:
+- **Participantes**: {{participantsCount}} personas atendidas
+- **Sesiones**: {{sessionsCount}} sesiones totales entregadas
+- **Voluntarios**: {{volunteersCount}} voluntarios comprometidos
+- **Duración**: {{formatNumber (daysBetween periodStart periodEnd) 0}} días
+
+**Métricas de Referencia** (Pre-Programa):
+{{#if baselineMetrics}}
+- **Confianza**: {{formatPercent baselineMetrics.avgConfidence}}
+- **Pertenencia**: {{formatPercent baselineMetrics.avgBelonging}}
+- **Preparación Laboral**: {{formatPercent baselineMetrics.avgJobReadiness}}
+- **Nivel de Idioma**: {{formatPercent baselineMetrics.avgLanguageLevel}}
+- **Bienestar**: {{formatPercent baselineMetrics.avgWellBeing}}
+{{else}}
+(Datos de referencia no disponibles - usar retroalimentación inicial de participantes como proxy)
+{{/if}}
+
+**Métricas de Resultados** (Post-Programa/Actual):
+- **Confianza**: {{formatPercent avgConfidence}} {{#if baselineMetrics}}({{trend avgConfidence baselineMetrics.avgConfidence}}){{/if}}
+- **Pertenencia**: {{formatPercent avgBelonging}} {{#if baselineMetrics}}({{trend avgBelonging baselineMetrics.avgBelonging}}){{/if}}
+- **Preparación Laboral**: {{formatPercent avgJobReadiness}} {{#if baselineMetrics}}({{trend avgJobReadiness baselineMetrics.avgJobReadiness}}){{/if}}
+- **Nivel de Idioma**: {{formatPercent avgLanguageLevel}} {{#if baselineMetrics}}({{trend avgLanguageLevel baselineMetrics.avgLanguageLevel}}){{/if}}
+- **Bienestar**: {{formatPercent avgWellBeing}} {{#if baselineMetrics}}({{trend avgWellBeing baselineMetrics.avgWellBeing}}){{/if}}
+
+**Creación de Valor**:
+- **Ratio SROI**: {{formatNumber sroiRatio 2}}:1 (Por cada $1 invertido, ${{formatNumber sroiRatio 2}} en valor social creado)
+- **Puntuación VIS**: {{formatNumber visScore 1}}/100 (Volunteer Impact Score - calidad de las contribuciones de voluntarios)
+
+**Base de Evidencia** (Voces de Participantes - citar con [cite:ID]):
+{{#each evidenceSnippets}}
+[cite:{{this.id}}] "{{this.text}}" ({{this.dimension}}, confianza: {{formatPercent this.score}})
+{{/each}}
+
+---
+
+**INSTRUCCIONES**: [Sigue la misma estructura que la versión en inglés, pero genera todo el contenido en español]
+
+Generar las siguientes secciones EN ESPAÑOL:
+1. Resumen Ejecutivo (120-150 palabras)
+2. El Desafío: Contexto y Referencia (250-300 palabras, 2 párrafos)
+3. La Intervención: Diseño del Programa (250-300 palabras, 2 párrafos)
+4. Los Resultados: Resultados Medibles (400-450 palabras, 3 párrafos)
+5. El ROI: Análisis de Creación de Valor (250-300 palabras, 2 párrafos)
+6. Historias de Participantes: Voces del Programa (250-300 palabras, 2 párrafos)
+7. Lecciones Aprendidas y Perspectivas Futuras (200-250 palabras, 2 párrafos)
+8. Llamado a la Acción (100-120 palabras)
+
+**REQUISITOS DE SALIDA**:
+- **Longitud Total**: 1800-2200 palabras EN ESPAÑOL
+- **Tono**: Inspirador, basado en evidencia, profesional, persuasivo
+- **Formato**: Texto plano con encabezados de sección claros (usar "# Nombre de Sección")
+- **Citas**: Formato en línea [cite:ID], mínimo 2 por párrafo
+- **Sin PII**: La evidencia ya está redactada
+- **IDIOMA**: TODO EL CONTENIDO DEBE ESTAR EN ESPAÑOL (excepto los IDs de citas)
+
+**REGLAS CRÍTICAS**:
+✅ Cada párrafo sustantivo debe tener al menos 2 citas
+✅ Usar solo fragmentos de evidencia proporcionados arriba
+✅ Texto plano solamente
+✅ Encabezados de sección con prefijo "# "
+✅ Este es un documento de marketing/partes interesadas - convincente pero factual
+✅ TODO EN ESPAÑOL
+
+---
+
+Generar el Estudio de Caso de Cliente ahora:

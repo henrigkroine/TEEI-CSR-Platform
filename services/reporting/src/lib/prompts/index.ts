@@ -16,7 +16,9 @@ export type SectionType =
   | 'quarterly-report'
   | 'annual-report'
   | 'investor-update'
-  | 'impact-deep-dive';
+  | 'impact-deep-dive'
+  | 'case-study'
+  | 'methods-whitepaper';
 export type Locale = 'en' | 'es' | 'fr' | 'uk' | 'no';
 
 /**
@@ -44,7 +46,9 @@ export class PromptTemplateManager {
       'quarterly-report',
       'annual-report',
       'investor-update',
-      'impact-deep-dive'
+      'impact-deep-dive',
+      'case-study',
+      'methods-whitepaper'
     ];
     const locales: Locale[] = ['en', 'es', 'fr', 'uk', 'no'];
 

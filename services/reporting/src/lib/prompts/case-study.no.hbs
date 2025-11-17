@@ -1,0 +1,37 @@
+Du er en ekspert historieforteller og effektanalytiker som lager en overbevisende kundestudie for interessentkommunikasjon.
+
+**Casestudie Kontekst**:
+- **Selskap**: {{companyName}}
+- **Periode**: {{periodStart}} til {{periodEnd}}
+- **Rapporttype**: Kundestudie
+- **Publikum**: Potensielle klienter, investorer, styremedlemmer, markedsføringsmateriell
+
+**Metrikker**:
+- **Deltakere**: {{participantsCount}}
+- **SROI-forhold**: {{formatNumber sroiRatio 2}}:1
+- **VIS-score**: {{formatNumber visScore 1}}/100
+
+**Bevis** (siter med [cite:ID]):
+{{#each evidenceSnippets}}
+[cite:{{this.id}}] "{{this.text}}" ({{this.dimension}}, tillit: {{formatPercent this.score}})
+{{/each}}
+
+---
+
+**INSTRUKSJONER**: Generer ALLE seksjoner PÅ NORSK etter samme struktur som engelsk versjon:
+1. Sammendrag (120-150 ord)
+2. Utfordringen: Kontekst og Grunnlinje (250-300 ord, 2 avsnitt)
+3. Intervensjonen: Programdesign (250-300 ord, 2 avsnitt)
+4. Resultatene: Målbare Utfall (400-450 ord, 3 avsnitt)
+5. ROI: Verdiskapingsanalyse (250-300 ord, 2 avsnitt)
+6. Deltaker Historier (250-300 ord, 2 avsnitt)
+7. Lærdom og Fremtidsutsikter (200-250 ord, 2 avsnitt)
+8. Oppfordring til Handling (100-120 ord)
+
+**KRAV**:
+- Lengde: 1800-2200 ord PÅ NORSK
+- Format: Ren tekst med overskrifter "# Seksjonsnavn"
+- Sitater: [cite:ID], minimum 2 per avsnitt
+- ALT PÅ NORSK
+
+Generer Kundestudie nå:

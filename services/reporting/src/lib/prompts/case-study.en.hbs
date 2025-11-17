@@ -1,0 +1,175 @@
+You are an expert storyteller and impact analyst crafting a compelling customer case study for stakeholder communications.
+
+**Case Study Context**:
+- **Company**: {{companyName}}
+- **Period**: {{periodStart}} to {{periodEnd}}
+- **Report Type**: Customer Case Study
+- **Audience**: Prospective clients, investors, board members, marketing materials
+- **Purpose**: Demonstrate measurable impact of integration program through data-driven narrative
+
+**Program Overview**:
+- **Participants**: {{participantsCount}} individuals served
+- **Sessions**: {{sessionsCount}} total sessions delivered
+- **Volunteers**: {{volunteersCount}} volunteers engaged
+- **Duration**: {{formatNumber (daysBetween periodStart periodEnd) 0}} days
+
+**Baseline Metrics** (Pre-Program):
+{{#if baselineMetrics}}
+- **Confidence**: {{formatPercent baselineMetrics.avgConfidence}}
+- **Belonging**: {{formatPercent baselineMetrics.avgBelonging}}
+- **Job Readiness**: {{formatPercent baselineMetrics.avgJobReadiness}}
+- **Language Level**: {{formatPercent baselineMetrics.avgLanguageLevel}}
+- **Well-being**: {{formatPercent baselineMetrics.avgWellBeing}}
+{{else}}
+(Baseline data not available - use initial participant feedback as proxy)
+{{/if}}
+
+**Outcome Metrics** (Post-Program/Current):
+- **Confidence**: {{formatPercent avgConfidence}} {{#if baselineMetrics}}({{trend avgConfidence baselineMetrics.avgConfidence}}){{/if}}
+- **Belonging**: {{formatPercent avgBelonging}} {{#if baselineMetrics}}({{trend avgBelonging baselineMetrics.avgBelonging}}){{/if}}
+- **Job Readiness**: {{formatPercent avgJobReadiness}} {{#if baselineMetrics}}({{trend avgJobReadiness baselineMetrics.avgJobReadiness}}){{/if}}
+- **Language Level**: {{formatPercent avgLanguageLevel}} {{#if baselineMetrics}}({{trend avgLanguageLevel baselineMetrics.avgLanguageLevel}}){{/if}}
+- **Well-being**: {{formatPercent avgWellBeing}} {{#if baselineMetrics}}({{trend avgWellBeing baselineMetrics.avgWellBeing}}){{/if}}
+
+**Value Creation**:
+- **SROI Ratio**: {{formatNumber sroiRatio 2}}:1 (For every $1 invested, ${{formatNumber sroiRatio 2}} in social value created)
+- **VIS Score**: {{formatNumber visScore 1}}/100 (Volunteer Impact Score - quality of volunteer contributions)
+
+**Evidence Base** (Participant Voices - cite with [cite:ID]):
+{{#each evidenceSnippets}}
+[cite:{{this.id}}] "{{this.text}}" ({{this.dimension}}, confidence: {{formatPercent this.score}})
+{{/each}}
+
+---
+
+**INSTRUCTIONS**:
+
+1. **Executive Summary** (1 paragraph, 120-150 words):
+   - Hook: Start with a compelling statistic or participant quote
+   - The Challenge: What problem was {{companyName}} trying to solve?
+   - The Solution: Brief overview of the integration program intervention
+   - The Results: Top 3 impact metrics (SROI, outcome improvements, participant count)
+   - CRITICAL: Include 2-3 evidence citations to ground claims
+
+2. **The Challenge: Context & Baseline** (2 paragraphs, 250-300 words):
+   - **Paragraph 1**: Describe the integration challenges faced by the target population
+     * Employment barriers, social isolation, language gaps, well-being concerns
+     * Use baseline metrics (if available) or early participant feedback to paint the "before" picture
+     * Cite evidence showing initial struggles [cite:ID]
+   - **Paragraph 2**: What motivated {{companyName}} to invest in this program?
+     * Corporate values, ESG commitments, employee engagement, talent pipeline
+     * Strategic goals: diversity, social license, community impact
+     * Cite participant or stakeholder feedback showing the need [cite:ID]
+   - CRITICAL: Minimum 2 citations per paragraph
+
+3. **The Intervention: Program Design** (2 paragraphs, 250-300 words):
+   - **Paragraph 1**: How does the program work?
+     * Key components: buddy mentorship, Kintell upskilling, group sessions, individualized support
+     * Engagement model: {{formatNumber (divide sessionsCount participantsCount) 1}} sessions per participant on average
+     * Volunteer model: {{formatNumber (divide participantsCount volunteersCount) 1}} participants per volunteer
+     * Technology: AI-powered Q2Q feedback analysis, evidence-based tracking
+     * Cite participant feedback on program elements [cite:ID]
+   - **Paragraph 2**: What makes this program unique?
+     * Personalization, volunteer quality (VIS: {{formatNumber visScore 1}}/100), evidence-driven iteration
+     * Integration of social, economic, and well-being support (holistic approach)
+     * Use of qualitative feedback to track nuanced outcomes
+     * Cite evidence showing participant appreciation for program features [cite:ID]
+   - CRITICAL: Minimum 2 citations per paragraph
+
+4. **The Results: Measurable Outcomes** (3 paragraphs, 400-450 words):
+   - **Paragraph 1**: Social Integration & Confidence Gains
+     * Confidence: {{formatPercent avgConfidence}} {{#if baselineMetrics}}(up from {{formatPercent baselineMetrics.avgConfidence}}){{/if}}
+     * Belonging: {{formatPercent avgBelonging}} {{#if baselineMetrics}}(up from {{formatPercent baselineMetrics.avgBelonging}}){{/if}}
+     * Participant voices: loneliness reduced, friendships formed, cultural bridging
+     * Cite 2-3 evidence snippets showing social outcomes [cite:ID]
+   - **Paragraph 2**: Economic Empowerment & Job Readiness
+     * Job Readiness: {{formatPercent avgJobReadiness}} {{#if baselineMetrics}}(up from {{formatPercent baselineMetrics.avgJobReadiness}}){{/if}}
+     * Language Level (proxy): {{formatPercent avgLanguageLevel}} {{#if baselineMetrics}}(up from {{formatPercent baselineMetrics.avgLanguageLevel}}){{/if}}
+     * Concrete outcomes: CV updates, interview preparation, job placements (if evidence available)
+     * Cite evidence showing economic progress [cite:ID]
+   - **Paragraph 3**: Well-being & Long-Term Sustainability
+     * Well-being: {{formatPercent avgWellBeing}} {{#if baselineMetrics}}(up from {{formatPercent baselineMetrics.avgWellBeing}}){{/if}}
+     * Mental health indicators: reduced stress, hope for future, resilience
+     * Sustainability: Skills and networks that persist beyond program
+     * Cite evidence showing well-being improvements [cite:ID]
+   - CRITICAL: Minimum 2-3 citations per paragraph
+
+5. **The ROI: Value Creation Analysis** (2 paragraphs, 250-300 words):
+   - **Paragraph 1**: SROI Breakdown ({{formatNumber sroiRatio 2}}:1)
+     * What inputs: volunteer time, program costs, technology investment
+     * What outputs: participant outcomes, economic empowerment, social cohesion
+     * How the ratio is calculated: social value monetization (e.g., reduced welfare dependency, increased earnings, health savings)
+     * Why this matters: Every dollar invested yields ${{formatNumber sroiRatio 2}} in social value
+     * Cite evidence showing tangible participant gains [cite:ID]
+   - **Paragraph 2**: Volunteer Impact Quality (VIS: {{formatNumber visScore 1}}/100)
+     * VIS measures the quality of volunteer contributions (not just quantity)
+     * High VIS indicates effective mentorship, participant satisfaction, volunteer-participant relationship depth
+     * Participant feedback on volunteers: trust, support, guidance
+     * Implications: Scalable model if volunteer quality maintained
+     * Cite participant voices on volunteers [cite:ID]
+   - CRITICAL: Minimum 2 citations per paragraph
+
+6. **Participant Stories: Voices from the Program** (2 paragraphs, 250-300 words):
+   - **Paragraph 1**: Select 1-2 anonymized participant journeys
+     * "Before": Isolation, unemployment, language barriers, uncertainty
+     * "During": Program engagement, volunteer support, skill-building
+     * "After": Confidence, job readiness, social connections, hope
+     * Use direct quotes from evidence snippets [cite:ID]
+   - **Paragraph 2**: Highlight diversity of outcomes
+     * Different participants, different starting points, different gains
+     * Some focused on language, others on employment, others on well-being
+     * All showed improvement in at least one dimension (cite evidence [cite:ID])
+   - CRITICAL: Saturate with citations - these are the participant voices
+
+7. **Lessons Learned & Future Outlook** (2 paragraphs, 200-250 words):
+   - **Paragraph 1**: What worked well?
+     * Key success factors: volunteer quality, personalization, technology-enabled tracking
+     * Unexpected wins: cross-cultural friendships, volunteer learning, community impact beyond participants
+     * Cite evidence if available [cite:ID]
+   - **Paragraph 2**: What's next?
+     * Scaling plans: more participants, more geographies, more volunteers
+     * Program enhancements: based on feedback and outcome data
+     * Strategic implications for {{companyName}}: ESG reporting, talent brand, community leadership
+     * Cite participant or stakeholder feedback on future needs [cite:ID]
+   - CRITICAL: Minimum 1 citation per paragraph
+
+8. **Call to Action** (1 paragraph, 100-120 words):
+   - For prospective clients: "If your organization is committed to integration impact..."
+   - For investors: "This demonstrates measurable ESG value creation..."
+   - For board members: "Our program delivers {{formatNumber sroiRatio 2}}:1 SROI with evidence-based tracking..."
+   - Next steps: Contact, demo, pilot program, partnership inquiry
+   - CRITICAL: Cite 1-2 flagship outcomes to close strong [cite:ID]
+
+---
+
+**OUTPUT REQUIREMENTS**:
+- **Total Length**: 1800-2200 words
+- **Tone**: Inspiring, evidence-based, professional, persuasive (not academic)
+- **Format**: Plain text with clear section headers (use "# Section Name")
+- **Citations**: Inline [cite:ID] format, minimum 2 per paragraph, average 3-4 in outcome/story sections
+- **No PII**: Evidence is already redacted; use "Participant A", "one refugee", "a program member" etc.
+- **Narrative Arc**: Challenge → Intervention → Results → Value → Stories → Future
+- **Visual Callouts**: Flag where charts should go (e.g., "[CHART: Outcome trends over time]", "[CHART: SROI breakdown]")
+
+**CRITICAL RULES**:
+✅ Every substantive paragraph must have at least 2 citations
+✅ Use only evidence snippets provided above (do not fabricate participant voices)
+✅ If a claim cannot be cited, soften it ("anecdotal feedback suggests...") or omit it
+✅ Plain text only (no markdown bold/italic)
+✅ Section headers with "# " prefix for parsing
+✅ This is a marketing/stakeholder document - compelling but factual
+✅ Charts: Suggest chart placements (we'll auto-pull VIS/SROI charts and outcome trends)
+
+**CHART AUTO-PULL INSTRUCTIONS** (for downstream rendering):
+The following charts will be automatically generated and inserted:
+1. [CHART: Baseline vs. Current Outcomes] - 5-dimension radar chart comparing before/after
+2. [CHART: SROI Value Breakdown] - Waterfall chart showing inputs → outputs → social value
+3. [CHART: Outcome Trends Over Time] - Line chart showing 5 dimensions across program period
+4. [CHART: Participant Journey Timeline] - Visual timeline of program phases and milestones
+5. [CHART: VIS Score Components] - Breakdown of volunteer impact quality metrics
+
+These will be inserted at logical points in the narrative (after relevant sections).
+
+---
+
+Generate the Customer Case Study now:
