@@ -1,0 +1,692 @@
+openapi: 3.0.3
+info:
+  title: Scenario Planner API
+  version: 1.0.0
+  description: |
+    Scenario Planner API provides "what-if" modeling for VIS/SROI/SDG metrics
+    with parameterized adjustments for volunteer hours, grant amounts, cohort sizes,
+    and program mix. Supports scenario persistence, execution, and deck export.
+  contact:
+    name: TEEI Platform Team
+servers:
+  - url: http://localhost:3007
+    description: Forecast Service (local development)
+  - url: http://localhost:3000/v1/scenarios
+    description: Via API Gateway (local)
+paths:
+  /health:
+    get:
+      summary: Health check endpoint
+      operationId: getHealth
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  service:
+                    type: string
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /v1/scenarios:
+    post:
+      summary: Create a new scenario
+      operationId: createScenario
+      tags:
+        - Scenarios
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateScenarioRequest'
+      responses:
+        '201':
+          description: Scenario created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Scenario'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    get:
+      summary: List scenarios for a company
+      operationId: listScenarios
+      tags:
+        - Scenarios
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: companyId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: includeArchived
+          in: query
+          schema:
+            type: boolean
+            default: false
+        - name: tags
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: Scenarios retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListScenariosResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /v1/scenarios/{scenarioId}:
+    get:
+      summary: Get scenario by ID
+      operationId: getScenario
+      tags:
+        - Scenarios
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: scenarioId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Scenario retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Scenario'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    patch:
+      summary: Update scenario
+      operationId: updateScenario
+      tags:
+        - Scenarios
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: scenarioId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateScenarioRequest'
+      responses:
+        '200':
+          description: Scenario updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Scenario'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    delete:
+      summary: Delete scenario
+      operationId: deleteScenario
+      tags:
+        - Scenarios
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: scenarioId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Scenario deleted successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /v1/scenarios/{scenarioId}/run:
+    post:
+      summary: Execute scenario and compute metric deltas
+      operationId: executeScenario
+      tags:
+        - Scenarios
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: scenarioId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExecuteScenarioRequest'
+      responses:
+        '200':
+          description: Scenario executed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecuteScenarioResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          description: Execution error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/scenarios/{scenarioId}/results:
+    get:
+      summary: Get cached scenario execution results
+      operationId: getScenarioResults
+      tags:
+        - Scenarios
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: scenarioId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Results retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScenarioResult'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /v1/scenarios/{scenarioId}/export/deck:
+    post:
+      summary: Export scenario to deck payload (JSON/PPTX)
+      operationId: exportScenarioToDeck
+      tags:
+        - Scenarios
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: scenarioId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [json, pptx, pdf]
+            default: json
+      responses:
+        '200':
+          description: Deck payload generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeckExportPayload'
+            application/vnd.openxmlformats-officedocument.presentationml.presentation:
+              schema:
+                type: string
+                format: binary
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  responses:
+    Unauthorized:
+      description: Unauthorized - Invalid or missing authentication token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Forbidden:
+      description: Forbidden - Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  schemas:
+    ScenarioParameters:
+      type: object
+      properties:
+        volunteerHours:
+          type: object
+          properties:
+            adjustment:
+              type: number
+              description: Multiplier (1.0 = baseline, 1.2 = +20%, 0.8 = -20%)
+            absoluteValue:
+              type: number
+              description: Override with absolute hours
+        grantAmount:
+          type: object
+          properties:
+            adjustment:
+              type: number
+            currency:
+              type: string
+              default: EUR
+            absoluteValue:
+              type: number
+        cohortSize:
+          type: object
+          properties:
+            adjustment:
+              type: number
+            absoluteValue:
+              type: integer
+        cohortDuration:
+          type: object
+          properties:
+            weeks:
+              type: integer
+              minimum: 1
+        programMix:
+          type: object
+          description: Program allocation weights (must sum to 1.0)
+          properties:
+            buddy:
+              type: number
+              minimum: 0
+              maximum: 1
+            language:
+              type: number
+              minimum: 0
+              maximum: 1
+            mentorship:
+              type: number
+              minimum: 0
+              maximum: 1
+            upskilling:
+              type: number
+              minimum: 0
+              maximum: 1
+        visDecayLambda:
+          type: number
+          minimum: 0
+          maximum: 1
+        visEnableDecay:
+          type: boolean
+        sroiDiscountRate:
+          type: number
+          minimum: 0
+          maximum: 1
+        sroiTimeHorizon:
+          type: integer
+          minimum: 1
+
+    MetricDelta:
+      type: object
+      properties:
+        metric:
+          type: string
+        baseline:
+          type: number
+        scenario:
+          type: number
+        delta:
+          type: number
+        deltaPercent:
+          type: number
+        unit:
+          type: string
+
+    SDGTarget:
+      type: object
+      properties:
+        goal:
+          type: integer
+          minimum: 1
+          maximum: 17
+        target:
+          type: string
+        description:
+          type: string
+
+    ScenarioResult:
+      type: object
+      properties:
+        scenarioId:
+          type: string
+          format: uuid
+        executedAt:
+          type: string
+          format: date-time
+        parameters:
+          $ref: '#/components/schemas/ScenarioParameters'
+        metrics:
+          type: object
+          properties:
+            vis:
+              $ref: '#/components/schemas/MetricDelta'
+            sroi:
+              $ref: '#/components/schemas/MetricDelta'
+            totalVolunteerHours:
+              $ref: '#/components/schemas/MetricDelta'
+            totalParticipants:
+              $ref: '#/components/schemas/MetricDelta'
+            totalGrantAmount:
+              $ref: '#/components/schemas/MetricDelta'
+        sdgCoverage:
+          type: object
+          properties:
+            baseline:
+              type: array
+              items:
+                $ref: '#/components/schemas/SDGTarget'
+            scenario:
+              type: array
+              items:
+                $ref: '#/components/schemas/SDGTarget'
+            newTargets:
+              type: array
+              items:
+                $ref: '#/components/schemas/SDGTarget'
+            lostTargets:
+              type: array
+              items:
+                $ref: '#/components/schemas/SDGTarget'
+        metadata:
+          type: object
+          properties:
+            calculationDurationMs:
+              type: number
+            dataPointsAnalyzed:
+              type: number
+            warnings:
+              type: array
+              items:
+                type: string
+
+    Scenario:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        companyId:
+          type: string
+          format: uuid
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+        parameters:
+          $ref: '#/components/schemas/ScenarioParameters'
+        createdBy:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        lastExecutedAt:
+          type: string
+          format: date-time
+        result:
+          $ref: '#/components/schemas/ScenarioResult'
+        tags:
+          type: array
+          items:
+            type: string
+        isArchived:
+          type: boolean
+
+    CreateScenarioRequest:
+      type: object
+      required:
+        - companyId
+        - name
+        - parameters
+      properties:
+        companyId:
+          type: string
+          format: uuid
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+        parameters:
+          $ref: '#/components/schemas/ScenarioParameters'
+        tags:
+          type: array
+          items:
+            type: string
+        executeImmediately:
+          type: boolean
+          default: false
+
+    UpdateScenarioRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+        parameters:
+          $ref: '#/components/schemas/ScenarioParameters'
+        tags:
+          type: array
+          items:
+            type: string
+        isArchived:
+          type: boolean
+
+    ExecuteScenarioRequest:
+      type: object
+      required:
+        - companyId
+      properties:
+        companyId:
+          type: string
+          format: uuid
+        period:
+          type: object
+          properties:
+            start:
+              type: string
+              format: date
+            end:
+              type: string
+              format: date
+
+    ExecuteScenarioResponse:
+      type: object
+      properties:
+        scenarioId:
+          type: string
+          format: uuid
+        result:
+          $ref: '#/components/schemas/ScenarioResult'
+
+    ListScenariosResponse:
+      type: object
+      properties:
+        scenarios:
+          type: array
+          items:
+            $ref: '#/components/schemas/Scenario'
+        pagination:
+          type: object
+          properties:
+            total:
+              type: integer
+            limit:
+              type: integer
+            offset:
+              type: integer
+            hasMore:
+              type: boolean
+
+    DeckExportPayload:
+      type: object
+      properties:
+        scenarioId:
+          type: string
+          format: uuid
+        scenarioName:
+          type: string
+        companyId:
+          type: string
+          format: uuid
+        companyName:
+          type: string
+        executedAt:
+          type: string
+          format: date-time
+        slides:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+                enum: [summary, metrics, sdg, parameters]
+              title:
+                type: string
+              data:
+                type: object
+        charts:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+                enum: [bar, line, pie, waterfall]
+              title:
+                type: string
+              series:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    data:
+                      type: array
+                      items:
+                        type: number
+              categories:
+                type: array
+                items:
+                  type: string
+        metadata:
+          type: object
+          properties:
+            generatedAt:
+              type: string
+              format: date-time
+            generatedBy:
+              type: string
+              format: uuid
+            format:
+              type: string
+              enum: [json, pptx, pdf]
+
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          default: false
+        error:
+          type: string
+        details:
+          type: object
