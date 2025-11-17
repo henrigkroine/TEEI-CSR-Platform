@@ -104,6 +104,19 @@
       ]
     },
     {
+      "name": "Boardroom",
+      "short_name": "Boardroom",
+      "description": "Enter boardroom presentation mode",
+      "url": "/boardroom",
+      "icons": [
+        {
+          "src": "/icons/shortcut-boardroom.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
       "name": "Reports",
       "short_name": "Reports",
       "description": "Access your reports library",
