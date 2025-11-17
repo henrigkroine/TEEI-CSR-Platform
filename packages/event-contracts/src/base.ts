@@ -42,7 +42,11 @@ export type EventType =
   | 'nlq.query.completed'
   | 'nlq.query.failed'
   | 'nlq.query.rejected'
-  | 'nlq.cache.invalidated';
+  | 'nlq.cache.invalidated'
+  // External integration events
+  | 'external.volunteer.logged'
+  | 'external.donation.made'
+  | 'external.user.synced';
 
 /**
  * Envelope for all events published to event bus

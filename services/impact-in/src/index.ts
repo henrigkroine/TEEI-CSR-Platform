@@ -9,6 +9,8 @@ import { createServiceLogger } from '@teei/shared-utils';
 import { deliveryRoutes } from './routes/deliveries.js';
 import { replayRoutes } from './routes/replay.js';
 import { registerWebhookRoutes } from './routes/webhooks.js';
+import { registerIngestRoutes } from './routes/ingest.js';
+import { registerIntegrationsHealthRoutes } from './routes/integrations-health.js';
 import { slaRoutes } from './routes/sla.js';
 import { createHealthManager, setupHealthRoutes } from './health/index.js';
 import { startScheduler } from '../scheduler/index.js';
@@ -32,6 +34,8 @@ async function start() {
   // Register routes with API versioning
   app.register(deliveryRoutes, { prefix: '/v1/impact-in' });
   app.register(replayRoutes, { prefix: '/v1/impact-in' });
+  app.register(registerIngestRoutes, { prefix: '/v1/impact-in' });
+  app.register(registerIntegrationsHealthRoutes, { prefix: '/v1/impact-in' });
   await registerWebhookRoutes(app);
   app.register(slaRoutes, { prefix: '/v1/impact-in' });
 
@@ -39,15 +43,20 @@ async function start() {
   app.get('/', async (request, reply) => {
     return {
       service: 'impact-in',
-      version: '1.0.0',
-      description: 'Impact data delivery service for external CSR platforms',
-      platforms: ['benevity', 'goodera', 'workday'],
+      version: '2.0.0',
+      description: 'Impact data ingestion and delivery service for external CSR platforms and internal TEEI services',
+      platforms: ['benevity', 'goodera', 'workday', 'kintell', 'upskilling', 'buddy'],
       endpoints: {
         deliveries: '/v1/impact-in/deliveries',
         stats: '/v1/impact-in/stats',
         replay: '/v1/impact-in/deliveries/:id/replay',
         bulkReplay: '/v1/impact-in/deliveries/bulk-replay',
         retryAllFailed: '/v1/impact-in/deliveries/retry-all-failed',
+        ingest: 'POST /v1/impact-in/ingest',
+        ingestStatus: 'GET /v1/impact-in/ingest/status',
+        ingestSchedule: 'POST /v1/impact-in/ingest/schedule',
+        integrationsHealth: 'GET /v1/impact-in/integrations/health',
+        integrationsMetrics: 'GET /v1/impact-in/integrations/metrics',
         webhooks: {
           benevity: 'POST /webhooks/benevity',
           goodera: 'POST /webhooks/goodera',
