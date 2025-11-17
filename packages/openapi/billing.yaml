@@ -1,0 +1,801 @@
+openapi: 3.0.3
+info:
+  title: TEEI Billing & Entitlements API
+  description: |
+    API for managing subscriptions, L2I bundles, and feature entitlements on the TEEI CSR Platform.
+
+    ## Founding-8 Licensing
+    The TEEI platform offers three subscription tiers:
+    - **Essentials**: $499/month - For small organizations starting their CSR journey
+    - **Professional**: $1,499/month - For growing organizations with established programs
+    - **Enterprise**: $4,999/month - For large organizations with complex global operations
+
+    ## License-to-Impact (L2I) Bundles
+    L2I bundles allow customers to directly fund TEEI program initiatives:
+    - **L2I-250** ($5K/year): Impact Starter - 250 learners
+    - **L2I-500** ($10K/year): Impact Builder - 500 learners
+    - **L2I-EXPAND** ($50K/year): Impact Expander - 2,500 learners
+    - **L2I-LAUNCH** ($100K/year): Impact Launcher (Founding-8) - 5,000+ learners
+  version: 1.0.0
+  contact:
+    email: api@teei.org
+
+servers:
+  - url: http://localhost:3010
+    description: Local development
+  - url: https://api-staging.teei.org
+    description: Staging environment
+  - url: https://api.teei.org
+    description: Production environment
+
+tags:
+  - name: Subscriptions
+    description: Manage company subscription plans
+  - name: L2I Bundles
+    description: License-to-Impact bundle management
+  - name: Entitlements
+    description: Feature access and quota checking
+  - name: Invoices
+    description: Invoice management and retrieval
+
+paths:
+  /api/billing/subscriptions:
+    post:
+      tags: [Subscriptions]
+      summary: Create a new subscription
+      operationId: createSubscription
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSubscriptionRequest'
+      responses:
+        '200':
+          description: Subscription created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/billing/subscriptions/{companyId}:
+    get:
+      tags: [Subscriptions]
+      summary: Get subscription for a company
+      operationId: getSubscription
+      parameters:
+        - name: companyId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Subscription retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionResponse'
+        '404':
+          description: Subscription not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/billing/subscriptions/{subscriptionId}:
+    patch:
+      tags: [Subscriptions]
+      summary: Update subscription
+      operationId: updateSubscription
+      parameters:
+        - name: subscriptionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSubscriptionRequest'
+      responses:
+        '200':
+          description: Subscription updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionResponse'
+        '404':
+          description: Subscription not found
+
+  /api/billing/subscriptions/{subscriptionId}/cancel:
+    post:
+      tags: [Subscriptions]
+      summary: Cancel subscription
+      operationId: cancelSubscription
+      parameters:
+        - name: subscriptionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Subscription canceled successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionResponse'
+
+  /api/billing/l2i-bundles:
+    get:
+      tags: [L2I Bundles]
+      summary: Get all available L2I bundle SKUs
+      operationId: getL2IBundles
+      responses:
+        '200':
+          description: L2I bundles retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  bundles:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/L2IBundle'
+    post:
+      tags: [L2I Bundles]
+      summary: Create an L2I subscription for a company
+      operationId: createL2ISubscription
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateL2ISubscriptionRequest'
+      responses:
+        '200':
+          description: L2I subscription created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/L2ISubscriptionResponse'
+
+  /api/billing/l2i-bundles/{companyId}:
+    get:
+      tags: [L2I Bundles]
+      summary: Get L2I subscriptions for a company
+      operationId: getCompanyL2IBundles
+      parameters:
+        - name: companyId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: L2I subscriptions retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  subscriptions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/L2ISubscription'
+
+  /api/billing/l2i-bundles/{l2iSubscriptionId}/allocate:
+    patch:
+      tags: [L2I Bundles]
+      summary: Update program allocation for an L2I subscription
+      operationId: updateL2IAllocation
+      parameters:
+        - name: l2iSubscriptionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateL2IAllocationRequest'
+      responses:
+        '200':
+          description: L2I allocation updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/L2ISubscriptionResponse'
+
+  /api/billing/l2i-bundles/{l2iSubscriptionId}/allocations:
+    get:
+      tags: [L2I Bundles]
+      summary: Get allocations for an L2I subscription
+      operationId: getL2IAllocations
+      parameters:
+        - name: l2iSubscriptionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Allocations retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  allocations:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/L2IAllocation'
+
+  /api/billing/l2i-bundles/{companyId}/impact-summary:
+    get:
+      tags: [L2I Bundles]
+      summary: Get impact summary for a company
+      operationId: getImpactSummary
+      parameters:
+        - name: companyId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Impact summary retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImpactSummary'
+
+  /api/billing/l2i-bundles/{l2iSubscriptionId}/cancel:
+    post:
+      tags: [L2I Bundles]
+      summary: Cancel an L2I subscription
+      operationId: cancelL2ISubscription
+      parameters:
+        - name: l2iSubscriptionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: L2I subscription canceled successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/L2ISubscriptionResponse'
+
+  /api/entitlements/me:
+    get:
+      tags: [Entitlements]
+      summary: Get current company entitlements
+      description: Returns feature flags, quotas, and L2I bundle information for the specified company
+      operationId: getEntitlements
+      parameters:
+        - name: companyId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Entitlements retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntitlementsResponse'
+        '404':
+          description: No active subscription found
+
+  /api/entitlements/check:
+    post:
+      tags: [Entitlements]
+      summary: Check if a specific feature/action is allowed
+      operationId: checkEntitlement
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EntitlementCheckRequest'
+      responses:
+        '200':
+          description: Entitlement check completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntitlementCheckResponse'
+
+components:
+  schemas:
+    CreateSubscriptionRequest:
+      type: object
+      required: [companyId, plan]
+      properties:
+        companyId:
+          type: string
+          format: uuid
+        plan:
+          type: string
+          enum: [essentials, professional, enterprise, starter, pro, custom]
+        seatCount:
+          type: integer
+          minimum: 1
+          default: 1
+        trialDays:
+          type: integer
+          minimum: 0
+          maximum: 30
+        paymentMethodId:
+          type: string
+
+    UpdateSubscriptionRequest:
+      type: object
+      properties:
+        seatCount:
+          type: integer
+          minimum: 1
+        plan:
+          type: string
+          enum: [essentials, professional, enterprise, starter, pro, custom]
+        cancelAtPeriodEnd:
+          type: boolean
+
+    SubscriptionResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        subscription:
+          $ref: '#/components/schemas/Subscription'
+        stripeClientSecret:
+          type: string
+
+    Subscription:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        companyId:
+          type: string
+          format: uuid
+        plan:
+          type: string
+          enum: [essentials, professional, enterprise, starter, pro, custom]
+        status:
+          type: string
+          enum: [active, trialing, past_due, canceled, unpaid]
+        seatCount:
+          type: integer
+        currentPeriodStart:
+          type: string
+          format: date-time
+        currentPeriodEnd:
+          type: string
+          format: date-time
+        cancelAtPeriodEnd:
+          type: boolean
+
+    CreateL2ISubscriptionRequest:
+      type: object
+      required: [companyId, sku]
+      properties:
+        companyId:
+          type: string
+          format: uuid
+        subscriptionId:
+          type: string
+          format: uuid
+          description: Optional - attach to existing subscription
+        sku:
+          type: string
+          enum: [L2I-250, L2I-500, L2I-EXPAND, L2I-LAUNCH]
+        quantity:
+          type: integer
+          minimum: 1
+          default: 1
+        programAllocation:
+          $ref: '#/components/schemas/ProgramAllocation'
+        paymentMethodId:
+          type: string
+
+    UpdateL2IAllocationRequest:
+      type: object
+      required: [programAllocation]
+      properties:
+        programAllocation:
+          $ref: '#/components/schemas/ProgramAllocation'
+
+    ProgramAllocation:
+      type: object
+      description: Program allocation percentages (must sum to 1.0)
+      required: [language, mentorship, upskilling, weei]
+      properties:
+        language:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+        mentorship:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+        upskilling:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+        weei:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+
+    L2IBundle:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        sku:
+          type: string
+          enum: [L2I-250, L2I-500, L2I-EXPAND, L2I-LAUNCH]
+        name:
+          type: string
+        description:
+          type: string
+        annualPrice:
+          type: integer
+          description: Price in cents
+        impactTier:
+          type: string
+          enum: [tier1, tier2, tier3, tier4]
+        learnersSupported:
+          type: integer
+        recognitionBadge:
+          type: string
+          enum: [bronze, silver, gold, platinum]
+        foundingMember:
+          type: boolean
+        defaultAllocation:
+          $ref: '#/components/schemas/ProgramAllocation'
+
+    L2ISubscription:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        companyId:
+          type: string
+          format: uuid
+        bundleId:
+          type: string
+          format: uuid
+        sku:
+          type: string
+        quantity:
+          type: integer
+        status:
+          type: string
+          enum: [active, trialing, past_due, canceled, unpaid]
+        programAllocation:
+          $ref: '#/components/schemas/ProgramAllocation'
+        learnersServedToDate:
+          type: integer
+        currentPeriodStart:
+          type: string
+          format: date-time
+        currentPeriodEnd:
+          type: string
+          format: date-time
+
+    L2ISubscriptionResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        l2iSubscription:
+          $ref: '#/components/schemas/L2ISubscription'
+
+    L2IAllocation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        program:
+          type: string
+          enum: [language, mentorship, upskilling, weei]
+        allocationPercentage:
+          type: number
+          format: float
+        allocationAmountUSD:
+          type: integer
+        learnersServed:
+          type: integer
+        averageSROI:
+          type: number
+          format: float
+        averageVIS:
+          type: number
+          format: float
+        periodStart:
+          type: string
+          format: date-time
+        periodEnd:
+          type: string
+          format: date-time
+
+    ImpactSummary:
+      type: object
+      properties:
+        success:
+          type: boolean
+        impactSummary:
+          type: object
+          properties:
+            totalCommitment:
+              type: number
+              description: Total annual commitment in USD
+            totalLearnersServed:
+              type: integer
+            recognitionBadges:
+              type: array
+              items:
+                type: string
+            foundingMember:
+              type: boolean
+            allocations:
+              type: array
+              items:
+                type: object
+                properties:
+                  program:
+                    type: string
+                  amountUSD:
+                    type: number
+                  learnersServed:
+                    type: integer
+                  averageSROI:
+                    type: number
+                    nullable: true
+                  averageVIS:
+                    type: number
+                    nullable: true
+
+    EntitlementsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        plan:
+          type: string
+        features:
+          type: object
+          properties:
+            reportBuilder:
+              type: object
+              properties:
+                enabled:
+                  type: boolean
+                tier:
+                  type: string
+            boardroomLive:
+              type: object
+              properties:
+                enabled:
+                  type: boolean
+            nlq:
+              type: object
+              properties:
+                enabled:
+                  type: boolean
+                quota:
+                  $ref: '#/components/schemas/Quota'
+            aiCopilot:
+              type: object
+              properties:
+                enabled:
+                  type: boolean
+                tokenLimit:
+                  type: integer
+                tokensUsed:
+                  type: integer
+            exportPdf:
+              type: object
+              properties:
+                enabled:
+                  type: boolean
+            exportCsv:
+              type: object
+              properties:
+                enabled:
+                  type: boolean
+            exportPptx:
+              type: object
+              properties:
+                enabled:
+                  type: boolean
+            connectors:
+              type: object
+              properties:
+                enabled:
+                  type: boolean
+                limit:
+                  type: integer
+                active:
+                  type: array
+                  items:
+                    type: string
+            forecast:
+              type: object
+              properties:
+                enabled:
+                  type: boolean
+            benchmarking:
+              type: object
+              properties:
+                enabled:
+                  type: boolean
+            genAiReports:
+              type: object
+              properties:
+                enabled:
+                  type: boolean
+            apiAccess:
+              type: object
+              properties:
+                enabled:
+                  type: boolean
+            sso:
+              type: object
+              properties:
+                enabled:
+                  type: boolean
+            scimProvisioning:
+              type: object
+              properties:
+                enabled:
+                  type: boolean
+            customBranding:
+              type: object
+              properties:
+                enabled:
+                  type: boolean
+            multiRegion:
+              type: object
+              properties:
+                enabled:
+                  type: boolean
+            prioritySupport:
+              type: object
+              properties:
+                enabled:
+                  type: boolean
+        l2iBundles:
+          type: array
+          items:
+            type: object
+            properties:
+              sku:
+                type: string
+              impactTier:
+                type: string
+              learnersSupported:
+                type: integer
+              recognitionBadge:
+                type: string
+              programAllocation:
+                type: object
+                properties:
+                  language:
+                    type: number
+                  mentorship:
+                    type: number
+                  upskilling:
+                    type: number
+                  weei:
+                    type: number
+        quotas:
+          type: object
+          properties:
+            seats:
+              type: object
+              properties:
+                limit:
+                  type: integer
+                used:
+                  type: integer
+            storage:
+              type: object
+              properties:
+                limit:
+                  type: integer
+                used:
+                  type: integer
+            aiTokens:
+              $ref: '#/components/schemas/Quota'
+
+    Quota:
+      type: object
+      properties:
+        limit:
+          type: integer
+        used:
+          type: integer
+        resetDate:
+          type: string
+          format: date-time
+
+    EntitlementCheckRequest:
+      type: object
+      required: [companyId, feature, action]
+      properties:
+        companyId:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        feature:
+          type: string
+        action:
+          type: string
+        resource:
+          type: string
+
+    EntitlementCheckResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        allowed:
+          type: boolean
+        reason:
+          type: string
+        quotaRemaining:
+          type: integer
+
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+        error:
+          type: string
+        message:
+          type: string

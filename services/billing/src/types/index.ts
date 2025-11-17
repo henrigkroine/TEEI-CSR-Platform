@@ -199,6 +199,298 @@ export const BillingEventSchema = z.object({
 export type BillingEvent = z.infer<typeof BillingEventSchema>;
 
 /**
+ * L2I Bundle SKU Schema
+ */
+export const L2IBundleSkuSchema = z.enum(['L2I-250', 'L2I-500', 'L2I-EXPAND', 'L2I-LAUNCH']);
+export type L2IBundleSku = z.infer<typeof L2IBundleSkuSchema>;
+
+/**
+ * L2I Program Schema
+ */
+export const L2IProgramSchema = z.enum(['language', 'mentorship', 'upskilling', 'weei']);
+export type L2IProgram = z.infer<typeof L2IProgramSchema>;
+
+/**
+ * Recognition Badge Schema
+ */
+export const RecognitionBadgeSchema = z.enum(['bronze', 'silver', 'gold', 'platinum']);
+export type RecognitionBadge = z.infer<typeof RecognitionBadgeSchema>;
+
+/**
+ * L2I Bundle Definition Schema
+ */
+export const L2IBundleSchema = z.object({
+  id: z.string().uuid(),
+  sku: L2IBundleSkuSchema,
+  name: z.string(),
+  description: z.string().optional(),
+
+  // Pricing
+  annualPrice: z.number().positive(), // USD
+  currency: z.string().default('usd'),
+
+  // Impact metrics
+  impactTier: z.enum(['tier1', 'tier2', 'tier3', 'tier4']),
+  learnersSupported: z.number().int().positive(),
+
+  // Recognition
+  recognitionBadge: RecognitionBadgeSchema,
+  foundingMember: z.boolean().default(false),
+
+  // Program allocation defaults
+  defaultAllocation: z.object({
+    language: z.number().min(0).max(1),
+    mentorship: z.number().min(0).max(1),
+    upskilling: z.number().min(0).max(1),
+    weei: z.number().min(0).max(1),
+  }),
+
+  // Stripe integration
+  stripePriceId: z.string().optional(),
+
+  active: z.boolean().default(true),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+
+export type L2IBundle = z.infer<typeof L2IBundleSchema>;
+
+/**
+ * L2I Subscription Schema
+ */
+export const L2ISubscriptionSchema = z.object({
+  id: z.string().uuid(),
+  companyId: z.string().uuid(),
+  bundleId: z.string().uuid(),
+  subscriptionId: z.string().uuid().optional(),
+
+  sku: L2IBundleSkuSchema,
+  quantity: z.number().int().positive().default(1),
+
+  // Stripe data
+  stripeSubscriptionItemId: z.string().optional(),
+
+  // Billing period
+  currentPeriodStart: z.string().datetime(),
+  currentPeriodEnd: z.string().datetime(),
+
+  // Status
+  status: z.enum(['active', 'trialing', 'past_due', 'canceled', 'unpaid']),
+  cancelAtPeriodEnd: z.boolean().default(false),
+  canceledAt: z.string().datetime().optional(),
+
+  // Program allocation (must sum to 1.0)
+  programAllocation: z.object({
+    language: z.number().min(0).max(1),
+    mentorship: z.number().min(0).max(1),
+    upskilling: z.number().min(0).max(1),
+    weei: z.number().min(0).max(1),
+  }).refine(
+    (alloc) => {
+      const sum = alloc.language + alloc.mentorship + alloc.upskilling + alloc.weei;
+      return Math.abs(sum - 1.0) < 0.0001; // Allow for floating point precision
+    },
+    { message: 'Program allocation must sum to 1.0' }
+  ),
+
+  // Impact tracking
+  learnersServedToDate: z.number().int().min(0).default(0),
+  lastImpactUpdateAt: z.string().datetime().optional(),
+
+  metadata: z.record(z.any()).default({}),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+
+export type L2ISubscription = z.infer<typeof L2ISubscriptionSchema>;
+
+/**
+ * L2I Allocation Schema
+ */
+export const L2IAllocationSchema = z.object({
+  id: z.string().uuid(),
+  l2iSubscriptionId: z.string().uuid(),
+  companyId: z.string().uuid(),
+
+  program: L2IProgramSchema,
+  allocationPercentage: z.number().min(0).max(1),
+  allocationAmountUSD: z.number().min(0),
+
+  // Impact metrics
+  learnersServed: z.number().int().min(0).default(0),
+  averageSROI: z.number().optional(),
+  averageVIS: z.number().optional(),
+  engagementRate: z.number().min(0).max(1).optional(),
+
+  // Evidence lineage
+  evidenceSnippets: z.array(z.object({
+    evidenceId: z.string().uuid(),
+    learnerName: z.string(), // anonymized
+    outcome: z.string(),
+    sroi: z.number(),
+  })).optional(),
+
+  // Period tracking
+  periodStart: z.string().datetime(),
+  periodEnd: z.string().datetime(),
+
+  lastCalculatedAt: z.string().datetime().optional(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+
+export type L2IAllocation = z.infer<typeof L2IAllocationSchema>;
+
+/**
+ * L2I Impact Event Schema
+ */
+export const L2IImpactEventSchema = z.object({
+  id: z.string().uuid(),
+  l2iSubscriptionId: z.string().uuid(),
+  allocationId: z.string().uuid().optional(),
+  companyId: z.string().uuid(),
+
+  eventType: z.enum(['learner_served', 'outcome_recorded', 'allocation_changed']),
+  program: L2IProgramSchema.optional(),
+
+  learnerIds: z.array(z.string().uuid()).optional(),
+  outcomeMetrics: z.object({
+    sroi: z.number().optional(),
+    vis: z.number().optional(),
+    engagement: z.number().optional(),
+  }).optional(),
+
+  sourceSystem: z.string().optional(),
+  sourceEventId: z.string().optional(),
+
+  metadata: z.record(z.any()).default({}),
+  createdAt: z.string().datetime(),
+});
+
+export type L2IImpactEvent = z.infer<typeof L2IImpactEventSchema>;
+
+/**
+ * Create L2I Bundle Request
+ */
+export const CreateL2ISubscriptionSchema = z.object({
+  companyId: z.string().uuid(),
+  subscriptionId: z.string().uuid().optional(),
+  sku: L2IBundleSkuSchema,
+  quantity: z.number().int().positive().default(1),
+  programAllocation: z.object({
+    language: z.number().min(0).max(1),
+    mentorship: z.number().min(0).max(1),
+    upskilling: z.number().min(0).max(1),
+    weei: z.number().min(0).max(1),
+  }).optional(), // If not provided, use bundle defaults
+  paymentMethodId: z.string().optional(),
+});
+
+export type CreateL2ISubscriptionRequest = z.infer<typeof CreateL2ISubscriptionSchema>;
+
+/**
+ * Update L2I Allocation Request
+ */
+export const UpdateL2IAllocationSchema = z.object({
+  programAllocation: z.object({
+    language: z.number().min(0).max(1),
+    mentorship: z.number().min(0).max(1),
+    upskilling: z.number().min(0).max(1),
+    weei: z.number().min(0).max(1),
+  }).refine(
+    (alloc) => {
+      const sum = alloc.language + alloc.mentorship + alloc.upskilling + alloc.weei;
+      return Math.abs(sum - 1.0) < 0.0001;
+    },
+    { message: 'Program allocation must sum to 1.0' }
+  ),
+});
+
+export type UpdateL2IAllocationRequest = z.infer<typeof UpdateL2IAllocationSchema>;
+
+/**
+ * L2I Bundle Definitions
+ */
+export const L2I_BUNDLE_DEFINITIONS: Record<L2IBundleSku, Omit<L2IBundle, 'id' | 'createdAt' | 'updatedAt'>> = {
+  'L2I-250': {
+    sku: 'L2I-250',
+    name: 'Impact Starter',
+    description: 'Support 250 learners annually with Language and Mentorship programs',
+    annualPrice: 5000,
+    currency: 'usd',
+    impactTier: 'tier1',
+    learnersSupported: 250,
+    recognitionBadge: 'bronze',
+    foundingMember: false,
+    defaultAllocation: {
+      language: 0.5,
+      mentorship: 0.5,
+      upskilling: 0,
+      weei: 0,
+    },
+    stripePriceId: process.env.STRIPE_L2I_250_PRICE_ID || 'price_l2i_250',
+    active: true,
+  },
+  'L2I-500': {
+    sku: 'L2I-500',
+    name: 'Impact Builder',
+    description: 'Support 500 learners annually with Language, Mentorship, and Upskilling programs',
+    annualPrice: 10000,
+    currency: 'usd',
+    impactTier: 'tier2',
+    learnersSupported: 500,
+    recognitionBadge: 'silver',
+    foundingMember: false,
+    defaultAllocation: {
+      language: 0.4,
+      mentorship: 0.3,
+      upskilling: 0.3,
+      weei: 0,
+    },
+    stripePriceId: process.env.STRIPE_L2I_500_PRICE_ID || 'price_l2i_500',
+    active: true,
+  },
+  'L2I-EXPAND': {
+    sku: 'L2I-EXPAND',
+    name: 'Impact Expander',
+    description: 'Support 2,500 learners annually with all programs including WEEI',
+    annualPrice: 50000,
+    currency: 'usd',
+    impactTier: 'tier3',
+    learnersSupported: 2500,
+    recognitionBadge: 'gold',
+    foundingMember: false,
+    defaultAllocation: {
+      language: 0.35,
+      mentorship: 0.25,
+      upskilling: 0.25,
+      weei: 0.15,
+    },
+    stripePriceId: process.env.STRIPE_L2I_EXPAND_PRICE_ID || 'price_l2i_expand',
+    active: true,
+  },
+  'L2I-LAUNCH': {
+    sku: 'L2I-LAUNCH',
+    name: 'Impact Launcher (Founding-8)',
+    description: 'Support 5,000+ learners annually with all programs, custom initiatives, and Founding-8 membership',
+    annualPrice: 100000,
+    currency: 'usd',
+    impactTier: 'tier4',
+    learnersSupported: 5000,
+    recognitionBadge: 'platinum',
+    foundingMember: true,
+    defaultAllocation: {
+      language: 0.3,
+      mentorship: 0.25,
+      upskilling: 0.25,
+      weei: 0.2,
+    },
+    stripePriceId: process.env.STRIPE_L2I_LAUNCH_PRICE_ID || 'price_l2i_launch',
+    active: true,
+  },
+};
+
+/**
  * Default pricing tier (Stripe-ready)
  */
 export const DEFAULT_PRICING: PricingTier = {

@@ -7,7 +7,10 @@ import { pgTable, uuid, varchar, timestamp, jsonb, pgEnum, integer, text, index,
 import { companies } from './users.js';
 
 // Enums
-export const subscriptionPlanEnum = pgEnum('subscription_plan', ['starter', 'pro', 'enterprise', 'custom']);
+export const subscriptionPlanEnum = pgEnum('subscription_plan', ['starter', 'pro', 'enterprise', 'custom', 'essentials', 'professional']);
+export const l2iSkuEnum = pgEnum('l2i_sku', ['L2I-250', 'L2I-500', 'L2I-EXPAND', 'L2I-LAUNCH']);
+export const l2iProgramEnum = pgEnum('l2i_program', ['language', 'mentorship', 'upskilling', 'weei']);
+export const recognitionBadgeEnum = pgEnum('recognition_badge', ['bronze', 'silver', 'gold', 'platinum']);
 export const subscriptionStatusEnum = pgEnum('subscription_status', ['active', 'trialing', 'past_due', 'canceled', 'unpaid']);
 export const invoiceStatusEnum = pgEnum('invoice_status', ['draft', 'open', 'paid', 'void', 'uncollectible']);
 export const usageEventTypeEnum = pgEnum('usage_event_type', [
@@ -243,11 +246,15 @@ export const billingPlanFeatures = pgTable('billing_plan_features', {
     forecast: boolean;
     benchmarking: boolean;
     nlq: boolean;
+    aiCopilot: boolean;
     genAiReports: boolean;
     apiAccess: boolean;
+    externalConnectors: boolean;
     sso: boolean;
     customBranding: boolean;
     prioritySupport: boolean;
+    multiRegion: boolean;
+    scimProvisioning: boolean;
   }>(),
 
   // Pricing (for reference, actual pricing in Stripe)
@@ -257,3 +264,167 @@ export const billingPlanFeatures = pgTable('billing_plan_features', {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
+
+/**
+ * L2I Bundles - License-to-Impact bundle SKU definitions
+ */
+export const l2iBundles = pgTable('l2i_bundles', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  sku: l2iSkuEnum('sku').notNull().unique(),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description'),
+
+  // Pricing
+  annualPrice: integer('annual_price').notNull(), // cents
+  currency: varchar('currency', { length: 3 }).default('usd'),
+
+  // Impact metrics
+  impactTier: varchar('impact_tier', { length: 50 }).notNull(), // tier1, tier2, tier3, tier4
+  learnersSupported: integer('learners_supported').notNull(),
+
+  // Recognition
+  recognitionBadge: recognitionBadgeEnum('recognition_badge').notNull(),
+  foundingMember: boolean('founding_member').default(false),
+
+  // Program tags (default allocation percentages)
+  defaultAllocation: jsonb('default_allocation').notNull().$type<{
+    language: number;
+    mentorship: number;
+    upskilling: number;
+    weei: number;
+  }>(),
+
+  // Stripe integration
+  stripePriceId: varchar('stripe_price_id', { length: 255 }),
+
+  // Status
+  active: boolean('active').default(true),
+
+  metadata: jsonb('metadata').default({}),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+/**
+ * L2I Subscriptions - Company purchases of L2I bundles
+ */
+export const l2iSubscriptions = pgTable('l2i_subscriptions', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  companyId: uuid('company_id').notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  bundleId: uuid('bundle_id').notNull().references(() => l2iBundles.id),
+  subscriptionId: uuid('subscription_id').references(() => billingSubscriptions.id),
+
+  // Purchase details
+  sku: l2iSkuEnum('sku').notNull(),
+  quantity: integer('quantity').default(1).notNull(),
+
+  // Stripe data
+  stripeSubscriptionItemId: varchar('stripe_subscription_item_id', { length: 255 }),
+
+  // Billing period
+  currentPeriodStart: timestamp('current_period_start', { withTimezone: true }).notNull(),
+  currentPeriodEnd: timestamp('current_period_end', { withTimezone: true }).notNull(),
+
+  // Status
+  status: subscriptionStatusEnum('status').notNull().default('active'),
+  cancelAtPeriodEnd: boolean('cancel_at_period_end').default(false),
+  canceledAt: timestamp('canceled_at', { withTimezone: true }),
+
+  // Program allocation (customizable by company)
+  programAllocation: jsonb('program_allocation').notNull().$type<{
+    language: number; // percentage (0-1)
+    mentorship: number;
+    upskilling: number;
+    weei: number;
+  }>(),
+
+  // Impact tracking
+  learnersServedToDate: integer('learners_served_to_date').default(0),
+  lastImpactUpdateAt: timestamp('last_impact_update_at', { withTimezone: true }),
+
+  metadata: jsonb('metadata').default({}),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  companyIdIdx: index('l2i_subscriptions_company_id_idx').on(table.companyId),
+  bundleIdIdx: index('l2i_subscriptions_bundle_id_idx').on(table.bundleId),
+  statusIdx: index('l2i_subscriptions_status_idx').on(table.status),
+}));
+
+/**
+ * L2I Allocations - Track program-level impact allocations
+ */
+export const l2iAllocations = pgTable('l2i_allocations', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  l2iSubscriptionId: uuid('l2i_subscription_id').notNull().references(() => l2iSubscriptions.id, { onDelete: 'cascade' }),
+  companyId: uuid('company_id').notNull().references(() => companies.id, { onDelete: 'cascade' }),
+
+  // Program details
+  program: l2iProgramEnum('program').notNull(),
+  allocationPercentage: decimal('allocation_percentage', { precision: 5, scale: 4 }).notNull(), // 0.0000 to 1.0000
+  allocationAmountUSD: integer('allocation_amount_usd').notNull(), // cents
+
+  // Impact metrics (updated periodically)
+  learnersServed: integer('learners_served').default(0),
+  averageSROI: decimal('average_sroi', { precision: 10, scale: 2 }),
+  averageVIS: decimal('average_vis', { precision: 10, scale: 2 }),
+  engagementRate: decimal('engagement_rate', { precision: 5, scale: 4 }),
+
+  // Evidence lineage (sample evidence IDs showing impact)
+  evidenceSnippets: jsonb('evidence_snippets').$type<Array<{
+    evidenceId: string;
+    learnerName: string; // anonymized
+    outcome: string;
+    sroi: number;
+  }>>(),
+
+  // Period tracking
+  periodStart: timestamp('period_start', { withTimezone: true }).notNull(),
+  periodEnd: timestamp('period_end', { withTimezone: true }).notNull(),
+
+  // Last updated
+  lastCalculatedAt: timestamp('last_calculated_at', { withTimezone: true }),
+
+  metadata: jsonb('metadata').default({}),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  l2iSubscriptionIdIdx: index('l2i_allocations_l2i_subscription_id_idx').on(table.l2iSubscriptionId),
+  companyIdIdx: index('l2i_allocations_company_id_idx').on(table.companyId),
+  programIdx: index('l2i_allocations_program_idx').on(table.program),
+  periodIdx: index('l2i_allocations_period_idx').on(table.periodStart, table.periodEnd),
+}));
+
+/**
+ * L2I Impact Events - Audit trail for impact updates
+ */
+export const l2iImpactEvents = pgTable('l2i_impact_events', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  l2iSubscriptionId: uuid('l2i_subscription_id').notNull().references(() => l2iSubscriptions.id, { onDelete: 'cascade' }),
+  allocationId: uuid('allocation_id').references(() => l2iAllocations.id),
+  companyId: uuid('company_id').notNull().references(() => companies.id, { onDelete: 'cascade' }),
+
+  // Event details
+  eventType: varchar('event_type', { length: 100 }).notNull(), // 'learner_served', 'outcome_recorded', 'allocation_changed'
+  program: l2iProgramEnum('program'),
+
+  // Impact data
+  learnerIds: jsonb('learner_ids').$type<string[]>(),
+  outcomeMetrics: jsonb('outcome_metrics').$type<{
+    sroi?: number;
+    vis?: number;
+    engagement?: number;
+  }>(),
+
+  // Source tracking
+  sourceSystem: varchar('source_system', { length: 100 }), // 'kintell', 'buddy', 'impact-in'
+  sourceEventId: varchar('source_event_id', { length: 255 }),
+
+  metadata: jsonb('metadata').default({}),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  l2iSubscriptionIdIdx: index('l2i_impact_events_l2i_subscription_id_idx').on(table.l2iSubscriptionId),
+  companyIdIdx: index('l2i_impact_events_company_id_idx').on(table.companyId),
+  eventTypeIdx: index('l2i_impact_events_event_type_idx').on(table.eventType),
+  createdAtIdx: index('l2i_impact_events_created_at_idx').on(table.createdAt),
+}));

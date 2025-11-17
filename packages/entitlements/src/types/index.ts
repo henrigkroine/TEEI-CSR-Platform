@@ -13,10 +13,14 @@ export enum Feature {
   FORECAST = 'forecast',
   BENCHMARKING = 'benchmarking',
   NLQ = 'nlq',
+  AI_COPILOT = 'ai_copilot',
   GEN_AI_REPORTS = 'gen_ai_reports',
   API_ACCESS = 'api_access',
+  EXTERNAL_CONNECTORS = 'external_connectors',
   SSO = 'sso',
+  SCIM_PROVISIONING = 'scim_provisioning',
   CUSTOM_BRANDING = 'custom_branding',
+  MULTI_REGION = 'multi_region',
   PRIORITY_SUPPORT = 'priority_support',
   EXPORT_PDF = 'export_pdf',
   EXPORT_CSV = 'export_csv',
@@ -107,6 +111,8 @@ export interface PlanFeatures {
     maxReportsPerMonth: number;
     maxAiTokensPerMonth: number;
     maxStorageGB: number;
+    maxNlqQueriesPerMonth: number;
+    maxExternalConnectors: number;
     features: Set<Feature>;
   };
   pro: {
@@ -114,6 +120,8 @@ export interface PlanFeatures {
     maxReportsPerMonth: number;
     maxAiTokensPerMonth: number;
     maxStorageGB: number;
+    maxNlqQueriesPerMonth: number;
+    maxExternalConnectors: number;
     features: Set<Feature>;
   };
   enterprise: {
@@ -121,6 +129,26 @@ export interface PlanFeatures {
     maxReportsPerMonth: null;
     maxAiTokensPerMonth: null;
     maxStorageGB: null;
+    maxNlqQueriesPerMonth: null;
+    maxExternalConnectors: null;
+    features: Set<Feature>;
+  };
+  essentials: {
+    maxSeats: number;
+    maxReportsPerMonth: number;
+    maxAiTokensPerMonth: number;
+    maxStorageGB: number;
+    maxNlqQueriesPerMonth: number;
+    maxExternalConnectors: number;
+    features: Set<Feature>;
+  };
+  professional: {
+    maxSeats: number;
+    maxReportsPerMonth: number | null;
+    maxAiTokensPerMonth: number;
+    maxStorageGB: number;
+    maxNlqQueriesPerMonth: number;
+    maxExternalConnectors: number;
     features: Set<Feature>;
   };
 }
@@ -129,11 +157,14 @@ export interface PlanFeatures {
  * Default plan features
  */
 export const DEFAULT_PLAN_FEATURES: PlanFeatures = {
+  // Legacy plans (for existing customers)
   starter: {
     maxSeats: 5,
     maxReportsPerMonth: 10,
     maxAiTokensPerMonth: 100000,
     maxStorageGB: 10,
+    maxNlqQueriesPerMonth: 0,
+    maxExternalConnectors: 0,
     features: new Set([
       Feature.REPORT_BUILDER,
       Feature.EXPORT_PDF,
@@ -145,6 +176,8 @@ export const DEFAULT_PLAN_FEATURES: PlanFeatures = {
     maxReportsPerMonth: 100,
     maxAiTokensPerMonth: 1000000,
     maxStorageGB: 100,
+    maxNlqQueriesPerMonth: 100,
+    maxExternalConnectors: 1,
     features: new Set([
       Feature.REPORT_BUILDER,
       Feature.BOARDROOM_LIVE,
@@ -162,20 +195,62 @@ export const DEFAULT_PLAN_FEATURES: PlanFeatures = {
     maxReportsPerMonth: null,
     maxAiTokensPerMonth: null,
     maxStorageGB: null,
+    maxNlqQueriesPerMonth: null,
+    maxExternalConnectors: null,
     features: new Set([
       Feature.REPORT_BUILDER,
       Feature.BOARDROOM_LIVE,
       Feature.FORECAST,
       Feature.BENCHMARKING,
       Feature.NLQ,
+      Feature.AI_COPILOT,
       Feature.GEN_AI_REPORTS,
       Feature.EXPORT_PDF,
       Feature.EXPORT_CSV,
       Feature.EXPORT_PPTX,
       Feature.API_ACCESS,
+      Feature.EXTERNAL_CONNECTORS,
       Feature.SSO,
+      Feature.SCIM_PROVISIONING,
       Feature.CUSTOM_BRANDING,
+      Feature.MULTI_REGION, // Global (4+ regions)
       Feature.PRIORITY_SUPPORT,
+    ]),
+  },
+  // Founding-8 plans
+  essentials: {
+    maxSeats: 10,
+    maxReportsPerMonth: 50,
+    maxAiTokensPerMonth: 500000, // 500K tokens
+    maxStorageGB: 50,
+    maxNlqQueriesPerMonth: 0, // NLQ not available
+    maxExternalConnectors: 0, // No connectors
+    features: new Set([
+      Feature.REPORT_BUILDER,
+      Feature.EXPORT_PDF,
+      Feature.EXPORT_CSV,
+    ]),
+  },
+  professional: {
+    maxSeats: 50,
+    maxReportsPerMonth: null, // Unlimited
+    maxAiTokensPerMonth: 2000000, // 2M tokens
+    maxStorageGB: 200,
+    maxNlqQueriesPerMonth: 200,
+    maxExternalConnectors: 2,
+    features: new Set([
+      Feature.REPORT_BUILDER,
+      Feature.BOARDROOM_LIVE,
+      Feature.FORECAST,
+      Feature.BENCHMARKING,
+      Feature.NLQ,
+      Feature.AI_COPILOT,
+      Feature.EXPORT_PDF,
+      Feature.EXPORT_CSV,
+      Feature.EXPORT_PPTX,
+      Feature.API_ACCESS,
+      Feature.EXTERNAL_CONNECTORS,
+      Feature.MULTI_REGION, // Dual-region
     ]),
   },
 };

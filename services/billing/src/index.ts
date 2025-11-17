@@ -9,6 +9,8 @@ import helmet from '@fastify/helmet';
 import { billingRoutes } from './routes/billing.js';
 import { subscriptionRoutes } from './routes/subscriptions.js';
 import { webhookRoutes } from './routes/webhooks.js';
+import { l2iBundleRoutes } from './routes/l2i-bundles.js';
+import { entitlementsRoutes } from './routes/entitlements.js';
 
 const fastify = Fastify({
   logger: true,
@@ -34,6 +36,8 @@ await fastify.register(cors, {
 await fastify.register(billingRoutes);
 await fastify.register(subscriptionRoutes);
 await fastify.register(webhookRoutes);
+await fastify.register(l2iBundleRoutes);
+await fastify.register(entitlementsRoutes);
 
 // Start server
 const start = async () => {
