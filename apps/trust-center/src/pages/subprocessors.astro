@@ -1,0 +1,117 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="Subprocessors" description="List of third-party subprocessors and data processors">
+  <div>
+    <h1 class="text-3xl font-bold text-gray-900 mb-6">Subprocessors</h1>
+
+    <div class="bg-blue-50 border border-blue-200 rounded-md p-4 mb-6">
+      <p class="text-sm text-blue-900">
+        <strong>Last Updated:</strong> November 17, 2025<br />
+        Customers are notified 30 days in advance of any subprocessor changes.
+      </p>
+    </div>
+
+    <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 mb-6">
+      <h2 class="text-xl font-semibold text-gray-900 mb-4">Infrastructure Subprocessors</h2>
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subprocessor</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Purpose</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+            <tr>
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Amazon Web Services</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">Cloud Infrastructure</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">US, EU, UK, APAC</td>
+              <td class="px-6 py-4 text-sm text-gray-700">Hosting, database, object storage</td>
+            </tr>
+            <tr>
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Cloudflare</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">CDN & Security</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">Global</td>
+              <td class="px-6 py-4 text-sm text-gray-700">Content delivery, DDoS protection, WAF</td>
+            </tr>
+            <tr>
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Datadog</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">Observability</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">US, EU</td>
+              <td class="px-6 py-4 text-sm text-gray-700">Application monitoring, logs, traces</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 mb-6">
+      <h2 class="text-xl font-semibold text-gray-900 mb-4">AI Model Providers</h2>
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subprocessor</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data Sharing</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+            <tr>
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">OpenAI</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">LLM API (GPT-4)</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">US</td>
+              <td class="px-6 py-4 text-sm text-gray-700">PII-redacted evidence snippets</td>
+            </tr>
+            <tr>
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Anthropic</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">LLM API (Claude)</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">US</td>
+              <td class="px-6 py-4 text-sm text-gray-700">PII-redacted evidence snippets</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="mt-4 bg-yellow-50 border border-yellow-200 rounded-md p-4">
+        <p class="text-sm text-yellow-900">
+          <strong>Note:</strong> All data sent to AI model providers is PII-redacted and validated for no leakage. See <a href="/ai-transparency" class="text-primary-600 hover:text-primary-700">AI Transparency</a> for details.
+        </p>
+      </div>
+    </div>
+
+    <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+      <h2 class="text-xl font-semibold text-gray-900 mb-4">Security & Compliance</h2>
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subprocessor</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Purpose</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+            <tr>
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Snyk</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">Vulnerability Scanning</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">US, EU</td>
+              <td class="px-6 py-4 text-sm text-gray-700">Code and dependency scanning</td>
+            </tr>
+            <tr>
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Vanta</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">Compliance Automation</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">US</td>
+              <td class="px-6 py-4 text-sm text-gray-700">SOC 2, ISO 27001 continuous monitoring</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</BaseLayout>

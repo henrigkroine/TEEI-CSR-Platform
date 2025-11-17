@@ -1,0 +1,158 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="Incident History" description="Historical record of platform incidents and resolutions">
+  <div>
+    <h1 class="text-3xl font-bold text-gray-900 mb-6">Incident History</h1>
+
+    <div class="bg-gray-50 p-4 rounded-md mb-6">
+      <p class="text-sm text-gray-700">
+        This page shows all incidents that affected service availability or performance over the past 90 days.
+        For real-time status, visit the <a href="/" class="text-primary-600 hover:text-primary-700 font-medium">Status page</a>.
+      </p>
+    </div>
+
+    <!-- November 2025 -->
+    <div class="mb-8">
+      <h2 class="text-xl font-semibold text-gray-900 mb-4">November 2025</h2>
+
+      <div class="space-y-4">
+        <div class="bg-white p-6 rounded-lg shadow-sm border-l-4 border-green-500">
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center space-x-3">
+              <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                Resolved
+              </span>
+              <span class="text-gray-900 font-semibold">Database Connection Pool Saturation</span>
+            </div>
+            <time class="text-sm text-gray-600" datetime="2025-11-10T14:30:00Z">Nov 10, 2025</time>
+          </div>
+
+          <div class="space-y-3 text-sm">
+            <div>
+              <strong class="text-gray-900">Affected Services:</strong>
+              <span class="text-gray-700"> API Gateway, Reporting Service</span>
+            </div>
+            <div>
+              <strong class="text-gray-900">Impact:</strong>
+              <span class="text-gray-700"> Elevated API latency (p95: 2.1s) and intermittent 503 errors in EU-WEST-1 region</span>
+            </div>
+            <div>
+              <strong class="text-gray-900">Duration:</strong>
+              <span class="text-gray-700"> 12 minutes (14:30 - 14:42 UTC)</span>
+            </div>
+            <div>
+              <strong class="text-gray-900">Root Cause:</strong>
+              <span class="text-gray-700"> Traffic spike during quarterly report generation period exhausted database connection pool limits</span>
+            </div>
+            <div>
+              <strong class="text-gray-900">Resolution:</strong>
+              <span class="text-gray-700"> Increased max_connections from 200 to 500. Implemented connection pooling improvements and query optimization.</span>
+            </div>
+            <div>
+              <strong class="text-gray-900">Prevention:</strong>
+              <span class="text-gray-700"> Added connection pool saturation alerts, implemented query result caching, scheduled report generation load balancing</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-lg shadow-sm border-l-4 border-green-500">
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center space-x-3">
+              <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                Resolved
+              </span>
+              <span class="text-gray-900 font-semibold">Elevated API Latency</span>
+            </div>
+            <time class="text-sm text-gray-600" datetime="2025-11-05T09:15:00Z">Nov 5, 2025</time>
+          </div>
+
+          <div class="space-y-3 text-sm">
+            <div>
+              <strong class="text-gray-900">Affected Services:</strong>
+              <span class="text-gray-700"> All Services (US-EAST-1)</span>
+            </div>
+            <div>
+              <strong class="text-gray-900">Impact:</strong>
+              <span class="text-gray-700"> API latency p95 increased from 245ms to 1.2s</span>
+            </div>
+            <div>
+              <strong class="text-gray-900">Duration:</strong>
+              <span class="text-gray-700"> 8 minutes (09:15 - 09:23 UTC)</span>
+            </div>
+            <div>
+              <strong class="text-gray-900">Root Cause:</strong>
+              <span class="text-gray-700"> Unexpected traffic spike (3x normal load) during product launch announcement</span>
+            </div>
+            <div>
+              <strong class="text-gray-900">Resolution:</strong>
+              <span class="text-gray-700"> Kubernetes HPA (Horizontal Pod Autoscaler) triggered and scaled pods from 10 to 30. Latency returned to normal within 2 minutes of scaling completion.</span>
+            </div>
+            <div>
+              <strong class="text-gray-900">Prevention:</strong>
+              <span class="text-gray-700"> Adjusted HPA thresholds for faster scaling response, pre-scaled infrastructure for future launches</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- October 2025 -->
+    <div class="mb-8">
+      <h2 class="text-xl font-semibold text-gray-900 mb-4">October 2025</h2>
+
+      <div class="bg-white p-6 rounded-lg shadow-sm border-l-4 border-green-500">
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center space-x-3">
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+              Resolved
+            </span>
+            <span class="text-gray-900 font-semibold">Cache Invalidation Issue</span>
+          </div>
+          <time class="text-sm text-gray-600" datetime="2025-10-22T16:45:00Z">Oct 22, 2025</time>
+        </div>
+
+        <div class="space-y-3 text-sm">
+          <div>
+            <strong class="text-gray-900">Affected Services:</strong>
+            <span class="text-gray-700"> Corporate Cockpit (Dashboard Views)</span>
+          </div>
+          <div>
+            <strong class="text-gray-900">Impact:</strong>
+            <span class="text-gray-700"> Stale data displayed in dashboards, metrics not updating in real-time</span>
+          </div>
+          <div>
+            <strong class="text-gray-900">Duration:</strong>
+            <span class="text-gray-700"> 35 minutes (16:45 - 17:20 UTC)</span>
+          </div>
+          <div>
+            <strong class="text-gray-900">Root Cause:</strong>
+            <span class="text-gray-700"> Redis cache invalidation logic failed after schema migration</span>
+          </div>
+          <div>
+            <strong class="text-gray-900">Resolution:</strong>
+            <span class="text-gray-700"> Flushed Redis cache, deployed hotfix to update cache key generation logic</span>
+          </div>
+          <div>
+            <strong class="text-gray-900">Prevention:</strong>
+            <span class="text-gray-700"> Added cache invalidation integration tests, implemented cache versioning strategy</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- No Incidents Period -->
+    <div class="bg-green-50 p-6 rounded-lg border border-green-200">
+      <div class="flex items-center space-x-3">
+        <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        <div>
+          <p class="font-semibold text-green-900">Excellent Reliability</p>
+          <p class="text-sm text-green-800">Zero incidents reported in September 2025</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</BaseLayout>

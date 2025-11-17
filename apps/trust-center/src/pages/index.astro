@@ -1,0 +1,162 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="Status" description="Real-time status and performance metrics for TEEI Platform">
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+
+  <div id="main-content">
+    <h1 class="text-3xl font-bold text-gray-900 mb-6">System Status</h1>
+
+    <div class="grid md:grid-cols-3 gap-6 mb-8">
+      <!-- System Status Card -->
+      <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200" role="region" aria-labelledby="status-heading">
+        <div class="flex items-center justify-between mb-4">
+          <h2 id="status-heading" class="text-lg font-semibold text-gray-900">Overall Status</h2>
+          <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800" role="status" aria-live="polite">
+            <span class="w-2 h-2 bg-green-500 rounded-full mr-2" aria-hidden="true"></span>
+            Operational
+          </span>
+        </div>
+        <div class="space-y-2 text-sm text-gray-600">
+          <div class="flex justify-between">
+            <span>Uptime (30d):</span>
+            <strong id="uptime-value" class="text-gray-900">99.95%</strong>
+          </div>
+          <div class="flex justify-between">
+            <span>Services:</span>
+            <strong class="text-gray-900">23/23 Online</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- Performance Card -->
+      <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200" role="region" aria-labelledby="performance-heading">
+        <h2 id="performance-heading" class="text-lg font-semibold text-gray-900 mb-4">Performance</h2>
+        <div class="space-y-2 text-sm text-gray-600">
+          <div class="flex justify-between">
+            <span>API Latency (p95):</span>
+            <strong id="latency-value" class="text-gray-900">245ms</strong>
+          </div>
+          <div class="flex justify-between">
+            <span>LCP (Web Vitals):</span>
+            <strong id="lcp-value" class="text-gray-900">1.2s</strong>
+          </div>
+          <div class="flex justify-between">
+            <span>Error Rate:</span>
+            <strong id="error-rate-value" class="text-gray-900">0.02%</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLO Card -->
+      <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200" role="region" aria-labelledby="slo-heading">
+        <h2 id="slo-heading" class="text-lg font-semibold text-gray-900 mb-4">Service Level Objectives</h2>
+        <div class="space-y-2 text-sm text-gray-600">
+          <div class="flex justify-between">
+            <span>Availability SLO:</span>
+            <strong class="text-gray-900">99.9%</strong>
+          </div>
+          <div class="flex justify-between">
+            <span>Error Budget:</span>
+            <strong id="error-budget-value" class="text-green-600">78% remaining</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Service Health -->
+    <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 mb-8" role="region" aria-labelledby="services-heading">
+      <h2 id="services-heading" class="text-xl font-semibold text-gray-900 mb-4">Service Health</h2>
+      <div class="space-y-3" role="list">
+        <div class="flex items-center justify-between border-b border-gray-100 pb-3" role="listitem">
+          <span class="text-gray-700">API Gateway</span>
+          <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+            <span class="w-2 h-2 bg-green-500 rounded-full mr-2" aria-hidden="true"></span>
+            Operational
+          </span>
+        </div>
+        <div class="flex items-center justify-between border-b border-gray-100 pb-3" role="listitem">
+          <span class="text-gray-700">Reporting Service</span>
+          <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+            <span class="w-2 h-2 bg-green-500 rounded-full mr-2" aria-hidden="true"></span>
+            Operational
+          </span>
+        </div>
+        <div class="flex items-center justify-between border-b border-gray-100 pb-3" role="listitem">
+          <span class="text-gray-700">Q2Q AI Pipeline</span>
+          <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+            <span class="w-2 h-2 bg-green-500 rounded-full mr-2" aria-hidden="true"></span>
+            Operational
+          </span>
+        </div>
+        <div class="flex items-center justify-between" role="listitem">
+          <span class="text-gray-700">Database (PostgreSQL)</span>
+          <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+            <span class="w-2 h-2 bg-green-500 rounded-full mr-2" aria-hidden="true"></span>
+            Operational
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Incidents -->
+    <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200" role="region" aria-labelledby="incidents-heading">
+      <div class="flex items-center justify-between mb-4">
+        <h2 id="incidents-heading" class="text-xl font-semibold text-gray-900">Recent Incidents</h2>
+        <a href="/incidents" class="text-primary-600 hover:text-primary-700 text-sm font-medium">View all →</a>
+      </div>
+      <div class="space-y-4" role="list">
+        <div class="border-l-4 border-green-500 pl-4 py-2" role="listitem">
+          <div class="flex items-center justify-between mb-1">
+            <span class="font-medium text-gray-900">Resolved</span>
+            <time class="text-sm text-gray-600" datetime="2025-11-10T14:30:00Z">Nov 10, 2025 14:30 UTC</time>
+          </div>
+          <p class="text-sm text-gray-700">Database connection pool saturation in EU-WEST-1. Resolved by scaling connection limits. Duration: 12 minutes.</p>
+        </div>
+        <div class="border-l-4 border-green-500 pl-4 py-2" role="listitem">
+          <div class="flex items-center justify-between mb-1">
+            <span class="font-medium text-gray-900">Resolved</span>
+            <time class="text-sm text-gray-600" datetime="2025-11-05T09:15:00Z">Nov 5, 2025 09:15 UTC</time>
+          </div>
+          <p class="text-sm text-gray-700">Elevated API latency during traffic spike. Auto-scaling triggered successfully. Duration: 8 minutes.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</BaseLayout>
+
+<script>
+  // Fetch live status from /status.json API
+  async function updateStatus() {
+    try {
+      const response = await fetch('/status.json');
+      const data = await response.json();
+
+      // Update metrics
+      if (data.uptime) {
+        document.getElementById('uptime-value')!.textContent = data.uptime.toFixed(2) + '%';
+      }
+      if (data.latencyP95) {
+        document.getElementById('latency-value')!.textContent = Math.round(data.latencyP95) + 'ms';
+      }
+      if (data.lcp) {
+        document.getElementById('lcp-value')!.textContent = data.lcp.toFixed(1) + 's';
+      }
+      if (data.errorRate !== undefined) {
+        document.getElementById('error-rate-value')!.textContent = data.errorRate.toFixed(2) + '%';
+      }
+      if (data.errorBudget !== undefined) {
+        document.getElementById('error-budget-value')!.textContent = data.errorBudget.toFixed(0) + '% remaining';
+      }
+
+      document.getElementById('last-updated')!.textContent = new Date().toUTCString();
+    } catch (error) {
+      console.error('Failed to fetch status:', error);
+    }
+  }
+
+  // Update every 30 seconds
+  updateStatus();
+  setInterval(updateStatus, 30000);
+</script>

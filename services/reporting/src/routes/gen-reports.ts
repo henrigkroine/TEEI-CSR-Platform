@@ -13,6 +13,7 @@ import {
 } from '../lib/lineage.js';
 import { getTemplateManager, SectionType, Locale } from '../lib/prompts/index.js';
 import { getCostAggregator } from '../middleware/cost-tracking.js';
+import { createEvidenceLedger, EvidenceLedger } from '../evidence/ledger.js';
 
 const logger = createServiceLogger('reporting:gen-reports');
 
@@ -90,7 +91,8 @@ class ReportGenerator {
     private llmClient: LLMClient,
     private citationExtractor: CitationExtractor,
     private redactionEnforcer: RedactionEnforcer,
-    private lineageTracker: LineageTracker
+    private lineageTracker: LineageTracker,
+    private evidenceLedger: EvidenceLedger
   ) {}
 
   async generate(request: GenerateReportRequest): Promise<GenerateReportResponse> {
@@ -125,8 +127,14 @@ class ReportGenerator {
       periodEnd
     );
 
+    // EVIDENCE GATE: Enforce minimum evidence requirement
     if (evidenceSnippets.length === 0) {
-      warnings.push('Insufficient evidence found for the period. Report quality may be limited.');
+      logger.error('EVIDENCE GATE BLOCKED: No evidence found for period', {
+        companyId: request.companyId,
+        periodStart: request.period.start,
+        periodEnd: request.period.end,
+      });
+      throw new Error('EVIDENCE_REQUIRED: No evidence found for the specified period. Cannot generate report without evidence.');
     }
 
     logger.info(`Extracted ${evidenceSnippets.length} evidence snippets`);
@@ -226,17 +234,18 @@ class ReportGenerator {
         evidenceSnippets
       );
 
+      // EVIDENCE GATE: Enforce citation requirements
       if (!validation.valid) {
-        logger.error(`Citation validation FAILED for ${sectionType}`, {
+        logger.error(`EVIDENCE GATE BLOCKED: Citation validation FAILED for ${sectionType}`, {
           errors: validation.errors,
           citationCount: validation.citationCount,
           paragraphCount: validation.paragraphCount,
           citationDensity: validation.citationDensity,
         });
 
-        // In strict mode, fail the entire generation if citations are invalid
+        // Return 422 EVIDENCE_REQUIRED when citations fail
         throw new Error(
-          `Citation validation failed for section "${sectionType}": ${validation.errors.join('; ')}`
+          `EVIDENCE_REQUIRED: Citation validation failed for section "${sectionType}". ${validation.errors.join('; ')}`
         );
       }
 
@@ -332,7 +341,31 @@ class ReportGenerator {
       citationMetadata
     );
 
-    // Step 7: Track costs
+    // Step 7: Record evidence usage in tamper-proof ledger
+    logger.info('Recording evidence usage in ledger');
+    for (const citationMeta of citationMetadata) {
+      try {
+        await this.evidenceLedger.append({
+          evidenceId: citationMeta.snippetId,
+          evidenceType: 'citation',
+          companyId: request.companyId,
+          content: citationMeta.snippetText || '', // Content to hash
+          eventType: 'cited',
+          reportId: lineageMetadata.reportId,
+          lineageId: lineageMetadata.reportId, // Use reportId as lineageId
+          operationContext: 'gen_report',
+          effectiveAt: new Date(),
+        });
+      } catch (ledgerError: any) {
+        // Don't fail the entire generation if ledger append fails
+        logger.error(`Failed to append to evidence ledger: ${ledgerError.message}`, {
+          evidenceId: citationMeta.snippetId,
+        });
+        warnings.push(`Evidence ledger append failed for citation ${citationMeta.snippetId}`);
+      }
+    }
+
+    // Step 8: Track costs
     const costAggregator = getCostAggregator();
     costAggregator.addCost({
       requestId: lineageMetadata.requestId || 'unknown',
@@ -384,12 +417,14 @@ export async function genReportsRoutes(
   const citationExtractor = createCitationExtractor();
   const redactionEnforcer = createRedactionEnforcer();
   const lineageTracker = createLineageTracker();
+  const evidenceLedger = createEvidenceLedger();
 
   const reportGenerator = new ReportGenerator(
     llmClient,
     citationExtractor,
     redactionEnforcer,
-    lineageTracker
+    lineageTracker,
+    evidenceLedger
   );
 
   /**
@@ -414,6 +449,13 @@ export async function genReportsRoutes(
           reply.code(400).send({
             error: 'Validation error',
             details: error.errors,
+          });
+        } else if (error.message.startsWith('EVIDENCE_REQUIRED')) {
+          // Evidence Gate: Return 422 when evidence requirements not met
+          reply.code(422).send({
+            error: 'Evidence Required',
+            message: error.message.replace('EVIDENCE_REQUIRED: ', ''),
+            code: 'EVIDENCE_REQUIRED',
           });
         } else {
           reply.code(500).send({

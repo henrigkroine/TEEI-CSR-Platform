@@ -1,0 +1,81 @@
+---
+interface Props {
+  title: string;
+  description?: string;
+}
+
+const { title, description = 'TEEI Platform Trust Center - Transparency, Security, and AI Governance' } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content={description} />
+    <title>{title} | TEEI Trust Center</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="sitemap" href="/sitemap-index.xml" />
+  </head>
+  <body class="min-h-screen bg-gray-50">
+    <header class="bg-white border-b border-gray-200">
+      <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4" role="navigation" aria-label="Main navigation">
+        <div class="flex justify-between items-center">
+          <div>
+            <h1 class="text-2xl font-bold text-gray-900">TEEI Trust Center</h1>
+            <p class="text-sm text-gray-600">Transparency • Security • Reliability</p>
+          </div>
+          <div class="hidden md:flex space-x-6">
+            <a href="/" class="text-gray-700 hover:text-primary-600 transition" aria-label="Status page">Status</a>
+            <a href="/security" class="text-gray-700 hover:text-primary-600 transition" aria-label="Security page">Security</a>
+            <a href="/privacy" class="text-gray-700 hover:text-primary-600 transition" aria-label="Privacy page">Privacy</a>
+            <a href="/ai-transparency" class="text-gray-700 hover:text-primary-600 transition" aria-label="AI Transparency page">AI Transparency</a>
+            <a href="/subprocessors" class="text-gray-700 hover:text-primary-600 transition" aria-label="Subprocessors page">Subprocessors</a>
+            <a href="/incidents" class="text-gray-700 hover:text-primary-600 transition" aria-label="Incidents page">Incidents</a>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8" role="main">
+      <slot />
+    </main>
+
+    <footer class="bg-white border-t border-gray-200 mt-16" role="contentinfo">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="text-center text-gray-600 text-sm">
+          <p>&copy; 2025 TEEI Platform. All rights reserved.</p>
+          <p class="mt-2">Last updated: <time id="last-updated">2025-11-17</time></p>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>
+
+<style is:global>
+  @tailwind base;
+  @tailwind components;
+  @tailwind utilities;
+
+  /* WCAG 2.2 AA focus indicators */
+  a:focus, button:focus {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+  }
+
+  /* Skip to main content link (accessibility) */
+  .skip-link {
+    position: absolute;
+    top: -40px;
+    left: 0;
+    background: #2563eb;
+    color: white;
+    padding: 8px;
+    text-decoration: none;
+    z-index: 100;
+  }
+
+  .skip-link:focus {
+    top: 0;
+  }
+</style>
