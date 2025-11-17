@@ -1,0 +1,252 @@
+{
+  "version": "2023-11",
+  "name": "CSRD ESRS (European Sustainability Reporting Standards)",
+  "effectiveDate": "2024-01-01",
+  "topics": [
+    {
+      "id": "ESRS-E1",
+      "name": "Climate change",
+      "category": "environmental",
+      "version": "2023-11",
+      "disclosures": [
+        {
+          "id": "E1-1",
+          "title": "Transition plan for climate change mitigation",
+          "description": "Describe the plan to ensure business model and strategy are compatible with the transition to a sustainable economy and limiting global warming to 1.5°C.",
+          "mandatory": true,
+          "dataPoints": [
+            {
+              "id": "E1-1-DP1",
+              "name": "Climate transition plan description",
+              "type": "narrative",
+              "required": true
+            },
+            {
+              "id": "E1-1-DP2",
+              "name": "GHG emission reduction targets",
+              "type": "quantitative",
+              "unit": "tonnes CO2e",
+              "required": true
+            },
+            {
+              "id": "E1-1-DP3",
+              "name": "Decarbonization levers",
+              "type": "qualitative",
+              "required": true
+            }
+          ]
+        },
+        {
+          "id": "E1-5",
+          "title": "Energy consumption and mix",
+          "description": "Disclose energy consumption from fossil and renewable sources.",
+          "mandatory": true,
+          "dataPoints": [
+            {
+              "id": "E1-5-DP1",
+              "name": "Total energy consumption",
+              "type": "quantitative",
+              "unit": "MWh",
+              "required": true
+            },
+            {
+              "id": "E1-5-DP2",
+              "name": "Renewable energy percentage",
+              "type": "quantitative",
+              "unit": "%",
+              "required": true
+            }
+          ]
+        },
+        {
+          "id": "E1-6",
+          "title": "Gross Scopes 1, 2, 3 and Total GHG emissions",
+          "description": "Disclose GHG emissions in tonnes of CO2 equivalent.",
+          "mandatory": true,
+          "dataPoints": [
+            {
+              "id": "E1-6-DP1",
+              "name": "Scope 1 emissions",
+              "type": "quantitative",
+              "unit": "tonnes CO2e",
+              "required": true
+            },
+            {
+              "id": "E1-6-DP2",
+              "name": "Scope 2 emissions (location-based)",
+              "type": "quantitative",
+              "unit": "tonnes CO2e",
+              "required": true
+            },
+            {
+              "id": "E1-6-DP3",
+              "name": "Scope 3 emissions",
+              "type": "quantitative",
+              "unit": "tonnes CO2e",
+              "required": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ESRS-S1",
+      "name": "Own workforce",
+      "category": "social",
+      "version": "2023-11",
+      "disclosures": [
+        {
+          "id": "S1-1",
+          "title": "Policies related to own workforce",
+          "description": "Describe policies to manage impacts on own workforce.",
+          "mandatory": true,
+          "dataPoints": [
+            {
+              "id": "S1-1-DP1",
+              "name": "Workforce policy description",
+              "type": "narrative",
+              "required": true
+            },
+            {
+              "id": "S1-1-DP2",
+              "name": "Policy coverage percentage",
+              "type": "quantitative",
+              "unit": "%",
+              "required": true
+            }
+          ]
+        },
+        {
+          "id": "S1-5",
+          "title": "Adequate wages",
+          "description": "Disclose whether employees earn adequate wages.",
+          "mandatory": true,
+          "dataPoints": [
+            {
+              "id": "S1-5-DP1",
+              "name": "Living wage assessment",
+              "type": "qualitative",
+              "required": true
+            },
+            {
+              "id": "S1-5-DP2",
+              "name": "Percentage earning above living wage",
+              "type": "quantitative",
+              "unit": "%",
+              "required": true
+            }
+          ]
+        },
+        {
+          "id": "S1-6",
+          "title": "Characteristics of the undertaking's employees",
+          "description": "Provide breakdown of workforce by gender, age, region.",
+          "mandatory": true,
+          "dataPoints": [
+            {
+              "id": "S1-6-DP1",
+              "name": "Total headcount",
+              "type": "quantitative",
+              "unit": "employees",
+              "required": true
+            },
+            {
+              "id": "S1-6-DP2",
+              "name": "Gender breakdown",
+              "type": "quantitative",
+              "unit": "%",
+              "required": true
+            },
+            {
+              "id": "S1-6-DP3",
+              "name": "Age distribution",
+              "type": "quantitative",
+              "unit": "%",
+              "required": true
+            }
+          ]
+        },
+        {
+          "id": "S1-14",
+          "title": "Health and safety metrics",
+          "description": "Report work-related injuries, fatalities, and ill health.",
+          "mandatory": true,
+          "dataPoints": [
+            {
+              "id": "S1-14-DP1",
+              "name": "Recordable work-related injuries",
+              "type": "quantitative",
+              "unit": "count",
+              "required": true
+            },
+            {
+              "id": "S1-14-DP2",
+              "name": "Work-related fatalities",
+              "type": "quantitative",
+              "unit": "count",
+              "required": true
+            },
+            {
+              "id": "S1-14-DP3",
+              "name": "Injury rate",
+              "type": "quantitative",
+              "unit": "per 1,000 employees",
+              "required": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ESRS-G1",
+      "name": "Business conduct",
+      "category": "governance",
+      "version": "2023-11",
+      "disclosures": [
+        {
+          "id": "G1-1",
+          "title": "Corporate culture and business conduct policies",
+          "description": "Describe policies on business ethics, anti-corruption, anti-competitive behavior.",
+          "mandatory": true,
+          "dataPoints": [
+            {
+              "id": "G1-1-DP1",
+              "name": "Business conduct policy description",
+              "type": "narrative",
+              "required": true
+            },
+            {
+              "id": "G1-1-DP2",
+              "name": "Training coverage",
+              "type": "quantitative",
+              "unit": "%",
+              "required": true
+            }
+          ]
+        },
+        {
+          "id": "G1-4",
+          "title": "Incidents and fines related to business conduct",
+          "description": "Report incidents of corruption, anti-competitive behavior, and associated fines.",
+          "mandatory": true,
+          "dataPoints": [
+            {
+              "id": "G1-4-DP1",
+              "name": "Number of corruption incidents",
+              "type": "quantitative",
+              "unit": "count",
+              "required": true
+            },
+            {
+              "id": "G1-4-DP2",
+              "name": "Total fines",
+              "type": "quantitative",
+              "unit": "EUR",
+              "required": true
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
