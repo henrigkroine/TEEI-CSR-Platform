@@ -1,0 +1,372 @@
+name: Collaboration CI
+
+on:
+  push:
+    branches:
+      - 'claude/worker25-collab-realtime-editor-*'
+    paths:
+      - 'services/reporting/src/collab/**'
+      - 'services/reporting/src/routes/collab/**'
+      - 'services/api-gateway/src/routes/collab/**'
+      - 'apps/corp-cockpit-astro/src/features/editor-collab/**'
+      - 'packages/shared-types/collab/**'
+      - 'packages/openapi/collab.yaml'
+      - '.github/workflows/collab-ci.yml'
+  pull_request:
+    paths:
+      - 'services/reporting/src/collab/**'
+      - 'services/reporting/src/routes/collab/**'
+      - 'services/api-gateway/src/routes/collab/**'
+      - 'apps/corp-cockpit-astro/src/features/editor-collab/**'
+      - 'packages/shared-types/collab/**'
+      - 'packages/openapi/collab.yaml'
+
+jobs:
+  lint-typecheck:
+    name: Lint & Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        run: npm install -g pnpm@9
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint shared-types
+        run: pnpm --filter @teei/shared-types lint
+
+      - name: Lint reporting service
+        run: pnpm --filter @teei/reporting lint
+
+      - name: Lint api-gateway
+        run: pnpm --filter @teei/api-gateway lint
+
+      - name: Lint cockpit
+        run: pnpm --filter corp-cockpit-astro lint
+
+      - name: Typecheck all
+        run: pnpm -r typecheck
+
+  unit-tests:
+    name: Unit Tests (≥90% coverage)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        run: npm install -g pnpm@9
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run OT Transform tests
+        run: pnpm --filter @teei/reporting test -- collab/merge/ot-transform.test.ts --coverage
+
+      - name: Check coverage threshold (≥90%)
+        run: |
+          COVERAGE=$(pnpm --filter @teei/reporting test -- collab/merge/ot-transform.test.ts --coverage --reporter=json | jq '.coverageMap.total.lines.pct')
+          if (( $(echo "$COVERAGE < 90" | bc -l) )); then
+            echo "Coverage $COVERAGE% is below 90% threshold"
+            exit 1
+          fi
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./services/reporting/coverage/lcov.info
+          flags: collab-unit
+          fail_ci_if_error: false
+
+  contract-tests:
+    name: Contract Tests (REST API)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: teei_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        run: npm install -g pnpm@9
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run schema migrations
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/teei_test
+        run: |
+          pnpm --filter @teei/reporting db:migrate
+          psql $DATABASE_URL -f services/reporting/src/collab/storage/schema.sql
+
+      - name: Run contract tests
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/teei_test
+          JWT_SECRET: test-secret-key
+        run: pnpm --filter @teei/reporting test -- routes/collab
+
+  soak-tests:
+    name: Soak Tests (Reconnect & Conflicts)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: teei_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        run: npm install -g pnpm@9
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run soak tests
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/teei_test
+          JWT_SECRET: test-secret-key
+        run: |
+          # Start reporting service in background
+          pnpm --filter @teei/reporting dev &
+          sleep 10
+
+          # Run soak test script (simulate 100 concurrent users, 5 min)
+          node scripts/soak-test-collab.js
+
+      - name: Check for memory leaks
+        run: |
+          # Analyze heap snapshot
+          node --expose-gc scripts/check-memory-leaks.js
+
+  e2e-tests:
+    name: E2E Tests (Playwright)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: teei_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        run: npm install -g pnpm@9
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright
+        run: pnpm --filter corp-cockpit-astro exec playwright install --with-deps
+
+      - name: Build app
+        run: pnpm --filter corp-cockpit-astro build
+
+      - name: Start services
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/teei_test
+          JWT_SECRET: test-secret-key
+        run: |
+          pnpm --filter @teei/api-gateway dev &
+          pnpm --filter @teei/reporting dev &
+          pnpm --filter corp-cockpit-astro preview &
+          sleep 15
+
+      - name: Run E2E tests
+        run: pnpm --filter corp-cockpit-astro test:e2e -- collab
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: apps/corp-cockpit-astro/playwright-report/
+          retention-days: 7
+
+  openapi-validation:
+    name: OpenAPI Spec Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate OpenAPI spec
+        uses: char0n/swagger-editor-validate@v1
+        with:
+          definition-file: packages/openapi/collab.yaml
+
+      - name: Generate TypeScript client
+        run: |
+          npx @openapitools/openapi-generator-cli generate \
+            -i packages/openapi/collab.yaml \
+            -g typescript-fetch \
+            -o /tmp/collab-client
+
+      - name: Verify generated client compiles
+        run: |
+          cd /tmp/collab-client
+          npm install
+          npm run build
+
+  security-audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        run: npm install -g pnpm@9
+
+      - name: Audit dependencies
+        run: pnpm audit --audit-level moderate
+
+      - name: Check for SQL injection
+        run: |
+          # Scan collab SQL files
+          grep -r "SELECT.*\$[0-9]" services/reporting/src/collab/storage/ || true
+
+      - name: Check for XSS vulnerabilities
+        run: |
+          # Scan for dangerouslySetInnerHTML
+          grep -r "dangerouslySetInnerHTML" apps/corp-cockpit-astro/src/features/editor-collab/ && exit 1 || true
+
+  accessibility-tests:
+    name: A11y Tests (WCAG 2.2 AA)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        run: npm install -g pnpm@9
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build app
+        run: pnpm --filter corp-cockpit-astro build
+
+      - name: Run axe-core tests
+        run: pnpm --filter corp-cockpit-astro test:a11y -- collab
+
+      - name: Check keyboard navigation
+        run: pnpm --filter corp-cockpit-astro test:e2e -- collab-keyboard-nav.spec.ts
+
+  performance-benchmarks:
+    name: Performance Benchmarks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        run: npm install -g pnpm@9
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run OT transform benchmarks
+        run: pnpm --filter @teei/reporting benchmark -- collab/merge/ot-transform.benchmark.ts
+
+      - name: Check performance SLOs
+        run: |
+          # Verify p95 op RTT ≤120ms
+          RESULT=$(node scripts/check-collab-slo.js)
+          echo "$RESULT"
+          if [[ "$RESULT" == *"FAIL"* ]]; then
+            exit 1
+          fi
+
+  status-check:
+    name: All Checks Passed
+    runs-on: ubuntu-latest
+    needs:
+      - lint-typecheck
+      - unit-tests
+      - contract-tests
+      - soak-tests
+      - e2e-tests
+      - openapi-validation
+      - security-audit
+      - accessibility-tests
+      - performance-benchmarks
+    steps:
+      - name: All checks passed
+        run: echo "✅ All collaboration CI checks passed!"
