@@ -1,0 +1,694 @@
+openapi: 3.0.3
+info:
+  title: TEEI Deck & Executive Presentations API
+  version: 2.0.0
+  description: |
+    Boardroom Mode v2 deck generator and PPTX export API.
+    Create executive presentations with live data tiles, citations, and branded exports.
+  contact:
+    name: TEEI Platform Team
+    email: platform@teei.io
+
+servers:
+  - url: https://api.teei.io/v2
+    description: Production
+  - url: https://staging-api.teei.io/v2
+    description: Staging
+  - url: http://localhost:3004/v2
+    description: Local development
+
+security:
+  - bearerAuth: []
+
+paths:
+  /deck/templates:
+    get:
+      summary: List available deck templates
+      description: |
+        Returns metadata for all available presentation templates:
+        - Quarterly Report
+        - Annual Report
+        - Investor Update
+        - Impact Deep Dive
+      operationId: listDeckTemplates
+      tags:
+        - Deck Templates
+      responses:
+        '200':
+          description: Templates retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  templates:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DeckTemplateMetadata'
+              examples:
+                success:
+                  summary: Available templates
+                  value:
+                    templates:
+                      - id: quarterly
+                        name: Quarterly Report
+                        description: Impact summary for board presentations
+                        defaultSlides: ['title', 'metrics-grid', 'chart', 'key-achievements']
+                        supportedLocales: ['en', 'es', 'fr', 'no', 'uk']
+                        estimatedSlides: 8
+                      - id: annual
+                        name: Annual Report
+                        description: Comprehensive yearly impact review
+                        defaultSlides: ['title', 'executive-summary', 'metrics-grid', 'chart', 'narrative', 'evidence-summary']
+                        supportedLocales: ['en', 'es', 'fr', 'no', 'uk']
+                        estimatedSlides: 15
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /deck/create:
+    post:
+      summary: Create a new deck
+      description: |
+        Generate a new presentation deck from a template with selected tiles.
+        Returns a deck definition that can be edited and exported.
+      operationId: createDeck
+      tags:
+        - Deck Management
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - companyId
+                - template
+                - period
+              properties:
+                companyId:
+                  type: string
+                  format: uuid
+                  description: Company ID for data context
+                template:
+                  $ref: '#/components/schemas/DeckTemplate'
+                period:
+                  type: object
+                  required:
+                    - start
+                    - end
+                  properties:
+                    start:
+                      type: string
+                      format: date
+                      description: Period start date (YYYY-MM-DD)
+                    end:
+                      type: string
+                      format: date
+                      description: Period end date (YYYY-MM-DD)
+                locale:
+                  type: string
+                  enum: ['en', 'es', 'fr', 'no', 'uk', 'he', 'ar']
+                  default: en
+                  description: Presentation language
+                customSlides:
+                  type: array
+                  items:
+                    type: string
+                  description: Override default slide types
+            examples:
+              quarterly:
+                summary: Create quarterly report deck
+                value:
+                  companyId: "550e8400-e29b-41d4-a716-446655440000"
+                  template: quarterly
+                  period:
+                    start: "2024-10-01"
+                    end: "2024-12-31"
+                  locale: en
+      responses:
+        '201':
+          description: Deck created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeckDefinition'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /deck/{deckId}:
+    get:
+      summary: Get deck definition
+      description: Retrieve the full definition of a deck including all slides and blocks
+      operationId: getDeck
+      tags:
+        - Deck Management
+      parameters:
+        - name: deckId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Deck retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeckDefinition'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    put:
+      summary: Update deck definition
+      description: Update deck metadata, slides, or blocks
+      operationId: updateDeck
+      tags:
+        - Deck Management
+      parameters:
+        - name: deckId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeckDefinition'
+      responses:
+        '200':
+          description: Deck updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeckDefinition'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    delete:
+      summary: Delete a deck
+      description: Permanently delete a deck definition
+      operationId: deleteDeck
+      tags:
+        - Deck Management
+      parameters:
+        - name: deckId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Deck deleted successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /deck/{deckId}/export:
+    post:
+      summary: Export deck to PPTX/PDF
+      description: |
+        Generate a downloadable presentation file from a deck definition.
+        Returns an export job ID that can be polled for status.
+
+        **Performance SLA**: p95 ≤ 10 seconds for PPTX generation
+      operationId: exportDeck
+      tags:
+        - Deck Export
+      parameters:
+        - name: deckId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeckExportRequest'
+            examples:
+              pptx:
+                summary: Export to PowerPoint
+                value:
+                  format: pptx
+                  options:
+                    includeWatermark: false
+                    includeNotes: true
+                    includeEvidence: true
+              draft_pptx:
+                summary: Export draft with watermark
+                value:
+                  format: pptx
+                  options:
+                    includeWatermark: true
+                    watermarkText: "DRAFT"
+                    includeNotes: true
+      responses:
+        '202':
+          description: Export job created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  exportId:
+                    type: string
+                    format: uuid
+                  statusUrl:
+                    type: string
+                    format: uri
+                    description: URL to poll for export status
+              examples:
+                success:
+                  value:
+                    exportId: "7f8a9b0c-1d2e-3f4a-5b6c-7d8e9f0a1b2c"
+                    statusUrl: "/deck/export/7f8a9b0c-1d2e-3f4a-5b6c-7d8e9f0a1b2c/status"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /deck/export/{exportId}/status:
+    get:
+      summary: Get export job status
+      description: Poll export job progress and retrieve download URL when complete
+      operationId: getExportStatus
+      tags:
+        - Deck Export
+      parameters:
+        - name: exportId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Export status retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeckExportResponse'
+              examples:
+                generating:
+                  summary: Export in progress
+                  value:
+                    exportId: "7f8a9b0c-1d2e-3f4a-5b6c-7d8e9f0a1b2c"
+                    status: generating
+                    progress: 65
+                    message: "Rendering slide 8/12..."
+                completed:
+                  summary: Export completed
+                  value:
+                    exportId: "7f8a9b0c-1d2e-3f4a-5b6c-7d8e9f0a1b2c"
+                    status: completed
+                    progress: 100
+                    message: "Export ready for download"
+                    pptxUrl: "https://cdn.teei.io/exports/7f8a9b0c.pptx"
+                    completedAt: "2024-11-17T14:32:10Z"
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    DeckTemplate:
+      type: string
+      enum:
+        - quarterly
+        - annual
+        - investor
+        - impact
+      description: Available presentation templates
+
+    DeckTemplateMetadata:
+      type: object
+      required:
+        - id
+        - name
+        - description
+        - defaultSlides
+        - supportedLocales
+        - estimatedSlides
+      properties:
+        id:
+          $ref: '#/components/schemas/DeckTemplate'
+        name:
+          type: string
+          description: Display name
+        description:
+          type: string
+          description: Template description
+        defaultSlides:
+          type: array
+          items:
+            type: string
+          description: Default slide block types
+        supportedLocales:
+          type: array
+          items:
+            type: string
+          description: Supported languages
+        previewImage:
+          type: string
+          format: uri
+          description: Preview thumbnail URL
+        estimatedSlides:
+          type: integer
+          description: Typical number of slides
+
+    SlideBlock:
+      type: object
+      required:
+        - id
+        - type
+        - order
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum:
+            - title
+            - metrics-grid
+            - chart
+            - narrative
+            - table
+            - two-column
+            - image
+            - key-achievements
+            - evidence-summary
+        title:
+          type: string
+        content:
+          type: string
+        bullets:
+          type: array
+          items:
+            type: string
+        citations:
+          type: array
+          items:
+            type: object
+            properties:
+              paragraphIndex:
+                type: integer
+              citationCount:
+                type: integer
+              citationIds:
+                type: array
+                items:
+                  type: string
+              evidenceIds:
+                type: array
+                items:
+                  type: string
+                  format: uuid
+        explainer:
+          type: object
+          properties:
+            title:
+              type: string
+            content:
+              type: string
+          description: "Why this section?" explainer panel
+        order:
+          type: integer
+
+    SlideDefinition:
+      type: object
+      required:
+        - id
+        - slideNumber
+        - template
+        - blocks
+      properties:
+        id:
+          type: string
+        slideNumber:
+          type: integer
+        template:
+          type: string
+          description: Slide layout template
+        blocks:
+          type: array
+          items:
+            $ref: '#/components/schemas/SlideBlock'
+        notes:
+          type: string
+          description: Speaker notes
+        evidenceIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: Evidence IDs for lineage
+
+    ThemeConfig:
+      type: object
+      required:
+        - name
+        - colors
+      properties:
+        name:
+          type: string
+        colors:
+          type: object
+          required:
+            - primary
+            - secondary
+            - accent
+            - textOnPrimary
+            - textOnSecondary
+            - textOnAccent
+          properties:
+            primary:
+              type: string
+              pattern: '^#[0-9A-Fa-f]{6}$'
+            secondary:
+              type: string
+              pattern: '^#[0-9A-Fa-f]{6}$'
+            accent:
+              type: string
+              pattern: '^#[0-9A-Fa-f]{6}$'
+            textOnPrimary:
+              type: string
+              pattern: '^#[0-9A-Fa-f]{6}$'
+            textOnSecondary:
+              type: string
+              pattern: '^#[0-9A-Fa-f]{6}$'
+            textOnAccent:
+              type: string
+              pattern: '^#[0-9A-Fa-f]{6}$'
+        logo:
+          type: object
+          properties:
+            url:
+              type: string
+              format: uri
+            position:
+              type: string
+              enum: ['top-left', 'top-right', 'bottom-left', 'bottom-right']
+            width:
+              type: number
+            height:
+              type: number
+
+    DeckDefinition:
+      type: object
+      required:
+        - id
+        - title
+        - template
+        - companyId
+        - period
+        - slides
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        subtitle:
+          type: string
+        template:
+          $ref: '#/components/schemas/DeckTemplate'
+        companyId:
+          type: string
+          format: uuid
+        period:
+          type: object
+          required:
+            - start
+            - end
+          properties:
+            start:
+              type: string
+              format: date
+            end:
+              type: string
+              format: date
+        locale:
+          type: string
+          enum: ['en', 'es', 'fr', 'no', 'uk', 'he', 'ar']
+          default: en
+        theme:
+          $ref: '#/components/schemas/ThemeConfig'
+        slides:
+          type: array
+          items:
+            $ref: '#/components/schemas/SlideDefinition'
+        metadata:
+          type: object
+          properties:
+            author:
+              type: string
+            createdAt:
+              type: string
+              format: date-time
+            updatedAt:
+              type: string
+              format: date-time
+            version:
+              type: string
+            approvalStatus:
+              type: string
+              enum: ['draft', 'pending', 'approved', 'rejected']
+              default: draft
+
+    DeckExportRequest:
+      type: object
+      required:
+        - format
+      properties:
+        format:
+          type: string
+          enum: ['pptx', 'pdf', 'both']
+          default: pptx
+        options:
+          type: object
+          properties:
+            includeWatermark:
+              type: boolean
+              default: false
+            watermarkText:
+              type: string
+            includeNotes:
+              type: boolean
+              default: true
+            includeEvidence:
+              type: boolean
+              default: true
+            compressImages:
+              type: boolean
+              default: true
+
+    DeckExportResponse:
+      type: object
+      required:
+        - exportId
+        - status
+        - progress
+        - message
+      properties:
+        exportId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: ['queued', 'generating', 'completed', 'failed']
+        progress:
+          type: integer
+          minimum: 0
+          maximum: 100
+        message:
+          type: string
+        downloadUrl:
+          type: string
+          format: uri
+        pdfUrl:
+          type: string
+          format: uri
+        pptxUrl:
+          type: string
+          format: uri
+        completedAt:
+          type: string
+          format: date-time
+        error:
+          type: string
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              details:
+                type: string
+
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: Unauthorized
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: Deck not found
+
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              details:
+                type: string
