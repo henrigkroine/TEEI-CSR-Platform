@@ -212,3 +212,202 @@ export const nlqRateLimits = pgTable('nlq_rate_limits', {
 
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
+
+/**
+ * NLQ Adjudication Reviews - Human-in-the-Loop (HIL) review and approval workflow
+ * Tracks manual review of NLQ outputs for quality assurance and model improvement
+ */
+export const adjudicationReviews = pgTable('adjudication_reviews', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  queryId: uuid('query_id').notNull().references(() => nlqQueries.id),
+  companyId: uuid('company_id').notNull().references(() => companies.id),
+
+  // Review decision
+  decision: varchar('decision', { length: 20 }).notNull(), // approved, revised, rejected
+  reviewedBy: uuid('reviewed_by').notNull(), // User ID who reviewed
+  reviewedAt: timestamp('reviewed_at', { withTimezone: true }).defaultNow().notNull(),
+
+  // Revision details (if decision = 'revised')
+  originalAnswer: text('original_answer'), // Original AI-generated answer
+  revisedAnswer: text('revised_answer'), // Human-revised answer
+  revisionReason: text('revision_reason'), // Why revision was needed
+  revisionType: varchar('revision_type', { length: 50 }), // factual_error, tone, clarity, completeness
+
+  // Feedback for model improvement
+  confidenceRating: integer('confidence_rating'), // 1-5 scale
+  accuracyRating: integer('accuracy_rating'), // 1-5 scale
+  clarityRating: integer('clarity_rating'), // 1-5 scale
+  feedbackComments: text('feedback_comments'),
+
+  // Routing to insights (if approved/revised)
+  routedToInsights: boolean('routed_to_insights').default(false),
+  insightId: uuid('insight_id'), // Reference to copilot_insights.id
+
+  // Prompt versioning
+  promptVersionBefore: varchar('prompt_version_before', { length: 50 }), // Prompt version that generated original
+  promptVersionAfter: varchar('prompt_version_after', { length: 50 }), // New prompt version if revised
+
+  // Metadata
+  reviewTimeMs: integer('review_time_ms'), // Time spent reviewing
+  metadata: jsonb('metadata'), // Additional context
+
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+/**
+ * Fairness Metrics - Track demographic parity and equality metrics for NLQ outputs
+ * Monitors for bias and disparate impact across protected attributes
+ */
+export const fairnessMetrics = pgTable('fairness_metrics', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  companyId: uuid('company_id').notNull().references(() => companies.id),
+
+  // Metric period
+  metricDate: timestamp('metric_date', { withTimezone: true }).notNull(),
+  periodType: varchar('period_type', { length: 20 }).notNull(), // daily, weekly, monthly
+
+  // Metric type
+  metricType: varchar('metric_type', { length: 50 }).notNull(), // demographic_parity, equal_opportunity, equalized_odds
+  protectedAttribute: varchar('protected_attribute', { length: 50 }).notNull(), // gender, ethnicity, age_group, etc.
+
+  // Demographic groups
+  groupA: varchar('group_a', { length: 100 }).notNull(), // e.g., 'female'
+  groupB: varchar('group_b', { length: 100 }).notNull(), // e.g., 'male'
+
+  // Metric values
+  groupAValue: decimal('group_a_value', { precision: 6, scale: 4 }).notNull(), // Metric value for group A
+  groupBValue: decimal('group_b_value', { precision: 6, scale: 4 }).notNull(), // Metric value for group B
+  disparityRatio: decimal('disparity_ratio', { precision: 6, scale: 4 }).notNull(), // groupA / groupB
+  absoluteDifference: decimal('absolute_difference', { precision: 6, scale: 4 }).notNull(), // |groupA - groupB|
+
+  // Statistical significance
+  sampleSizeA: integer('sample_size_a').notNull(),
+  sampleSizeB: integer('sample_size_b').notNull(),
+  pValue: decimal('p_value', { precision: 6, scale: 4 }), // Statistical significance
+  confidenceInterval: jsonb('confidence_interval'), // {lower, upper}
+
+  // Alert thresholds
+  thresholdExceeded: boolean('threshold_exceeded').default(false), // >10% disparity
+  alertSeverity: varchar('alert_severity', { length: 20 }), // low, medium, high, critical
+  alertTriggered: boolean('alert_triggered').default(false),
+  alertedAt: timestamp('alerted_at', { withTimezone: true }),
+
+  // Context
+  queryCategory: varchar('query_category', { length: 100 }), // Type of queries analyzed
+  sampleQueries: jsonb('sample_queries'), // Array of query IDs in sample
+
+  // Mitigation
+  mitigationRequired: boolean('mitigation_required').default(false),
+  mitigationStatus: varchar('mitigation_status', { length: 50 }), // pending, in_progress, resolved
+  mitigationNotes: text('mitigation_notes'),
+
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+/**
+ * NLQ Prompt Versions - Version control for NLQ prompts with canary rollout support
+ * Enables A/B testing and gradual rollout of prompt improvements
+ */
+export const nlqPromptVersions = pgTable('nlq_prompt_versions', {
+  id: uuid('id').defaultRandom().primaryKey(),
+
+  // Version identification
+  versionId: varchar('version_id', { length: 50 }).notNull().unique(), // e.g., 'nlq-intent-v1.2.0'
+  versionName: varchar('version_name', { length: 100 }).notNull(), // Human-readable name
+  description: text('description').notNull(),
+
+  // Prompt content
+  promptType: varchar('prompt_type', { length: 50 }).notNull(), // intent_classification, query_generation, answer_synthesis
+  promptTemplate: text('prompt_template').notNull(), // Full prompt template
+  promptHash: varchar('prompt_hash', { length: 64 }).notNull(), // SHA-256 for integrity
+
+  // Model configuration
+  modelProvider: varchar('model_provider', { length: 50 }).notNull(), // anthropic, openai
+  modelName: varchar('model_name', { length: 100 }).notNull(), // claude-3-5-sonnet-20241022
+  temperature: decimal('temperature', { precision: 3, scale: 2 }).default('0.0'),
+  maxTokens: integer('max_tokens').default(1000),
+
+  // Rollout configuration
+  rolloutStatus: varchar('rollout_status', { length: 50 }).notNull(), // draft, canary, active, deprecated
+  canaryPercentage: integer('canary_percentage').default(0), // 0-100, percentage of traffic
+
+  // Performance metrics
+  avgF1Score: decimal('avg_f1_score', { precision: 4, scale: 3 }), // Model F1 score
+  avgLatencyMs: integer('avg_latency_ms'), // p95 latency
+  avgCostUsd: decimal('avg_cost_usd', { precision: 8, scale: 6 }), // Cost per query
+  acceptanceRate: decimal('acceptance_rate', { precision: 4, scale: 3 }), // HIL acceptance rate
+
+  // Evaluation results
+  evalRunId: uuid('eval_run_id'), // Reference to evalRuns table if applicable
+  evalResults: jsonb('eval_results'), // {f1, precision, recall, examples}
+
+  // Canary success criteria
+  promotionCriteria: jsonb('promotion_criteria'), // {minF1, maxLatency, minAcceptance}
+  rollbackCriteria: jsonb('rollback_criteria'), // {maxF1Drop, maxLatencyIncrease}
+
+  // Lifecycle
+  activatedAt: timestamp('activated_at', { withTimezone: true }),
+  deprecatedAt: timestamp('deprecated_at', { withTimezone: true }),
+  createdBy: uuid('created_by').notNull(),
+
+  // Metadata
+  tags: jsonb('tags'), // ['performance', 'accuracy', 'cost-optimization']
+  changeLog: text('change_log'), // What changed from previous version
+
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+/**
+ * Query Performance Metrics - Track cost and latency by query signature
+ * Enables performance monitoring and optimization at query pattern level
+ */
+export const queryPerformanceMetrics = pgTable('query_performance_metrics', {
+  id: uuid('id').defaultRandom().primaryKey(),
+
+  // Query signature (normalized pattern)
+  querySignature: varchar('query_signature', { length: 255 }).notNull(), // Hash of query pattern
+  templateId: uuid('template_id').references(() => nlqTemplates.id),
+  intentType: varchar('intent_type', { length: 100 }).notNull(),
+
+  // Time window
+  metricDate: timestamp('metric_date', { withTimezone: true }).notNull(),
+  windowType: varchar('window_type', { length: 20 }).notNull(), // hourly, daily, weekly
+
+  // Volume metrics
+  queryCount: integer('query_count').notNull().default(0),
+  uniqueCompanies: integer('unique_companies').notNull().default(0),
+  uniqueUsers: integer('unique_users').notNull().default(0),
+
+  // Latency metrics (milliseconds)
+  latencyP50: integer('latency_p50'),
+  latencyP95: integer('latency_p95'),
+  latencyP99: integer('latency_p99'),
+  latencyMin: integer('latency_min'),
+  latencyMax: integer('latency_max'),
+  latencyAvg: integer('latency_avg'),
+
+  // Cost metrics
+  totalCostUsd: decimal('total_cost_usd', { precision: 10, scale: 6 }).notNull().default('0'),
+  avgCostUsd: decimal('avg_cost_usd', { precision: 8, scale: 6 }),
+  totalTokens: integer('total_tokens').notNull().default(0),
+  avgTokens: integer('avg_tokens'),
+
+  // Cache metrics
+  cacheHits: integer('cache_hits').default(0),
+  cacheMisses: integer('cache_misses').default(0),
+  cacheHitRate: decimal('cache_hit_rate', { precision: 4, scale: 3 }),
+
+  // Quality metrics
+  avgConfidence: decimal('avg_confidence', { precision: 4, scale: 3 }),
+  safetyViolations: integer('safety_violations').default(0),
+  errorCount: integer('error_count').default(0),
+  errorRate: decimal('error_rate', { precision: 4, scale: 3 }),
+
+  // Success metrics
+  successCount: integer('success_count').default(0),
+  successRate: decimal('success_rate', { precision: 4, scale: 3 }),
+
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
