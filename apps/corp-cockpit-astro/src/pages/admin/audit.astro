@@ -1,0 +1,44 @@
+---
+/**
+ * Audit Log Explorer Page
+ *
+ * Accessible to users with AuditViewer or AuditAdmin roles.
+ * Provides unified query interface over audit events.
+ */
+
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import AuditExplorer from '../../admin/audit/AuditExplorer';
+
+// Authentication check
+const session = Astro.cookies.get('session')?.value;
+if (!session) {
+  return Astro.redirect('/login');
+}
+
+// RBAC check
+const user = await getUserFromSession(session);
+if (!user || !['AuditViewer', 'AuditAdmin', 'admin'].includes(user.role)) {
+  return Astro.redirect('/unauthorized');
+}
+
+// Helper function (stub - implement based on your auth system)
+async function getUserFromSession(sessionId: string) {
+  // TODO: Implement actual session validation
+  return {
+    id: 'user-id',
+    email: 'user@example.com',
+    role: 'AuditAdmin',
+    tenantId: 'company-id',
+  };
+}
+
+const companyId = user.tenantId || 'default';
+---
+
+<BaseLayout title="Audit Log Explorer">
+  <link rel="stylesheet" href="/styles/audit-explorer.css" />
+
+  <main class="audit-page">
+    <AuditExplorer client:load companyId={companyId} userRole={user.role} />
+  </main>
+</BaseLayout>

@@ -6,6 +6,7 @@ import { cohortsRoutes } from './routes/cohorts.js';
 import { funnelsRoutes } from './routes/funnels.js';
 import { benchmarksRoutes } from './routes/benchmarks.js';
 import { metricsRoutes } from './routes/metrics.js';
+import { auditRoutes } from './audit/routes.js';
 import { startSyncScheduler, stopSyncScheduler } from './loaders/ingestion.js';
 import { closeClient as closeClickHouse } from './lib/clickhouse-client.js';
 import { closeRedis } from './lib/cache.js';
@@ -36,6 +37,14 @@ async function start() {
     await instance.register(metricsRoutes, { prefix: '/metrics' });
   }, { prefix: '/v1/analytics' });
 
+  // Register audit routes
+  const dbPool = (global as any).dbPool; // Assumes dbPool is available globally
+  if (dbPool) {
+    app.register(async (instance) => {
+      await auditRoutes(instance, dbPool);
+    }, { prefix: '/v1/audit' });
+  }
+
   // Start server
   try {
     await app.listen({ port: PORT, host: '0.0.0.0' });
@@ -56,6 +65,13 @@ async function start() {
     logger.info('    GET  /v1/analytics/funnels - Conversion funnels');
     logger.info('    GET  /v1/analytics/benchmarks - Industry/region/size benchmarks');
     logger.info('    GET  /v1/analytics/metrics/company/:companyId/history - Historical metrics for forecasting');
+    logger.info('');
+    logger.info('  Audit APIs:');
+    logger.info('    GET  /v1/audit/events - Query audit events with filters');
+    logger.info('    GET  /v1/audit/events/:id - Get single audit event by ID');
+    logger.info('    GET  /v1/audit/timeline - Timeline aggregation for heatmap');
+    logger.info('    GET  /v1/audit/stats - Audit statistics');
+    logger.info('    POST /v1/audit/export - Create compliance export bundle (ZIP)');
     logger.info('');
     logger.info('Environment:');
     logger.info(`  ClickHouse: ${process.env.CLICKHOUSE_URL || 'http://localhost:8123'}`);
