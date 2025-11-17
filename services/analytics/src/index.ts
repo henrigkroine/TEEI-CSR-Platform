@@ -6,6 +6,7 @@ import { cohortsRoutes } from './routes/cohorts.js';
 import { funnelsRoutes } from './routes/funnels.js';
 import { benchmarksRoutes } from './routes/benchmarks.js';
 import { metricsRoutes } from './routes/metrics.js';
+import { catalogRoutes } from './catalog/routes/catalog.js';
 import { startSyncScheduler, stopSyncScheduler } from './loaders/ingestion.js';
 import { closeClient as closeClickHouse } from './lib/clickhouse-client.js';
 import { closeRedis } from './lib/cache.js';
@@ -34,6 +35,7 @@ async function start() {
     await instance.register(funnelsRoutes);
     await instance.register(benchmarksRoutes);
     await instance.register(metricsRoutes, { prefix: '/metrics' });
+    await instance.register(catalogRoutes, { prefix: '/catalog' });
   }, { prefix: '/v1/analytics' });
 
   // Start server
