@@ -1,0 +1,37 @@
+---
+import type { ChartBlockPayload } from '@teei/shared-types';
+
+export interface Props {
+  payload: ChartBlockPayload;
+  index: number;
+}
+
+const { payload, index } = Astro.props;
+const chartId = `chart-${index}`;
+---
+
+<div class="bg-white rounded-lg shadow-md p-6">
+  <h3 class="text-lg font-semibold text-gray-900 mb-4">{payload.title}</h3>
+  <canvas id={chartId} role="img" aria-label={`Chart showing ${payload.title}`}></canvas>
+</div>
+
+<script define:vars={{ chartId, payload }}>
+  // Dynamically import Chart.js on client side
+  if (typeof window !== 'undefined') {
+    import('https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js').then((ChartModule) => {
+      const Chart = ChartModule.default || ChartModule;
+      const ctx = document.getElementById(chartId);
+      if (ctx) {
+        new Chart(ctx, {
+          type: payload.chartType,
+          data: payload.data,
+          options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            ...payload.options,
+          },
+        });
+      }
+    });
+  }
+</script>

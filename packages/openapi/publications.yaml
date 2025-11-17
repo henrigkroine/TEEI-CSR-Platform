@@ -1,0 +1,690 @@
+openapi: 3.0.3
+info:
+  title: TEEI Publications API
+  description: API for managing and accessing public impact pages and embeds
+  version: 1.0.0
+  contact:
+    name: TEEI Support
+    email: support@teei.io
+
+servers:
+  - url: https://api.teei.io
+    description: Production server
+  - url: http://localhost:3000
+    description: Development server
+
+tags:
+  - name: Publications
+    description: Manage publications (authenticated)
+  - name: Public
+    description: Public publication access (no auth required)
+
+paths:
+  /v1/publications:
+    get:
+      summary: List publications
+      description: Get all publications for the authenticated tenant
+      tags: [Publications]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of publications
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Publication'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      summary: Create publication
+      description: Create a new publication (draft)
+      tags: [Publications]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePublicationRequest'
+      responses:
+        '201':
+          description: Publication created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Publication'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /v1/publications/{id}:
+    parameters:
+      - $ref: '#/components/parameters/PublicationId'
+
+    get:
+      summary: Get publication
+      description: Get a publication with all its blocks
+      tags: [Publications]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Publication details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/PublicationWithBlocks'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      summary: Update publication
+      description: Update publication metadata
+      tags: [Publications]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePublicationRequest'
+      responses:
+        '200':
+          description: Publication updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Publication'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      summary: Delete publication
+      description: Delete a publication and all its blocks
+      tags: [Publications]
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Publication deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /v1/publications/{id}/publish:
+    post:
+      summary: Publish publication
+      description: Set publication status to LIVE
+      tags: [Publications]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PublicationId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PublishPublicationRequest'
+      responses:
+        '200':
+          description: Publication published
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Publication'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /v1/publications/{id}/token:
+    post:
+      summary: Rotate access token
+      description: Generate a new access token for TOKEN-visibility publications
+      tags: [Publications]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PublicationId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RotateTokenRequest'
+      responses:
+        '200':
+          description: Token rotated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/RotateTokenResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /v1/publications/{id}/blocks:
+    post:
+      summary: Add block
+      description: Add a content block to a publication
+      tags: [Publications]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PublicationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddBlockRequest'
+      responses:
+        '201':
+          description: Block added
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/PublicationBlock'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /v1/publications/{id}/blocks/{blockId}:
+    parameters:
+      - $ref: '#/components/parameters/PublicationId'
+      - $ref: '#/components/parameters/BlockId'
+
+    patch:
+      summary: Update block
+      description: Update a content block
+      tags: [Publications]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateBlockRequest'
+      responses:
+        '200':
+          description: Block updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/PublicationBlock'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      summary: Delete block
+      description: Delete a content block
+      tags: [Publications]
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Block deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /v1/publications/{id}/stats:
+    get:
+      summary: Get publication statistics
+      description: Get analytics stats for a publication
+      tags: [Publications]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PublicationId'
+      responses:
+        '200':
+          description: Publication stats
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/PublicationStats'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /public/publications/{slug}:
+    get:
+      summary: Get public publication
+      description: Get a publication by slug (public endpoint)
+      tags: [Public]
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: token
+          in: query
+          description: Access token for TOKEN-visibility publications
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Publication data
+          headers:
+            ETag:
+              description: Entity tag for caching
+              schema:
+                type: string
+            Cache-Control:
+              description: Cache control header
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/PublicPublicationResponse'
+        '304':
+          description: Not modified (cached)
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    PublicationId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    BlockId:
+      name: blockId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    Publication:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenantId:
+          type: string
+          format: uuid
+        slug:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [DRAFT, LIVE, ARCHIVED]
+        visibility:
+          type: string
+          enum: [PUBLIC, TOKEN]
+        metaTitle:
+          type: string
+        metaDescription:
+          type: string
+        ogImage:
+          type: string
+        publishedAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    PublicationWithBlocks:
+      allOf:
+        - $ref: '#/components/schemas/Publication'
+        - type: object
+          properties:
+            blocks:
+              type: array
+              items:
+                $ref: '#/components/schemas/PublicationBlock'
+
+    PublicationBlock:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        publicationId:
+          type: string
+          format: uuid
+        kind:
+          type: string
+          enum: [TILE, TEXT, CHART, EVIDENCE]
+        payloadJson:
+          type: object
+        order:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreatePublicationRequest:
+      type: object
+      required:
+        - slug
+        - title
+      properties:
+        slug:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        visibility:
+          type: string
+          enum: [PUBLIC, TOKEN]
+        metaTitle:
+          type: string
+        metaDescription:
+          type: string
+        ogImage:
+          type: string
+
+    UpdatePublicationRequest:
+      type: object
+      properties:
+        slug:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        visibility:
+          type: string
+          enum: [PUBLIC, TOKEN]
+        status:
+          type: string
+          enum: [DRAFT, LIVE, ARCHIVED]
+        metaTitle:
+          type: string
+        metaDescription:
+          type: string
+        ogImage:
+          type: string
+
+    PublishPublicationRequest:
+      type: object
+      properties:
+        metaTitle:
+          type: string
+        metaDescription:
+          type: string
+        ogImage:
+          type: string
+
+    RotateTokenRequest:
+      type: object
+      properties:
+        expiresInDays:
+          type: integer
+          default: 30
+
+    RotateTokenResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        tokenExpiresAt:
+          type: string
+          format: date-time
+        embedUrl:
+          type: string
+
+    AddBlockRequest:
+      type: object
+      required:
+        - kind
+        - payloadJson
+        - order
+      properties:
+        kind:
+          type: string
+          enum: [TILE, TEXT, CHART, EVIDENCE]
+        payloadJson:
+          type: object
+        order:
+          type: integer
+
+    UpdateBlockRequest:
+      type: object
+      properties:
+        payloadJson:
+          type: object
+        order:
+          type: integer
+
+    PublicationStats:
+      type: object
+      properties:
+        publicationId:
+          type: string
+          format: uuid
+        totalViews:
+          type: integer
+        uniqueVisitors:
+          type: integer
+        topReferrers:
+          type: array
+          items:
+            type: object
+            properties:
+              domain:
+                type: string
+              count:
+                type: integer
+        viewsByCountry:
+          type: array
+          items:
+            type: object
+            properties:
+              country:
+                type: string
+              count:
+                type: integer
+        viewsOverTime:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+                format: date
+              count:
+                type: integer
+
+    PublicPublicationResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenantId:
+          type: string
+          format: uuid
+        slug:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        metaTitle:
+          type: string
+        metaDescription:
+          type: string
+        ogImage:
+          type: string
+        publishedAt:
+          type: string
+          format: date-time
+        blocks:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicationBlock'
+        etag:
+          type: string
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: string
+              message:
+                type: string
+
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: string
+                example: Unauthorized
+              message:
+                type: string
+
+    Forbidden:
+      description: Forbidden
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: string
+                example: Forbidden
+              message:
+                type: string
+
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: string
+                example: NotFound
+              message:
+                type: string

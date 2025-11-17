@@ -1,0 +1,27 @@
+---
+import { PublicationsList } from '../../../components/publications/PublicationsList';
+
+const title = 'Publications Manager';
+---
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title} - TEEI Cockpit</title>
+  </head>
+  <body>
+    <div class="min-h-screen bg-gray-50">
+      <header class="bg-white shadow">
+        <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+          <h1 class="text-3xl font-bold text-gray-900">{title}</h1>
+        </div>
+      </header>
+
+      <main class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+        <PublicationsList client:load />
+      </main>
+    </div>
+  </body>
+</html>

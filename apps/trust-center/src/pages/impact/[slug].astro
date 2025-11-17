@@ -1,0 +1,95 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import TileBlock from '../../components/TileBlock.astro';
+import TextBlock from '../../components/TextBlock.astro';
+import ChartBlock from '../../components/ChartBlock.astro';
+import EvidenceBlock from '../../components/EvidenceBlock.astro';
+import { fetchPublicationBySlug } from '../../lib/api';
+
+const { slug } = Astro.params;
+const { token } = Astro.url.searchParams;
+
+if (!slug) {
+  return Astro.redirect('/404');
+}
+
+const publication = await fetchPublicationBySlug(slug, token || undefined);
+
+if (!publication) {
+  return Astro.redirect('/404');
+}
+
+const title = publication.metaTitle || publication.title;
+const description = publication.metaDescription || publication.description;
+---
+
+<BaseLayout title={title} description={description} ogImage={publication.ogImage}>
+  <main class="min-h-screen py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-7xl mx-auto">
+      <!-- Header -->
+      <header class="text-center mb-12">
+        <h1 class="text-4xl font-bold text-gray-900 mb-4">
+          {publication.title}
+        </h1>
+        {publication.description && (
+          <p class="text-xl text-gray-600 max-w-3xl mx-auto">
+            {publication.description}
+          </p>
+        )}
+        {publication.publishedAt && (
+          <p class="text-sm text-gray-500 mt-4">
+            Published on {new Date(publication.publishedAt).toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+            })}
+          </p>
+        )}
+      </header>
+
+      <!-- Blocks -->
+      <div class="space-y-8">
+        {publication.blocks.map((block, index) => {
+          switch (block.kind) {
+            case 'TILE':
+              return (
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <TileBlock payload={block.payloadJson as any} />
+                </div>
+              );
+            case 'TEXT':
+              return <TextBlock payload={block.payloadJson as any} />;
+            case 'CHART':
+              return <ChartBlock payload={block.payloadJson as any} index={index} />;
+            case 'EVIDENCE':
+              return <EvidenceBlock payload={block.payloadJson as any} />;
+            default:
+              return null;
+          }
+        })}
+      </div>
+
+      <!-- Footer -->
+      <footer class="mt-16 pt-8 border-t border-gray-200 text-center text-sm text-gray-500">
+        <p>Powered by TEEI CSR Platform</p>
+      </footer>
+    </div>
+  </main>
+</BaseLayout>
+
+<style>
+  main {
+    animation: fadeIn 0.5s ease-in;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+</style>

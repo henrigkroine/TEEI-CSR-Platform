@@ -5,6 +5,7 @@ import { config } from 'dotenv';
 import { registerProxyRoutes } from './routes/proxy.js';
 import { registerHealthRoutes } from './routes/health.js';
 import { registerPrivacyRoutes } from './routes/privacy.js';
+import { registerPublicationRoutes } from './routes/publications/index.js';
 import { createHealthManager, setupHealthRoutes } from './health/index.js';
 
 // Load environment variables
@@ -182,6 +183,9 @@ async function initializeGateway() {
 
     // Register GDPR privacy routes
     await registerPrivacyRoutes(fastify);
+
+    // Register publication routes
+    await registerPublicationRoutes(fastify);
 
     // Register proxy routes (must be last to avoid conflicts)
     await registerProxyRoutes(fastify);
