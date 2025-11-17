@@ -5,6 +5,7 @@ import { initDatabase, closeDatabase } from './db/index.js';
 import { createHealthManager, setupHealthRoutes } from './health/index.js';
 import { ResidencyCache } from './utils/cache.js';
 import { residencyRoutes } from './routes/residency.js';
+import { allowedRegionsRoutes } from './routes/allowed-regions.js';
 import { createValidateResidencyMiddleware } from './middleware/validateResidency.js';
 
 const logger = createServiceLogger('data-residency');
@@ -54,6 +55,7 @@ async function start() {
 
   // Register routes
   app.register(residencyRoutes, { cache, config });
+  allowedRegionsRoutes(app);
 
   // Start server
   try {
@@ -77,6 +79,11 @@ async function start() {
     logger.info(`  PUT  /api/residency/company/:id - Update company region`);
     logger.info(`  POST /api/residency/validate - Validate residency`);
     logger.info(`  POST /api/residency/validate/bulk - Bulk validate residency`);
+    logger.info(`  GET  /api/residency/regions - List available regions`);
+    logger.info(`  GET  /api/residency/regions/:region - Get region metadata`);
+    logger.info(`  GET  /api/residency/company/:companyId/allowed-regions - Get allowed regions`);
+    logger.info(`  PUT  /api/residency/company/:companyId/allowed-regions - Update allowed regions`);
+    logger.info(`  POST /api/residency/validate-region-access - Validate region access`);
   } catch (err) {
     logger.error(err);
     process.exit(1);
