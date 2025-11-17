@@ -1,0 +1,395 @@
+name: Release Canary with Auto-Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      service:
+        description: 'Service to deploy'
+        required: true
+        type: choice
+        options:
+          - api-gateway
+          - reporting
+          - corp-cockpit
+          - analytics
+          - q2q-ai
+          - all
+      version:
+        description: 'Image tag/version (e.g., v1.2.0)'
+        required: true
+        type: string
+      region:
+        description: 'Target region'
+        required: true
+        type: choice
+        options:
+          - us-east-1
+          - eu-central-1
+          - all
+      auto_rollback:
+        description: 'Automatically rollback on SLO violations'
+        type: boolean
+        default: true
+      slo_threshold:
+        description: 'Error budget consumption threshold (%)'
+        type: number
+        default: 10
+
+env:
+  NODE_VERSION: '20'
+  CANARY_TRAFFIC_START: 5
+  CANARY_TRAFFIC_INCREMENT: 10
+  CANARY_ANALYSIS_DURATION: 300  # 5 minutes per stage
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  validate:
+    name: Validate Canary Deployment
+    runs-on: ubuntu-latest
+    outputs:
+      canary_id: ${{ steps.gen-id.outputs.canary_id }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Generate canary ID
+        id: gen-id
+        run: |
+          CANARY_ID="canary-$(date +%s)-${{ github.sha | cut -c1-7 }}"
+          echo "canary_id=$CANARY_ID" >> $GITHUB_OUTPUT
+          echo "Generated canary ID: $CANARY_ID"
+
+      - name: Validate version format
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          if [[ ! "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "ERROR: Version must follow semver format (e.g., v1.2.0)"
+            exit 1
+          fi
+          echo "✅ Valid version: $VERSION"
+
+      - name: Check baseline SLO status
+        run: |
+          # Query current SLO status before deployment
+          curl -f "https://api.teei-platform.com/api/slo/status" -o /tmp/baseline-slo.json
+
+          # Ensure no critical SLO violations before deploying
+          CRITICAL_SLOS=$(jq -r '.summary.critical' /tmp/baseline-slo.json)
+          if [[ "$CRITICAL_SLOS" -gt 0 ]]; then
+            echo "❌ ERROR: $CRITICAL_SLOS SLO(s) currently in critical state"
+            echo "Cannot deploy during active SLO violations"
+            exit 1
+          fi
+
+          echo "✅ Baseline SLOs healthy"
+
+  deploy-canary:
+    name: Deploy Canary - ${{ github.event.inputs.service }}@${{ github.event.inputs.version }}
+    needs: validate
+    runs-on: ubuntu-latest
+    outputs:
+      deployment_status: ${{ steps.final-status.outputs.status }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.28.0'
+
+      - name: Configure kubectl
+        run: |
+          REGION="${{ github.event.inputs.region }}"
+          if [ "$REGION" = "us-east-1" ]; then
+            echo "${{ secrets.KUBE_CONFIG_US_EAST_1 }}" | base64 -d > /tmp/kubeconfig
+          elif [ "$REGION" = "eu-central-1" ]; then
+            echo "${{ secrets.KUBE_CONFIG_EU_CENTRAL_1 }}" | base64 -d > /tmp/kubeconfig
+          else
+            echo "ERROR: Invalid region"
+            exit 1
+          fi
+          echo "KUBECONFIG=/tmp/kubeconfig" >> $GITHUB_ENV
+
+      - name: Deploy canary (Stage 1 - 5% traffic)
+        id: deploy-stage1
+        run: |
+          SERVICE="${{ github.event.inputs.service }}"
+          VERSION="${{ github.event.inputs.version }}"
+
+          # Update canary deployment with new version
+          kubectl set image deployment/${SERVICE}-canary \
+            ${SERVICE}=ghcr.io/${{ github.repository_owner }}/teei-${SERVICE}:${VERSION} \
+            -n teei-csr
+
+          # Set traffic split: 5% canary, 95% stable
+          kubectl patch service ${SERVICE} -n teei-csr --type merge -p '
+          {
+            "metadata": {
+              "annotations": {
+                "traffic.smi-spec.io/canary-weight": "5",
+                "traffic.smi-spec.io/stable-weight": "95"
+              }
+            }
+          }'
+
+          # Wait for rollout
+          kubectl rollout status deployment/${SERVICE}-canary -n teei-csr --timeout=5m
+
+          echo "✅ Canary deployed with 5% traffic"
+
+      - name: Analyze Stage 1 (5% traffic)
+        id: analyze-stage1
+        run: |
+          echo "⏱️  Analyzing canary for ${{ env.CANARY_ANALYSIS_DURATION }} seconds..."
+          sleep ${{ env.CANARY_ANALYSIS_DURATION }}
+
+          # Run analysis script
+          bash scripts/canary/analyze-metrics.sh \
+            --service="${{ github.event.inputs.service }}" \
+            --canary-id="${{ needs.validate.outputs.canary_id }}" \
+            --baseline-file=/tmp/baseline-slo.json \
+            --error-budget-threshold=${{ github.event.inputs.slo_threshold }}
+
+          # Store result
+          echo "result=$(cat /tmp/canary-analysis-result.txt)" >> $GITHUB_OUTPUT
+
+      - name: Check Stage 1 results
+        run: |
+          RESULT="${{ steps.analyze-stage1.outputs.result }}"
+          if [[ "$RESULT" != "PASS" ]]; then
+            echo "❌ Stage 1 analysis failed: $RESULT"
+            echo "Triggering automatic rollback..."
+            exit 1
+          fi
+          echo "✅ Stage 1 passed"
+
+      - name: Deploy Stage 2 (25% traffic)
+        if: success()
+        run: |
+          kubectl patch service ${{ github.event.inputs.service }} -n teei-csr --type merge -p '
+          {
+            "metadata": {
+              "annotations": {
+                "traffic.smi-spec.io/canary-weight": "25"
+              }
+            }
+          }'
+          echo "✅ Increased canary traffic to 25%"
+
+      - name: Analyze Stage 2
+        if: success()
+        id: analyze-stage2
+        run: |
+          sleep ${{ env.CANARY_ANALYSIS_DURATION }}
+
+          bash scripts/canary/analyze-metrics.sh \
+            --service="${{ github.event.inputs.service }}" \
+            --canary-id="${{ needs.validate.outputs.canary_id }}" \
+            --baseline-file=/tmp/baseline-slo.json \
+            --error-budget-threshold=${{ github.event.inputs.slo_threshold }}
+
+          echo "result=$(cat /tmp/canary-analysis-result.txt)" >> $GITHUB_OUTPUT
+
+      - name: Check Stage 2 results
+        if: success()
+        run: |
+          RESULT="${{ steps.analyze-stage2.outputs.result }}"
+          if [[ "$RESULT" != "PASS" ]]; then
+            echo "❌ Stage 2 analysis failed: $RESULT"
+            exit 1
+          fi
+          echo "✅ Stage 2 passed"
+
+      - name: Deploy Stage 3 (50% traffic)
+        if: success()
+        run: |
+          kubectl patch service ${{ github.event.inputs.service }} -n teei-csr --type merge -p '
+          {
+            "metadata": {
+              "annotations": {
+                "traffic.smi-spec.io/canary-weight": "50"
+              }
+            }
+          }'
+          echo "✅ Increased canary traffic to 50%"
+
+      - name: Analyze Stage 3
+        if: success()
+        id: analyze-stage3
+        run: |
+          sleep ${{ env.CANARY_ANALYSIS_DURATION }}
+
+          bash scripts/canary/analyze-metrics.sh \
+            --service="${{ github.event.inputs.service }}" \
+            --canary-id="${{ needs.validate.outputs.canary_id }}" \
+            --baseline-file=/tmp/baseline-slo.json \
+            --error-budget-threshold=${{ github.event.inputs.slo_threshold }}
+
+          echo "result=$(cat /tmp/canary-analysis-result.txt)" >> $GITHUB_OUTPUT
+
+      - name: Check Stage 3 results
+        if: success()
+        run: |
+          RESULT="${{ steps.analyze-stage3.outputs.result }}"
+          if [[ "$RESULT" != "PASS" ]]; then
+            echo "❌ Stage 3 analysis failed: $RESULT"
+            exit 1
+          fi
+          echo "✅ Stage 3 passed"
+
+      - name: Promote to 100% (Complete)
+        if: success()
+        run: |
+          # Promote canary to stable
+          kubectl patch deployment ${{ github.event.inputs.service }} -n teei-csr \
+            --type merge \
+            -p "{\"spec\":{\"template\":{\"spec\":{\"containers\":[{\"name\":\"${{ github.event.inputs.service }}\",\"image\":\"ghcr.io/${{ github.repository_owner }}/teei-${{ github.event.inputs.service }}:${{ github.event.inputs.version }}\"}]}}}}"
+
+          # Remove canary traffic split
+          kubectl patch service ${{ github.event.inputs.service }} -n teei-csr --type merge -p '
+          {
+            "metadata": {
+              "annotations": {
+                "traffic.smi-spec.io/canary-weight": "0",
+                "traffic.smi-spec.io/stable-weight": "100"
+              }
+            }
+          }'
+
+          echo "🎉 Canary promoted to 100%"
+
+      - name: Final status
+        id: final-status
+        if: always()
+        run: |
+          if [[ "${{ job.status }}" == "success" ]]; then
+            echo "status=success" >> $GITHUB_OUTPUT
+          else
+            echo "status=failed" >> $GITHUB_OUTPUT
+          fi
+
+  rollback:
+    name: Auto-Rollback Canary
+    needs: [validate, deploy-canary]
+    if: failure() && github.event.inputs.auto_rollback == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.28.0'
+
+      - name: Configure kubectl
+        run: |
+          REGION="${{ github.event.inputs.region }}"
+          if [ "$REGION" = "us-east-1" ]; then
+            echo "${{ secrets.KUBE_CONFIG_US_EAST_1 }}" | base64 -d > /tmp/kubeconfig
+          else
+            echo "${{ secrets.KUBE_CONFIG_EU_CENTRAL_1 }}" | base64 -d > /tmp/kubeconfig
+          fi
+          echo "KUBECONFIG=/tmp/kubeconfig" >> $GITHUB_ENV
+
+      - name: Execute rollback
+        run: |
+          echo "🔄 Rolling back canary deployment..."
+
+          SERVICE="${{ github.event.inputs.service }}"
+
+          # Revert traffic to 100% stable
+          kubectl patch service ${SERVICE} -n teei-csr --type merge -p '
+          {
+            "metadata": {
+              "annotations": {
+                "traffic.smi-spec.io/canary-weight": "0",
+                "traffic.smi-spec.io/stable-weight": "100"
+              }
+            }
+          }'
+
+          # Scale down canary
+          kubectl scale deployment ${SERVICE}-canary --replicas=0 -n teei-csr
+
+          echo "✅ Rollback complete - all traffic on stable version"
+
+      - name: Verify rollback
+        run: |
+          # Run smoke tests
+          bash scripts/dr/smoke.sh
+
+          # Check SLO status
+          curl -f "https://api.teei-platform.com/api/slo/status"
+
+      - name: Create rollback incident
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `[ROLLBACK] Canary deployment failed - ${{ github.event.inputs.service }}@${{ github.event.inputs.version }}`,
+              body: `## Automatic Rollback Executed
+
+              **Service**: ${{ github.event.inputs.service }}
+              **Version**: ${{ github.event.inputs.version }}
+              **Region**: ${{ github.event.inputs.region }}
+              **Canary ID**: ${{ needs.validate.outputs.canary_id }}
+
+              **Reason**: Canary analysis detected SLO violations exceeding ${{ github.event.inputs.slo_threshold }}% error budget threshold
+
+              **Triggered by**: @${{ github.actor }}
+              **Workflow**: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+              ### Next Steps
+              - [ ] Review canary analysis logs
+              - [ ] Investigate root cause of regression
+              - [ ] Fix issues in version ${{ github.event.inputs.version }}
+              - [ ] Re-test before next deployment attempt
+              `,
+              labels: ['rollback', 'canary', 'auto-rollback', 'slo-violation']
+            });
+
+  notify:
+    name: Notify Results
+    needs: [validate, deploy-canary, rollback]
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Determine status
+        id: status
+        run: |
+          if [[ "${{ needs.deploy-canary.outputs.deployment_status }}" == "success" ]]; then
+            echo "message=✅ Canary deployment successful" >> $GITHUB_OUTPUT
+            echo "color=0x00FF00" >> $GITHUB_OUTPUT
+          elif [[ "${{ needs.rollback.result }}" == "success" ]]; then
+            echo "message=🔄 Canary rolled back due to SLO violations" >> $GITHUB_OUTPUT
+            echo "color=0xFFA500" >> $GITHUB_OUTPUT
+          else
+            echo "message=❌ Canary deployment failed" >> $GITHUB_OUTPUT
+            echo "color=0xFF0000" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Notify Discord
+        uses: sarisia/actions-status-discord@v1
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK_DEPLOYMENTS }}
+          title: Canary Deployment - ${{ github.event.inputs.service }}
+          description: |
+            ${{ steps.status.outputs.message }}
+
+            **Version**: ${{ github.event.inputs.version }}
+            **Region**: ${{ github.event.inputs.region }}
+            **Canary ID**: ${{ needs.validate.outputs.canary_id }}
+
+            [View workflow](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+          color: ${{ steps.status.outputs.color }}

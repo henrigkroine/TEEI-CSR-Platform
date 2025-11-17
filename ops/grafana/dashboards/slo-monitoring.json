@@ -1,0 +1,344 @@
+{
+  "dashboard": {
+    "title": "SLO Monitoring - TEEI CSR Platform",
+    "tags": ["slo", "sre", "reliability"],
+    "timezone": "browser",
+    "editable": true,
+    "graphTooltip": 1,
+    "time": {
+      "from": "now-24h",
+      "to": "now"
+    },
+    "fiscalYearStartMonth": 0,
+    "refresh": "30s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "SLO Overview",
+        "type": "stat",
+        "gridPos": {
+          "h": 4,
+          "w": 24,
+          "x": 0,
+          "y": 0
+        },
+        "targets": [
+          {
+            "expr": "count(teei_slo_compliance == 1)",
+            "legendFormat": "Compliant SLOs",
+            "refId": "A"
+          },
+          {
+            "expr": "count(teei_slo_compliance == 0)",
+            "legendFormat": "Violated SLOs",
+            "refId": "B"
+          },
+          {
+            "expr": "count(teei_slo_compliance)",
+            "legendFormat": "Total SLOs",
+            "refId": "C"
+          }
+        ],
+        "options": {
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"]
+          },
+          "orientation": "horizontal",
+          "textMode": "value_and_name",
+          "colorMode": "value",
+          "graphMode": "none"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 1, "color": "green"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "API Availability SLO (99.9% target)",
+        "type": "graph",
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 4
+        },
+        "targets": [
+          {
+            "expr": "teei_slo_current_value{slo_name=\"API Availability\"}",
+            "legendFormat": "Current Availability %",
+            "refId": "A"
+          },
+          {
+            "expr": "teei_slo_target_value{slo_name=\"API Availability\"}",
+            "legendFormat": "Target (99.9%)",
+            "refId": "B"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "percent",
+            "min": 99,
+            "max": 100
+          }
+        ],
+        "alert": {
+          "name": "API Availability SLO Violated",
+          "conditions": [
+            {
+              "type": "query",
+              "query": {"params": ["A", "5m", "now"]},
+              "reducer": {"type": "last"},
+              "evaluator": {"type": "lt", "params": [99.9]}
+            }
+          ]
+        }
+      },
+      {
+        "id": 3,
+        "title": "API Latency p95 (500ms target)",
+        "type": "graph",
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 4
+        },
+        "targets": [
+          {
+            "expr": "teei_slo_current_value{slo_name=\"API Latency (p95)\"}",
+            "legendFormat": "Current p95 Latency",
+            "refId": "A"
+          },
+          {
+            "expr": "teei_slo_target_value{slo_name=\"API Latency (p95)\"}",
+            "legendFormat": "Target (500ms)",
+            "refId": "B"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "ms",
+            "min": 0,
+            "max": 1000
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Error Budget Remaining",
+        "type": "gauge",
+        "gridPos": {
+          "h": 8,
+          "w": 8,
+          "x": 0,
+          "y": 12
+        },
+        "targets": [
+          {
+            "expr": "teei_error_budget_remaining_percent{slo_name=\"API Availability\"}",
+            "legendFormat": "API Availability",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "showThresholdLabels": false,
+          "showThresholdMarkers": true
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "min": 0,
+            "max": 100,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 10, "color": "orange"},
+                {"value": 25, "color": "yellow"},
+                {"value": 50, "color": "green"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 5,
+        "title": "Error Budget Burn Rate",
+        "type": "graph",
+        "gridPos": {
+          "h": 8,
+          "w": 16,
+          "x": 8,
+          "y": 12
+        },
+        "targets": [
+          {
+            "expr": "teei_error_budget_burn_rate",
+            "legendFormat": "{{slo_name}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "short",
+            "label": "Errors/Hour",
+            "min": 0
+          }
+        ],
+        "alert": {
+          "name": "Fast Error Budget Burn",
+          "conditions": [
+            {
+              "type": "query",
+              "query": {"params": ["A", "5m", "now"]},
+              "reducer": {"type": "avg"},
+              "evaluator": {"type": "gt", "params": [10]}
+            }
+          ]
+        }
+      },
+      {
+        "id": 6,
+        "title": "Frontend LCP SLO (2.5s target)",
+        "type": "graph",
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 20
+        },
+        "targets": [
+          {
+            "expr": "teei_slo_current_value{slo_name=~\".*LCP.*\"}",
+            "legendFormat": "{{slo_name}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "ms",
+            "min": 0,
+            "max": 5000
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "SLO Violations (Last 24h)",
+        "type": "table",
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 20
+        },
+        "targets": [
+          {
+            "expr": "sum by(slo_name, severity) (increase(teei_slo_violations_total[24h]))",
+            "format": "table",
+            "instant": true,
+            "refId": "A"
+          }
+        ],
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {"Time": true},
+              "indexByName": {},
+              "renameByName": {
+                "slo_name": "SLO Name",
+                "severity": "Severity",
+                "Value": "Violations"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "All SLOs Compliance Status",
+        "type": "stat",
+        "gridPos": {
+          "h": 6,
+          "w": 24,
+          "x": 0,
+          "y": 28
+        },
+        "targets": [
+          {
+            "expr": "teei_slo_compliance",
+            "legendFormat": "{{slo_name}}",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"]
+          },
+          "orientation": "auto",
+          "textMode": "value_and_name",
+          "colorMode": "background",
+          "graphMode": "none"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [
+              {
+                "type": "value",
+                "options": {
+                  "0": {"text": "VIOLATED", "color": "red"},
+                  "1": {"text": "COMPLIANT", "color": "green"}
+                }
+              }
+            ],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 1, "color": "green"}
+              ]
+            }
+          }
+        }
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "datasource",
+          "type": "datasource",
+          "query": "prometheus"
+        }
+      ]
+    },
+    "annotations": {
+      "list": [
+        {
+          "name": "Deployments",
+          "datasource": "-- Grafana --",
+          "enable": true,
+          "iconColor": "blue",
+          "tags": ["deployment"]
+        },
+        {
+          "name": "Incidents",
+          "datasource": "-- Grafana --",
+          "enable": true,
+          "iconColor": "red",
+          "tags": ["incident"]
+        }
+      ]
+    }
+  }
+}

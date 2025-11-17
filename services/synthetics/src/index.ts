@@ -18,6 +18,10 @@ import { monitorAllReportGeneration } from '../pilot-routes/report-generation.js
 import { monitorAllPDFExports } from '../pilot-routes/export-pdf.js';
 import { monitorAllApprovalWorkflows } from '../pilot-routes/approval-workflow.js';
 import { monitorAllEvidenceExplorers } from '../pilot-routes/evidence-explorer.js';
+import { monitorAllBoardrooms } from '../pilot-routes/boardroom-deck.js';
+import { monitorAllPPTXExports } from '../pilot-routes/export-pptx.js';
+import { monitorAllConnectors } from '../pilot-routes/connectors-health.js';
+import { monitorTrustCenterStatus } from '../pilot-routes/trust-center-status.js';
 
 /**
  * Initialize OpenTelemetry for all monitors
@@ -57,6 +61,10 @@ async function runAllMonitors(): Promise<void> {
     monitorAllPDFExports(),
     monitorAllApprovalWorkflows(),
     monitorAllEvidenceExplorers(),
+    monitorAllBoardrooms(),
+    monitorAllPPTXExports(),
+    monitorAllConnectors(),
+    monitorTrustCenterStatus(),
   ]);
 
   // Count successes and failures
@@ -69,8 +77,8 @@ async function runAllMonitors(): Promise<void> {
   console.log(`\n${'='.repeat(80)}`);
   console.log('📊 MONITORING CYCLE COMPLETE');
   console.log(`   Duration: ${duration}ms`);
-  console.log(`   Monitors Succeeded: ${succeeded}/6`);
-  console.log(`   Monitors Failed: ${failed}/6`);
+  console.log(`   Monitors Succeeded: ${succeeded}/10`);
+  console.log(`   Monitors Failed: ${failed}/10`);
   console.log('='.repeat(80));
 
   // Log failures
@@ -83,6 +91,10 @@ async function runAllMonitors(): Promise<void> {
         'PDF Export',
         'Approval Workflow',
         'Evidence Explorer',
+        'Boardroom Deck',
+        'PPTX Export',
+        'Connectors Health',
+        'Trust Center Status',
       ];
       console.error(`❌ ${monitorNames[index]} monitor failed:`, result.reason);
     }

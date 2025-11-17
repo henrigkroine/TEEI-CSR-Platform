@@ -1,0 +1,217 @@
+#
+# Pod Disruption Budgets (PDBs) for Critical Services
+#
+# Ensures high availability during:
+# - Cluster upgrades
+# - Node maintenance
+# - Voluntary disruptions
+#
+# Strategy: Allow max 1 pod to be unavailable at a time for critical services
+#
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: api-gateway-pdb
+  namespace: teei-csr
+  labels:
+    app: api-gateway
+    tier: critical
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: api-gateway
+  unhealthyPodEvictionPolicy: IfHealthyBudget
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: reporting-pdb
+  namespace: teei-csr
+  labels:
+    app: reporting
+    tier: critical
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: reporting
+  unhealthyPodEvictionPolicy: IfHealthyBudget
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: analytics-pdb
+  namespace: teei-csr
+  labels:
+    app: analytics
+    tier: critical
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: analytics
+  unhealthyPodEvictionPolicy: IfHealthyBudget
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: q2q-ai-pdb
+  namespace: teei-csr
+  labels:
+    app: q2q-ai
+    tier: critical
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: q2q-ai
+  unhealthyPodEvictionPolicy: IfHealthyBudget
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: impact-calculator-pdb
+  namespace: teei-csr
+  labels:
+    app: impact-calculator
+    tier: high
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: impact-calculator
+  unhealthyPodEvictionPolicy: IfHealthyBudget
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: journey-engine-pdb
+  namespace: teei-csr
+  labels:
+    app: journey-engine
+    tier: high
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: journey-engine
+  unhealthyPodEvictionPolicy: IfHealthyBudget
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: unified-profile-pdb
+  namespace: teei-csr
+  labels:
+    app: unified-profile
+    tier: high
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: unified-profile
+  unhealthyPodEvictionPolicy: IfHealthyBudget
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: notifications-pdb
+  namespace: teei-csr
+  labels:
+    app: notifications
+    tier: medium
+spec:
+  maxUnavailable: 2
+  selector:
+    matchLabels:
+      app: notifications
+  unhealthyPodEvictionPolicy: IfHealthyBudget
+
+---
+# Corp Cockpit (Astro frontend)
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: corp-cockpit-pdb
+  namespace: teei-csr
+  labels:
+    app: corp-cockpit
+    tier: critical
+spec:
+  minAvailable: "50%"
+  selector:
+    matchLabels:
+      app: corp-cockpit
+  unhealthyPodEvictionPolicy: IfHealthyBudget
+
+---
+# Connectors (lower priority)
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: kintell-connector-pdb
+  namespace: teei-csr
+  labels:
+    app: kintell-connector
+    tier: low
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: kintell-connector
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: buddy-connector-pdb
+  namespace: teei-csr
+  labels:
+    app: buddy-connector
+    tier: low
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: buddy-connector
+
+---
+# Observability (ensure always some capacity)
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: prometheus-pdb
+  namespace: teei-csr
+  labels:
+    app: prometheus
+    tier: critical
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: prometheus
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: grafana-pdb
+  namespace: teei-csr
+  labels:
+    app: grafana
+    tier: high
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: grafana

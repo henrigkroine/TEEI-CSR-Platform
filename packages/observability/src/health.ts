@@ -411,4 +411,23 @@ export function registerHealthRoutes(
     const statusCode = health.status === HealthStatus.UNHEALTHY ? 503 : 200;
     reply.code(statusCode).send(health);
   });
+
+  // Kubernetes-style aliases
+  fastify.get('/healthz', async (_request: any, reply: any) => {
+    const health = await healthManager.health();
+    const statusCode = health.status === HealthStatus.UNHEALTHY ? 503 : 200;
+    reply.code(statusCode).send(health);
+  });
+
+  fastify.get('/readyz', async (_request: any, reply: any) => {
+    const health = await healthManager.readiness();
+    const statusCode = health.status === HealthStatus.HEALTHY ? 200 : 503;
+    reply.code(statusCode).send(health);
+  });
+
+  fastify.get('/livez', async (_request: any, reply: any) => {
+    const health = await healthManager.liveness();
+    const statusCode = health.status === HealthStatus.HEALTHY ? 200 : 503;
+    reply.code(statusCode).send(health);
+  });
 }
