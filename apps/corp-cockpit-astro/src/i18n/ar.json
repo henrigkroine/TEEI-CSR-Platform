@@ -147,11 +147,6 @@
       "noStuckUsers": "✅ لم يتم اكتشاف مستخدمين عالقين - الجميع يتدفق بسلاسة!"
     }
   },
-<<<<<<< HEAD
-  "common": {
-    "loading": "جار التحميل...",
-    "error": "خطأ",
-=======
   "dashboard": {
     "title": "نظرة عامة على لوحة القيادة",
     "metrics": "المقاييس",
@@ -190,19 +185,12 @@
     "error": "خطأ",
     "success": "نجح",
     "warning": "تحذير",
->>>>>>> origin/claude/worker5-data-trust-catalog-01MP5u1wgV11fa33LqqEQWbp
     "noData": "لا توجد بيانات متاحة",
     "refresh": "تحديث",
     "save": "حفظ",
     "cancel": "إلغاء",
     "confirm": "تأكيد",
     "delete": "حذف",
-<<<<<<< HEAD
-    "edit": "تحرير",
-    "close": "إغلاق",
-    "viewDetails": "عرض التفاصيل",
-    "viewAsTable": "عرض كجدول (يمكن الوصول إليه)"
-=======
     "edit": "تعديل",
     "close": "إغلاق",
     "back": "رجوع",
@@ -228,6 +216,5 @@
     "theme": "المظهر",
     "high_contrast": "تباين عالي",
     "screen_reader_mode": "وضع قارئ الشاشة"
->>>>>>> origin/claude/worker5-data-trust-catalog-01MP5u1wgV11fa33LqqEQWbp
   }
 }
