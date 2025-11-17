@@ -7,7 +7,7 @@ import { pgTable, uuid, varchar, timestamp, jsonb, pgEnum, integer, text, index,
 import { companies } from './users.js';
 
 // Enums
-export const subscriptionPlanEnum = pgEnum('subscription_plan', ['starter', 'pro', 'enterprise', 'custom']);
+export const subscriptionPlanEnum = pgEnum('subscription_plan', ['essentials', 'professional', 'enterprise', 'custom']);
 export const subscriptionStatusEnum = pgEnum('subscription_status', ['active', 'trialing', 'past_due', 'canceled', 'unpaid']);
 export const invoiceStatusEnum = pgEnum('invoice_status', ['draft', 'open', 'paid', 'void', 'uncollectible']);
 export const usageEventTypeEnum = pgEnum('usage_event_type', [
@@ -20,6 +20,11 @@ export const usageEventTypeEnum = pgEnum('usage_event_type', [
   'storage_gb',
   'compute_hours'
 ]);
+
+// L2I Bundle Enums
+export const l2iBundleTierEnum = pgEnum('l2i_bundle_tier', ['foundation', 'growth', 'expand', 'launch']);
+export const l2iProgramTagEnum = pgEnum('l2i_program_tag', ['language', 'mentorship', 'upskilling', 'weei']);
+export const l2iBundleStatusEnum = pgEnum('l2i_bundle_status', ['active', 'expired', 'consumed', 'revoked']);
 
 /**
  * Billing Customers - Links companies to Stripe customers
@@ -244,6 +249,9 @@ export const billingPlanFeatures = pgTable('billing_plan_features', {
     benchmarking: boolean;
     nlq: boolean;
     genAiReports: boolean;
+    copilot: boolean;
+    multiRegion: boolean;
+    connectors: boolean;
     apiAccess: boolean;
     sso: boolean;
     customBranding: boolean;
@@ -257,3 +265,100 @@ export const billingPlanFeatures = pgTable('billing_plan_features', {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
+
+/**
+ * L2I Bundles - License-to-Impact add-on SKUs
+ * Tied to TEEI program funding tiers with learner capacity and impact recognition
+ */
+export const l2iBundles = pgTable('l2i_bundles', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  companyId: uuid('company_id').notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  subscriptionId: uuid('subscription_id').references(() => billingSubscriptions.id),
+
+  // Bundle tier and pricing
+  tier: l2iBundleTierEnum('tier').notNull(),
+  sku: varchar('sku', { length: 100 }).notNull(), // e.g., 'L2I-FOUNDATION-250'
+  priceUSD: integer('price_usd').notNull(), // Price in cents
+
+  // Learner capacity
+  learnerCapacity: integer('learner_capacity').notNull(), // 250, 500, custom
+  learnersAllocated: integer('learners_allocated').default(0),
+
+  // Program tags (multiple programs can be funded)
+  programTags: jsonb('program_tags').notNull().$type<Array<'language' | 'mentorship' | 'upskilling' | 'weei'>>(),
+
+  // Recognition metadata
+  recognition: jsonb('recognition').$type<{
+    founderBadge?: 'founding-8' | 'founding-100' | 'founding-1000';
+    impactCredits?: number;
+    acknowledgmentTier?: 'bronze' | 'silver' | 'gold' | 'platinum';
+    publicRecognition?: boolean;
+  }>(),
+
+  // Allocation details
+  teeiProgramId: varchar('teei_program_id', { length: 255 }), // Links to TEEI program
+  allocationNotes: text('allocation_notes'),
+
+  // Status and validity
+  status: l2iBundleStatusEnum('status').notNull().default('active'),
+  validFrom: timestamp('valid_from', { withTimezone: true }).notNull(),
+  validUntil: timestamp('valid_until', { withTimezone: true }),
+  purchasedAt: timestamp('purchased_at', { withTimezone: true }).notNull().defaultNow(),
+
+  // Stripe integration
+  stripePriceId: varchar('stripe_price_id', { length: 255 }),
+  stripeInvoiceItemId: varchar('stripe_invoice_item_id', { length: 255 }),
+
+  // Metadata
+  metadata: jsonb('metadata').default({}),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  companyIdIdx: index('l2i_bundles_company_id_idx').on(table.companyId),
+  tierIdx: index('l2i_bundles_tier_idx').on(table.tier),
+  statusIdx: index('l2i_bundles_status_idx').on(table.status),
+  subscriptionIdIdx: index('l2i_bundles_subscription_id_idx').on(table.subscriptionId),
+}));
+
+/**
+ * L2I Allocations - Track learner allocations per bundle
+ * Records which learners are funded by which L2I bundle
+ */
+export const l2iAllocations = pgTable('l2i_allocations', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  bundleId: uuid('bundle_id').notNull().references(() => l2iBundles.id, { onDelete: 'cascade' }),
+  companyId: uuid('company_id').notNull().references(() => companies.id, { onDelete: 'cascade' }),
+
+  // Learner info (from TEEI programs)
+  learnerUserId: uuid('learner_user_id'), // May link to users table if learner has account
+  learnerExternalId: varchar('learner_external_id', { length: 255 }), // TEEI program learner ID
+  learnerName: varchar('learner_name', { length: 255 }),
+  learnerEmail: varchar('learner_email', { length: 255 }),
+
+  // Program details
+  programTag: l2iProgramTagEnum('program_tag').notNull(),
+  programCohort: varchar('program_cohort', { length: 100 }), // e.g., '2025-Q1'
+
+  // Allocation status
+  allocatedAt: timestamp('allocated_at', { withTimezone: true }).notNull().defaultNow(),
+  completedAt: timestamp('completed_at', { withTimezone: true }),
+  status: varchar('status', { length: 50 }).notNull().default('active'), // active, completed, withdrawn
+
+  // Impact tracking
+  impactMetrics: jsonb('impact_metrics').$type<{
+    hoursCompleted?: number;
+    skillsAcquired?: string[];
+    certificationsEarned?: string[];
+    engagementScore?: number;
+  }>(),
+
+  // Metadata
+  metadata: jsonb('metadata').default({}),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  bundleIdIdx: index('l2i_allocations_bundle_id_idx').on(table.bundleId),
+  companyIdIdx: index('l2i_allocations_company_id_idx').on(table.companyId),
+  programTagIdx: index('l2i_allocations_program_tag_idx').on(table.programTag),
+  learnerExternalIdIdx: index('l2i_allocations_learner_external_id_idx').on(table.learnerExternalId),
+}));
