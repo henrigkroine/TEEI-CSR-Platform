@@ -1,0 +1,348 @@
+---
+/**
+ * Publication Renderer - Worker 19
+ *
+ * Renders publication blocks with proper styling and accessibility.
+ * Supports TILE, TEXT, CHART, EVIDENCE, METRIC, and HEADING blocks.
+ */
+
+import type { PublicPublicationResponse, PublicationBlock } from '@teei/shared-types';
+import { marked } from 'marked';
+
+export interface Props {
+  publication: PublicPublicationResponse;
+  isEmbed?: boolean;
+}
+
+const { publication, isEmbed = false } = Astro.props;
+
+// Group blocks by width for responsive grid
+const blocks = publication.blocks || [];
+
+// Helper: Render markdown safely
+function renderMarkdown(content: string): string {
+  return marked.parse(content);
+}
+---
+
+<article class="publication-content" data-publication-id={publication.id}>
+  {/* Header */}
+  <header class="publication-header">
+    <h1 class="publication-title">{publication.title}</h1>
+    {publication.description && (
+      <p class="publication-description">{publication.description}</p>
+    )}
+    {publication.published_at && (
+      <time class="publication-date" datetime={publication.published_at}>
+        Published: {new Date(publication.published_at).toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        })}
+      </time>
+    )}
+  </header>
+
+  {/* Blocks */}
+  <div class="blocks-container">
+    {blocks.map((block: PublicationBlock) => (
+      <div
+        class={`block block-${block.kind.toLowerCase()} block-width-${block.width}`}
+        data-block-id={block.id}
+        style={block.styling ? `
+          ${block.styling.backgroundColor ? `background-color: ${block.styling.backgroundColor};` : ''}
+          ${block.styling.textColor ? `color: ${block.styling.textColor};` : ''}
+          ${block.styling.borderColor ? `border-color: ${block.styling.borderColor};` : ''}
+          ${block.styling.padding ? `padding: ${block.styling.padding};` : ''}
+        ` : ''}
+      >
+        {/* TILE */}
+        {block.kind === 'TILE' && block.payload_json.type === 'TILE' && (
+          <div class="tile">
+            <div class="tile-label">{block.payload_json.label}</div>
+            <div class="tile-value">
+              {block.payload_json.value.toLocaleString()}
+              {block.payload_json.unit && <span class="tile-unit">{block.payload_json.unit}</span>}
+            </div>
+            {block.payload_json.trend !== undefined && (
+              <div class={`tile-trend ${block.payload_json.trend >= 0 ? 'positive' : 'negative'}`}>
+                {block.payload_json.trend >= 0 ? '↑' : '↓'} {Math.abs(block.payload_json.trend)}%
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* TEXT */}
+        {block.kind === 'TEXT' && block.payload_json.type === 'TEXT' && (
+          <div class="text-content">
+            {block.payload_json.format === 'html' ? (
+              <div set:html={block.payload_json.content} />
+            ) : (
+              <div set:html={renderMarkdown(block.payload_json.content)} />
+            )}
+          </div>
+        )}
+
+        {/* METRIC */}
+        {block.kind === 'METRIC' && block.payload_json.type === 'METRIC' && (
+          <div class="metric">
+            <div class="metric-label">{block.payload_json.label}</div>
+            <div class="metric-value">
+              {block.payload_json.value.toLocaleString()}
+              {block.payload_json.unit && <span class="metric-unit"> {block.payload_json.unit}</span>}
+            </div>
+            {block.payload_json.change !== undefined && (
+              <div class={`metric-change ${block.payload_json.change >= 0 ? 'positive' : 'negative'}`}>
+                {block.payload_json.change >= 0 ? '+' : ''}{block.payload_json.change}
+                {block.payload_json.changeLabel && ` ${block.payload_json.changeLabel}`}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* HEADING */}
+        {block.kind === 'HEADING' && block.payload_json.type === 'HEADING' && (
+          <>
+            {block.payload_json.level === 1 && <h1 class="heading">{block.payload_json.text}</h1>}
+            {block.payload_json.level === 2 && <h2 class="heading">{block.payload_json.text}</h2>}
+            {block.payload_json.level === 3 && <h3 class="heading">{block.payload_json.text}</h3>}
+          </>
+        )}
+
+        {/* CHART */}
+        {block.kind === 'CHART' && block.payload_json.type === 'CHART' && (
+          <div class="chart">
+            <h3 class="chart-title">{block.payload_json.title}</h3>
+            <div class="chart-placeholder">
+              <p>Chart: {block.payload_json.chartType}</p>
+              <pre>{JSON.stringify(block.payload_json.data, null, 2)}</pre>
+            </div>
+          </div>
+        )}
+
+        {/* EVIDENCE */}
+        {block.kind === 'EVIDENCE' && block.payload_json.type === 'EVIDENCE' && (
+          <div class="evidence">
+            <h3 class="evidence-title">Evidence</h3>
+            <div class="evidence-snippets">
+              {block.payload_json.snippets.map((snippet) => (
+                <blockquote class="snippet">
+                  <p class="snippet-text">"{snippet.text}"</p>
+                  <footer class="snippet-source">
+                    — {snippet.source}
+                    {snippet.timestamp && (
+                      <time>{new Date(snippet.timestamp).toLocaleDateString()}</time>
+                    )}
+                  </footer>
+                </blockquote>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    ))}
+  </div>
+</article>
+
+<style>
+  .publication-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+  }
+
+  .publication-header {
+    text-align: center;
+    margin-bottom: 3rem;
+    padding-bottom: 2rem;
+    border-bottom: 2px solid var(--color-border);
+  }
+
+  .publication-title {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+    color: var(--color-text);
+  }
+
+  .publication-description {
+    font-size: 1.125rem;
+    color: var(--color-text-secondary);
+    max-width: 800px;
+    margin: 0 auto 1rem;
+  }
+
+  .publication-date {
+    display: block;
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+  }
+
+  .blocks-container {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 1.5rem;
+  }
+
+  .block {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    padding: 1.5rem;
+  }
+
+  .block-width-full { grid-column: span 12; }
+  .block-width-half { grid-column: span 6; }
+  .block-width-third { grid-column: span 4; }
+  .block-width-quarter { grid-column: span 3; }
+
+  /* Tile */
+  .tile {
+    text-align: center;
+  }
+
+  .tile-label {
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+  }
+
+  .tile-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--color-primary);
+  }
+
+  .tile-unit {
+    font-size: 1.25rem;
+    color: var(--color-text-secondary);
+  }
+
+  .tile-trend {
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+
+  .tile-trend.positive { color: var(--color-success); }
+  .tile-trend.negative { color: var(--color-danger); }
+
+  /* Metric */
+  .metric {
+    text-align: center;
+  }
+
+  .metric-label {
+    font-size: 1rem;
+    color: var(--color-text-secondary);
+    margin-bottom: 0.5rem;
+  }
+
+  .metric-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--color-text);
+  }
+
+  .metric-unit {
+    font-size: 1rem;
+    color: var(--color-text-secondary);
+  }
+
+  .metric-change {
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+  }
+
+  .metric-change.positive { color: var(--color-success); }
+  .metric-change.negative { color: var(--color-danger); }
+
+  /* Text */
+  .text-content {
+    line-height: 1.8;
+  }
+
+  .text-content :global(h1),
+  .text-content :global(h2),
+  .text-content :global(h3) {
+    margin-top: 1.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .text-content :global(p) {
+    margin-bottom: 1rem;
+  }
+
+  .text-content :global(ul),
+  .text-content :global(ol) {
+    margin-left: 1.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .text-content :global(a) {
+    color: var(--color-primary);
+    text-decoration: underline;
+  }
+
+  /* Heading */
+  .heading {
+    margin: 0;
+  }
+
+  /* Chart */
+  .chart-title {
+    font-size: 1.25rem;
+    margin-bottom: 1rem;
+  }
+
+  .chart-placeholder {
+    padding: 2rem;
+    background: var(--color-bg);
+    border-radius: 8px;
+    text-align: center;
+  }
+
+  /* Evidence */
+  .evidence-title {
+    font-size: 1.25rem;
+    margin-bottom: 1rem;
+  }
+
+  .evidence-snippets {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .snippet {
+    padding: 1rem;
+    background: var(--color-bg);
+    border-left: 4px solid var(--color-primary);
+    border-radius: 4px;
+    margin: 0;
+  }
+
+  .snippet-text {
+    font-style: italic;
+    margin-bottom: 0.5rem;
+  }
+
+  .snippet-source {
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .publication-title {
+      font-size: 1.75rem;
+    }
+
+    .block-width-half,
+    .block-width-third,
+    .block-width-quarter {
+      grid-column: span 12;
+    }
+  }
+</style>

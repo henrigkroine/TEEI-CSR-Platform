@@ -1,0 +1,205 @@
+---
+/**
+ * Public Impact Page - Worker 19
+ *
+ * Dynamic route for published impact pages at /impact/:slug
+ * Fetches publication data from API and renders with SSR
+ * Supports token-based access for private publications
+ *
+ * @route /impact/:slug
+ */
+
+import type { PublicPublicationResponse } from '@teei/shared-types';
+import PublicationRenderer from '../../components/PublicationRenderer.astro';
+import Layout from '../../layouts/Layout.astro';
+
+const { slug } = Astro.params;
+const token = Astro.url.searchParams.get('token');
+const isEmbed = Astro.url.searchParams.get('embed') === '1';
+
+// Fetch publication from API
+const apiBaseUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
+const url = new URL(`${apiBaseUrl}/public/publications/${slug}`);
+if (token) {
+  url.searchParams.set('token', token);
+}
+
+let publication: PublicPublicationResponse | null = null;
+let error: string | null = null;
+
+try {
+  const response = await fetch(url.toString(), {
+    headers: {
+      'Accept': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    if (response.status === 404) {
+      error = 'Publication not found';
+    } else if (response.status === 401) {
+      const data = await response.json();
+      error = data.error === 'TOKEN_REQUIRED' ? 'This publication requires a token to access' :
+              data.error === 'INVALID_TOKEN' ? 'Invalid or expired token' :
+              data.error === 'TOKEN_EXPIRED' ? 'Token has expired' :
+              'Unauthorized';
+    } else {
+      error = 'Failed to load publication';
+    }
+  } else {
+    publication = await response.json();
+
+    // Set cache headers (from API response)
+    const cacheControl = response.headers.get('Cache-Control');
+    const etag = response.headers.get('ETag');
+    if (cacheControl) {
+      Astro.response.headers.set('Cache-Control', cacheControl);
+    }
+    if (etag) {
+      Astro.response.headers.set('ETag', etag);
+    }
+  }
+} catch (err: any) {
+  console.error('[PublicationPage] Fetch error:', err);
+  error = 'An error occurred while loading this publication';
+}
+
+// If error, show 404 or error page
+if (error) {
+  Astro.response.status = publication ? 500 : 404;
+}
+
+// SEO metadata
+const metaTitle = publication?.meta_title || publication?.title || 'Publication Not Found';
+const metaDescription = publication?.meta_description || publication?.description || '';
+const ogImage = publication?.og_image_url || '';
+const ogTitle = publication?.og_title || metaTitle;
+const ogDescription = publication?.og_description || metaDescription;
+---
+
+<Layout
+  title={metaTitle}
+  description={metaDescription}
+  ogImage={ogImage}
+  ogTitle={ogTitle}
+  ogDescription={ogDescription}
+  isEmbed={isEmbed}
+>
+  {error ? (
+    <div class="error-container">
+      <div class="error-card">
+        <h1>{error}</h1>
+        {error.includes('token') ? (
+          <p>This publication requires a valid access token. Please contact the publication owner.</p>
+        ) : error.includes('not found') ? (
+          <p>The publication you're looking for doesn't exist or has been removed.</p>
+        ) : (
+          <p>We encountered an error loading this publication. Please try again later.</p>
+        )}
+        <a href="/" class="home-link">← Back to Trust Center</a>
+      </div>
+    </div>
+  ) : publication ? (
+    <PublicationRenderer publication={publication} isEmbed={isEmbed} />
+  ) : null}
+</Layout>
+
+<style>
+  .error-container {
+    min-height: 60vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+  }
+
+  .error-card {
+    max-width: 600px;
+    text-align: center;
+    padding: 3rem;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+
+  .error-card h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1f2937;
+    margin-bottom: 1rem;
+  }
+
+  .error-card p {
+    color: #6b7280;
+    margin-bottom: 2rem;
+    line-height: 1.6;
+  }
+
+  .home-link {
+    display: inline-block;
+    padding: 0.75rem 1.5rem;
+    background: #2563eb;
+    color: white;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: 500;
+    transition: background 0.2s;
+  }
+
+  .home-link:hover {
+    background: #1d4ed8;
+  }
+</style>
+
+{!isEmbed && publication && (
+  <script define:vars={{ slug: publication.slug }}>
+    // Track view via beacon
+    if ('sendBeacon' in navigator) {
+      const payload = JSON.stringify({
+        is_embed: false,
+        embed_domain: null,
+      });
+      const blob = new Blob([payload], { type: 'application/json' });
+      const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
+      navigator.sendBeacon(`${apiUrl}/public/publications/${slug}/view`, blob);
+    }
+  </script>
+)}
+
+{isEmbed && publication && (
+  <script define:vars={{ slug: publication.slug }}>
+    // Notify parent window (resize observer)
+    function notifyHeight() {
+      const height = document.documentElement.scrollHeight;
+      window.parent.postMessage({
+        type: 'teei:resize',
+        height,
+        slug,
+      }, '*');
+    }
+
+    // Initial notification
+    notifyHeight();
+
+    // Watch for content changes
+    const resizeObserver = new ResizeObserver(notifyHeight);
+    resizeObserver.observe(document.body);
+
+    // Notify ready
+    window.parent.postMessage({
+      type: 'teei:ready',
+      slug,
+    }, '*');
+
+    // Track view
+    if ('sendBeacon' in navigator) {
+      const payload = JSON.stringify({
+        is_embed: true,
+        embed_domain: document.referrer ? new URL(document.referrer).hostname : null,
+      });
+      const blob = new Blob([payload], { type: 'application/json' });
+      const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
+      navigator.sendBeacon(`${apiUrl}/public/publications/${slug}/view`, blob);
+    }
+  </script>
+)}
