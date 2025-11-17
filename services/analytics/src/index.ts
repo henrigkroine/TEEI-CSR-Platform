@@ -6,6 +6,7 @@ import { cohortsRoutes } from './routes/cohorts.js';
 import { funnelsRoutes } from './routes/funnels.js';
 import { benchmarksRoutes } from './routes/benchmarks.js';
 import { metricsRoutes } from './routes/metrics.js';
+import { tilesRoutes } from './routes/tiles.js';
 import { startSyncScheduler, stopSyncScheduler } from './loaders/ingestion.js';
 import { closeClient as closeClickHouse } from './lib/clickhouse-client.js';
 import { closeRedis } from './lib/cache.js';
@@ -34,6 +35,7 @@ async function start() {
     await instance.register(funnelsRoutes);
     await instance.register(benchmarksRoutes);
     await instance.register(metricsRoutes, { prefix: '/metrics' });
+    await instance.register(tilesRoutes, { prefix: '/tiles' });
   }, { prefix: '/v1/analytics' });
 
   // Start server
@@ -56,6 +58,7 @@ async function start() {
     logger.info('    GET  /v1/analytics/funnels - Conversion funnels');
     logger.info('    GET  /v1/analytics/benchmarks - Industry/region/size benchmarks');
     logger.info('    GET  /v1/analytics/metrics/company/:companyId/history - Historical metrics for forecasting');
+    logger.info('    GET  /v1/analytics/tiles/:tileType - Impact tiles (language, mentorship, upskilling, weei)');
     logger.info('');
     logger.info('Environment:');
     logger.info(`  ClickHouse: ${process.env.CLICKHOUSE_URL || 'http://localhost:8123'}`);

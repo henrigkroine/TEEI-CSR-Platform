@@ -1,0 +1,683 @@
+openapi: 3.0.3
+info:
+  title: TEEI Impact Tiles API
+  version: 1.0.0
+  description: |
+    Impact Tiles API provides pre-wired metrics for TEEI programs:
+    - Language Learning (class sessions, cohort duration, volunteer hours, retention)
+    - Mentorship (bookings, attendance, no-show rate, repeat mentoring)
+    - Upskilling (enrollments → completions → placements, course locales)
+    - WEEI (U:LEARN/U:START/U:GROW/U:LEAD throughput, demo days)
+
+    All tiles include VIS/SROI scores where applicable and support caching for performance.
+  contact:
+    name: TEEI Platform Team
+    email: platform@teei.io
+
+servers:
+  - url: https://api.teei.io/v1
+    description: Production
+  - url: https://staging-api.teei.io/v1
+    description: Staging
+  - url: http://localhost:3008/v1
+    description: Local development
+
+security:
+  - bearerAuth: []
+
+paths:
+  /analytics/tiles/{tileType}:
+    get:
+      summary: Get specific impact tile
+      description: |
+        Retrieve aggregated metrics for a specific program tile type.
+        Supports custom periods or preset time ranges (week, month, quarter, year).
+      operationId: getTile
+      tags:
+        - Tiles
+      parameters:
+        - name: tileType
+          in: path
+          required: true
+          description: Type of impact tile
+          schema:
+            type: string
+            enum: [language, mentorship, upskilling, weei]
+          example: "language"
+        - name: companyId
+          in: query
+          required: true
+          description: Company identifier
+          schema:
+            type: string
+            format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        - name: period
+          in: query
+          description: Preset time period (overrides startDate/endDate)
+          schema:
+            type: string
+            enum: [week, month, quarter, year]
+            default: month
+          example: "month"
+        - name: startDate
+          in: query
+          description: Custom period start date (ISO format)
+          schema:
+            type: string
+            format: date-time
+          example: "2024-01-01T00:00:00Z"
+        - name: endDate
+          in: query
+          description: Custom period end date (ISO format)
+          schema:
+            type: string
+            format: date-time
+          example: "2024-01-31T23:59:59Z"
+      responses:
+        '200':
+          description: Tile data retrieved successfully
+          headers:
+            X-Cache-Status:
+              description: Cache hit/miss status
+              schema:
+                type: string
+                enum: [HIT, MISS]
+              example: "HIT"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TileResponse'
+              examples:
+                language:
+                  summary: Language tile example
+                  value:
+                    tile:
+                      id: "language-550e8400-e29b-41d4-a716-446655440000-2024-01-01"
+                      type: "language"
+                      companyId: "550e8400-e29b-41d4-a716-446655440000"
+                      periodStart: "2024-01-01T00:00:00Z"
+                      periodEnd: "2024-01-31T23:59:59Z"
+                      lastUpdated: "2024-01-31T12:00:00Z"
+                      visScore: 78.5
+                      sroiRatio: 5.23
+                      metrics:
+                        sessionsPerWeek: 2.5
+                        cohortDurationMonths: 3
+                        volunteerHours: 245.5
+                        retentionRate: 85.2
+                        participantsCount: 120
+                        totalSessions: 340
+                        avgAttendanceRate: 92.3
+                        activeCohorts: 8
+                      frequencyBreakdown:
+                        twicePerWeek: 5
+                        thricePerWeek: 3
+                      durationBreakdown:
+                        twoMonths: 6
+                        threeMonths: 2
+                    metadata:
+                      companyId: "550e8400-e29b-41d4-a716-446655440000"
+                      generatedAt: "2024-01-31T12:00:00Z"
+                      cacheHit: true
+                      queryDurationMs: 45
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /analytics/tiles/company/{companyId}:
+    get:
+      summary: Get all tiles for a company
+      description: |
+        Retrieve all available impact tiles for a company in a single request.
+        Failed tile aggregations are silently skipped.
+      operationId: getAllTiles
+      tags:
+        - Tiles
+      parameters:
+        - name: companyId
+          in: path
+          required: true
+          description: Company identifier
+          schema:
+            type: string
+            format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        - name: period
+          in: query
+          description: Preset time period
+          schema:
+            type: string
+            enum: [week, month, quarter, year]
+            default: month
+          example: "month"
+        - name: startDate
+          in: query
+          description: Custom period start date (ISO format)
+          schema:
+            type: string
+            format: date-time
+          example: "2024-01-01T00:00:00Z"
+        - name: endDate
+          in: query
+          description: Custom period end date (ISO format)
+          schema:
+            type: string
+            format: date-time
+          example: "2024-01-31T23:59:59Z"
+      responses:
+        '200':
+          description: All tiles retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TileListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /analytics/tiles/entitlements/{companyId}:
+    get:
+      summary: Get tile entitlements
+      description: |
+        Check which tiles are enabled for a company based on their subscription tier.
+      operationId: getTileEntitlements
+      tags:
+        - Tiles
+      parameters:
+        - name: companyId
+          in: path
+          required: true
+          description: Company identifier
+          schema:
+            type: string
+            format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+      responses:
+        '200':
+          description: Entitlements retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  companyId:
+                    type: string
+                    format: uuid
+                  entitlements:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TileEntitlement'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: RS256 JWT token with company_id claim
+
+  schemas:
+    BaseTile:
+      type: object
+      required:
+        - id
+        - type
+        - companyId
+        - periodStart
+        - periodEnd
+        - lastUpdated
+      properties:
+        id:
+          type: string
+          description: Unique tile identifier
+        type:
+          type: string
+          enum: [language, mentorship, upskilling, weei]
+          description: Tile type discriminator
+        companyId:
+          type: string
+          format: uuid
+          description: Company this tile belongs to
+        periodStart:
+          type: string
+          format: date-time
+          description: Period start date
+        periodEnd:
+          type: string
+          format: date-time
+          description: Period end date
+        lastUpdated:
+          type: string
+          format: date-time
+          description: When this tile data was last updated
+        visScore:
+          type: number
+          format: float
+          description: Volunteer Impact Score (optional)
+        sroiRatio:
+          type: number
+          format: float
+          description: Social Return on Investment ratio (optional)
+
+    LanguageTile:
+      allOf:
+        - $ref: '#/components/schemas/BaseTile'
+        - type: object
+          required:
+            - metrics
+          properties:
+            metrics:
+              type: object
+              required:
+                - sessionsPerWeek
+                - cohortDurationMonths
+                - volunteerHours
+                - retentionRate
+                - participantsCount
+                - totalSessions
+                - avgAttendanceRate
+                - activeCohorts
+              properties:
+                sessionsPerWeek:
+                  type: number
+                  format: float
+                  description: Average class sessions per week
+                cohortDurationMonths:
+                  type: integer
+                  description: Cohort duration in months
+                volunteerHours:
+                  type: number
+                  format: float
+                  description: Total volunteer hours contributed
+                retentionRate:
+                  type: number
+                  format: float
+                  description: Retention rate as percentage (0-100)
+                participantsCount:
+                  type: integer
+                  description: Total number of participants
+                totalSessions:
+                  type: integer
+                  description: Total number of sessions held
+                avgAttendanceRate:
+                  type: number
+                  format: float
+                  description: Average attendance rate as percentage (0-100)
+                activeCohorts:
+                  type: integer
+                  description: Number of active cohorts
+            frequencyBreakdown:
+              type: object
+              properties:
+                twicePerWeek:
+                  type: integer
+                thricePerWeek:
+                  type: integer
+            durationBreakdown:
+              type: object
+              properties:
+                twoMonths:
+                  type: integer
+                threeMonths:
+                  type: integer
+
+    MentorshipTile:
+      allOf:
+        - $ref: '#/components/schemas/BaseTile'
+        - type: object
+          required:
+            - metrics
+          properties:
+            metrics:
+              type: object
+              required:
+                - bookingsCount
+                - attendedCount
+                - attendanceRate
+                - noShowRate
+                - repeatMentoringCount
+                - avgSessionsPerMentee
+                - uniqueMentees
+                - uniqueMentors
+              properties:
+                bookingsCount:
+                  type: integer
+                attendedCount:
+                  type: integer
+                attendanceRate:
+                  type: number
+                  format: float
+                noShowRate:
+                  type: number
+                  format: float
+                repeatMentoringCount:
+                  type: integer
+                avgSessionsPerMentee:
+                  type: number
+                  format: float
+                uniqueMentees:
+                  type: integer
+                uniqueMentors:
+                  type: integer
+                avgMentorRating:
+                  type: number
+                  format: float
+                  description: Average mentor rating (0-5)
+            repeatMentoringBreakdown:
+              type: object
+              properties:
+                moderate:
+                  type: integer
+                  description: Mentees with 2-3 sessions
+                high:
+                  type: integer
+                  description: Mentees with 4+ sessions
+
+    UpskillingTile:
+      allOf:
+        - $ref: '#/components/schemas/BaseTile'
+        - type: object
+          required:
+            - metrics
+            - localeBreakdown
+            - funnelMetrics
+          properties:
+            metrics:
+              type: object
+              required:
+                - enrollmentsCount
+                - completionsCount
+                - placementsCount
+                - completionRate
+                - placementRate
+                - avgCourseDurationWeeks
+                - activeCoursesCount
+              properties:
+                enrollmentsCount:
+                  type: integer
+                completionsCount:
+                  type: integer
+                placementsCount:
+                  type: integer
+                completionRate:
+                  type: number
+                  format: float
+                placementRate:
+                  type: number
+                  format: float
+                avgCourseDurationWeeks:
+                  type: number
+                  format: float
+                activeCoursesCount:
+                  type: integer
+            localeBreakdown:
+              type: object
+              required:
+                - UA
+                - EN
+                - DE
+                - "NO"
+              properties:
+                UA:
+                  type: integer
+                  description: Ukrainian locale courses
+                EN:
+                  type: integer
+                  description: English locale courses
+                DE:
+                  type: integer
+                  description: German locale courses
+                "NO":
+                  type: integer
+                  description: Norwegian locale courses
+            funnelMetrics:
+              type: object
+              required:
+                - enrollmentToCompletion
+                - completionToPlacement
+                - enrollmentToPlacement
+              properties:
+                enrollmentToCompletion:
+                  type: number
+                  format: float
+                completionToPlacement:
+                  type: number
+                  format: float
+                enrollmentToPlacement:
+                  type: number
+                  format: float
+
+    WEEITile:
+      allOf:
+        - $ref: '#/components/schemas/BaseTile'
+        - type: object
+          required:
+            - metrics
+            - stageMetrics
+            - progressionMetrics
+          properties:
+            metrics:
+              type: object
+              required:
+                - totalParticipants
+                - demoDaysCount
+                - avgParticipantsPerDemoDay
+                - overallCompletionRate
+              properties:
+                totalParticipants:
+                  type: integer
+                demoDaysCount:
+                  type: integer
+                avgParticipantsPerDemoDay:
+                  type: number
+                  format: float
+                overallCompletionRate:
+                  type: number
+                  format: float
+            stageMetrics:
+              type: object
+              required:
+                - uLearn
+                - uStart
+                - uGrow
+                - uLead
+              properties:
+                uLearn:
+                  $ref: '#/components/schemas/WEEIStageMetrics'
+                uStart:
+                  $ref: '#/components/schemas/WEEIStageMetrics'
+                uGrow:
+                  $ref: '#/components/schemas/WEEIStageMetrics'
+                uLead:
+                  $ref: '#/components/schemas/WEEIStageMetrics'
+            progressionMetrics:
+              type: object
+              required:
+                - learnToStart
+                - startToGrow
+                - growToLead
+              properties:
+                learnToStart:
+                  type: number
+                  format: float
+                startToGrow:
+                  type: number
+                  format: float
+                growToLead:
+                  type: number
+                  format: float
+
+    WEEIStageMetrics:
+      type: object
+      required:
+        - enrolled
+        - active
+        - completed
+        - completionRate
+      properties:
+        enrolled:
+          type: integer
+        active:
+          type: integer
+        completed:
+          type: integer
+        completionRate:
+          type: number
+          format: float
+
+    TileResponse:
+      type: object
+      required:
+        - tile
+        - metadata
+      properties:
+        tile:
+          oneOf:
+            - $ref: '#/components/schemas/LanguageTile'
+            - $ref: '#/components/schemas/MentorshipTile'
+            - $ref: '#/components/schemas/UpskillingTile'
+            - $ref: '#/components/schemas/WEEITile'
+          discriminator:
+            propertyName: type
+            mapping:
+              language: '#/components/schemas/LanguageTile'
+              mentorship: '#/components/schemas/MentorshipTile'
+              upskilling: '#/components/schemas/UpskillingTile'
+              weei: '#/components/schemas/WEEITile'
+        metadata:
+          type: object
+          required:
+            - companyId
+            - generatedAt
+            - cacheHit
+            - queryDurationMs
+          properties:
+            companyId:
+              type: string
+              format: uuid
+            generatedAt:
+              type: string
+              format: date-time
+            cacheHit:
+              type: boolean
+            queryDurationMs:
+              type: integer
+              description: Query execution time in milliseconds
+
+    TileListResponse:
+      type: object
+      required:
+        - tiles
+        - metadata
+      properties:
+        tiles:
+          type: array
+          items:
+            oneOf:
+              - $ref: '#/components/schemas/LanguageTile'
+              - $ref: '#/components/schemas/MentorshipTile'
+              - $ref: '#/components/schemas/UpskillingTile'
+              - $ref: '#/components/schemas/WEEITile'
+        metadata:
+          type: object
+          required:
+            - companyId
+            - count
+            - generatedAt
+          properties:
+            companyId:
+              type: string
+              format: uuid
+            count:
+              type: integer
+            generatedAt:
+              type: string
+              format: date-time
+
+    TileEntitlement:
+      type: object
+      required:
+        - companyId
+        - tileType
+        - enabled
+        - tier
+      properties:
+        companyId:
+          type: string
+          format: uuid
+        tileType:
+          type: string
+          enum: [language, mentorship, upskilling, weei]
+        enabled:
+          type: boolean
+        tier:
+          type: string
+          enum: [basic, premium, enterprise]
+
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Error message
+        message:
+          type: string
+          description: Detailed error message
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Invalid tile type"
+            message: "Tile type must be one of: language, mentorship, upskilling, weei"
+
+    Unauthorized:
+      description: Missing or invalid authentication
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Unauthorized"
+            message: "Invalid or expired JWT token"
+
+    Forbidden:
+      description: Tile not available for subscription tier
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Tile not available"
+            message: "The weei tile is not available for your subscription tier"
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Internal Server Error"
+            message: "Failed to aggregate tile data"
+
+tags:
+  - name: Tiles
+    description: Impact program tiles for Language, Mentorship, Upskilling, and WEEI
