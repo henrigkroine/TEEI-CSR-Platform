@@ -42,7 +42,13 @@ export type EventType =
   | 'nlq.query.completed'
   | 'nlq.query.failed'
   | 'nlq.query.rejected'
-  | 'nlq.cache.invalidated';
+  | 'nlq.cache.invalidated'
+  // Ingest events (from external platforms and internal TEEI systems)
+  | 'ingest.volunteer.logged'
+  | 'ingest.donation.made'
+  | 'ingest.directory.synced'
+  | 'ingest.enrollment.created'
+  | 'ingest.placement.created';
 
 /**
  * Envelope for all events published to event bus
