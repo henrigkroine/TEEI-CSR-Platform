@@ -5,7 +5,7 @@ import { config } from 'dotenv';
 import { registerProxyRoutes } from './routes/proxy.js';
 import { registerHealthRoutes } from './routes/health.js';
 import { registerPrivacyRoutes } from './routes/privacy.js';
-import { registerTrustRoutes } from './routes/trust.js';
+import { trustRoutes } from './routes/trust.js';
 import { registerStatusRoutes } from './routes/status.js';
 import { createHealthManager, setupHealthRoutes } from './health/index.js';
 
@@ -171,7 +171,11 @@ async function initializeGateway() {
           q2q: '/v1/q2q/*',
           safety: '/v1/safety/*',
           privacy: '/v1/privacy/*',
+<<<<<<< HEAD
           trust: '/v1/trust/*'
+=======
+          trust: '/trust/v1/*'
+>>>>>>> origin/claude/trust-center-evidence-gates-01RnUrgDEanNv97UVk35SeHm
         },
         apiVersion: 'v1',
         deprecation: {
@@ -186,8 +190,8 @@ async function initializeGateway() {
     // Register GDPR privacy routes
     await registerPrivacyRoutes(fastify);
 
-    // Register Trust API routes
-    await registerTrustRoutes(fastify);
+    // Register Trust Center API routes
+    await fastify.register(trustRoutes);
 
     // Register Status API routes (public, no auth)
     await registerStatusRoutes(fastify);

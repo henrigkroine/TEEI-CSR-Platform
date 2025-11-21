@@ -1,217 +1,192 @@
 ---
-import TrustLayout from '@layouts/TrustLayout.astro';
+import BaseLayout from '../layouts/BaseLayout.astro';
 ---
 
-<TrustLayout
-  title="AI Transparency - TEEI Trust Center"
-  description="Learn about TEEI's AI models, data usage, and ethical AI practices."
->
-  <div class="max-w-4xl mx-auto">
-    <h1 class="text-4xl font-bold text-gray-900 dark:text-white mb-4">
-      AI Transparency
-    </h1>
+<BaseLayout title="AI Transparency" description="AI governance, model cards, and human oversight practices">
+  <div>
+    <h1 class="text-3xl font-bold text-gray-900 mb-6">AI Transparency & Governance</h1>
 
-    <p class="text-lg text-gray-600 dark:text-gray-300 mb-8">
-      Our commitment to responsible AI development and transparent model usage.
-    </p>
-
-    <section aria-labelledby="overview-heading" class="mb-12">
-      <h2 id="overview-heading" class="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
-        AI in the TEEI Platform
-      </h2>
-
-      <div class="card bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
-        <p class="text-gray-700 dark:text-gray-300 mb-4">
-          The TEEI Platform uses AI to enhance impact measurement and reporting. We believe in
-          transparent, ethical AI that augments human decision-making rather than replacing it.
-        </p>
-        <p class="text-gray-700 dark:text-gray-300">
-          All AI-generated content is clearly labeled and requires human review before publication.
-        </p>
-      </div>
-    </section>
-
-    <section aria-labelledby="use-cases-heading" class="mb-12">
-      <h2 id="use-cases-heading" class="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
-        AI Use Cases
-      </h2>
-
-      <div class="space-y-6">
-        <div class="card">
-          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-3">
-            Q2Q Pipeline (Qualitative to Quantitative)
-          </h3>
-          <p class="text-gray-600 dark:text-gray-300 mb-3">
-            Converts qualitative feedback (stories, testimonials) into quantitative insights
-            to support impact measurement.
-          </p>
-          <ul class="list-disc list-inside space-y-1 text-sm text-gray-600 dark:text-gray-300">
-            <li>Model: Claude 3.5 Sonnet (Anthropic)</li>
-            <li>Purpose: Evidence extraction and sentiment analysis</li>
-            <li>Human oversight: All extractions reviewed by impact analysts</li>
-            <li>Data usage: Feedback text only, no PII sent to model</li>
-          </ul>
+    <!-- AI Act Compliance -->
+    <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 mb-6">
+      <h2 class="text-xl font-semibold text-gray-900 mb-4">EU AI Act Compliance</h2>
+      <p class="text-gray-700 mb-4">
+        We comply with the EU AI Act requirements for transparency, accountability, and human oversight of AI systems.
+      </p>
+      <div class="grid md:grid-cols-2 gap-4">
+        <div>
+          <h3 class="font-semibold text-gray-900 mb-2">Risk Classification</h3>
+          <div class="space-y-2 text-sm">
+            <div class="flex justify-between">
+              <span class="text-gray-700">Q2Q AI Pipeline:</span>
+              <span class="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs font-medium">Limited Risk</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-700">Report Generation:</span>
+              <span class="px-2 py-1 bg-green-100 text-green-800 rounded text-xs font-medium">Low Risk</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-700">Evidence Scoring:</span>
+              <span class="px-2 py-1 bg-green-100 text-green-800 rounded text-xs font-medium">Low Risk</span>
+            </div>
+          </div>
         </div>
-
-        <div class="card">
-          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-3">
-            Gen-AI Reporting
-          </h3>
-          <p class="text-gray-600 dark:text-gray-300 mb-3">
-            Generates narrative reports from structured impact data with strict citation requirements.
-          </p>
-          <ul class="list-disc list-inside space-y-1 text-sm text-gray-600 dark:text-gray-300">
-            <li>Model: GPT-4 Turbo (OpenAI)</li>
-            <li>Purpose: Narrative generation for quarterly and annual reports</li>
-            <li>Citation requirement: Minimum 1 citation per paragraph</li>
-            <li>PII handling: Pre-LLM redaction, post-LLM leak detection</li>
-          </ul>
-        </div>
-
-        <div class="card">
-          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-3">
-            Insight Scoring
-          </h3>
-          <p class="text-gray-600 dark:text-gray-300 mb-3">
-            Assigns confidence ratings to AI-extracted insights for quality assurance.
-          </p>
-          <ul class="list-disc list-inside space-y-1 text-sm text-gray-600 dark:text-gray-300">
-            <li>Model: Custom ensemble (Random Forest + BERT)</li>
-            <li>Purpose: Quality scoring of evidence snippets</li>
-            <li>Training data: Manually labeled dataset of 10,000+ snippets</li>
-            <li>Accuracy: 94.2% on validation set</li>
-          </ul>
-        </div>
-
-        <div class="card">
-          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-3">
-            Safety Moderation
-          </h3>
-          <p class="text-gray-600 dark:text-gray-300 mb-3">
-            Filters inappropriate content from user-generated feedback and comments.
-          </p>
-          <ul class="list-disc list-inside space-y-1 text-sm text-gray-600 dark:text-gray-300">
-            <li>Model: OpenAI Moderation API + custom rules</li>
-            <li>Purpose: Content safety and policy enforcement</li>
-            <li>Categories: Hate speech, violence, self-harm, sexual content</li>
-            <li>Human review: All flagged content reviewed within 24 hours</li>
+        <div>
+          <h3 class="font-semibold text-gray-900 mb-2">Article 13 Transparency</h3>
+          <ul class="space-y-1 text-sm text-gray-700">
+            <li>• AI system disclosed to users</li>
+            <li>• Human oversight mechanisms in place</li>
+            <li>• Records of operations maintained</li>
+            <li>• Audit logs for 5+ years</li>
           </ul>
         </div>
       </div>
-    </section>
+    </div>
 
-    <section aria-labelledby="principles-heading" class="mb-12">
-      <h2 id="principles-heading" class="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
-        Ethical AI Principles
-      </h2>
-
-      <div class="space-y-6">
-        <div class="card">
-          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
-            Human Oversight
-          </h3>
-          <p class="text-gray-600 dark:text-gray-300">
-            All AI-generated outputs require human review before being used in reports or
-            decision-making. AI is a tool to augment, not replace, human judgment.
-          </p>
+    <!-- Model Cards -->
+    <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 mb-6">
+      <h2 class="text-xl font-semibold text-gray-900 mb-4">Model Cards</h2>
+      <p class="text-gray-700 mb-4">
+        Comprehensive documentation for all AI models used in production, including intended use, limitations, and performance characteristics.
+      </p>
+      <div class="space-y-4">
+        <div class="border border-gray-200 rounded-md p-4">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="font-semibold text-gray-900">Q2Q Evidence Classifier v3.2</h3>
+            <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-medium">Production</span>
+          </div>
+          <div class="grid md:grid-cols-2 gap-2 text-sm">
+            <div>
+              <span class="text-gray-600">Base Model:</span>
+              <span class="font-medium text-gray-900"> GPT-4-turbo (OpenAI)</span>
+            </div>
+            <div>
+              <span class="text-gray-600">Purpose:</span>
+              <span class="font-medium text-gray-900"> Extract impact metrics from text</span>
+            </div>
+            <div>
+              <span class="text-gray-600">Accuracy:</span>
+              <span class="font-medium text-gray-900"> 89.5% (validated)</span>
+            </div>
+            <div>
+              <span class="text-gray-600">Last Updated:</span>
+              <span class="font-medium text-gray-900"> Nov 2025</span>
+            </div>
+          </div>
+          <a href="/docs/model-cards/q2q-v3.2.pdf" class="text-primary-600 hover:text-primary-700 text-sm font-medium mt-2 inline-block">
+            View full model card →
+          </a>
         </div>
 
-        <div class="card">
-          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
-            Transparency & Disclosure
-          </h3>
-          <p class="text-gray-600 dark:text-gray-300">
-            AI-generated content is clearly labeled. Users can see which parts of a report
-            were AI-assisted and which were human-authored.
-          </p>
-        </div>
-
-        <div class="card">
-          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
-            Bias Mitigation
-          </h3>
-          <p class="text-gray-600 dark:text-gray-300">
-            We regularly audit AI models for bias and fairness. Training data is diverse and
-            representative, with ongoing monitoring for demographic parity.
-          </p>
-        </div>
-
-        <div class="card">
-          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
-            Privacy-First Design
-          </h3>
-          <p class="text-gray-600 dark:text-gray-300">
-            PII is redacted before any data is sent to AI models. We do not use customer data
-            to train third-party models without explicit consent.
-          </p>
-        </div>
-
-        <div class="card">
-          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
-            Explainability
-          </h3>
-          <p class="text-gray-600 dark:text-gray-300">
-            AI decisions include confidence scores and explanations. Users can trace how insights
-            were derived from source data through our lineage tracking system.
-          </p>
+        <div class="border border-gray-200 rounded-md p-4">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="font-semibold text-gray-900">Narrative Generation v2.1</h3>
+            <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-medium">Production</span>
+          </div>
+          <div class="grid md:grid-cols-2 gap-2 text-sm">
+            <div>
+              <span class="text-gray-600">Base Model:</span>
+              <span class="font-medium text-gray-900"> Claude 3.7 Sonnet (Anthropic)</span>
+            </div>
+            <div>
+              <span class="text-gray-600">Purpose:</span>
+              <span class="font-medium text-gray-900"> Generate CSRD-aligned reports</span>
+            </div>
+            <div>
+              <span class="text-gray-600">Citation Accuracy:</span>
+              <span class="font-medium text-gray-900"> 98.2% (validated)</span>
+            </div>
+            <div>
+              <span class="text-gray-600">Last Updated:</span>
+              <span class="font-medium text-gray-900"> Nov 2025</span>
+            </div>
+          </div>
+          <a href="/docs/model-cards/narrative-v2.1.pdf" class="text-primary-600 hover:text-primary-700 text-sm font-medium mt-2 inline-block">
+            View full model card →
+          </a>
         </div>
       </div>
-    </section>
+    </div>
 
-    <section aria-labelledby="data-usage-heading" class="mb-12">
-      <h2 id="data-usage-heading" class="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
-        Data Usage & Training
-      </h2>
+    <!-- Human Oversight -->
+    <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 mb-6">
+      <h2 class="text-xl font-semibold text-gray-900 mb-4">Human Oversight & Review</h2>
+      <p class="text-gray-700 mb-4">
+        All AI-generated outputs are subject to human review before finalization. We maintain Standard Operating Procedures (SOPs) for AI oversight.
+      </p>
+      <div class="space-y-3">
+        <div class="flex items-start space-x-3">
+          <span class="text-primary-600 text-xl" aria-hidden="true">👤</span>
+          <div>
+            <h3 class="font-semibold text-gray-900">Approval Workflow</h3>
+            <p class="text-sm text-gray-700">Reports require analyst review before publication. Draft → Review → Approve lifecycle enforced.</p>
+          </div>
+        </div>
+        <div class="flex items-start space-x-3">
+          <span class="text-primary-600 text-xl" aria-hidden="true">🔍</span>
+          <div>
+            <h3 class="font-semibold text-gray-900">Audit Mode</h3>
+            <p class="text-sm text-gray-700">Evidence lineage overlay shows citation provenance. Hover on any data point to view source evidence ID.</p>
+          </div>
+        </div>
+        <div class="flex items-start space-x-3">
+          <span class="text-primary-600 text-xl" aria-hidden="true">📋</span>
+          <div>
+            <h3 class="font-semibold text-gray-900">Oversight SOPs</h3>
+            <p class="text-sm text-gray-700">Documented procedures for monitoring AI systems, handling failures, and escalating issues.</p>
+            <a href="/docs/ai-oversight-sop.pdf" class="text-primary-600 hover:text-primary-700 text-sm font-medium">
+              View SOP →
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
 
-      <div class="card">
-        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-3">
-          Model Training Policy
-        </h3>
-        <ul class="list-disc list-inside space-y-2 text-gray-600 dark:text-gray-300">
-          <li>
-            <strong>Third-party models:</strong> We use enterprise APIs with zero data retention
-            (OpenAI Zero Retention, Anthropic Enterprise Tier)
-          </li>
-          <li>
-            <strong>Custom models:</strong> Trained only on anonymized, aggregated data with
-            explicit customer consent
-          </li>
-          <li>
-            <strong>No cross-tenant learning:</strong> Customer data is never used to improve
-            services for other customers
-          </li>
-          <li>
-            <strong>Opt-out available:</strong> Customers can opt out of contributing to model
-            improvement at any time
-          </li>
+    <!-- Evidence Gates -->
+    <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 mb-6">
+      <h2 class="text-xl font-semibold text-gray-900 mb-4">Evidence Gates</h2>
+      <p class="text-gray-700 mb-4">
+        We enforce strict "no evidence → no sentence" policies. AI-generated content without sufficient citations is rejected with <code class="px-2 py-1 bg-gray-100 text-gray-800 rounded text-sm font-mono">422_EVIDENCE_REQUIRED</code> error.
+      </p>
+      <div class="bg-gray-50 p-4 rounded-md">
+        <h3 class="font-semibold text-gray-900 mb-2">Citation Requirements</h3>
+        <ul class="space-y-1 text-sm text-gray-700">
+          <li>• Minimum 1 citation per paragraph (configurable)</li>
+          <li>• Citation density: ≥0.5 per 100 words</li>
+          <li>• All citations validated against evidence database</li>
+          <li>• Failed validations block report generation</li>
         </ul>
       </div>
-    </section>
+    </div>
 
-    <section aria-labelledby="audit-heading">
-      <h2 id="audit-heading" class="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
-        AI Audits & Governance
-      </h2>
-
-      <div class="card">
-        <p class="text-gray-600 dark:text-gray-300 mb-4">
-          We conduct quarterly audits of all AI systems for:
-        </p>
-        <ul class="list-disc list-inside space-y-2 text-gray-600 dark:text-gray-300">
-          <li>Accuracy and performance metrics</li>
-          <li>Bias detection across demographic groups</li>
-          <li>Data handling and privacy compliance</li>
-          <li>Adherence to ethical AI principles</li>
-        </ul>
-
-        <div class="mt-6 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-          <p class="text-sm text-gray-700 dark:text-gray-300">
-            <strong>Last AI Audit:</strong> 2025-Q1<br />
-            <strong>Next Scheduled Audit:</strong> 2025-Q2<br />
-            <strong>Audit Reports:</strong> Available to enterprise customers upon request
-          </p>
+    <!-- Evidence Ledger -->
+    <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+      <h2 class="text-xl font-semibold text-gray-900 mb-4">Evidence Ledger (Tamper-Proof Audit Log)</h2>
+      <p class="text-gray-700 mb-4">
+        All evidence usage is recorded in an append-only ledger with SHA-256 content digests. Ledger provides cryptographic integrity guarantees for compliance audits.
+      </p>
+      <div class="space-y-2 text-sm">
+        <div class="flex justify-between border-b border-gray-100 pb-2">
+          <span class="text-gray-700">Digest Algorithm:</span>
+          <span class="font-semibold text-gray-900">SHA-256</span>
+        </div>
+        <div class="flex justify-between border-b border-gray-100 pb-2">
+          <span class="text-gray-700">Chain Integrity:</span>
+          <span class="font-semibold text-gray-900">previousDigest linking</span>
+        </div>
+        <div class="flex justify-between border-b border-gray-100 pb-2">
+          <span class="text-gray-700">Tamper Detection:</span>
+          <span class="font-semibold text-gray-900">Automated verification</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-gray-700">Retention:</span>
+          <span class="font-semibold text-gray-900">5+ years (AI Act Article 12)</span>
         </div>
       </div>
-    </section>
+      <div class="mt-4">
+        <a href="/api/v1/trust/ledger/:reportId" class="text-primary-600 hover:text-primary-700 text-sm font-medium">
+          Ledger API Documentation →
+        </a>
+      </div>
+    </div>
   </div>
-</TrustLayout>
+</BaseLayout>

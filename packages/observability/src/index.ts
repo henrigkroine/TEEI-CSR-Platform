@@ -112,3 +112,13 @@ export {
   type DependencyHealth,
   type HealthCheckFn,
 } from './health.js';
+
+// OpenLineage exports
+export {
+  OpenLineageEmitter,
+  createOpenLineageEmitter,
+  type Dataset,
+  type Job,
+  type Run,
+  type OpenLineageEvent,
+} from './openlineage.js';

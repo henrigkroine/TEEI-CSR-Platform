@@ -1,177 +1,124 @@
 ---
-import TrustLayout from '@layouts/TrustLayout.astro';
+import BaseLayout from '../layouts/BaseLayout.astro';
 ---
 
-<TrustLayout
-  title="Privacy - TEEI Trust Center"
-  description="How TEEI protects and handles your data in compliance with GDPR and other privacy regulations."
->
-  <div class="max-w-4xl mx-auto">
-    <h1 class="text-4xl font-bold text-gray-900 dark:text-white mb-4">
-      Privacy
-    </h1>
+<BaseLayout title="Privacy" description="Privacy practices, data protection, and GDPR compliance">
+  <div>
+    <h1 class="text-3xl font-bold text-gray-900 mb-6">Privacy & Data Protection</h1>
 
-    <p class="text-lg text-gray-600 dark:text-gray-300 mb-8">
-      How we protect and handle your data in compliance with GDPR and other regulations.
-    </p>
-
-    <section aria-labelledby="principles-heading" class="mb-12">
-      <h2 id="principles-heading" class="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
-        Privacy Principles
-      </h2>
-
-      <div class="space-y-6">
-        <div class="card">
-          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
-            Data Minimization
-          </h3>
-          <p class="text-gray-600 dark:text-gray-300">
-            We collect only the data necessary to provide our services and deliver value to our users.
-            Personal information is limited to what's essential for impact measurement and reporting.
-          </p>
+    <!-- GDPR Compliance -->
+    <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 mb-6">
+      <h2 class="text-xl font-semibold text-gray-900 mb-4">GDPR Compliance</h2>
+      <p class="text-gray-700 mb-4">
+        We are fully compliant with the EU General Data Protection Regulation (GDPR) and provide comprehensive rights to data subjects.
+      </p>
+      <div class="grid md:grid-cols-2 gap-4">
+        <div>
+          <h3 class="font-semibold text-gray-900 mb-2">Your Rights</h3>
+          <ul class="space-y-2 text-sm text-gray-700">
+            <li>• Right to access your personal data</li>
+            <li>• Right to rectification</li>
+            <li>• Right to erasure ("right to be forgotten")</li>
+            <li>• Right to data portability</li>
+            <li>• Right to object to processing</li>
+            <li>• Right to restrict processing</li>
+          </ul>
         </div>
-
-        <div class="card">
-          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
-            Purpose Limitation
-          </h3>
-          <p class="text-gray-600 dark:text-gray-300">
-            Data is used solely for the purposes disclosed at collection. We do not sell or share
-            personal data with third parties for marketing purposes.
+        <div>
+          <h3 class="font-semibold text-gray-900 mb-2">DSAR Processing</h3>
+          <p class="text-sm text-gray-700 mb-2">
+            Data Subject Access Requests (DSARs) are processed within 30 days as required by GDPR Article 15.
           </p>
-        </div>
-
-        <div class="card">
-          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
-            Transparency
-          </h3>
-          <p class="text-gray-600 dark:text-gray-300">
-            Clear communication about what data we collect, why we collect it, and how it's used.
-            Users have full visibility into their data processing activities.
-          </p>
-        </div>
-
-        <div class="card">
-          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
-            User Control
-          </h3>
-          <p class="text-gray-600 dark:text-gray-300">
-            Users maintain control over their data with rights to access, correct, delete, and export
-            their information at any time.
-          </p>
-        </div>
-      </div>
-    </section>
-
-    <section aria-labelledby="gdpr-heading" class="mb-12">
-      <h2 id="gdpr-heading" class="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
-        GDPR Compliance
-      </h2>
-
-      <div class="card">
-        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-3">
-          Your Data Rights
-        </h3>
-        <ul class="list-disc list-inside space-y-2 text-gray-600 dark:text-gray-300">
-          <li><strong>Right to Access:</strong> Request a copy of your personal data</li>
-          <li><strong>Right to Rectification:</strong> Correct inaccurate or incomplete data</li>
-          <li><strong>Right to Erasure:</strong> Request deletion of your personal data</li>
-          <li><strong>Right to Portability:</strong> Export your data in a machine-readable format</li>
-          <li><strong>Right to Restrict Processing:</strong> Limit how we use your data</li>
-          <li><strong>Right to Object:</strong> Object to certain types of data processing</li>
-        </ul>
-
-        <div class="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-          <p class="text-sm text-gray-700 dark:text-gray-300 mb-2">
-            To exercise any of these rights, contact our Data Protection Officer:
-          </p>
-          <a
-            href="mailto:privacy@teei-platform.com"
-            class="inline-flex items-center text-primary hover:underline font-medium"
-          >
-            privacy@teei-platform.com
+          <a href="mailto:privacy@teei.io" class="text-primary-600 hover:text-primary-700 text-sm font-medium">
+            Submit DSAR →
           </a>
-          <p class="text-sm text-gray-600 dark:text-gray-400 mt-3">
-            We will respond to all requests within 30 days as required by GDPR.
-          </p>
         </div>
       </div>
-    </section>
+    </div>
 
-    <section aria-labelledby="data-processing-heading" class="mb-12">
-      <h2 id="data-processing-heading" class="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
-        Data Processing & Storage
-      </h2>
-
-      <div class="space-y-6">
-        <div class="card">
-          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-3">Data Residency</h3>
-          <p class="text-gray-600 dark:text-gray-300 mb-3">
-            Customer data is stored in the region specified in your contract:
-          </p>
-          <ul class="list-disc list-inside space-y-1 text-gray-600 dark:text-gray-300">
-            <li>EU customers: Frankfurt, Germany (AWS eu-central-1)</li>
-            <li>UK customers: London, UK (AWS eu-west-2)</li>
-            <li>US customers: Virginia, USA (AWS us-east-1)</li>
-          </ul>
+    <!-- Data Processing Agreement -->
+    <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 mb-6">
+      <h2 class="text-xl font-semibold text-gray-900 mb-4">Data Processing Agreement (DPA)</h2>
+      <p class="text-gray-700 mb-4">
+        Our standard DPA meets GDPR Article 28 requirements and includes Standard Contractual Clauses (SCCs) for international data transfers.
+      </p>
+      <div class="space-y-2 mb-4">
+        <div class="flex items-center justify-between border-b border-gray-100 pb-2">
+          <span class="text-gray-700">DPA Version:</span>
+          <span class="font-semibold text-gray-900">3.1 (Updated Nov 2025)</span>
         </div>
-
-        <div class="card">
-          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-3">Retention Policies</h3>
-          <p class="text-gray-600 dark:text-gray-300 mb-3">
-            Data retention periods by category:
-          </p>
-          <ul class="list-disc list-inside space-y-1 text-gray-600 dark:text-gray-300">
-            <li>User profiles: Duration of account + 30 days</li>
-            <li>Impact metrics: 7 years (for audit and compliance)</li>
-            <li>Logs and analytics: 90 days</li>
-            <li>Backup data: 30 days</li>
-          </ul>
+        <div class="flex items-center justify-between border-b border-gray-100 pb-2">
+          <span class="text-gray-700">SCCs:</span>
+          <span class="font-semibold text-gray-900">EU Commission 2021/914</span>
         </div>
-
-        <div class="card">
-          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-3">Data Categories</h3>
-          <p class="text-gray-600 dark:text-gray-300 mb-3">
-            We process the following categories of data:
-          </p>
-          <ul class="list-disc list-inside space-y-1 text-gray-600 dark:text-gray-300">
-            <li>Identity data (name, email, user ID)</li>
-            <li>Company and organization data</li>
-            <li>Impact measurement data (SROI, VIS scores)</li>
-            <li>Volunteer activity data (anonymized)</li>
-            <li>Usage and analytics data</li>
-          </ul>
+        <div class="flex items-center justify-between">
+          <span class="text-gray-700">Binding Corporate Rules:</span>
+          <span class="font-semibold text-gray-900">Approved</span>
         </div>
       </div>
-    </section>
+      <a href="/docs/dpa.pdf" class="inline-block px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition">
+        Download DPA
+      </a>
+    </div>
 
-    <section aria-labelledby="cookies-heading">
-      <h2 id="cookies-heading" class="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
-        Cookies & Tracking
-      </h2>
-
-      <div class="card">
-        <p class="text-gray-600 dark:text-gray-300 mb-4">
-          We use essential cookies to maintain your session and provide core functionality.
-          All analytics cookies require explicit consent.
-        </p>
-
-        <div class="space-y-3">
-          <div>
-            <h4 class="font-medium text-gray-900 dark:text-white">Essential Cookies</h4>
-            <p class="text-sm text-gray-600 dark:text-gray-400">
-              Required for authentication and session management. Cannot be disabled.
-            </p>
-          </div>
-
-          <div>
-            <h4 class="font-medium text-gray-900 dark:text-white">Analytics Cookies</h4>
-            <p class="text-sm text-gray-600 dark:text-gray-400">
-              Help us understand usage patterns and improve the platform. Opt-in only.
-            </p>
-          </div>
+    <!-- Data Residency -->
+    <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 mb-6">
+      <h2 class="text-xl font-semibold text-gray-900 mb-4">Data Residency</h2>
+      <p class="text-gray-700 mb-4">
+        We store and process data in compliance with regional data residency requirements. Customer data does not leave the designated region.
+      </p>
+      <div class="space-y-4">
+        <div class="border-l-4 border-blue-500 pl-4">
+          <h3 class="font-semibold text-gray-900">European Union</h3>
+          <p class="text-sm text-gray-700">Primary: EU-WEST-1 (Ireland) | Backup: EU-CENTRAL-1 (Frankfurt)</p>
+        </div>
+        <div class="border-l-4 border-blue-500 pl-4">
+          <h3 class="font-semibold text-gray-900">United States</h3>
+          <p class="text-sm text-gray-700">Primary: US-EAST-1 (Virginia) | Backup: US-WEST-2 (Oregon)</p>
+        </div>
+        <div class="border-l-4 border-blue-500 pl-4">
+          <h3 class="font-semibold text-gray-900">United Kingdom</h3>
+          <p class="text-sm text-gray-700">Primary: EU-WEST-2 (London) | Backup: EU-WEST-1 (Ireland)</p>
+        </div>
+        <div class="border-l-4 border-blue-500 pl-4">
+          <h3 class="font-semibold text-gray-900">Asia-Pacific</h3>
+          <p class="text-sm text-gray-700">Primary: AP-SOUTHEAST-1 (Singapore) | Backup: AP-NORTHEAST-1 (Tokyo)</p>
         </div>
       </div>
-    </section>
+      <div class="mt-4">
+        <a href="/api/v1/residency/policy" class="text-primary-600 hover:text-primary-700 text-sm font-medium">
+          View Residency Policy API →
+        </a>
+      </div>
+    </div>
+
+    <!-- Records of Processing Activities (ROPA) -->
+    <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 mb-6">
+      <h2 class="text-xl font-semibold text-gray-900 mb-4">Records of Processing Activities (ROPA)</h2>
+      <p class="text-gray-700 mb-4">
+        As required by GDPR Article 30, we maintain comprehensive records of all data processing activities.
+      </p>
+      <a href="/docs/ropa.pdf" class="inline-block px-4 py-2 border border-primary-600 text-primary-600 rounded-md hover:bg-primary-50 transition">
+        View ROPA
+      </a>
+    </div>
+
+    <!-- Data Protection Impact Assessment (DPIA) -->
+    <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+      <h2 class="text-xl font-semibold text-gray-900 mb-4">Data Protection Impact Assessments (DPIA)</h2>
+      <p class="text-gray-700 mb-4">
+        We conduct DPIAs for all high-risk processing activities, including AI model training and automated decision-making.
+      </p>
+      <ul class="space-y-2 text-sm text-gray-700">
+        <li>• Q2Q AI Pipeline DPIA (Updated Q4 2025)</li>
+        <li>• Report Generation DPIA (Updated Q3 2025)</li>
+        <li>• Evidence Lineage DPIA (Updated Q4 2025)</li>
+      </ul>
+      <div class="mt-4">
+        <a href="/docs/dpia-summary.pdf" class="text-primary-600 hover:text-primary-700 text-sm font-medium">
+          View DPIA Summaries →
+        </a>
+      </div>
+    </div>
   </div>
-</TrustLayout>
+</BaseLayout>

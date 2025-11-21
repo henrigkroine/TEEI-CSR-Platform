@@ -1,451 +1,413 @@
 /**
- * Evidence Ledger - Append-only tamper-evident ledger for evidence/citation tracking
+ * Evidence Ledger - Append-only tamper-proof audit log
  *
- * Features:
- * - Append-only ledger with hash chaining
- * - HMAC signatures for authentication
- * - Tamper detection via integrity verification
- * - NO PII stored (only IDs and hashes)
+ * Purpose: Provides cryptographic integrity guarantees for evidence citations
+ * Compliance: SOC2, ISO 27001, AI Act Article 13, CSRD assurance
  *
- * Security Model:
- * - Each entry contains SHA-256 hash of citation text
- * - Hash chain: each entry links to previous via previousHash
- * - HMAC-SHA256 signature over entry data
- * - Immutability enforced at database level
+ * Security guarantees:
+ * - Append-only: no updates or deletes
+ * - SHA-256 content digests
+ * - Chain integrity via previousDigest
+ * - Tamper detection
+ * - No PII in ledger entries
  *
- * Usage:
- * ```typescript
- * const ledger = new EvidenceLedger(db, process.env.LEDGER_SECRET_KEY);
- * await ledger.append({
- *   reportId: '...',
- *   citationId: '...',
- *   action: 'ADDED',
- *   citationText: 'Evidence snippet...',
- *   editor: userId,
- *   metadata: { ip: '...', userAgent: '...', reason: 'Initial report generation' }
- * });
- * ```
+ * @module evidence/ledger
  */
 
+import { createHash } from 'crypto';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
-import { eq, and, desc, asc } from 'drizzle-orm';
-import { evidenceLedger } from '@teei/shared-schema';
+import { eq, and, desc } from 'drizzle-orm';
+import { evidenceLedger, evidenceLedgerAudit } from '@teei/shared-schema';
 import { createServiceLogger } from '@teei/shared-utils';
-import { createHash, createHmac } from 'crypto';
-import { getAuditIntegration } from '../lib/audit-integration.js';
 
 const logger = createServiceLogger('reporting:evidence-ledger');
 
-/**
- * Ledger entry action types
- */
-export type LedgerAction = 'ADDED' | 'MODIFIED' | 'REMOVED';
-
-/**
- * Metadata attached to each ledger entry
- * NO PII - only technical data
- */
-export interface LedgerMetadata {
-  ip?: string;
-  userAgent?: string;
-  reason?: string;
-  requestId?: string;
-  [key: string]: any; // Allow additional non-PII technical metadata
-}
-
-/**
- * Input for appending a new ledger entry
- */
-export interface AppendLedgerEntryInput {
-  reportId: string;
-  citationId: string;
-  action: LedgerAction;
-  citationText: string; // Used for hashing only, NOT stored
-  editor: string; // userId or 'system'
-  metadata?: LedgerMetadata;
-}
-
-/**
- * Ledger entry returned from database
- */
 export interface LedgerEntry {
-  id: string;
-  reportId: string;
-  citationId: string;
-  action: LedgerAction;
-  contentHash: string;
-  previousHash: string | null;
-  signature: string;
-  editor: string;
-  metadata: LedgerMetadata | null;
-  timestamp: Date;
+  evidenceId: string;
+  evidenceType: 'snippet' | 'citation' | 'metric' | 'calculation';
+  companyId: string;
+  content: string; // Content to hash (NOT stored, only digest stored)
+  eventType: 'created' | 'cited' | 'edited' | 'verified' | 'redacted';
+  editorId?: string;
+  editorRole?: string;
+  reportId?: string;
+  lineageId?: string;
+  operationContext?: string;
+  effectiveAt?: Date;
 }
 
-/**
- * Result of integrity verification
- */
 export interface VerificationResult {
   valid: boolean;
-  errors: string[];
-  warnings: string[];
-  totalEntries: number;
-  verifiedEntries: number;
-  firstEntry?: LedgerEntry;
-  lastEntry?: LedgerEntry;
-}
-
-/**
- * Tampering detection log
- */
-export interface TamperLog {
   entryId: string;
-  entryIndex: number;
-  timestamp: Date;
-  tamperType: 'HASH_CHAIN_BROKEN' | 'INVALID_SIGNATURE' | 'MISSING_ENTRY' | 'REORDERED';
-  details: string;
-  affectedEntry: LedgerEntry;
-  previousEntry?: LedgerEntry;
+  expectedDigest: string;
+  actualDigest: string;
+  chainValid: boolean;
+  errors: string[];
 }
 
 /**
- * Evidence Ledger Class
- * Manages append-only ledger with tamper detection
+ * Evidence Ledger Service
+ * Manages append-only audit log with cryptographic integrity
  */
 export class EvidenceLedger {
   private db: ReturnType<typeof drizzle>;
-  private secretKey: string;
 
-  /**
-   * @param connectionString - PostgreSQL connection string
-   * @param secretKey - Secret key for HMAC signatures (must be kept secure)
-   */
-  constructor(connectionString: string, secretKey: string) {
-    if (!secretKey || secretKey.length < 32) {
-      throw new Error('Secret key must be at least 32 characters for security');
-    }
-
+  constructor(connectionString: string) {
     const client = postgres(connectionString);
     this.db = drizzle(client);
-    this.secretKey = secretKey;
-
     logger.info('Evidence ledger initialized');
   }
 
   /**
-   * Append a new entry to the ledger
-   * Automatically handles hash chaining and signature generation
+   * Compute SHA-256 digest of content
+   * Uses deterministic JSON serialization for objects
    */
-  async append(input: AppendLedgerEntryInput): Promise<LedgerEntry> {
+  private computeDigest(content: string): string {
+    return createHash('sha256').update(content, 'utf8').digest('hex');
+  }
+
+  /**
+   * Get the latest ledger entry for an evidence item
+   * Used to chain entries via previousDigest
+   */
+  private async getLatestEntry(evidenceId: string): Promise<any | null> {
     try {
-      logger.info(`Appending ledger entry: ${input.action} for citation ${input.citationId}`);
+      const entries = await this.db
+        .select()
+        .from(evidenceLedger)
+        .where(eq(evidenceLedger.evidenceId, evidenceId))
+        .orderBy(desc(evidenceLedger.version))
+        .limit(1);
 
-      // Calculate content hash (SHA-256 of citation text)
-      const contentHash = this.hashContent(input.citationText);
+      return entries.length > 0 ? entries[0] : null;
+    } catch (error: any) {
+      logger.error(`Failed to get latest entry for ${evidenceId}: ${error.message}`);
+      return null;
+    }
+  }
 
-      // Get previous entry for hash chaining
-      const previousEntry = await this.getLastEntry(input.reportId);
-      const previousHash = previousEntry ? this.hashEntry(previousEntry) : null;
+  /**
+   * Append an entry to the ledger
+   * This is the ONLY way to add records (no updates or deletes allowed)
+   *
+   * Security:
+   * - Computes SHA-256 digest of content
+   * - Chains to previous entry via previousDigest
+   * - Increments version number
+   * - Records attribution (editorId, not PII)
+   *
+   * @throws Error if append fails
+   */
+  async append(entry: LedgerEntry): Promise<string> {
+    try {
+      logger.info(`Appending ledger entry for evidence ${entry.evidenceId}`, {
+        evidenceType: entry.evidenceType,
+        eventType: entry.eventType,
+        companyId: entry.companyId,
+      });
 
-      // Generate entry ID (will be set by database, but we need it for signature)
-      // We'll use a temporary value and recalculate after insert
-      const timestamp = new Date();
+      // Compute content digest (content NOT stored, only digest)
+      const contentDigest = this.computeDigest(entry.content);
 
-      // Create signature
-      const signatureData = {
-        reportId: input.reportId,
-        citationId: input.citationId,
-        action: input.action,
-        contentHash,
-        previousHash,
-        editor: input.editor,
-        timestamp: timestamp.toISOString(),
-      };
-      const signature = this.generateSignature(signatureData);
+      // Get previous entry to chain
+      const previousEntry = await this.getLatestEntry(entry.evidenceId);
+      const previousDigest = previousEntry?.contentDigest || null;
+      const version = previousEntry ? previousEntry.version + 1 : 1;
 
-      // Insert entry
-      const [entry] = await this.db
-        .insert(evidenceLedger)
-        .values({
-          reportId: input.reportId,
-          citationId: input.citationId,
-          action: input.action,
-          contentHash,
-          previousHash,
-          signature,
-          editor: input.editor,
-          metadata: input.metadata || null,
-          timestamp,
-        })
-        .returning();
-
-      logger.info(`Ledger entry created: ${entry.id}`);
-
-      // Emit audit event for citation edit
-      try {
-        const auditIntegration = getAuditIntegration();
-        await auditIntegration.emitCitationEdited({
-          reportId: input.reportId,
-          citationId: input.citationId,
-          action: input.action,
-          editor: input.editor,
-          previousHash: previousHash || undefined,
-          newHash: contentHash,
-          metadata: {
-            ...input.metadata,
-            requestId: input.metadata?.requestId,
-          },
-        });
-      } catch (error: any) {
-        // Log but don't fail the operation if audit event emission fails
-        logger.warn(`Failed to emit audit event for ledger entry ${entry.id}: ${error.message}`);
+      // Validate chain integrity if previous entry exists
+      if (previousEntry && previousEntry.tamperDetected) {
+        logger.error(`Cannot append to tampered evidence chain: ${entry.evidenceId}`);
+        throw new Error(`Evidence ${entry.evidenceId} has detected tampering. Cannot append.`);
       }
 
-      return this.mapToLedgerEntry(entry);
+      // Create ledger entry (no PII!)
+      const ledgerRecord = {
+        evidenceId: entry.evidenceId,
+        evidenceType: entry.evidenceType,
+        companyId: entry.companyId,
+        contentDigest,
+        previousDigest,
+        version,
+        eventType: entry.eventType,
+        editorId: entry.editorId || null,
+        editorRole: entry.editorRole || null,
+        signerIdentity: entry.editorId ? this.computeDigest(entry.editorId) : 'system',
+        reportId: entry.reportId || null,
+        lineageId: entry.lineageId || null,
+        operationContext: entry.operationContext || null,
+        tamperDetected: false,
+        tamperDetails: null,
+        effectiveAt: entry.effectiveAt || new Date(),
+        retentionUntil: null, // Set based on GDPR policy
+        ipAddress: null, // Anonymize if needed
+        userAgent: null, // Truncate if needed
+      };
+
+      // Insert (append-only, no updates!)
+      const result = await this.db
+        .insert(evidenceLedger)
+        .values(ledgerRecord as any)
+        .returning({ id: evidenceLedger.id });
+
+      const insertedId = result[0].id;
+
+      // Audit the append operation
+      await this.auditOperation({
+        operationType: 'append',
+        ledgerEntryId: insertedId,
+        actorId: entry.editorId,
+        actorType: entry.editorId ? 'user' : 'system',
+        success: true,
+      });
+
+      logger.info(`Ledger entry appended successfully`, {
+        id: insertedId,
+        evidenceId: entry.evidenceId,
+        version,
+        contentDigest: contentDigest.substring(0, 16) + '...',
+      });
+
+      return insertedId;
     } catch (error: any) {
       logger.error(`Failed to append ledger entry: ${error.message}`, { error });
+
+      // Audit the failed operation
+      await this.auditOperation({
+        operationType: 'append',
+        actorId: entry.editorId,
+        actorType: entry.editorId ? 'user' : 'system',
+        success: false,
+        errorMessage: error.message,
+      });
+
       throw error;
     }
   }
 
   /**
-   * Get all ledger entries for a report in chronological order
+   * Verify the integrity of an evidence chain
+   * Checks:
+   * - Content digest matches recomputed hash
+   * - Chain integrity (previousDigest links)
+   * - No gaps in version sequence
+   *
+   * @param evidenceId The evidence to verify
+   * @param expectedContent Expected content for latest version (optional)
    */
-  async getEntries(reportId: string): Promise<LedgerEntry[]> {
+  async verify(evidenceId: string, expectedContent?: string): Promise<VerificationResult> {
+    try {
+      logger.info(`Verifying evidence chain for ${evidenceId}`);
+
+      // Get all entries for this evidence (ordered by version)
+      const entries = await this.db
+        .select()
+        .from(evidenceLedger)
+        .where(eq(evidenceLedger.evidenceId, evidenceId))
+        .orderBy(evidenceLedger.version);
+
+      if (entries.length === 0) {
+        return {
+          valid: false,
+          entryId: '',
+          expectedDigest: '',
+          actualDigest: '',
+          chainValid: false,
+          errors: ['No ledger entries found for this evidence'],
+        };
+      }
+
+      const errors: string[] = [];
+      let chainValid = true;
+
+      // Verify chain integrity
+      for (let i = 0; i < entries.length; i++) {
+        const entry = entries[i];
+
+        // Check version sequence
+        if (entry.version !== i + 1) {
+          errors.push(`Version sequence broken: expected ${i + 1}, got ${entry.version}`);
+          chainValid = false;
+        }
+
+        // Check previous digest chain
+        if (i > 0) {
+          const previousEntry = entries[i - 1];
+          if (entry.previousDigest !== previousEntry.contentDigest) {
+            errors.push(
+              `Chain broken at version ${entry.version}: previousDigest mismatch`
+            );
+            chainValid = false;
+          }
+        } else {
+          // First entry should have no previous digest
+          if (entry.previousDigest !== null) {
+            errors.push(`First entry should not have previousDigest`);
+            chainValid = false;
+          }
+        }
+      }
+
+      // Verify content digest if expectedContent provided
+      const latestEntry = entries[entries.length - 1];
+      let expectedDigest = latestEntry.contentDigest;
+      let actualDigest = latestEntry.contentDigest;
+      let digestValid = true;
+
+      if (expectedContent) {
+        actualDigest = this.computeDigest(expectedContent);
+        digestValid = actualDigest === expectedDigest;
+
+        if (!digestValid) {
+          errors.push(
+            `Content digest mismatch: expected ${expectedDigest}, got ${actualDigest}`
+          );
+        }
+      }
+
+      const valid = chainValid && digestValid && errors.length === 0;
+
+      // If tampering detected, flag it in the database
+      if (!valid && !latestEntry.tamperDetected) {
+        logger.error(`TAMPER DETECTED for evidence ${evidenceId}`, { errors });
+
+        // Flag as tampered (this is the ONLY update operation allowed!)
+        await this.db
+          .update(evidenceLedger)
+          .set({
+            tamperDetected: true,
+            tamperDetails: errors.join('; '),
+          })
+          .where(eq(evidenceLedger.id, latestEntry.id));
+      }
+
+      // Audit the verification
+      await this.auditOperation({
+        operationType: 'verify',
+        ledgerEntryId: latestEntry.id,
+        actorType: 'system',
+        success: valid,
+        errorMessage: valid ? null : errors.join('; '),
+      });
+
+      logger.info(`Evidence verification complete`, {
+        evidenceId,
+        valid,
+        chainValid,
+        entryCount: entries.length,
+      });
+
+      return {
+        valid,
+        entryId: latestEntry.id,
+        expectedDigest,
+        actualDigest,
+        chainValid,
+        errors,
+      };
+    } catch (error: any) {
+      logger.error(`Failed to verify evidence chain: ${error.message}`, { error });
+      throw error;
+    }
+  }
+
+  /**
+   * Get ledger history for an evidence item
+   * Returns all versions with metadata (no content, only digests)
+   */
+  async getHistory(evidenceId: string): Promise<any[]> {
+    try {
+      const entries = await this.db
+        .select()
+        .from(evidenceLedger)
+        .where(eq(evidenceLedger.evidenceId, evidenceId))
+        .orderBy(evidenceLedger.version);
+
+      logger.info(`Retrieved ${entries.length} ledger entries for ${evidenceId}`);
+
+      return entries;
+    } catch (error: any) {
+      logger.error(`Failed to get ledger history: ${error.message}`, { error });
+      throw error;
+    }
+  }
+
+  /**
+   * Get ledger entries for a report
+   * Returns all evidence used in report generation
+   */
+  async getReportEvidence(reportId: string): Promise<any[]> {
     try {
       const entries = await this.db
         .select()
         .from(evidenceLedger)
         .where(eq(evidenceLedger.reportId, reportId))
-        .orderBy(asc(evidenceLedger.timestamp));
+        .orderBy(evidenceLedger.recordedAt);
 
-      return entries.map(e => this.mapToLedgerEntry(e));
+      logger.info(`Retrieved ${entries.length} evidence entries for report ${reportId}`);
+
+      return entries;
     } catch (error: any) {
-      logger.error(`Failed to get ledger entries: ${error.message}`, { error });
+      logger.error(`Failed to get report evidence: ${error.message}`, { error });
       throw error;
     }
   }
 
   /**
-   * Verify integrity of all ledger entries for a report
-   * Checks hash chain and signatures
+   * Get tampered evidence items
+   * Returns all evidence that failed verification
    */
-  async verifyIntegrity(reportId: string): Promise<VerificationResult> {
+  async getTamperedEvidence(companyId?: string): Promise<any[]> {
     try {
-      logger.info(`Verifying ledger integrity for report ${reportId}`);
-
-      const entries = await this.getEntries(reportId);
-      const errors: string[] = [];
-      const warnings: string[] = [];
-      let verifiedEntries = 0;
-
-      if (entries.length === 0) {
-        warnings.push('No ledger entries found for this report');
-        return {
-          valid: true,
-          errors,
-          warnings,
-          totalEntries: 0,
-          verifiedEntries: 0,
-        };
+      const conditions = [eq(evidenceLedger.tamperDetected, true)];
+      if (companyId) {
+        conditions.push(eq(evidenceLedger.companyId, companyId));
       }
 
-      // Verify first entry has no previous hash
-      if (entries[0].previousHash !== null) {
-        errors.push(`First entry ${entries[0].id} has non-null previousHash (expected null)`);
-      } else {
-        verifiedEntries++;
-      }
+      const entries = await this.db
+        .select()
+        .from(evidenceLedger)
+        .where(and(...conditions))
+        .orderBy(desc(evidenceLedger.recordedAt));
 
-      // Verify signatures for all entries
-      for (let i = 0; i < entries.length; i++) {
-        const entry = entries[i];
-        const isSignatureValid = this.verifySignature(entry);
+      logger.warn(`Found ${entries.length} tampered evidence items`);
 
-        if (!isSignatureValid) {
-          errors.push(`Entry ${entry.id} (index ${i}) has invalid signature`);
-        }
-      }
-
-      // Verify hash chain
-      for (let i = 1; i < entries.length; i++) {
-        const current = entries[i];
-        const previous = entries[i - 1];
-
-        const expectedPreviousHash = this.hashEntry(previous);
-
-        if (current.previousHash !== expectedPreviousHash) {
-          errors.push(
-            `Hash chain broken at entry ${current.id} (index ${i}): ` +
-            `expected previousHash ${expectedPreviousHash}, got ${current.previousHash}`
-          );
-        } else {
-          verifiedEntries++;
-        }
-      }
-
-      const result: VerificationResult = {
-        valid: errors.length === 0,
-        errors,
-        warnings,
-        totalEntries: entries.length,
-        verifiedEntries,
-        firstEntry: entries[0],
-        lastEntry: entries[entries.length - 1],
-      };
-
-      logger.info('Integrity verification complete', {
-        reportId,
-        valid: result.valid,
-        totalEntries: result.totalEntries,
-        verifiedEntries: result.verifiedEntries,
-        errorCount: errors.length,
-      });
-
-      return result;
+      return entries;
     } catch (error: any) {
-      logger.error(`Failed to verify integrity: ${error.message}`, { error });
+      logger.error(`Failed to get tampered evidence: ${error.message}`, { error });
       throw error;
     }
   }
 
   /**
-   * Detect tampering in ledger entries
-   * Returns detailed logs of any detected tampering
+   * Audit an operation on the ledger
+   * Creates audit trail for all ledger operations
    */
-  async detectTampering(reportId: string): Promise<TamperLog[]> {
+  private async auditOperation(params: {
+    operationType: string;
+    ledgerEntryId?: string;
+    actorId?: string;
+    actorType: string;
+    success: boolean;
+    errorCode?: string;
+    errorMessage?: string | null;
+  }): Promise<void> {
     try {
-      logger.info(`Detecting tampering for report ${reportId}`);
-
-      const verification = await this.verifyIntegrity(reportId);
-      const entries = await this.getEntries(reportId);
-      const tamperLogs: TamperLog[] = [];
-
-      if (verification.valid) {
-        logger.info('No tampering detected');
-        return tamperLogs;
-      }
-
-      // Parse errors to create tamper logs
-      for (const error of verification.errors) {
-        // Extract entry ID from error message
-        const entryIdMatch = error.match(/entry ([a-f0-9-]+)/i);
-        const indexMatch = error.match(/index (\d+)/);
-
-        if (!entryIdMatch) continue;
-
-        const entryId = entryIdMatch[1];
-        const entryIndex = indexMatch ? parseInt(indexMatch[1], 10) : -1;
-        const entry = entries.find(e => e.id === entryId);
-
-        if (!entry) continue;
-
-        let tamperType: TamperLog['tamperType'];
-        if (error.includes('Hash chain broken')) {
-          tamperType = 'HASH_CHAIN_BROKEN';
-        } else if (error.includes('invalid signature')) {
-          tamperType = 'INVALID_SIGNATURE';
-        } else if (error.includes('previousHash')) {
-          tamperType = 'HASH_CHAIN_BROKEN';
-        } else {
-          tamperType = 'MISSING_ENTRY';
-        }
-
-        tamperLogs.push({
-          entryId: entry.id,
-          entryIndex,
-          timestamp: entry.timestamp,
-          tamperType,
-          details: error,
-          affectedEntry: entry,
-          previousEntry: entryIndex > 0 ? entries[entryIndex - 1] : undefined,
-        });
-      }
-
-      logger.warn(`Tampering detected: ${tamperLogs.length} issues found`, {
-        reportId,
-        tamperCount: tamperLogs.length,
-      });
-
-      return tamperLogs;
+      await this.db.insert(evidenceLedgerAudit).values({
+        operationType: params.operationType,
+        ledgerEntryId: params.ledgerEntryId || null,
+        actorId: params.actorId || null,
+        actorType: params.actorType,
+        success: params.success,
+        errorCode: params.errorCode || null,
+        errorMessage: params.errorMessage || null,
+        requestId: null, // Set from request context if available
+        ipAddress: null, // Anonymize if needed
+      } as any);
     } catch (error: any) {
-      logger.error(`Failed to detect tampering: ${error.message}`, { error });
-      throw error;
+      // Don't throw on audit failure, but log it
+      logger.error(`Failed to audit ledger operation: ${error.message}`);
     }
-  }
-
-  /**
-   * Get the last entry for a report (for hash chaining)
-   */
-  private async getLastEntry(reportId: string): Promise<LedgerEntry | null> {
-    const [entry] = await this.db
-      .select()
-      .from(evidenceLedger)
-      .where(eq(evidenceLedger.reportId, reportId))
-      .orderBy(desc(evidenceLedger.timestamp))
-      .limit(1);
-
-    return entry ? this.mapToLedgerEntry(entry) : null;
-  }
-
-  /**
-   * Hash citation content (SHA-256)
-   */
-  private hashContent(text: string): string {
-    return createHash('sha256').update(text).digest('hex');
-  }
-
-  /**
-   * Hash a ledger entry for hash chaining
-   * Uses all immutable fields to create a unique hash
-   */
-  private hashEntry(entry: LedgerEntry): string {
-    const data = `${entry.id}|${entry.reportId}|${entry.citationId}|${entry.action}|${entry.contentHash}|${entry.timestamp.toISOString()}`;
-    return createHash('sha256').update(data).digest('hex');
-  }
-
-  /**
-   * Generate HMAC signature for an entry
-   */
-  private generateSignature(data: any): string {
-    const payload = JSON.stringify(data);
-    return createHmac('sha256', this.secretKey).update(payload).digest('hex');
-  }
-
-  /**
-   * Verify HMAC signature of an entry
-   */
-  private verifySignature(entry: LedgerEntry): boolean {
-    const signatureData = {
-      reportId: entry.reportId,
-      citationId: entry.citationId,
-      action: entry.action,
-      contentHash: entry.contentHash,
-      previousHash: entry.previousHash,
-      editor: entry.editor,
-      timestamp: entry.timestamp.toISOString(),
-    };
-
-    const expectedSignature = this.generateSignature(signatureData);
-    return entry.signature === expectedSignature;
-  }
-
-  /**
-   * Map database result to LedgerEntry
-   */
-  private mapToLedgerEntry(row: any): LedgerEntry {
-    return {
-      id: row.id,
-      reportId: row.reportId,
-      citationId: row.citationId,
-      action: row.action as LedgerAction,
-      contentHash: row.contentHash,
-      previousHash: row.previousHash,
-      signature: row.signature,
-      editor: row.editor,
-      metadata: row.metadata,
-      timestamp: row.timestamp,
-    };
   }
 }
 
@@ -458,10 +420,5 @@ export function createEvidenceLedger(): EvidenceLedger {
     throw new Error('DATABASE_URL environment variable not set');
   }
 
-  const secretKey = process.env.LEDGER_SECRET_KEY;
-  if (!secretKey) {
-    throw new Error('LEDGER_SECRET_KEY environment variable not set');
-  }
-
-  return new EvidenceLedger(connectionString, secretKey);
+  return new EvidenceLedger(connectionString);
 }

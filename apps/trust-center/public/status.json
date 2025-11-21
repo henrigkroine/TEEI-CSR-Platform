@@ -1,0 +1,36 @@
+{
+  "status": "operational",
+  "uptime": 99.95,
+  "latencyP95": 245,
+  "lcp": 1.2,
+  "errorRate": 0.02,
+  "errorBudget": 78.5,
+  "services": [
+    {
+      "name": "API Gateway",
+      "status": "operational",
+      "uptime": 99.98
+    },
+    {
+      "name": "Reporting Service",
+      "status": "operational",
+      "uptime": 99.96
+    },
+    {
+      "name": "Q2Q AI Pipeline",
+      "status": "operational",
+      "uptime": 99.93
+    },
+    {
+      "name": "Database (PostgreSQL)",
+      "status": "operational",
+      "uptime": 99.99
+    },
+    {
+      "name": "Analytics Service",
+      "status": "operational",
+      "uptime": 99.95
+    }
+  ],
+  "lastUpdated": "2025-11-17T20:00:00Z"
+}
