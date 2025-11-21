@@ -1,48 +1,68 @@
 /**
  * @teei/data-masker
- * Deterministic pseudonymization for demo tenants
  *
- * Provides:
- * - Deterministic masking (same input → same output)
+ * Deterministic pseudonymization library for demo data generation.
+ * Ensures consistent, safe, and realistic fake data across the platform.
+ *
+ * Key Features:
+ * - Deterministic masking: same input → same output
  * - Locale-aware fake data generation
  * - Referential consistency across services
- * - PII redaction with configurable entity detection
+ * - PII detection and validation
+ * - Configurable salt per tenant
  *
  * @example
  * ```typescript
- * import { DataMasker } from '@teei/data-masker';
+ * import { maskName, maskEmail, createMaskingContext } from '@teei/data-masker';
  *
- * const masker = new DataMasker({
- *   tenantId: 'demo-acme-corp',
- *   masterSalt: process.env.MASKER_SALT!,
- *   locale: 'en'
- * });
- *
- * // Deterministic masking - same subjectKey always produces same result
- * const name1 = masker.maskName('John Doe', 'user-123');
- * const name2 = masker.maskName('John Doe', 'user-123');
- * console.log(name1.masked === name2.masked); // true
- *
- * // Referential consistency across PII types
- * const email = masker.maskEmail('john@example.com', 'user-123');
- * const phone = masker.maskPhone('+1-555-1234', 'user-123');
- * // All derived from same hash for user-123
+ * const context = createMaskingContext('demo-acme', 'user-123', 'en');
+ * const maskedName = maskName('John Doe', context);
+ * const maskedEmail = maskEmail('john@example.com', context);
  * ```
  */
 
-export { DataMasker } from './masker';
-export {
-  deterministicHash,
-  hashToSeed,
-  hashToUuid,
-  createDeterministicMapper,
-} from './hash';
+// Type exports
 export type {
+  Locale,
   MaskerConfig,
-  MaskResult,
-  NameMaskOptions,
+  MaskingContext,
   AddressMaskOptions,
   FreeTextMaskOptions,
-  MaskingStats,
-  SupportedLocale,
-} from './types';
+  PIIDetection,
+} from './types.js';
+
+// Schema exports
+export { LocaleSchema, MaskerConfigSchema } from './types.js';
+
+// Hashing utilities
+export {
+  generateDeterministicHash,
+  hashToSeed,
+  hashToUUID,
+  generateSalt,
+  hashValue,
+  DEFAULT_DEMO_SALT,
+} from './hasher.js';
+
+// Masking functions
+export {
+  createMaskingContext,
+  maskName,
+  maskEmail,
+  maskPhone,
+  maskAddress,
+  maskIBAN,
+  maskFreeText,
+  maskCompanyName,
+  maskJobTitle,
+  generateDeterministicUserId,
+} from './maskers.js';
+
+// PII detection and validation
+export {
+  detectPII,
+  assertNoPII,
+  redactPII,
+  isDemoTenantId,
+  assertDemoTenant,
+} from './detector.js';

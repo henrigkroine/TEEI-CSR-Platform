@@ -1,15 +1,14 @@
 # @teei/data-masker
 
-Deterministic pseudonymization library for demo tenants in the TEEI CSR Platform.
+Deterministic pseudonymization library for demo data generation in the TEEI CSR Platform.
 
 ## Features
 
-- **Deterministic Masking**: Same input always produces same output (referential consistency)
-- **Locale-Aware**: Support for EN, ES, FR, UK, NO fake data generation
-- **Tenant Isolation**: Different tenants get different masked values for same input
-- **Comprehensive PII Coverage**: Names, emails, phones, addresses, IBANs, free text
-- **Secure**: HMAC-SHA256 based hashing with configurable salts
-- **Statistics Tracking**: Monitor masking operations for reporting
+- **Deterministic Masking**: Same input always produces the same masked output
+- **Locale-Aware**: Support for multiple locales (EN, ES, FR, UK, NO)
+- **Referential Consistency**: Maintains relationships across services
+- **PII Detection**: Validates that no real PII leaks through
+- **Configurable Salt**: Per-tenant salt for additional security
 
 ## Installation
 
@@ -19,225 +18,198 @@ pnpm add @teei/data-masker
 
 ## Usage
 
-### Basic Example
+### Basic Masking
 
 ```typescript
-import { DataMasker } from '@teei/data-masker';
+import { maskName, maskEmail, createMaskingContext } from '@teei/data-masker';
 
-const masker = new DataMasker({
-  tenantId: 'demo-acme-corp',
-  masterSalt: process.env.MASKER_SALT!,
-  locale: 'en'
-});
+// Create a masking context
+const context = createMaskingContext('demo-acme', 'user-123', 'en');
 
-// Mask a name
-const nameResult = masker.maskName('John Doe', 'user-123');
-console.log(nameResult.masked); // e.g., "Sarah Johnson"
+// Mask different types of PII
+const maskedName = maskName('John Doe', context);
+const maskedEmail = maskEmail('john@example.com', context);
 
-// Mask an email
-const emailResult = masker.maskEmail('john@example.com', 'user-123');
-console.log(emailResult.masked); // e.g., "sarah.johnson@example.org"
-
-// Same subject key → same hash
-console.log(nameResult.hash === emailResult.hash); // true
+console.log(maskedName); // e.g., "Jane Smith"
+console.log(maskedEmail); // e.g., "jane.smith@example.org"
 ```
 
 ### Deterministic Behavior
 
 ```typescript
-// Same inputs always produce same outputs
-const result1 = masker.maskName('Jane Smith', 'user-456');
-const result2 = masker.maskName('Jane Smith', 'user-456');
+import { maskName, createMaskingContext } from '@teei/data-masker';
 
-console.log(result1.masked === result2.masked); // true
-console.log(result1.hash === result2.hash); // true
+const context = createMaskingContext('demo-acme', 'user-123');
+
+const masked1 = maskName('John Doe', context);
+const masked2 = maskName('John Doe', context);
+
+console.log(masked1 === masked2); // true - always the same output
 ```
+
+### Available Masking Functions
+
+```typescript
+import {
+  maskName,
+  maskEmail,
+  maskPhone,
+  maskAddress,
+  maskIBAN,
+  maskFreeText,
+  maskCompanyName,
+  maskJobTitle,
+  generateDeterministicUserId,
+} from '@teei/data-masker';
+
+const context = createMaskingContext('demo-tenant', 'subject-key');
+
+// Personal data
+maskName('John Doe', context);
+maskName('Jane Smith', context, { gender: 'female' });
+maskEmail('john@example.com', context);
+maskEmail('john@acme.com', context, { preserveDomain: true });
+
+// Contact information
+maskPhone('+1-555-0100', context);
+maskPhone('+44-555-0100', context, { preserveCountryCode: true });
+maskAddress('123 Main St, Anytown', context);
+maskAddress('456 Oak Ave', context, {
+  includePostalCode: true,
+  includeCountry: true,
+});
+
+// Financial data
+maskIBAN('GB82WEST12345698765432', context);
+maskIBAN('DE89370400440532013000', context, { preserveCountryCode: true });
+
+// Text and organizational data
+maskFreeText('Sensitive information', context);
+maskFreeText('Long text...', context, {
+  preserveLength: true,
+  maxLength: 100,
+});
+maskCompanyName('Acme Corp', context);
+maskJobTitle('Software Engineer', context);
+
+// Generate IDs
+generateDeterministicUserId(context); // "demo-user-abc123..."
+```
+
+### PII Detection and Validation
+
+```typescript
+import { detectPII, assertNoPII, redactPII } from '@teei/data-masker';
+
+// Detect PII in text
+const detection = detectPII('Email: john@example.com, Phone: 555-1234');
+console.log(detection.hasPII); // true
+console.log(detection.detected); // [{ type: 'email', position: 7, ... }]
+
+// Assert no PII (throws if found)
+try {
+  assertNoPII(maskedData, 'user profile');
+} catch (error) {
+  console.error('PII leak detected!', error);
+}
+
+// Simple redaction
+const redacted = redactPII('Contact john@example.com');
+console.log(redacted); // "Contact [REDACTED]"
+```
+
+### Demo Tenant Validation
+
+```typescript
+import { isDemoTenantId, assertDemoTenant } from '@teei/data-masker';
+
+// Check if tenant ID is for demo
+console.log(isDemoTenantId('demo-acme')); // true
+console.log(isDemoTenantId('production-tenant')); // false
+
+// Assert demo tenant (throws if not)
+try {
+  assertDemoTenant('demo-acme'); // OK
+  assertDemoTenant('production'); // Throws error
+} catch (error) {
+  console.error('Not a demo tenant!', error);
+}
+```
+
+### Custom Salt Configuration
+
+```typescript
+import { createMaskingContext, generateSalt } from '@teei/data-masker';
+
+// Generate a custom salt for a tenant
+const customSalt = generateSalt();
+
+// Use custom salt
+const context = createMaskingContext('demo-acme', 'user-123', 'en', customSalt);
+```
+
+## Locale Support
+
+Supported locales:
+- `en` - English (US)
+- `es` - Spanish
+- `fr` - French
+- `uk` - English (UK)
+- `no` - Norwegian (Bokmål)
+
+```typescript
+import { createMaskingContext, maskName } from '@teei/data-masker';
+
+const contexts = {
+  english: createMaskingContext('demo-acme', 'user-1', 'en'),
+  spanish: createMaskingContext('demo-acme', 'user-1', 'es'),
+  french: createMaskingContext('demo-acme', 'user-1', 'fr'),
+};
+
+// Same user, different locales
+console.log(maskName('John Doe', contexts.english));
+console.log(maskName('John Doe', contexts.spanish));
+console.log(maskName('John Doe', contexts.french));
+```
+
+## How It Works
+
+### Deterministic Hashing
+
+The library uses SHA-256 hashing to create deterministic seeds from:
+- Tenant ID
+- Subject key (e.g., user ID, company ID)
+- Salt (configurable per tenant)
+
+These seeds are used with [faker.js](https://fakerjs.dev/) to generate consistent fake data.
 
 ### Referential Consistency
 
-```typescript
-const subjectKey = 'user-789';
+Because the same inputs produce the same outputs:
+- A user's name is always the same across services
+- Related data (email, phone) for a user remain consistent
+- Cross-service joins work correctly with masked data
 
-// All PII for same subject derived from same hash
-const name = masker.maskName('Alice Brown', subjectKey);
-const email = masker.maskEmail('alice@example.com', subjectKey);
-const phone = masker.maskPhone('+1-555-1234', subjectKey);
+### Security Considerations
 
-// All operations produce same hash
-console.log(name.hash === email.hash); // true
-console.log(email.hash === phone.hash); // true
-```
-
-### Locale Support
-
-```typescript
-const enMasker = new DataMasker({
-  tenantId: 'demo-en',
-  masterSalt: 'salt',
-  locale: 'en'
-});
-
-const esMasker = new DataMasker({
-  tenantId: 'demo-es',
-  masterSalt: 'salt',
-  locale: 'es'
-});
-
-const frMasker = new DataMasker({
-  tenantId: 'demo-fr',
-  masterSalt: 'salt',
-  locale: 'fr'
-});
-
-// Generates names appropriate for each locale
-```
-
-### Advanced Options
-
-```typescript
-// Preserve email domain
-const masker = new DataMasker({
-  tenantId: 'demo',
-  masterSalt: 'salt',
-  preserveEmailDomain: true
-});
-
-const result = masker.maskEmail('john@company.com', 'user-1');
-// Result: something@company.com (domain preserved)
-
-// Name masking with gender hint
-const nameResult = masker.maskName('John Doe', 'user-2', {
-  gender: 'male'
-});
-
-// Address masking with city preservation
-const addrResult = masker.maskAddress('123 Main St, London, UK', 'user-3', {
-  preserveCity: true
-});
-// Result includes "London, UK"
-
-// Free text with PII redaction
-const textResult = masker.maskFreeText(
-  'Contact john@example.com or call 555-1234',
-  'user-4',
-  {
-    redactEntities: ['email', 'phone'],
-    maxLength: 200
-  }
-);
-// Result: "[REDACTED_EMAIL]" and "[REDACTED_PHONE]"
-```
-
-### UUID Generation
-
-```typescript
-// Generate deterministic UUIDs
-const uuid1 = masker.generateUuid('user-100');
-const uuid2 = masker.generateUuid('user-100');
-
-console.log(uuid1 === uuid2); // true
-console.log(uuid1); // "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"
-```
-
-### Statistics Tracking
-
-```typescript
-masker.resetStats();
-
-masker.maskName('Test User', 'user-1');
-masker.maskEmail('test@example.com', 'user-1');
-masker.maskPhone('555-1234', 'user-2');
-
-const stats = masker.getStats();
-console.log(stats);
-// {
-//   totalMasked: 3,
-//   byType: { name: 1, email: 1, phone: 1, ... },
-//   uniqueSubjects: 2
-// }
-```
-
-## API Reference
-
-### `DataMasker`
-
-#### Constructor
-
-```typescript
-new DataMasker(config: MaskerConfig)
-```
-
-**Config Options:**
-- `tenantId` (string, required): Tenant ID for isolation
-- `masterSalt` (string, required): Master salt for hashing
-- `locale` (SupportedLocale, optional): Locale for fake data (default: 'en')
-- `preserveEmailDomain` (boolean, optional): Keep original email domain (default: false)
-
-#### Methods
-
-##### `maskName(originalName, subjectKey, options?)`
-Mask a person's name deterministically.
-
-**Returns:** `MaskResult { masked: string, hash: string }`
-
-##### `maskEmail(originalEmail, subjectKey)`
-Mask an email address deterministically.
-
-**Returns:** `MaskResult`
-
-##### `maskPhone(originalPhone, subjectKey)`
-Mask a phone number deterministically.
-
-**Returns:** `MaskResult`
-
-##### `maskAddress(originalAddress, subjectKey, options?)`
-Mask a physical address deterministically.
-
-**Returns:** `MaskResult`
-
-##### `maskIBAN(originalIban, subjectKey)`
-Mask an IBAN deterministically.
-
-**Returns:** `MaskResult`
-
-##### `maskFreeText(originalText, subjectKey, options?)`
-Mask free-form text with optional PII redaction.
-
-**Returns:** `MaskResult`
-
-##### `generateUuid(subjectKey)`
-Generate a deterministic UUID for a subject.
-
-**Returns:** `string` (UUID v4 format)
-
-##### `getStats()`
-Get current masking statistics.
-
-**Returns:** `MaskingStats`
-
-##### `resetStats()`
-Reset masking statistics to zero.
-
-## Security Considerations
-
-1. **Master Salt**: Store `masterSalt` securely (environment variables, secrets manager)
-2. **Subject Keys**: Use consistent identifiers (user IDs, email hashes) for referential consistency
-3. **Tenant Isolation**: Different tenants automatically get different masked values
-4. **Hash Exposure**: Hashes are one-way (original values cannot be recovered)
-5. **PII Logging**: Never log original PII values, only masked results
+- Masking is **one-way** - original data cannot be recovered
+- Each tenant uses a unique salt for additional security
+- Demo tenants are clearly marked (`demo-` or `test-` prefix)
+- PII detection catches accidental data leaks
 
 ## Testing
 
 ```bash
-# Run tests
+# Run unit tests
 pnpm test
 
-# Watch mode
-pnpm test:watch
-
-# Coverage
+# Run tests with coverage
 pnpm test:coverage
 ```
+
+## API Reference
+
+See the [TypeScript types](./src/types.ts) for complete API documentation.
 
 ## License
 
