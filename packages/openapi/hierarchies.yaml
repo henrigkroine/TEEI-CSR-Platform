@@ -1,0 +1,474 @@
+openapi: 3.0.3
+info:
+  title: Enterprise Hierarchies & Consolidation API
+  version: 1.0.0
+  description: |
+    API for managing organizational hierarchies and consolidated reporting.
+
+    Features:
+    - Organization (parent entity) CRUD
+    - Org unit hierarchy management
+    - Tenant membership management
+    - Consolidation runs
+    - FX rate management
+    - Elimination rules
+    - Manual adjustments
+
+servers:
+  - url: https://api.teei.io/v1
+    description: Production
+  - url: https://api-staging.teei.io/v1
+    description: Staging
+  - url: http://localhost:3000
+    description: Local development
+
+tags:
+  - name: Organizations
+    description: Top-level organization management
+  - name: Org Units
+    description: Hierarchical organizational units
+  - name: Consolidation
+    description: Consolidation runs and facts
+  - name: Eliminations
+    description: Elimination rules
+  - name: Adjustments
+    description: Manual adjustments
+  - name: FX Rates
+    description: Foreign exchange rates
+
+paths:
+  /api/hierarchies/orgs:
+    get:
+      summary: List organizations
+      tags: [Organizations]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of organizations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Org'
+                  meta:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      summary: Create organization
+      tags: [Organizations]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrgRequest'
+      responses:
+        '201':
+          description: Organization created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Org'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/hierarchies/orgs/{orgId}:
+    get:
+      summary: Get organization details
+      tags: [Organizations]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/OrgId'
+      responses:
+        '200':
+          description: Organization details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Org'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      summary: Update organization
+      tags: [Organizations]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/OrgId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateOrgRequest'
+      responses:
+        '200':
+          description: Organization updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Org'
+    delete:
+      summary: Deactivate organization
+      tags: [Organizations]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/OrgId'
+      responses:
+        '200':
+          description: Organization deactivated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+
+  /api/consolidation/runs:
+    post:
+      summary: Run consolidation
+      tags: [Consolidation]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RunConsolidationRequest'
+      responses:
+        '201':
+          description: Consolidation run completed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/ConsolidationOutput'
+
+  /api/consolidation/runs/{runId}:
+    get:
+      summary: Get consolidation run details
+      tags: [Consolidation]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: runId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Consolidation run details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/ConsolRun'
+
+  /api/consolidation/facts:
+    get:
+      summary: Query consolidation facts
+      tags: [Consolidation]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: orgId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: orgUnitId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: period
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: metric
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Consolidation facts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ConsolFact'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    OrgId:
+      name: orgId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    Org:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        currency:
+          type: string
+          pattern: '^[A-Z]{3}$'
+        ownerUserId:
+          type: string
+          format: uuid
+        logoUrl:
+          type: string
+          format: uri
+        theme:
+          type: object
+        active:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateOrgRequest:
+      type: object
+      required:
+        - name
+        - currency
+      properties:
+        name:
+          type: string
+          minLength: 1
+        currency:
+          type: string
+          pattern: '^[A-Z]{3}$'
+        logoUrl:
+          type: string
+          format: uri
+        theme:
+          type: object
+
+    UpdateOrgRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        currency:
+          type: string
+        logoUrl:
+          type: string
+        theme:
+          type: object
+        active:
+          type: boolean
+
+    RunConsolidationRequest:
+      type: object
+      required:
+        - orgId
+        - period
+      properties:
+        orgId:
+          type: string
+          format: uuid
+        period:
+          type: string
+          format: date
+        scope:
+          type: object
+          properties:
+            orgUnitIds:
+              type: array
+              items:
+                type: string
+                format: uuid
+            includeDescendants:
+              type: boolean
+
+    ConsolFact:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        orgId:
+          type: string
+          format: uuid
+        orgUnitId:
+          type: string
+          format: uuid
+        period:
+          type: string
+          format: date
+        metric:
+          type: string
+        valueLocal:
+          type: number
+        valueBase:
+          type: number
+        currency:
+          type: string
+        fxRate:
+          type: number
+        eliminated:
+          type: number
+        adjusted:
+          type: number
+        runId:
+          type: string
+          format: uuid
+        calculatedAt:
+          type: string
+          format: date-time
+
+    ConsolRun:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        orgId:
+          type: string
+          format: uuid
+        period:
+          type: string
+          format: date
+        status:
+          type: string
+          enum: [pending, running, completed, failed]
+        startedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+        stats:
+          type: object
+
+    ConsolidationOutput:
+      type: object
+      properties:
+        runId:
+          type: string
+          format: uuid
+        orgId:
+          type: string
+          format: uuid
+        period:
+          type: string
+          format: date
+        facts:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConsolFact'
+        stats:
+          type: object
+
+  responses:
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+              error:
+                type: string
+              message:
+                type: string
+
+    BadRequest:
+      description: Bad Request
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+              error:
+                type: string
+              message:
+                type: string
+
+    NotFound:
+      description: Not Found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+              error:
+                type: string
+              message:
+                type: string
