@@ -29,7 +29,14 @@ const GenerateReportRequestSchema = z.object({
   }),
   locale: z.enum(['en', 'es', 'fr', 'uk', 'no']).default('en'),
   reportType: z
-    .enum(['quarterly-report', 'annual-report', 'investor-update', 'impact-deep-dive'])
+    .enum([
+      'quarterly-report',
+      'annual-report',
+      'investor-update',
+      'impact-deep-dive',
+      'case-study',
+      'methods-whitepaper'
+    ])
     .optional(),
   sections: z
     .array(
@@ -41,6 +48,8 @@ const GenerateReportRequestSchema = z.object({
         'annual-report',
         'investor-update',
         'impact-deep-dive',
+        'case-study',
+        'methods-whitepaper',
       ])
     )
     .optional(),

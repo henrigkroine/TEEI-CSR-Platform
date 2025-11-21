@@ -1,0 +1,53 @@
+Eres un metodólogo de investigación y científico de datos que documenta los métodos de cálculo VIS/SROI para audiencias académicas y profesionales.
+
+**Contexto del Libro Blanco**:
+- **Empresa**: {{companyName}}
+- **Período de Análisis**: {{periodStart}} a {{periodEnd}}
+- **Tipo de Informe**: Libro Blanco de Métodos - Transparencia de Cálculo VIS y SROI
+- **Audiencia**: Evaluadores de impacto, investigadores académicos, auditores, funcionarios de fundaciones, científicos de datos
+- **Propósito**: Transparencia total sobre cómo se calculan, validan y gobiernan VIS y SROI
+
+**Métricas Calculadas para Este Período**:
+- **Ratio SROI**: {{formatNumber sroiRatio 2}}:1
+- **Puntuación VIS**: {{formatNumber visScore 1}}/100
+- **Participantes**: {{participantsCount}}
+- **Sesiones**: {{sessionsCount}}
+- **Voluntarios**: {{volunteersCount}}
+
+**Evidencia** (datos derivados de Q2Q - citar con [cite:ID]):
+{{#each evidenceSnippets}}
+[cite:{{this.id}}] "{{this.text}}" ({{this.dimension}}, confianza IA: {{formatPercent this.score}})
+{{/each}}
+
+---
+
+**INSTRUCCIONES**: [Sigue la misma estructura que la versión en inglés, pero genera todo el contenido en español]
+
+Generar las siguientes secciones EN ESPAÑOL:
+1. Resumen Ejecutivo (150-180 palabras)
+2. Introducción: Definiendo VIS y SROI (300-350 palabras, 2 párrafos)
+3. Fuentes de Datos y Linaje (400-450 palabras, 3 párrafos)
+4. Metodología de Cálculo VIS (500-600 palabras, 4 párrafos)
+5. Metodología de Cálculo SROI (500-600 palabras, 4 párrafos)
+6. Calidad de Datos y Gobernanza (350-400 palabras, 3 párrafos)
+7. Limitaciones y Mejoras Futuras (250-300 palabras, 2 párrafos)
+8. Conclusión y Compromiso de Transparencia (200-250 palabras, 2 párrafos)
+
+**REQUISITOS DE SALIDA**:
+- **Longitud Total**: 2500-3000 palabras EN ESPAÑOL
+- **Tono**: Rigor académico, transparencia metodológica
+- **Formato**: Texto plano con encabezados de sección claros
+- **Citas**: Formato en línea [cite:ID], mínimo 2 por párrafo
+- **Fórmulas**: Indicar claramente las fórmulas VIS y SROI
+- **IDIOMA**: TODO EL CONTENIDO DEBE ESTAR EN ESPAÑOL
+
+**REGLAS CRÍTICAS**:
+✅ Este es un libro blanco técnico - las fórmulas, validación y limitaciones deben ser explícitas
+✅ Cada paso de cálculo debe citar evidencia fuente [cite:ID]
+✅ Texto plano solamente
+✅ Transparencia sobre errores de IA, brechas contrafactuales, proxies de monetización
+✅ TODO EN ESPAÑOL
+
+---
+
+Generar el Libro Blanco de Métodos ahora:

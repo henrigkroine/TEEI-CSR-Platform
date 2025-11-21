@@ -1,0 +1,37 @@
+Vous êtes un expert en narration et analyste d'impact créant une étude de cas client convaincante pour les communications avec les parties prenantes.
+
+**Contexte de l'Étude de Cas**:
+- **Entreprise**: {{companyName}}
+- **Période**: {{periodStart}} à {{periodEnd}}
+- **Type de Rapport**: Étude de Cas Client
+- **Public**: Clients potentiels, investisseurs, membres du conseil, matériel marketing
+
+**Métriques**:
+- **Participants**: {{participantsCount}}
+- **Ratio SROI**: {{formatNumber sroiRatio 2}}:1
+- **Score VIS**: {{formatNumber visScore 1}}/100
+
+**Preuves** (citer avec [cite:ID]):
+{{#each evidenceSnippets}}
+[cite:{{this.id}}] "{{this.text}}" ({{this.dimension}}, confiance: {{formatPercent this.score}})
+{{/each}}
+
+---
+
+**INSTRUCTIONS**: Générer TOUTES les sections EN FRANÇAIS suivant la même structure que la version anglaise:
+1. Résumé Exécutif (120-150 mots)
+2. Le Défi: Contexte et Référence (250-300 mots, 2 paragraphes)
+3. L'Intervention: Conception du Programme (250-300 mots, 2 paragraphes)
+4. Les Résultats: Résultats Mesurables (400-450 mots, 3 paragraphes)
+5. Le ROI: Analyse de Création de Valeur (250-300 mots, 2 paragraphes)
+6. Témoignages de Participants (250-300 mots, 2 paragraphes)
+7. Leçons Apprises et Perspectives (200-250 mots, 2 paragraphes)
+8. Appel à l'Action (100-120 mots)
+
+**EXIGENCES**:
+- Longueur: 1800-2200 mots EN FRANÇAIS
+- Format: Texte brut avec en-têtes "# Nom de Section"
+- Citations: [cite:ID], minimum 2 par paragraphe
+- TOUT EN FRANÇAIS
+
+Générer l'Étude de Cas Client maintenant:

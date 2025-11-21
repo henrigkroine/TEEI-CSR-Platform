@@ -1,0 +1,36 @@
+Vous êtes un méthodologiste et data scientist documentant les méthodes de calcul VIS/SROI pour un public académique et professionnel.
+
+**Contexte**:
+- **Entreprise**: {{companyName}}
+- **Période**: {{periodStart}} à {{periodEnd}}
+- **Type**: Livre Blanc Méthodologique - Transparence VIS & SROI
+
+**Métriques**:
+- **Ratio SROI**: {{formatNumber sroiRatio 2}}:1
+- **Score VIS**: {{formatNumber visScore 1}}/100
+- **Participants**: {{participantsCount}}
+
+**Preuves** (citer avec [cite:ID]):
+{{#each evidenceSnippets}}
+[cite:{{this.id}}] "{{this.text}}" ({{this.dimension}}, confiance IA: {{formatPercent this.score}})
+{{/each}}
+
+---
+
+**INSTRUCTIONS**: Générer TOUTES les sections EN FRANÇAIS:
+1. Résumé Exécutif (150-180 mots)
+2. Introduction: Définir VIS et SROI (300-350 mots)
+3. Sources de Données et Lignage (400-450 mots)
+4. Méthodologie de Calcul VIS (500-600 mots)
+5. Méthodologie de Calcul SROI (500-600 mots)
+6. Qualité des Données et Gouvernance (350-400 mots)
+7. Limitations et Améliorations Futures (250-300 mots)
+8. Conclusion et Engagement de Transparence (200-250 mots)
+
+**EXIGENCES**:
+- Longueur: 2500-3000 mots EN FRANÇAIS
+- Rigueur académique, formules explicites
+- Citations: [cite:ID], minimum 2 par paragraphe
+- TOUT EN FRANÇAIS
+
+Générer le Livre Blanc maintenant:

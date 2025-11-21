@@ -1,0 +1,312 @@
+openapi: 3.0.0
+info:
+  title: TEEI Reporting Service API
+  version: 1.0.0
+  description: |
+    Gen-AI powered reporting service for CSR impact reports with citation validation,
+    PII redaction, and evidence-based narrative generation.
+
+    Supports multiple report types:
+    - Quarterly Reports
+    - Annual Reports
+    - Investor Updates
+    - Impact Deep Dives
+    - **Case Studies** (NEW)
+    - **Methods Whitepapers** (NEW)
+
+servers:
+  - url: http://localhost:3003
+    description: Local development
+  - url: https://api-reporting.teei.io
+    description: Production
+
+paths:
+  /gen-reports/generate:
+    post:
+      summary: Generate AI-powered impact report
+      description: |
+        Generate a comprehensive impact report with evidence-based citations.
+
+        **Evidence Gate Enforcement**:
+        - Minimum 1 citation per paragraph (configurable)
+        - Citation density: 0.5 per 100 words (configurable)
+        - Fail-fast on missing or invalid citations
+
+        **PII Redaction**:
+        - Pre-LLM redaction with post-redaction leak detection
+        - Audit logging with redaction counts
+
+        **New Report Types**:
+        - **case-study**: Customer case study with baseline→intervention→outcomes narrative
+        - **methods-whitepaper**: VIS/SROI methodology documentation with full transparency
+
+      operationId: generateReport
+      tags:
+        - Reports
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateReportRequest'
+            examples:
+              caseStudy:
+                summary: Case Study Request
+                value:
+                  companyId: "550e8400-e29b-41d4-a716-446655440000"
+                  period:
+                    start: "2024-01-01"
+                    end: "2024-03-31"
+                  locale: "en"
+                  reportType: "case-study"
+                  deterministic: false
+                  temperature: 0.7
+                  maxTokens: 4000
+              methodsWhitepaper:
+                summary: Methods Whitepaper Request
+                value:
+                  companyId: "550e8400-e29b-41d4-a716-446655440000"
+                  period:
+                    start: "2024-01-01"
+                    end: "2024-12-31"
+                  locale: "en"
+                  reportType: "methods-whitepaper"
+                  deterministic: true
+                  temperature: 0.3
+                  maxTokens: 6000
+      responses:
+        '200':
+          description: Report generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerateReportResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Report generation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /gen-reports/cost-summary:
+    get:
+      summary: Get cost summary for generated reports
+      description: Returns aggregated cost metrics for LLM usage
+      operationId: getCostSummary
+      tags:
+        - Reports
+      responses:
+        '200':
+          description: Cost summary retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CostSummaryResponse'
+        '500':
+          description: Failed to get cost summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    GenerateReportRequest:
+      type: object
+      required:
+        - companyId
+        - period
+      properties:
+        companyId:
+          type: string
+          format: uuid
+          description: Company identifier
+        period:
+          type: object
+          required:
+            - start
+            - end
+          properties:
+            start:
+              type: string
+              format: date
+              description: Period start date (ISO 8601)
+            end:
+              type: string
+              format: date
+              description: Period end date (ISO 8601)
+        locale:
+          type: string
+          enum: [en, es, fr, uk, no]
+          default: en
+          description: Report language locale
+        reportType:
+          type: string
+          enum:
+            - quarterly-report
+            - annual-report
+            - investor-update
+            - impact-deep-dive
+            - case-study
+            - methods-whitepaper
+          description: |
+            Report type (use this for comprehensive templates):
+            - **case-study**: Customer case study (1800-2200 words, baseline→intervention→outcomes→ROI→stories)
+            - **methods-whitepaper**: VIS/SROI methodology (2500-3000 words, formulas, validation, limitations)
+        sections:
+          type: array
+          items:
+            type: string
+            enum:
+              - impact-summary
+              - sroi-narrative
+              - outcome-trends
+              - quarterly-report
+              - annual-report
+              - investor-update
+              - impact-deep-dive
+              - case-study
+              - methods-whitepaper
+          description: Custom section selection (alternative to reportType)
+        deterministic:
+          type: boolean
+          default: false
+          description: Use deterministic generation (seed=42) for reproducibility
+        temperature:
+          type: number
+          minimum: 0
+          maximum: 2
+          description: LLM temperature (0=deterministic, 2=creative). Recommended 0.7 for case studies, 0.3 for whitepapers
+        maxTokens:
+          type: number
+          minimum: 100
+          maximum: 8000
+          description: Maximum tokens for LLM output. Recommended 4000 for case studies, 6000 for whitepapers
+
+    GenerateReportResponse:
+      type: object
+      properties:
+        reportId:
+          type: string
+          format: uuid
+          description: Unique report identifier
+        sections:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReportSection'
+        lineage:
+          $ref: '#/components/schemas/LineageMetadata'
+        warnings:
+          type: array
+          items:
+            type: string
+          description: Non-fatal warnings (e.g., low evidence count)
+
+    ReportSection:
+      type: object
+      properties:
+        type:
+          type: string
+          description: Section type
+        content:
+          type: string
+          description: Generated content with inline citations [cite:ID]
+        citations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Citation'
+        wordCount:
+          type: integer
+          description: Word count (excluding citation tags)
+        characterCount:
+          type: integer
+          description: Character count
+
+    Citation:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Citation reference ID (cite-0, cite-1, ...)
+        snippetId:
+          type: string
+          format: uuid
+          description: Evidence snippet ID (source data lineage)
+        text:
+          type: string
+          description: Redacted evidence text
+        relevanceScore:
+          type: number
+          format: float
+          description: AI relevance score (0-1)
+
+    LineageMetadata:
+      type: object
+      properties:
+        modelName:
+          type: string
+          description: LLM model used (e.g., gpt-4, claude-3)
+        promptVersion:
+          type: string
+          description: Template version (e.g., case-study-en-v1.0)
+        timestamp:
+          type: string
+          format: date-time
+          description: Generation timestamp (ISO 8601)
+        tokensUsed:
+          type: integer
+          description: Total tokens (input + output)
+        tokensInput:
+          type: integer
+          description: Input tokens
+        tokensOutput:
+          type: integer
+          description: Output tokens
+        estimatedCostUsd:
+          type: string
+          description: Estimated cost in USD
+
+    CostSummaryResponse:
+      type: object
+      properties:
+        totalCostUsd:
+          type: string
+          description: Total cost across all requests
+        totalTokens:
+          type: integer
+          description: Total tokens consumed
+        requestCount:
+          type: integer
+          description: Total requests processed
+        byModel:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              costUsd:
+                type: string
+              tokens:
+                type: integer
+              requests:
+                type: integer
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error type
+        message:
+          type: string
+          description: Error message
+        details:
+          type: array
+          items:
+            type: object
+          description: Validation error details (if applicable)
