@@ -2,6 +2,7 @@ import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { createHealthManager, setupHealthRoutes } from './health/index.js';
 import { forecastRoutes } from './routes/forecast.js';
+import { scenarioRoutes } from './routes/scenarios.js';
 import { closeRedis } from './lib/cache.js';
 
 const PORT = parseInt(process.env.PORT_FORECAST || '3007');
@@ -39,6 +40,7 @@ async function start() {
   // Register forecast API routes
   app.register(async (instance) => {
     await instance.register(forecastRoutes, { prefix: '/forecast' });
+    await instance.register(scenarioRoutes, { prefix: '/scenarios' });
   }, { prefix: '/v1/analytics' });
 
   // Start server
@@ -58,6 +60,15 @@ async function start() {
     app.log.info('  Forecast APIs:');
     app.log.info('    POST /v1/analytics/forecast/v2 - Generate forecast');
     app.log.info('    POST /v1/analytics/forecast/compare - Compare models');
+    app.log.info('');
+    app.log.info('  Scenario Planner APIs:');
+    app.log.info('    POST   /v1/analytics/scenarios - Create scenario');
+    app.log.info('    GET    /v1/analytics/scenarios - List scenarios');
+    app.log.info('    GET    /v1/analytics/scenarios/:id - Get scenario');
+    app.log.info('    POST   /v1/analytics/scenarios/:id/run - Run scenario');
+    app.log.info('    GET    /v1/analytics/scenarios/:id/results - Get results');
+    app.log.info('    PATCH  /v1/analytics/scenarios/:id - Update scenario');
+    app.log.info('    DELETE /v1/analytics/scenarios/:id - Delete scenario');
     app.log.info('');
     app.log.info('Supported models:');
     app.log.info('  - ETS (Simple, Holt, Holt-Winters)');

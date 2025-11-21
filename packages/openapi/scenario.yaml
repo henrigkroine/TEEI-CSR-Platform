@@ -1,0 +1,582 @@
+openapi: 3.1.0
+info:
+  title: Scenario Planner API
+  version: 1.0.0
+  description: |
+    What-if scenario planning API for projecting VIS/SROI/SDG impacts based on parameter adjustments.
+
+    Allows executives to model different program configurations and see projected outcomes.
+
+servers:
+  - url: http://localhost:3007/v1/analytics
+    description: Local development
+  - url: https://api.teei.io/v1/analytics
+    description: Production
+
+tags:
+  - name: Scenarios
+    description: Scenario management and execution
+
+paths:
+  /scenarios:
+    post:
+      tags:
+        - Scenarios
+      summary: Create a new scenario
+      description: Creates a what-if scenario with specified parameters
+      operationId: createScenario
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateScenarioRequest'
+      responses:
+        '201':
+          description: Scenario created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Scenario'
+        '400':
+          description: Invalid parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+
+    get:
+      tags:
+        - Scenarios
+      summary: List scenarios
+      description: Get all scenarios for a company
+      operationId: listScenarios
+      parameters:
+        - name: companyId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            minimum: 1
+            maximum: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+        - name: favoritesOnly
+          in: query
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: List of scenarios
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  scenarios:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Scenario'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+
+  /scenarios/{id}:
+    get:
+      tags:
+        - Scenarios
+      summary: Get scenario by ID
+      operationId: getScenario
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Scenario details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Scenario'
+        '404':
+          description: Scenario not found
+
+    patch:
+      tags:
+        - Scenarios
+      summary: Update scenario
+      operationId: updateScenario
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateScenarioRequest'
+      responses:
+        '200':
+          description: Scenario updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Scenario'
+        '400':
+          description: Invalid parameters
+        '404':
+          description: Scenario not found
+
+    delete:
+      tags:
+        - Scenarios
+      summary: Delete scenario
+      operationId: deleteScenario
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Scenario deleted
+        '404':
+          description: Scenario not found
+
+  /scenarios/{id}/run:
+    post:
+      tags:
+        - Scenarios
+      summary: Execute scenario
+      description: Run scenario engine to compute projected impacts (SROI, VIS, SDG coverage)
+      operationId: runScenario
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RunScenarioRequest'
+      responses:
+        '200':
+          description: Scenario execution result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScenarioResult'
+        '404':
+          description: Scenario not found
+        '500':
+          description: Execution failed
+
+  /scenarios/{id}/results:
+    get:
+      tags:
+        - Scenarios
+      summary: Get scenario execution history
+      operationId: getScenarioResults
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+            minimum: 1
+            maximum: 50
+      responses:
+        '200':
+          description: Execution history
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  scenarioId:
+                    type: string
+                    format: uuid
+                  executions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        result:
+                          $ref: '#/components/schemas/ScenarioResult'
+                        executedBy:
+                          type: string
+                        executedAt:
+                          type: string
+                          format: date-time
+
+components:
+  schemas:
+    ScenarioParameters:
+      type: object
+      description: Adjustable parameters for what-if analysis
+      properties:
+        volunteerHoursDelta:
+          type: number
+          description: Change in volunteer hours (absolute)
+          example: 100
+        grantAmountDelta:
+          type: number
+          description: Change in grant funding (USD, absolute)
+          example: 5000
+        cohortSizeMultiplier:
+          type: number
+          minimum: 0.1
+          maximum: 10
+          description: Cohort size multiplier (1.5 = 50% increase)
+          example: 1.5
+        cohortDurationMonths:
+          type: integer
+          minimum: 1
+          maximum: 60
+          description: Cohort duration override (months)
+          example: 6
+        programMix:
+          type: object
+          description: Program allocation percentages (must sum to 100)
+          properties:
+            buddySystem:
+              type: number
+              minimum: 0
+              maximum: 100
+              example: 40
+            skillShare:
+              type: number
+              minimum: 0
+              maximum: 100
+              example: 30
+            mentorship:
+              type: number
+              minimum: 0
+              maximum: 100
+              example: 20
+            communityEvents:
+              type: number
+              minimum: 0
+              maximum: 100
+              example: 10
+        activityRates:
+          type: object
+          description: Activity frequency overrides (per month)
+          properties:
+            matchesPerMonth:
+              type: number
+              minimum: 0
+            eventsPerMonth:
+              type: number
+              minimum: 0
+            skillSharesPerMonth:
+              type: number
+              minimum: 0
+            feedbackPerMonth:
+              type: number
+              minimum: 0
+            milestonesPerMonth:
+              type: number
+              minimum: 0
+            checkinsPerMonth:
+              type: number
+              minimum: 0
+        investmentMultiplier:
+          type: number
+          minimum: 0.1
+          maximum: 10
+          description: Investment cost multiplier
+          example: 1.2
+
+    CreateScenarioRequest:
+      type: object
+      required:
+        - tenantId
+        - companyId
+        - name
+        - parameters
+      properties:
+        tenantId:
+          type: string
+          example: tenant_abc123
+        companyId:
+          type: string
+          format: uuid
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          example: Q4 Growth Plan
+        description:
+          type: string
+          example: Model 50% cohort increase with same budget
+        parameters:
+          $ref: '#/components/schemas/ScenarioParameters'
+        tags:
+          type: array
+          items:
+            type: string
+          example: [growth, q4-2025]
+
+    UpdateScenarioRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        description:
+          type: string
+        parameters:
+          $ref: '#/components/schemas/ScenarioParameters'
+        tags:
+          type: array
+          items:
+            type: string
+        isFavorite:
+          type: boolean
+
+    Scenario:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenantId:
+          type: string
+        companyId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        parameters:
+          $ref: '#/components/schemas/ScenarioParameters'
+        tags:
+          type: array
+          items:
+            type: string
+        latestResult:
+          $ref: '#/components/schemas/ScenarioResult'
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        createdBy:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
+        updatedBy:
+          type: string
+        isFavorite:
+          type: boolean
+
+    RunScenarioRequest:
+      type: object
+      properties:
+        scenarioId:
+          type: string
+          format: uuid
+        baselinePeriod:
+          type: object
+          properties:
+            start:
+              type: string
+              format: date
+            end:
+              type: string
+              format: date
+
+    BaselineMetrics:
+      type: object
+      properties:
+        sroi:
+          type: number
+          example: 3.5
+        vis:
+          type: number
+          example: 75.0
+        socialValue:
+          type: number
+          example: 5250.0
+        investment:
+          type: number
+          example: 1500.0
+        sdgCoverage:
+          type: array
+          items:
+            type: object
+            properties:
+              goalId:
+                type: integer
+                minimum: 1
+                maximum: 17
+              coverage:
+                type: number
+                minimum: 0
+                maximum: 100
+        activityCounts:
+          type: object
+          properties:
+            matches:
+              type: integer
+            events:
+              type: integer
+            skillShares:
+              type: integer
+            feedback:
+              type: integer
+            milestones:
+              type: integer
+            checkins:
+              type: integer
+        programAllocations:
+          type: object
+          properties:
+            buddySystem:
+              type: number
+            skillShare:
+              type: number
+            mentorship:
+              type: number
+            communityEvents:
+              type: number
+        period:
+          type: object
+          properties:
+            start:
+              type: string
+              format: date
+            end:
+              type: string
+              format: date
+
+    ProjectedMetrics:
+      type: object
+      properties:
+        sroi:
+          type: number
+        sroiDelta:
+          type: number
+        sroiPercentChange:
+          type: number
+        vis:
+          type: number
+        visDelta:
+          type: number
+        visPercentChange:
+          type: number
+        socialValue:
+          type: number
+        socialValueDelta:
+          type: number
+        socialValuePercentChange:
+          type: number
+        investment:
+          type: number
+        investmentDelta:
+          type: number
+        investmentPercentChange:
+          type: number
+        sdgCoverage:
+          type: array
+          items:
+            type: object
+            properties:
+              goalId:
+                type: integer
+              coverage:
+                type: number
+              delta:
+                type: number
+        activityCounts:
+          type: object
+
+    ScenarioResult:
+      type: object
+      properties:
+        scenarioId:
+          type: string
+          format: uuid
+        baseline:
+          $ref: '#/components/schemas/BaselineMetrics'
+        projected:
+          $ref: '#/components/schemas/ProjectedMetrics'
+        parameters:
+          $ref: '#/components/schemas/ScenarioParameters'
+        calculatedAt:
+          type: string
+          format: date-time
+        calculationDurationMs:
+          type: integer
+          description: Engine execution time
+          example: 142
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: Confidence score (0-1) based on data quality
+          example: 0.85
+        warnings:
+          type: array
+          items:
+            type: string
+          example:
+            - Cohort size increase >200% may not be realistic
+
+    Pagination:
+      type: object
+      properties:
+        limit:
+          type: integer
+        offset:
+          type: integer
+        total:
+          type: integer
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: array
+          items:
+            type: object
