@@ -1,396 +1,452 @@
 /**
  * Deck Composer Component
  *
- * Main component for composing boardroom presentation decks.
- * Combines template selection, tile picker, and preview.
+ * Unified component for composing boardroom presentation decks.
+ * Supports both wizard-based local flow and API-driven server flow.
  *
- * @module deck/DeckComposer
+ * Features:
+ * - Template selection (Quarterly, Annual, Investor, Impact, Impact Deep Dive)
+ * - Tile picker for slide customization
+ * - Extended locale selection (EN/ES/FR/NO/UK/HE/AR with RTL support)
+ * - Theme configuration
+ * - Live preview
+ * - Both client-side wizard and server-side API deck creation
+ *
+ * @module components/deck/DeckComposer
  */
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { DeckTemplateSelector } from './DeckTemplateSelector';
 import { DeckTilePicker } from './DeckTilePicker';
 import { DeckPreview } from './DeckPreview';
-import type { DeckTemplate, DeckTile, DeckLocale, DeckConfig } from './types';
+import type {
+  DeckTemplate,
+  DeckTemplateMetadata,
+  DeckDefinition,
+  DeckLocale,
+} from '@teei/shared-types';
+import type { DeckTile, DeckConfig } from './types';
 import { AVAILABLE_TEMPLATES, LOCALE_NAMES, THEME_NAMES } from './constants';
 
 export interface DeckComposerProps {
   /** Company identifier */
   companyId: string;
-  /** Period start date */
-  periodStart: Date;
-  /** Period end date */
-  periodEnd: Date;
+  /** Period start date (Date object for local flow) */
+  periodStart?: Date;
+  /** Period end date (Date object for local flow) */
+  periodEnd?: Date;
+  /** Period object (string dates for API flow) */
+  period?: {
+    start: string;
+    end: string;
+  };
   /** Company logo URL */
   logoUrl?: string;
   /** Primary brand color */
   primaryColor?: string;
-  /** Callback when export is requested */
-  onExport: (config: DeckConfig) => Promise<void>;
+  /** Callback when export is requested (local flow) */
+  onExport?: (config: DeckConfig) => Promise<void>;
+  /** Callback when deck is created (API flow) */
+  onDeckCreated?: (deck: DeckDefinition) => void;
   /** Callback when composer is closed */
   onClose?: () => void;
+  /** Callback when composer is cancelled (API flow) */
+  onCancel?: () => void;
+  /** Flow mode: 'wizard' (local) or 'api' (server) */
+  mode?: 'wizard' | 'api';
 }
+
+// Extended locale list with RTL support
+const LOCALES = [
+  { code: 'en' as const, name: 'English', flag: '🇬🇧', rtl: false },
+  { code: 'es' as const, name: 'Español', flag: '🇪🇸', rtl: false },
+  { code: 'fr' as const, name: 'Français', flag: '🇫🇷', rtl: false },
+  { code: 'no' as const, name: 'Norsk', flag: '🇳🇴', rtl: false },
+  { code: 'uk' as const, name: 'Українська', flag: '🇺🇦', rtl: false },
+  { code: 'he' as const, name: 'עברית', flag: '🇮🇱', rtl: true },
+  { code: 'ar' as const, name: 'العربية', flag: '🇸🇦', rtl: true },
+];
 
 export function DeckComposer({
   companyId,
   periodStart,
   periodEnd,
+  period,
   logoUrl,
   primaryColor,
   onExport,
+  onDeckCreated,
   onClose,
+  onCancel,
+  mode = 'wizard',
 }: DeckComposerProps) {
-  // State management
-  const [selectedTemplate, setSelectedTemplate] = useState<DeckTemplate>('quarterly');
-  const [selectedTiles, setSelectedTiles] = useState<DeckTile[]>([]);
-  const [selectedLocale, setSelectedLocale] = useState<DeckLocale>('en');
-  const [selectedTheme, setSelectedTheme] = useState<'default' | 'corporate' | 'minimalist'>(
-    'default'
-  );
-  const [includeWatermark, setIncludeWatermark] = useState(false);
-  const [watermarkText, setWatermarkText] = useState('DRAFT');
-  const [isExporting, setIsExporting] = useState(false);
+  // Determine flow mode based on props
+  const isApiMode = mode === 'api' || (period !== undefined && onDeckCreated !== undefined);
+
+  // Wizard mode state
   const [currentStep, setCurrentStep] = useState<'template' | 'tiles' | 'preview'>('template');
+  const [selectedTiles, setSelectedTiles] = useState<DeckTile[]>([]);
 
-  // Initialize tiles when template changes
-  const handleTemplateChange = useCallback(
-    (template: DeckTemplate) => {
-      setSelectedTemplate(template);
-      const templateConfig = AVAILABLE_TEMPLATES.find((t) => t.id === template);
-      if (templateConfig) {
-        setSelectedTiles(templateConfig.defaultTiles);
-      }
-    },
-    []
-  );
+  // API mode state
+  const [step, setStep] = useState<'template' | 'customize' | 'review'>('template');
+  const [templates, setTemplates] = useState<DeckTemplateMetadata[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [generatedDeck, setGeneratedDeck] = useState<DeckDefinition | null>(null);
 
-  // Handle export
-  const handleExport = useCallback(async () => {
-    setIsExporting(true);
-    try {
-      const config: DeckConfig = {
-        template: selectedTemplate,
-        tiles: selectedTiles,
-        locale: selectedLocale,
-        companyId,
-        periodStart,
-        periodEnd,
-        includeWatermark,
-        watermarkText: includeWatermark ? watermarkText : undefined,
-        theme: selectedTheme,
-      };
+  // Shared state
+  const [selectedTemplate, setSelectedTemplate] = useState<DeckTemplate>('quarterly');
+  const [selectedLocale, setSelectedLocale] = useState<DeckLocale>('en');
+  const [selectedTheme, setSelectedTheme] = useState<'default' | 'corporate' | 'minimalist'>('default');
 
-      await onExport(config);
-    } catch (error) {
-      console.error('[DeckComposer] Export failed:', error);
-      alert('Failed to export deck. Please try again.');
-    } finally {
-      setIsExporting(false);
+  // API mode: Fetch available templates
+  useEffect(() => {
+    if (isApiMode) {
+      fetchTemplates();
     }
+  }, [isApiMode]);
+
+  const fetchTemplates = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/v2/deck/templates');
+      if (!response.ok) throw new Error('Failed to fetch templates');
+      const data = await response.json();
+      setTemplates(data.templates || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load templates');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // API mode: Generate deck
+  const handleGenerateDeck = async () => {
+    if (!period) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await fetch('/api/v2/deck/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          companyId,
+          template: selectedTemplate,
+          period,
+          locale: selectedLocale,
+          theme: {
+            name: selectedTheme,
+            colors: {
+              primary: primaryColor || '#00393f',
+              secondary: '#ffffff',
+              accent: '#e6f4f5',
+              textOnPrimary: '#ffffff',
+              textOnSecondary: '#00393f',
+              textOnAccent: '#00393f',
+            },
+            logo: logoUrl ? {
+              url: logoUrl,
+              position: 'top-right' as const,
+              width: 120,
+              height: 40,
+            } : undefined,
+          },
+          options: {
+            includeCharts: true,
+            includeEvidence: true,
+            includeSpeakerNotes: false,
+            maxSlides: 20,
+            tone: 'formal' as const,
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate deck');
+      }
+
+      const data = await response.json();
+      setGeneratedDeck(data.deck);
+      setStep('review');
+
+      if (onDeckCreated) {
+        onDeckCreated(data.deck);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to generate deck');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Wizard mode: Generate deck config
+  const deckConfig = useMemo<DeckConfig | undefined>(() => {
+    if (isApiMode || !periodStart || !periodEnd) return undefined;
+
+    return {
+      template: selectedTemplate,
+      tiles: selectedTiles,
+      locale: selectedLocale,
+      theme: selectedTheme,
+      period: {
+        start: periodStart,
+        end: periodEnd,
+      },
+      branding: {
+        logoUrl,
+        primaryColor,
+      },
+    };
   }, [
+    isApiMode,
     selectedTemplate,
     selectedTiles,
     selectedLocale,
-    companyId,
+    selectedTheme,
     periodStart,
     periodEnd,
-    includeWatermark,
-    watermarkText,
-    selectedTheme,
-    onExport,
+    logoUrl,
+    primaryColor,
   ]);
 
-  // Validation
-  const canExport = useMemo(() => {
-    return selectedTiles.length > 0 && !isExporting;
-  }, [selectedTiles, isExporting]);
+  // Wizard mode: Handle export
+  const handleExport = useCallback(async () => {
+    if (!deckConfig || !onExport) return;
 
-  // Step navigation
-  const handleNext = useCallback(() => {
-    if (currentStep === 'template') {
-      setCurrentStep('tiles');
-    } else if (currentStep === 'tiles') {
-      setCurrentStep('preview');
+    try {
+      await onExport(deckConfig);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Export failed');
     }
-  }, [currentStep]);
+  }, [deckConfig, onExport]);
 
-  const handleBack = useCallback(() => {
-    if (currentStep === 'preview') {
-      setCurrentStep('tiles');
-    } else if (currentStep === 'tiles') {
-      setCurrentStep('template');
+  // Navigation handlers
+  const handleNextStep = () => {
+    if (isApiMode) {
+      if (step === 'template') setStep('customize');
+      else if (step === 'customize') handleGenerateDeck();
+    } else {
+      if (currentStep === 'template') setCurrentStep('tiles');
+      else if (currentStep === 'tiles') setCurrentStep('preview');
     }
-  }, [currentStep]);
+  };
+
+  const handlePreviousStep = () => {
+    if (isApiMode) {
+      if (step === 'customize') setStep('template');
+      else if (step === 'review') setStep('customize');
+    } else {
+      if (currentStep === 'tiles') setCurrentStep('template');
+      else if (currentStep === 'preview') setCurrentStep('tiles');
+    }
+  };
+
+  const activeStep = isApiMode ? step : currentStep;
+  const canGoNext = isApiMode
+    ? (step === 'template' && selectedTemplate) || (step === 'customize')
+    : (currentStep === 'template' && selectedTemplate) ||
+      (currentStep === 'tiles' && selectedTiles.length > 0);
+
+  // RTL support
+  const selectedLocaleData = LOCALES.find((l) => l.code === selectedLocale);
+  const isRtl = selectedLocaleData?.rtl || false;
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-white">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Create Boardroom Deck</h2>
-          <p className="text-sm text-gray-600 mt-1">
-            Period: {periodStart.toLocaleDateString()} - {periodEnd.toLocaleDateString()}
-          </p>
+    <div className="deck-composer" dir={isRtl ? 'rtl' : 'ltr'}>
+      <div className="deck-composer__header">
+        <h2 className="deck-composer__title">
+          {isApiMode ? 'Create Presentation Deck' : 'Deck Composer'}
+        </h2>
+        <button
+          type="button"
+          className="deck-composer__close"
+          onClick={onClose || onCancel}
+          aria-label="Close"
+        >
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M15 5L5 15M5 5l10 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+        </button>
+      </div>
+
+      {error && (
+        <div className="deck-composer__error" role="alert">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M10 0C4.48 0 0 4.48 0 10s4.48 10 10 10 10-4.48 10-10S15.52 0 10 0zm1 15H9v-2h2v2zm0-4H9V5h2v6z" />
+          </svg>
+          {error}
         </div>
-        {onClose && (
-          <button
-            onClick={onClose}
-            className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500"
-            aria-label="Close deck composer"
-          >
-            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-              <path
-                fillRule="evenodd"
-                d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                clipRule="evenodd"
+      )}
+
+      <div className="deck-composer__body">
+        {/* Step 1: Template Selection */}
+        {activeStep === 'template' && (
+          <div className="deck-composer__step">
+            <h3 className="deck-composer__step-title">Select Template</h3>
+            <DeckTemplateSelector
+              templates={isApiMode ? templates : AVAILABLE_TEMPLATES}
+              selected={selectedTemplate}
+              onSelect={setSelectedTemplate}
+            />
+          </div>
+        )}
+
+        {/* Step 2: Tiles/Customization */}
+        {(activeStep === 'tiles' || activeStep === 'customize') && (
+          <div className="deck-composer__step">
+            <h3 className="deck-composer__step-title">
+              {isApiMode ? 'Customize Deck' : 'Select Tiles'}
+            </h3>
+
+            {/* Locale Selection */}
+            <div className="deck-composer__section">
+              <label className="deck-composer__label">Language</label>
+              <div className="deck-composer__locale-grid">
+                {LOCALES.map((locale) => (
+                  <button
+                    key={locale.code}
+                    type="button"
+                    className={`deck-composer__locale-option ${
+                      selectedLocale === locale.code ? 'active' : ''
+                    }`}
+                    onClick={() => setSelectedLocale(locale.code)}
+                  >
+                    <span className="locale-flag">{locale.flag}</span>
+                    <span className="locale-name">{locale.name}</span>
+                    {locale.rtl && <span className="locale-rtl-badge">RTL</span>}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Theme Selection */}
+            <div className="deck-composer__section">
+              <label className="deck-composer__label">Theme</label>
+              <div className="deck-composer__theme-grid">
+                {(['default', 'corporate', 'minimalist'] as const).map((theme) => (
+                  <button
+                    key={theme}
+                    type="button"
+                    className={`deck-composer__theme-option ${
+                      selectedTheme === theme ? 'active' : ''
+                    }`}
+                    onClick={() => setSelectedTheme(theme)}
+                  >
+                    {THEME_NAMES[theme]}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Tile Picker (Wizard mode only) */}
+            {!isApiMode && (
+              <DeckTilePicker
+                template={selectedTemplate}
+                selectedTiles={selectedTiles}
+                onTilesChange={setSelectedTiles}
               />
-            </svg>
-          </button>
+            )}
+          </div>
+        )}
+
+        {/* Step 3: Preview/Review */}
+        {(activeStep === 'preview' || activeStep === 'review') && (
+          <div className="deck-composer__step">
+            <h3 className="deck-composer__step-title">
+              {isApiMode ? 'Review Deck' : 'Preview'}
+            </h3>
+            <DeckPreview
+              config={isApiMode ? undefined : deckConfig}
+              deck={isApiMode ? generatedDeck : undefined}
+            />
+          </div>
         )}
       </div>
 
-      {/* Step indicator */}
-      <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
-        <nav aria-label="Progress">
-          <ol className="flex items-center">
-            {(['template', 'tiles', 'preview'] as const).map((step, index) => {
-              const isActive = currentStep === step;
-              const isCompleted =
-                (step === 'template' && currentStep !== 'template') ||
-                (step === 'tiles' && currentStep === 'preview');
+      {/* Footer Navigation */}
+      <div className="deck-composer__footer">
+        {activeStep !== 'template' && activeStep !== 'review' && (
+          <button
+            type="button"
+            className="deck-composer__button deck-composer__button--secondary"
+            onClick={handlePreviousStep}
+            disabled={loading}
+          >
+            Back
+          </button>
+        )}
 
-              return (
-                <li key={step} className="relative flex-1">
-                  <button
-                    onClick={() => setCurrentStep(step)}
-                    className={`
-                      group flex w-full items-center focus:outline-none focus:ring-2 focus:ring-blue-500 rounded
-                      ${index !== 0 ? 'pl-8' : ''}
-                    `}
-                  >
-                    {index !== 0 && (
-                      <div
-                        className={`absolute left-0 top-4 w-8 h-0.5 ${
-                          isCompleted ? 'bg-blue-600' : 'bg-gray-300'
-                        }`}
-                        aria-hidden="true"
-                      />
-                    )}
-                    <span
-                      className={`
-                        relative flex h-8 w-8 items-center justify-center rounded-full
-                        ${
-                          isActive
-                            ? 'bg-blue-600 text-white'
-                            : isCompleted
-                              ? 'bg-blue-600 text-white'
-                              : 'bg-white border-2 border-gray-300 text-gray-500'
-                        }
-                      `}
-                    >
-                      {isCompleted ? (
-                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                          <path
-                            fillRule="evenodd"
-                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                      ) : (
-                        <span className="text-sm font-semibold">{index + 1}</span>
-                      )}
-                    </span>
-                    <span
-                      className={`ml-3 text-sm font-medium ${
-                        isActive ? 'text-blue-600' : 'text-gray-500'
-                      }`}
-                    >
-                      {step === 'template' && 'Template'}
-                      {step === 'tiles' && 'Content'}
-                      {step === 'preview' && 'Preview'}
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
-          </ol>
-        </nav>
-      </div>
-
-      {/* Main content */}
-      <div className="flex-1 overflow-y-auto px-6 py-6">
-        <div className="max-w-5xl mx-auto">
-          {currentStep === 'template' && (
-            <DeckTemplateSelector
-              selectedTemplate={selectedTemplate}
-              onChange={handleTemplateChange}
-            />
-          )}
-
-          {currentStep === 'tiles' && (
-            <div className="space-y-6">
-              <DeckTilePicker
-                selectedTiles={selectedTiles}
-                onChange={setSelectedTiles}
-              />
-
-              {/* Additional options */}
-              <div className="space-y-4 pt-6 border-t border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900">Options</h3>
-
-                {/* Locale selector */}
-                <div>
-                  <label
-                    htmlFor="locale-select"
-                    className="block text-sm font-medium text-gray-700 mb-2"
-                  >
-                    Language
-                  </label>
-                  <select
-                    id="locale-select"
-                    value={selectedLocale}
-                    onChange={(e) => setSelectedLocale(e.target.value as DeckLocale)}
-                    className="w-full md:w-64 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    {Object.entries(LOCALE_NAMES).map(([code, name]) => (
-                      <option key={code} value={code}>
-                        {name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Theme selector */}
-                <div>
-                  <label
-                    htmlFor="theme-select"
-                    className="block text-sm font-medium text-gray-700 mb-2"
-                  >
-                    Theme
-                  </label>
-                  <select
-                    id="theme-select"
-                    value={selectedTheme}
-                    onChange={(e) =>
-                      setSelectedTheme(
-                        e.target.value as 'default' | 'corporate' | 'minimalist'
-                      )
-                    }
-                    className="w-full md:w-64 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    {Object.entries(THEME_NAMES).map(([code, name]) => (
-                      <option key={code} value={code}>
-                        {name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Watermark option */}
-                <div className="flex items-start gap-3">
-                  <input
-                    type="checkbox"
-                    id="watermark-checkbox"
-                    checked={includeWatermark}
-                    onChange={(e) => setIncludeWatermark(e.target.checked)}
-                    className="mt-1 w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
-                  />
-                  <div className="flex-1">
-                    <label
-                      htmlFor="watermark-checkbox"
-                      className="text-sm font-medium text-gray-700 cursor-pointer"
-                    >
-                      Include watermark
-                    </label>
-                    {includeWatermark && (
-                      <input
-                        type="text"
-                        value={watermarkText}
-                        onChange={(e) => setWatermarkText(e.target.value)}
-                        placeholder="Watermark text (e.g., DRAFT)"
-                        className="mt-2 w-full md:w-64 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      />
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {currentStep === 'preview' && (
-            <DeckPreview
-              template={selectedTemplate}
-              tiles={selectedTiles}
-              locale={selectedLocale}
-              theme={selectedTheme}
-              logoUrl={logoUrl}
-              primaryColor={primaryColor}
-            />
-          )}
-        </div>
-      </div>
-
-      {/* Footer with navigation */}
-      <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
-        <div>
-          {currentStep !== 'template' && (
+        <div className="deck-composer__footer-actions">
+          {(activeStep === 'template' || activeStep === 'customize' || activeStep === 'tiles') && (
             <button
-              onClick={handleBack}
-              className="px-4 py-2 text-gray-700 hover:text-gray-900 font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 rounded-lg"
+              type="button"
+              className="deck-composer__button deck-composer__button--primary"
+              onClick={handleNextStep}
+              disabled={!canGoNext || loading}
             >
-              ← Back
-            </button>
-          )}
-        </div>
-
-        <div className="flex items-center gap-3">
-          {currentStep !== 'preview' && (
-            <button
-              onClick={handleNext}
-              disabled={selectedTiles.length === 0 && currentStep === 'tiles'}
-              className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              Continue →
-            </button>
-          )}
-
-          {currentStep === 'preview' && (
-            <button
-              onClick={handleExport}
-              disabled={!canExport}
-              className="px-6 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 flex items-center gap-2"
-            >
-              {isExporting ? (
+              {loading ? (
                 <>
                   <svg
-                    className="animate-spin h-5 w-5"
+                    className="deck-composer__spinner"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 20 20"
                     fill="none"
-                    viewBox="0 0 24 24"
                   >
                     <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
+                      cx="10"
+                      cy="10"
+                      r="8"
                       stroke="currentColor"
-                      strokeWidth="4"
+                      strokeWidth="2"
+                      strokeDasharray="50"
+                      strokeDashoffset="25"
                     />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  </svg>
+                  Generating...
+                </>
+              ) : isApiMode && activeStep === 'customize' ? (
+                'Generate Deck'
+              ) : (
+                'Next'
+              )}
+            </button>
+          )}
+
+          {(activeStep === 'preview' || activeStep === 'review') && !isApiMode && onExport && (
+            <button
+              type="button"
+              className="deck-composer__button deck-composer__button--primary"
+              onClick={handleExport}
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <svg
+                    className="deck-composer__spinner"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 20 20"
+                    fill="none"
+                  >
+                    <circle
+                      cx="10"
+                      cy="10"
+                      r="8"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeDasharray="50"
+                      strokeDashoffset="25"
                     />
                   </svg>
                   Exporting...
                 </>
               ) : (
                 <>
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                    <path
-                      fillRule="evenodd"
-                      d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"
-                      clipRule="evenodd"
-                    />
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M13 8V2H7v6H2l8 8 8-8h-5zM0 18h20v2H0v-2z" />
                   </svg>
                   Export Deck
                 </>
