@@ -1,0 +1,630 @@
+openapi: 3.0.3
+info:
+  title: TEEI CSR Platform - Branding API
+  version: 1.0.0
+  description: |
+    White-label branding and theming API for the TEEI CSR Platform.
+    Supports per-tenant branding (logos, colors, fonts), branded exports, and subdomain routing.
+  contact:
+    name: TEEI Platform Team
+    email: platform@teei.io
+
+servers:
+  - url: https://api.teei-csr.com/v1
+    description: Production
+  - url: https://staging-api.teei-csr.com/v1
+    description: Staging
+  - url: http://localhost:3000/v1
+    description: Development
+
+tags:
+  - name: themes
+    description: Theme management endpoints
+  - name: assets
+    description: Brand asset management (logos, favicons, watermarks)
+  - name: domains
+    description: Custom domain management for white-label routing
+
+paths:
+  /branding/themes:
+    get:
+      tags: [themes]
+      summary: List themes for a tenant
+      description: Returns all themes for the specified tenant
+      operationId: listThemes
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: tenantId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Tenant ID to filter themes
+      responses:
+        '200':
+          description: List of themes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ThemeListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    post:
+      tags: [themes]
+      summary: Create a new theme
+      description: Creates a new branding theme for a tenant (admin only)
+      operationId: createTheme
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateThemeRequest'
+      responses:
+        '201':
+          description: Theme created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ThemeResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /branding/themes/{themeId}:
+    get:
+      tags: [themes]
+      summary: Get theme by ID
+      description: Returns a specific theme by ID
+      operationId: getTheme
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/themeId'
+      responses:
+        '200':
+          description: Theme details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ThemeResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags: [themes]
+      summary: Update a theme
+      description: Updates an existing theme (admin only)
+      operationId: updateTheme
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/themeId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateThemeRequest'
+      responses:
+        '200':
+          description: Theme updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ThemeResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [themes]
+      summary: Delete a theme
+      description: Deletes a theme and all associated assets (admin only)
+      operationId: deleteTheme
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/themeId'
+      responses:
+        '200':
+          description: Theme deleted successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /branding/themes/{themeId}/activate:
+    post:
+      tags: [themes]
+      summary: Activate a theme
+      description: Activates a theme (deactivates others for the tenant)
+      operationId: activateTheme
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/themeId'
+      responses:
+        '200':
+          description: Theme activated successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /branding/themes/{themeId}/assets:
+    get:
+      tags: [assets]
+      summary: List assets for a theme
+      description: Returns all assets (logos, favicons, etc.) for a theme
+      operationId: listAssets
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/themeId'
+      responses:
+        '200':
+          description: List of assets
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetListResponse'
+
+    post:
+      tags: [assets]
+      summary: Upload an asset
+      description: Uploads a brand asset (logo, favicon, watermark)
+      operationId: uploadAsset
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/themeId'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Asset file (PNG, SVG, JPEG, ICO)
+                kind:
+                  type: string
+                  enum: [logo, favicon, watermark, hero_image]
+                  description: Asset kind
+              required:
+                - file
+                - kind
+      responses:
+        '201':
+          description: Asset uploaded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+
+  /branding/assets/{assetId}:
+    delete:
+      tags: [assets]
+      summary: Delete an asset
+      description: Deletes a brand asset
+      operationId: deleteAsset
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: assetId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Asset ID
+      responses:
+        '200':
+          description: Asset deleted successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /branding/domains:
+    get:
+      tags: [domains]
+      summary: List custom domains
+      description: Returns all custom domains for a tenant
+      operationId: listDomains
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: tenantId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: List of domains
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DomainListResponse'
+
+    post:
+      tags: [domains]
+      summary: Add a custom domain
+      description: Adds a custom domain for white-label routing
+      operationId: addDomain
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddDomainRequest'
+      responses:
+        '201':
+          description: Domain added successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DomainResponse'
+
+  /branding/domains/{domainId}/verify:
+    post:
+      tags: [domains]
+      summary: Verify domain ownership
+      description: Verifies domain ownership via DNS TXT record
+      operationId: verifyDomain
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: domainId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Domain verified successfully
+        '400':
+          description: Verification failed
+
+  /branding/domains/{domainId}:
+    delete:
+      tags: [domains]
+      summary: Remove a custom domain
+      description: Removes a custom domain
+      operationId: removeDomain
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: domainId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Domain removed successfully
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    themeId:
+      name: themeId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Theme ID
+
+  schemas:
+    ThemeTokens:
+      type: object
+      description: Complete theme token set
+      required: [colors, typography, spacing, radii, shadows]
+      properties:
+        colors:
+          $ref: '#/components/schemas/ColorTokens'
+        typography:
+          $ref: '#/components/schemas/TypographyTokens'
+        spacing:
+          $ref: '#/components/schemas/SpacingTokens'
+        radii:
+          $ref: '#/components/schemas/RadiusTokens'
+        shadows:
+          $ref: '#/components/schemas/ShadowTokens'
+
+    ColorTokens:
+      type: object
+      description: Color tokens (all must pass WCAG AA contrast requirements)
+      properties:
+        primary:
+          type: string
+          example: '#2563eb'
+        primaryHover:
+          type: string
+          example: '#1d4ed8'
+        primaryForeground:
+          type: string
+          example: '#ffffff'
+        # ... (additional color properties)
+
+    TypographyTokens:
+      type: object
+      properties:
+        fontFamily:
+          type: string
+          example: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+        fontSize:
+          type: object
+          properties:
+            base:
+              type: string
+              example: '1rem'
+            lg:
+              type: string
+              example: '1.125rem'
+
+    SpacingTokens:
+      type: object
+      properties:
+        xs:
+          type: string
+          example: '0.25rem'
+        sm:
+          type: string
+          example: '0.5rem'
+
+    RadiusTokens:
+      type: object
+      properties:
+        base:
+          type: string
+          example: '0.25rem'
+
+    ShadowTokens:
+      type: object
+      properties:
+        base:
+          type: string
+          example: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
+
+    CreateThemeRequest:
+      type: object
+      required: [tenantId, name, tokens]
+      properties:
+        tenantId:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: 'Brand Theme'
+        tokens:
+          $ref: '#/components/schemas/ThemeTokens'
+        darkMode:
+          type: object
+          description: Dark mode color overrides
+        isActive:
+          type: boolean
+          default: false
+
+    UpdateThemeRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        tokens:
+          $ref: '#/components/schemas/ThemeTokens'
+        darkMode:
+          type: object
+        isActive:
+          type: boolean
+
+    AddDomainRequest:
+      type: object
+      required: [tenantId, domain]
+      properties:
+        tenantId:
+          type: string
+          format: uuid
+        domain:
+          type: string
+          example: 'acme.teei-csr.com'
+
+    ThemeResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            tenantId:
+              type: string
+              format: uuid
+            name:
+              type: string
+            isActive:
+              type: boolean
+            tokens:
+              $ref: '#/components/schemas/ThemeTokens'
+            createdAt:
+              type: string
+              format: date-time
+            updatedAt:
+              type: string
+              format: date-time
+
+    ThemeListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            type: object
+        meta:
+          type: object
+          properties:
+            total:
+              type: integer
+
+    AssetResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            themeId:
+              type: string
+              format: uuid
+            kind:
+              type: string
+              enum: [logo, favicon, watermark, hero_image]
+            url:
+              type: string
+            hash:
+              type: string
+              description: SHA-256 hash for integrity
+
+    AssetListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            type: object
+
+    DomainResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            domain:
+              type: string
+            verificationToken:
+              type: string
+            isVerified:
+              type: boolean
+
+    DomainListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            type: object
+
+  responses:
+    Unauthorized:
+      description: Unauthorized - Invalid or missing authentication token
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: string
+                example: Unauthorized
+
+    Forbidden:
+      description: Forbidden - Insufficient permissions
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: string
+                example: Forbidden
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: string
+                example: Not Found
+
+    ValidationError:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: string
+                example: Bad Request
+              validation:
+                type: object
+
+    ServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: string
+                example: Internal Server Error
