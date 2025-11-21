@@ -1,0 +1,373 @@
+openapi: 3.0.3
+info:
+  title: AI Audit Trail API
+  description: |
+    Worker 10: AI/ML Explainability & Guardrails
+    
+    Provides audit trail and explainability for AI operations across the TEEI CSR Platform.
+  version: 1.0.0
+
+servers:
+  - url: https://api.teei.io/v1
+    description: Production
+  - url: http://localhost:3000/v1
+    description: Local development
+
+paths:
+  /ai/audit/{id}:
+    get:
+      summary: Get audit record by ID
+      operationId: getAuditRecord
+      tags:
+        - AI Audit
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Audit record found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PromptRecord'
+        '404':
+          description: Audit record not found
+        '403':
+          description: Forbidden - not authorized for this company
+
+  /ai/audit:
+    get:
+      summary: Query audit records
+      operationId: queryAuditRecords
+      tags:
+        - AI Audit
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: companyId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: since
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: until
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: model
+          in: query
+          schema:
+            type: string
+        - name: operation
+          in: query
+          schema:
+            type: string
+            enum: [report-generation, nlq-query, q2q-classification, other]
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [success, failed, blocked_safety, blocked_evidence, blocked_budget]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: List of audit records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PromptRecord'
+
+  /ai/audit/{id}/explain:
+    get:
+      summary: Get explainability bundle
+      operationId: explainAuditRecord
+      tags:
+        - AI Audit
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: includePrompt
+          in: query
+          schema:
+            type: boolean
+            default: false
+        - name: includeOutput
+          in: query
+          schema:
+            type: boolean
+            default: false
+        - name: includeEvidence
+          in: query
+          schema:
+            type: boolean
+            default: true
+      responses:
+        '200':
+          description: Explainability bundle
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExplainResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    PromptRecord:
+      type: object
+      required:
+        - id
+        - requestId
+        - companyId
+        - modelName
+        - provider
+        - promptHash
+        - outputHash
+        - evidenceIds
+        - tokensInput
+        - tokensOutput
+        - tokensTotal
+        - costUsd
+        - latencyMs
+        - safetyCheckPassed
+        - evidenceGatePassed
+        - budgetCheckPassed
+        - status
+        - operation
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        requestId:
+          type: string
+        companyId:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        modelName:
+          type: string
+        modelVersion:
+          type: string
+        provider:
+          type: string
+          enum: [openai, anthropic, google, azure]
+        region:
+          type: string
+        promptTemplate:
+          type: string
+        promptHash:
+          type: string
+        promptVariables:
+          type: object
+        outputHash:
+          type: string
+        outputSummary:
+          type: string
+        evidenceIds:
+          type: array
+          items:
+            type: string
+        citationCount:
+          type: integer
+        topK:
+          type: integer
+        tokensInput:
+          type: integer
+        tokensOutput:
+          type: integer
+        tokensTotal:
+          type: integer
+        costUsd:
+          type: number
+          format: double
+        latencyMs:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        safetyCheckPassed:
+          type: boolean
+        safetyCheckDetails:
+          $ref: '#/components/schemas/SafetyCheckDetails'
+        evidenceGatePassed:
+          type: boolean
+        evidenceGateDetails:
+          $ref: '#/components/schemas/EvidenceGateDetails'
+        budgetCheckPassed:
+          type: boolean
+        budgetCheckDetails:
+          $ref: '#/components/schemas/BudgetCheckDetails'
+        status:
+          type: string
+          enum: [success, failed, blocked_safety, blocked_evidence, blocked_budget]
+        errorMessage:
+          type: string
+        sectionExplanations:
+          type: array
+          items:
+            $ref: '#/components/schemas/SectionExplanation'
+        retryCount:
+          type: integer
+        parentRequestId:
+          type: string
+        operation:
+          type: string
+          enum: [report-generation, nlq-query, q2q-classification, other]
+
+    SafetyCheckDetails:
+      type: object
+      properties:
+        categoriesChecked:
+          type: array
+          items:
+            type: string
+        violations:
+          type: array
+          items:
+            $ref: '#/components/schemas/SafetyViolation'
+        rationale:
+          type: string
+        checkDurationMs:
+          type: number
+
+    SafetyViolation:
+      type: object
+      properties:
+        category:
+          type: string
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+        flaggedText:
+          type: string
+        severity:
+          type: string
+          enum: [low, medium, high]
+
+    EvidenceGateDetails:
+      type: object
+      properties:
+        minCitationsRequired:
+          type: integer
+        actualCitations:
+          type: integer
+        citationDensity:
+          type: number
+        paragraphCount:
+          type: integer
+        warnings:
+          type: array
+          items:
+            type: string
+
+    BudgetCheckDetails:
+      type: object
+      properties:
+        limitUsd:
+          type: number
+        usedUsd:
+          type: number
+        remainingUsd:
+          type: number
+        thisCostUsd:
+          type: number
+        period:
+          type: string
+          enum: [daily, monthly]
+        resetAt:
+          type: string
+          format: date-time
+
+    SectionExplanation:
+      type: object
+      properties:
+        sectionType:
+          type: string
+        whyThisSection:
+          type: string
+        topEvidenceIds:
+          type: array
+          items:
+            type: string
+        variablesUsed:
+          type: object
+
+    ExplainResponse:
+      type: object
+      properties:
+        promptRecord:
+          $ref: '#/components/schemas/PromptRecord'
+        promptTemplate:
+          type: string
+        promptReconstructed:
+          type: string
+        outputFull:
+          type: string
+        evidenceSnippets:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              text:
+                type: string
+              dimension:
+                type: string
+              score:
+                type: number
+        sectionBreakdown:
+          type: array
+          items:
+            type: object
+            properties:
+              sectionType:
+                type: string
+              reasoning:
+                type: string
+              evidenceUsed:
+                type: array
+                items:
+                  type: string
+              variables:
+                type: object

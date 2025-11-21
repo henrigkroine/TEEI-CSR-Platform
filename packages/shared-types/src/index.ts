@@ -4,3 +4,4 @@ export * from './reporting';
 export * from './demo';
 export * from './deck';
 export * from './tiles';
+export * from './ai/index';
