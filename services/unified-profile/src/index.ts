@@ -21,6 +21,10 @@ async function start() {
   // Register routes with API versioning
   app.register(profileRoutes, { prefix: '/v1/profile' });
 
+  // Register SCIM 2.0 routes
+  const { scimRoutes } = await import('./routes/scim.js');
+  await app.register(scimRoutes);
+
   // Connect to event bus and setup subscribers
   const eventBus = getEventBus();
   await eventBus.connect();

@@ -171,11 +171,7 @@ async function initializeGateway() {
           q2q: '/v1/q2q/*',
           safety: '/v1/safety/*',
           privacy: '/v1/privacy/*',
-<<<<<<< HEAD
           trust: '/v1/trust/*'
-=======
-          trust: '/trust/v1/*'
->>>>>>> origin/claude/trust-center-evidence-gates-01RnUrgDEanNv97UVk35SeHm
         },
         apiVersion: 'v1',
         deprecation: {
@@ -195,6 +191,11 @@ async function initializeGateway() {
 
     // Register Status API routes (public, no auth)
     await registerStatusRoutes(fastify);
+
+    // Register Admin Studio v2 routes
+    const { adminRoutes } = await import('./routes/admin/index.js');
+    await fastify.register(adminRoutes);
+    fastify.log.info('Admin Studio v2 routes registered');
 
     // Register proxy routes (must be last to avoid conflicts)
     await registerProxyRoutes(fastify);

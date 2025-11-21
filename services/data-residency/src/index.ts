@@ -55,6 +55,10 @@ async function start() {
   // Register routes
   app.register(residencyRoutes, { cache, config });
 
+  // Register SSO routes
+  const { ssoRoutes } = await import('./routes/sso.js');
+  await app.register(ssoRoutes);
+
   // Start server
   try {
     await app.listen({ port: config.port, host: '0.0.0.0' });
