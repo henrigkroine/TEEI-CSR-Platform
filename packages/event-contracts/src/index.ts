@@ -10,6 +10,9 @@ export * from './safety/index.js';
 export * from './nlq/index.js';
 export * from './reporting/index.js';
 
+// Ingest events (from external platforms and internal TEEI systems)
+export * from './ingest/index.js';
+
 // Convenience type for all events
 import type {
   BuddyMatchCreated,

@@ -47,6 +47,10 @@ async function start() {
   app.register(slaRoutes, { prefix: '/v1/impact-in' });
   await registerImportRoutes(app);
 
+  // Register new ingest routes (Worker 4)
+  app.register(registerIngestRoutes, { prefix: '/v1/ingest' });
+  app.register(registerIntegrationsHealthRoutes, { prefix: '/integrations' });
+
   // Root endpoint
   app.get('/', async (request, reply) => {
     return {
@@ -55,11 +59,28 @@ async function start() {
       description: 'Impact data delivery service for external CSR platforms + Data Importer',
       platforms: ['benevity', 'goodera', 'workday'],
       endpoints: {
+        // Outbound delivery (existing)
         deliveries: '/v1/impact-in/deliveries',
         stats: '/v1/impact-in/stats',
         replay: '/v1/impact-in/deliveries/:id/replay',
         bulkReplay: '/v1/impact-in/deliveries/bulk-replay',
         retryAllFailed: '/v1/impact-in/deliveries/retry-all-failed',
+
+        // Inbound ingestion (Worker 4)
+        ingest: {
+          benevityVolunteers: 'POST /v1/ingest/benevity/volunteers',
+          benevityDonations: 'POST /v1/ingest/benevity/donations',
+          gooderaVolunteers: 'POST /v1/ingest/goodera/volunteers',
+          gooderaDonations: 'POST /v1/ingest/goodera/donations',
+          workdayDirectory: 'POST /v1/ingest/workday/directory',
+          kintellEnrollments: 'POST /v1/ingest/kintell/enrollments',
+          upskillingEnrollments: 'POST /v1/ingest/upskilling/enrollments',
+          buddyData: 'POST /v1/ingest/buddy/data',
+          mentorshipPlacements: 'POST /v1/ingest/mentorship/placements',
+          all: 'POST /v1/ingest/all',
+        },
+
+        // Webhooks
         webhooks: {
           benevity: 'POST /webhooks/benevity',
           goodera: 'POST /webhooks/goodera',
@@ -80,7 +101,11 @@ async function start() {
         slaStatus: '/v1/impact-in/sla-status',
         slaReport: '/v1/impact-in/sla-report',
         deliveryTimeline: '/v1/impact-in/delivery-timeline',
+
+        // Health endpoints
         health: '/health',
+        integrationsHealth: 'GET /integrations/health',
+        connectorHealth: 'GET /integrations/health/:connector',
       },
     };
   });
