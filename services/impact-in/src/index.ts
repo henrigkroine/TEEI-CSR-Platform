@@ -11,6 +11,8 @@ import { createServiceLogger } from '@teei/shared-utils';
 import { deliveryRoutes } from './routes/deliveries.js';
 import { replayRoutes } from './routes/replay.js';
 import { registerWebhookRoutes } from './routes/webhooks.js';
+import { registerIngestRoutes } from './routes/ingest.js';
+import { registerIntegrationsHealthRoutes } from './routes/integrations-health.js';
 import { slaRoutes } from './routes/sla.js';
 import { registerImportRoutes } from './routes/imports/index.js';
 import { createHealthManager, setupHealthRoutes } from './health/index.js';
@@ -43,6 +45,8 @@ async function start() {
   // Register routes with API versioning
   app.register(deliveryRoutes, { prefix: '/v1/impact-in' });
   app.register(replayRoutes, { prefix: '/v1/impact-in' });
+  app.register(registerIngestRoutes, { prefix: '/v1/impact-in' });
+  app.register(registerIntegrationsHealthRoutes, { prefix: '/v1/impact-in' });
   await registerWebhookRoutes(app);
   app.register(slaRoutes, { prefix: '/v1/impact-in' });
   await registerImportRoutes(app);
