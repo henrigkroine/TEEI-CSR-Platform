@@ -1,0 +1,663 @@
+openapi: 3.0.0
+info:
+  title: TEEI Publications API
+  description: |
+    Public Impact Pages & Embeds API - Worker 19
+
+    Create and manage public microsites for impact reporting.
+    Support secure embeds for corporate sites.
+  version: 1.0.0
+  contact:
+    name: TEEI Platform Team
+    email: api@teei.io
+
+servers:
+  - url: https://api.teei.io
+    description: Production
+  - url: http://localhost:3000
+    description: Development
+
+tags:
+  - name: publications
+    description: Publication management (authenticated)
+  - name: blocks
+    description: Block management (authenticated)
+  - name: tokens
+    description: Token management (authenticated)
+  - name: public
+    description: Public access endpoints (no auth)
+
+paths:
+  /publications:
+    post:
+      summary: Create publication
+      tags: [publications]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePublicationRequest'
+      responses:
+        '201':
+          description: Publication created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Publication'
+        '409':
+          description: Slug already exists
+
+    get:
+      summary: List publications
+      tags: [publications]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [DRAFT, LIVE, ARCHIVED]
+      responses:
+        '200':
+          description: Publications list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicationListResponse'
+
+  /publications/{id}:
+    get:
+      summary: Get publication with blocks
+      tags: [publications]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Publication with blocks
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicationWithBlocks'
+        '404':
+          description: Not found
+
+    patch:
+      summary: Update publication
+      tags: [publications]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePublicationRequest'
+      responses:
+        '200':
+          description: Publication updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Publication'
+
+    delete:
+      summary: Delete publication
+      tags: [publications]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Deleted
+
+  /publications/{id}/publish:
+    post:
+      summary: Publish publication (DRAFT → LIVE)
+      tags: [publications]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Published
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Publication'
+
+  /publications/{id}/blocks:
+    post:
+      summary: Add block to publication
+      tags: [blocks]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddBlockRequest'
+      responses:
+        '201':
+          description: Block added
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicationBlock'
+
+  /publications/{id}/blocks/{blockId}:
+    patch:
+      summary: Update block
+      tags: [blocks]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: blockId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateBlockRequest'
+      responses:
+        '200':
+          description: Block updated
+
+    delete:
+      summary: Delete block
+      tags: [blocks]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: blockId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Block deleted
+
+  /publications/{id}/tokens:
+    post:
+      summary: Generate access token
+      tags: [tokens]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateTokenRequest'
+      responses:
+        '201':
+          description: Token generated (plaintext only shown once)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+
+    get:
+      summary: List tokens
+      tags: [tokens]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Tokens list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PublicationToken'
+
+  /publications/{id}/tokens/{tokenId}:
+    delete:
+      summary: Revoke token
+      tags: [tokens]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: tokenId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Token revoked
+
+  /publications/{id}/stats:
+    get:
+      summary: Get publication analytics
+      tags: [publications]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Publication stats
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicationStatsResponse'
+
+  /public/publications/{slug}:
+    get:
+      summary: Get public publication (no auth, optional token for private)
+      tags: [public]
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: token
+          in: query
+          description: Access token for TOKEN-visibility publications
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Public publication
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: public, max-age=300, stale-while-revalidate=600
+            ETag:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicPublicationResponse'
+        '401':
+          description: Token required or invalid
+        '404':
+          description: Not found
+
+  /public/publications/{slug}/view:
+    post:
+      summary: Track view (analytics beacon)
+      tags: [public]
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                duration:
+                  type: integer
+                is_embed:
+                  type: boolean
+                embed_domain:
+                  type: string
+      responses:
+        '204':
+          description: View tracked
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    CreatePublicationRequest:
+      type: object
+      required:
+        - slug
+        - title
+      properties:
+        slug:
+          type: string
+          pattern: '^[a-z0-9-]+$'
+        title:
+          type: string
+        description:
+          type: string
+        visibility:
+          type: string
+          enum: [PUBLIC, TOKEN]
+        meta_title:
+          type: string
+        meta_description:
+          type: string
+        og_image_url:
+          type: string
+          format: uri
+
+    UpdatePublicationRequest:
+      type: object
+      properties:
+        slug:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        visibility:
+          type: string
+          enum: [PUBLIC, TOKEN]
+        meta_title:
+          type: string
+        meta_description:
+          type: string
+        og_image_url:
+          type: string
+
+    Publication:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenant_id:
+          type: string
+        slug:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [DRAFT, LIVE, ARCHIVED]
+        visibility:
+          type: string
+          enum: [PUBLIC, TOKEN]
+        view_count:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        published_at:
+          type: string
+          format: date-time
+
+    PublicationBlock:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        publication_id:
+          type: string
+          format: uuid
+        kind:
+          type: string
+          enum: [TILE, TEXT, CHART, EVIDENCE, METRIC, HEADING]
+        order:
+          type: integer
+        payload_json:
+          type: object
+        width:
+          type: string
+          enum: [full, half, third, quarter]
+        created_at:
+          type: string
+          format: date-time
+
+    PublicationWithBlocks:
+      allOf:
+        - $ref: '#/components/schemas/Publication'
+        - type: object
+          properties:
+            blocks:
+              type: array
+              items:
+                $ref: '#/components/schemas/PublicationBlock'
+
+    AddBlockRequest:
+      type: object
+      required:
+        - kind
+        - order
+        - payload_json
+      properties:
+        kind:
+          type: string
+          enum: [TILE, TEXT, CHART, EVIDENCE, METRIC, HEADING]
+        order:
+          type: integer
+        payload_json:
+          type: object
+        width:
+          type: string
+          enum: [full, half, third, quarter]
+
+    UpdateBlockRequest:
+      type: object
+      properties:
+        order:
+          type: integer
+        payload_json:
+          type: object
+        width:
+          type: string
+
+    GenerateTokenRequest:
+      type: object
+      properties:
+        label:
+          type: string
+        expires_in_days:
+          type: integer
+          minimum: 1
+          maximum: 365
+
+    TokenResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        token:
+          type: string
+          description: Plaintext token (only returned once)
+        token_prefix:
+          type: string
+        label:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+
+    PublicationToken:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        publication_id:
+          type: string
+          format: uuid
+        token_prefix:
+          type: string
+        label:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+        revoked_at:
+          type: string
+          format: date-time
+        use_count:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+
+    PublicationStatsResponse:
+      type: object
+      properties:
+        publication_id:
+          type: string
+        view_count:
+          type: integer
+        unique_visitors:
+          type: integer
+        views_by_day:
+          type: array
+          items:
+            type: object
+        top_referrers:
+          type: array
+          items:
+            type: object
+        embed_stats:
+          type: object
+
+    PublicPublicationResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        slug:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        blocks:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicationBlock'
+        theme_config:
+          type: object
+        published_at:
+          type: string
+        meta_title:
+          type: string
+        meta_description:
+          type: string
+        og_image_url:
+          type: string
+
+    PublicationListResponse:
+      type: object
+      properties:
+        publications:
+          type: array
+          items:
+            allOf:
+              - $ref: '#/components/schemas/Publication'
+              - type: object
+                properties:
+                  block_count:
+                    type: integer
+        total:
+          type: integer
+        page:
+          type: integer
+        page_size:
+          type: integer

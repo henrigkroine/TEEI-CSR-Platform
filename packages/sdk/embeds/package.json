@@ -1,0 +1,35 @@
+{
+  "name": "@teei/embed-sdk",
+  "version": "1.0.0",
+  "description": "TEEI Impact Publication Embed SDK - Secure iframe embeds for public impact pages",
+  "main": "dist/embed.js",
+  "module": "dist/embed.esm.js",
+  "types": "dist/embed.d.ts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup src/embed.ts --format cjs,esm,iife --dts --minify --clean",
+    "dev": "tsup src/embed.ts --format iife --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "teei",
+    "impact",
+    "embed",
+    "iframe",
+    "sdk",
+    "csr",
+    "sustainability"
+  ],
+  "author": "TEEI Platform Team",
+  "license": "MIT",
+  "devDependencies": {
+    "tsup": "^8.0.0",
+    "typescript": "^5.3.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
