@@ -1,0 +1,411 @@
+openapi: 3.0.3
+info:
+  title: TEEI Data Importer API
+  description: Import historical CSR/volunteering/donation/program data with visual field mapping
+  version: 1.0.0
+  contact:
+    name: TEEI Data Platform
+    email: data-platform@teei.com
+
+servers:
+  - url: https://api.teei.com/v1
+    description: Production
+  - url: http://localhost:3000/v1
+    description: Local Development
+
+tags:
+  - name: imports
+    description: Import session lifecycle
+  - name: templates
+    description: Mapping templates
+
+paths:
+  /imports/sessions:
+    post:
+      summary: Create import session
+      description: Create a new import session for file upload
+      operationId: createImportSession
+      tags:
+        - imports
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateImportSessionRequest'
+      responses:
+        '201':
+          description: Session created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateImportSessionResponse'
+        '400':
+          description: Bad request (file too large, invalid format)
+        '401':
+          description: Unauthorized
+
+    get:
+      summary: List import sessions
+      description: List all import sessions for tenant
+      operationId: listImportSessions
+      tags:
+        - imports
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Sessions retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListImportSessionsResponse'
+
+  /imports/sessions/{sessionId}:
+    get:
+      summary: Get import session
+      description: Get details of an import session
+      operationId: getImportSession
+      tags:
+        - imports
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      responses:
+        '200':
+          description: Session retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportSession'
+        '404':
+          description: Session not found
+
+  /imports/sessions/{sessionId}/upload:
+    post:
+      summary: Upload file
+      description: Upload file and infer schema
+      operationId: uploadFile
+      tags:
+        - imports
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: File uploaded and schema inferred
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadFileResponse'
+        '400':
+          description: Invalid file or session state
+
+  /imports/sessions/{sessionId}/mapping:
+    post:
+      summary: Save mapping configuration
+      description: Save field mapping configuration for import session
+      operationId: saveMapping
+      tags:
+        - imports
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveMappingRequest'
+      responses:
+        '200':
+          description: Mapping saved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SaveMappingResponse'
+
+  /imports/sessions/{sessionId}/preview:
+    post:
+      summary: Generate preview
+      description: Generate preview with validation
+      operationId: generatePreview
+      tags:
+        - imports
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GeneratePreviewRequest'
+      responses:
+        '200':
+          description: Preview generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneratePreviewResponse'
+
+  /imports/sessions/{sessionId}/commit:
+    post:
+      summary: Commit import
+      description: Commit import session and start ingestion
+      operationId: commitImport
+      tags:
+        - imports
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CommitImportRequest'
+      responses:
+        '200':
+          description: Import committed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommitImportResponse'
+
+  /imports/sessions/{sessionId}/errors:
+    get:
+      summary: Get validation errors
+      description: Get validation errors for import session
+      operationId: getErrors
+      tags:
+        - imports
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      responses:
+        '200':
+          description: Errors retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetErrorsResponse'
+
+  /imports/templates:
+    get:
+      summary: List mapping templates
+      description: List all mapping templates for tenant
+      operationId: listTemplates
+      tags:
+        - templates
+      responses:
+        '200':
+          description: Templates retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListTemplatesResponse'
+
+components:
+  parameters:
+    SessionId:
+      name: sessionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    CreateImportSessionRequest:
+      type: object
+      required:
+        - fileName
+        - fileFormat
+        - fileSize
+      properties:
+        fileName:
+          type: string
+        fileFormat:
+          type: string
+          enum: [csv, xlsx, json]
+        fileSize:
+          type: integer
+          description: File size in bytes
+        templateId:
+          type: string
+          format: uuid
+
+    CreateImportSessionResponse:
+      type: object
+      properties:
+        session:
+          $ref: '#/components/schemas/ImportSession'
+        uploadUrl:
+          type: string
+
+    ImportSession:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenantId:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [created, uploading, uploaded, inferring, mapped, validating, previewing, committing, completed, failed]
+        fileName:
+          type: string
+        fileFormat:
+          type: string
+          enum: [csv, xlsx, json]
+        fileSize:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    UploadFileResponse:
+      type: object
+      properties:
+        sessionId:
+          type: string
+          format: uuid
+        status:
+          type: string
+        inferredSchema:
+          type: object
+        message:
+          type: string
+
+    SaveMappingRequest:
+      type: object
+      required:
+        - mappingConfig
+      properties:
+        mappingConfig:
+          type: object
+        saveAsTemplate:
+          type: boolean
+        templateName:
+          type: string
+
+    SaveMappingResponse:
+      type: object
+      properties:
+        sessionId:
+          type: string
+          format: uuid
+        status:
+          type: string
+        templateId:
+          type: string
+          format: uuid
+        message:
+          type: string
+
+    GeneratePreviewRequest:
+      type: object
+      properties:
+        sampleSize:
+          type: integer
+          minimum: 10
+          maximum: 100
+          default: 100
+
+    GeneratePreviewResponse:
+      type: object
+      properties:
+        sessionId:
+          type: string
+          format: uuid
+        preview:
+          type: object
+
+    CommitImportRequest:
+      type: object
+      properties:
+        skipRowsWithErrors:
+          type: boolean
+          default: false
+
+    CommitImportResponse:
+      type: object
+      properties:
+        sessionId:
+          type: string
+          format: uuid
+        status:
+          type: string
+        jobId:
+          type: string
+          format: uuid
+        message:
+          type: string
+
+    GetErrorsResponse:
+      type: object
+      properties:
+        sessionId:
+          type: string
+          format: uuid
+        errors:
+          type: array
+          items:
+            type: object
+        downloadUrl:
+          type: string
+
+    ListTemplatesResponse:
+      type: object
+      properties:
+        templates:
+          type: array
+          items:
+            type: object
+        total:
+          type: integer
+
+    ListImportSessionsResponse:
+      type: object
+      properties:
+        sessions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ImportSession'
+        total:
+          type: integer
+        page:
+          type: integer
+        pageSize:
+          type: integer
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+security:
+  - BearerAuth: []

@@ -10,7 +10,8 @@ const SERVICE_ENDPOINTS = {
   BUDDY_SERVICE: process.env.BUDDY_SERVICE_URL || 'http://localhost:3003',
   UPSKILLING_CONNECTOR: process.env.UPSKILLING_CONNECTOR_URL || 'http://localhost:3004',
   Q2Q_AI: process.env.Q2Q_AI_URL || 'http://localhost:3005',
-  SAFETY_MODERATION: process.env.SAFETY_MODERATION_URL || 'http://localhost:3006'
+  SAFETY_MODERATION: process.env.SAFETY_MODERATION_URL || 'http://localhost:3006',
+  IMPACT_IN: process.env.IMPACT_IN_URL || 'http://localhost:3007'
 };
 
 /**
@@ -87,6 +88,18 @@ export async function registerProxyRoutes(fastify: FastifyInstance): Promise<voi
     http2: false,
     preHandler: async (request, reply) => {
       fastify.log.info(`Proxying request to Safety & Moderation: ${request.url}`);
+      reply.header('X-API-Version', 'v1');
+    }
+  });
+
+  // Impact-In Service - Data importer and external CSR platform delivery (v1)
+  await fastify.register(fastifyHttpProxy, {
+    upstream: SERVICE_ENDPOINTS.IMPACT_IN,
+    prefix: '/v1/imports',
+    rewritePrefix: '/v1/impact-in/imports',
+    http2: false,
+    preHandler: async (request, reply) => {
+      fastify.log.info(`Proxying request to Impact-In (Imports): ${request.url}`);
       reply.header('X-API-Version', 'v1');
     }
   });

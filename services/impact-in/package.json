@@ -14,13 +14,18 @@
     "@teei/event-contracts": "workspace:*",
     "@teei/shared-schema": "workspace:*",
     "@teei/shared-utils": "workspace:*",
+    "@teei/shared-types": "workspace:*",
     "fastify": "^4.25.2",
+    "@fastify/multipart": "^8.1.0",
     "zod": "^3.22.4",
     "undici": "^6.6.0",
-    "fast-xml-parser": "^4.3.3"
+    "fast-xml-parser": "^4.3.3",
+    "papaparse": "^5.4.1",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/node": "^20.11.5",
+    "@types/papaparse": "^5.3.14",
     "tsx": "^4.7.0",
     "typescript": "^5.3.3",
     "vitest": "^1.2.1"
