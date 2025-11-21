@@ -1,0 +1,506 @@
+openapi: 3.0.3
+info:
+  title: TEEI CSR Platform - Collaboration API
+  version: 1.0.0
+  description: |
+    Real-time collaboration API for document editing, comments, and suggestions.
+
+    Supports WebSocket, Server-Sent Events (SSE), and REST transports.
+
+    ## Features
+    - Operational Transform (OT) for conflict-free merges
+    - Presence awareness with real-time cursors
+    - Threaded comments anchored to text ranges
+    - Track changes (suggestions) with accept/reject workflow
+    - Offline support with operation queue and rehydration
+
+    ## Rate Limits
+    - Operations: 120 per minute per user
+    - Document size: 100,000 characters max
+    - Concurrent users: 50 per document
+
+servers:
+  - url: https://api.teei.io/v1
+    description: Production
+  - url: http://localhost:3000/v1
+    description: Local development
+
+paths:
+  /collab/sessions:
+    post:
+      summary: Create or join collaboration session
+      tags: [Sessions]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [docId]
+              properties:
+                docId:
+                  type: string
+                  description: Document identifier (format reportId:sectionKey)
+                  example: "report-123:executive_summary"
+                initialContent:
+                  type: string
+                  description: Initial document content (for new documents)
+      responses:
+        '200':
+          description: Session created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /collab/history:
+    get:
+      summary: Get document history
+      tags: [Documents]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: docId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: since
+          in: query
+          schema:
+            type: integer
+            description: Lamport clock value (get ops since this clock)
+      responses:
+        '200':
+          description: Document history
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  snapshot:
+                    $ref: '#/components/schemas/DocumentSnapshot'
+                  operations:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Operation'
+
+  /collab/operations:
+    post:
+      summary: Apply operation (REST clients only)
+      tags: [Operations]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [docId, operation]
+              properties:
+                docId:
+                  type: string
+                operation:
+                  $ref: '#/components/schemas/Operation'
+      responses:
+        '200':
+          description: Operation applied
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  opId:
+                    type: string
+
+  /collab/comments:
+    get:
+      summary: Get comments for document
+      tags: [Comments]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: docId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Comments list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  comments:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Comment'
+
+    post:
+      summary: Add comment
+      tags: [Comments]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Comment'
+      responses:
+        '201':
+          description: Comment created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  commentId:
+                    type: string
+
+  /collab/comments/{id}/resolve:
+    put:
+      summary: Resolve comment
+      tags: [Comments]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Comment resolved
+
+  /collab/suggestions:
+    get:
+      summary: Get suggestions for document
+      tags: [Suggestions]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: docId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, accepted, rejected]
+      responses:
+        '200':
+          description: Suggestions list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  suggestions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Suggestion'
+
+    post:
+      summary: Create suggestion (track changes)
+      tags: [Suggestions]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Suggestion'
+      responses:
+        '201':
+          description: Suggestion created
+
+  /collab/suggestions/{id}/accept:
+    put:
+      summary: Accept suggestion
+      tags: [Suggestions]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [docId]
+              properties:
+                docId:
+                  type: string
+      responses:
+        '200':
+          description: Suggestion accepted
+
+  /collab/suggestions/{id}/reject:
+    put:
+      summary: Reject suggestion
+      tags: [Suggestions]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [docId]
+              properties:
+                docId:
+                  type: string
+      responses:
+        '200':
+          description: Suggestion rejected
+
+  /collab/presence:
+    get:
+      summary: Get active users (presence)
+      tags: [Presence]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: docId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Active users
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  presence:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/UserPresence'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    DocumentSnapshot:
+      type: object
+      required: [docId, version, content, clock, createdAt, createdBy, isPublished]
+      properties:
+        docId:
+          type: string
+          example: "report-123:executive_summary"
+        version:
+          type: integer
+        content:
+          type: string
+        attributes:
+          type: object
+          additionalProperties: true
+        clock:
+          type: integer
+          description: Lamport clock
+        createdAt:
+          type: string
+          format: date-time
+        createdBy:
+          type: string
+        isPublished:
+          type: boolean
+
+    Operation:
+      type: object
+      required: [id, docId, userId, timestamp, clock, type]
+      properties:
+        id:
+          type: string
+          format: uuid
+        docId:
+          type: string
+        userId:
+          type: string
+        timestamp:
+          type: integer
+        clock:
+          type: integer
+        type:
+          type: string
+          enum: [insert, delete, replace, set_attribute, remove_attribute]
+        position:
+          type: integer
+        text:
+          type: string
+        length:
+          type: integer
+        attribute:
+          type: string
+        value:
+          type: string
+
+    Comment:
+      type: object
+      required: [id, docId, userId, userName, content, anchor, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        docId:
+          type: string
+        userId:
+          type: string
+        userName:
+          type: string
+        content:
+          type: string
+        anchor:
+          $ref: '#/components/schemas/TextSelection'
+        parentId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        resolvedAt:
+          type: string
+          format: date-time
+        resolvedBy:
+          type: string
+
+    Suggestion:
+      type: object
+      required: [id, docId, userId, userName, operation, status, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        docId:
+          type: string
+        userId:
+          type: string
+        userName:
+          type: string
+        operation:
+          $ref: '#/components/schemas/Operation'
+        status:
+          type: string
+          enum: [pending, accepted, rejected]
+        createdAt:
+          type: string
+          format: date-time
+        reviewedAt:
+          type: string
+          format: date-time
+        reviewedBy:
+          type: string
+
+    UserPresence:
+      type: object
+      required: [userId, userName, userEmail, avatarColor, isTyping, lastSeen]
+      properties:
+        userId:
+          type: string
+        userName:
+          type: string
+        userEmail:
+          type: string
+        avatarColor:
+          type: string
+          pattern: '^#[0-9A-Fa-f]{6}$'
+        cursor:
+          $ref: '#/components/schemas/TextSelection'
+        isTyping:
+          type: boolean
+        lastSeen:
+          type: integer
+
+    TextSelection:
+      type: object
+      required: [start, end, isCollapsed]
+      properties:
+        start:
+          type: integer
+        end:
+          type: integer
+        isCollapsed:
+          type: boolean
+
+    SessionResponse:
+      type: object
+      properties:
+        sessionId:
+          type: string
+        snapshot:
+          $ref: '#/components/schemas/DocumentSnapshot'
+        operations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Operation'
+        users:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserPresence'
+        comments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Comment'
+        role:
+          type: string
+          enum: [owner, editor, commenter, viewer]
+
+  responses:
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Unauthorized"
+
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              message:
+                type: string
