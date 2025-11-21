@@ -6,6 +6,25 @@
 import { z } from 'zod';
 
 // ============================================================================
+// Regional Policy Configuration
+// ============================================================================
+
+export type DataRegion = 'us' | 'eu' | 'uk' | 'ap' | 'global';
+
+export const RegionPolicySchema = z.object({
+  /** Allowed regions for model inference */
+  allowedRegions: z.array(z.enum(['us', 'eu', 'uk', 'ap', 'global'])).min(1),
+  /** Preferred region for this tenant */
+  preferredRegion: z.enum(['us', 'eu', 'uk', 'ap', 'global']).optional(),
+  /** Whether to enforce strict region boundaries (block cross-region calls) */
+  enforceStrict: z.boolean().default(true),
+  /** Fallback region if preferred unavailable */
+  fallbackRegion: z.enum(['us', 'eu', 'uk', 'ap', 'global']).optional(),
+});
+
+export type RegionPolicy = z.infer<typeof RegionPolicySchema>;
+
+// ============================================================================
 // Q2Q Model Configuration
 // ============================================================================
 
@@ -37,6 +56,7 @@ export const Q2QConfigSchema = z.object({
   thresholds: Q2QThresholdsSchema.optional(),
   temperature: z.number().min(0).max(2).default(0.3).optional(),
   maxTokens: z.number().min(100).max(4000).default(2000).optional(),
+  regionPolicy: RegionPolicySchema.optional(),
 });
 
 export type Q2QWeights = z.infer<typeof Q2QWeightsSchema>;
@@ -130,6 +150,9 @@ export const TenantOverrideSchema = z.object({
   sroi: SROIConfigSchema.optional(),
   vis: VISConfigSchema.optional(),
 
+  // Regional Policy (global, applies to all AI operations)
+  regionPolicy: RegionPolicySchema.optional(),
+
   // Guardrails and Rollback
   guardrails: GuardrailsSchema.optional(),
   rollback: RollbackConfigSchema.optional(),
@@ -174,6 +197,10 @@ export const GLOBAL_DEFAULTS: Required<Omit<TenantOverride, 'tenantId' | 'versio
       skills_applied: 0.3,
       beneficiary_reach: 0.25,
     },
+  },
+  regionPolicy: {
+    allowedRegions: ['global'],
+    enforceStrict: false,
   },
   guardrails: {
     minFairnessThreshold: 0.9,

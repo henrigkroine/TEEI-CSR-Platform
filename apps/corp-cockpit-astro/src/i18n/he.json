@@ -147,11 +147,6 @@
       "noStuckUsers": "✅ לא זוהו משתמשים תקועים - כולם זורמים בצורה חלקה!"
     }
   },
-<<<<<<< HEAD
-  "common": {
-    "loading": "טוען...",
-    "error": "שגיאה",
-=======
   "dashboard": {
     "title": "סקירת לוח הבקרה",
     "metrics": "מדדים",
@@ -190,7 +185,6 @@
     "error": "שגיאה",
     "success": "הצלחה",
     "warning": "אזהרה",
->>>>>>> origin/claude/worker5-data-trust-catalog-01MP5u1wgV11fa33LqqEQWbp
     "noData": "אין נתונים זמינים",
     "refresh": "רענן",
     "save": "שמור",
@@ -199,10 +193,6 @@
     "delete": "מחק",
     "edit": "ערוך",
     "close": "סגור",
-<<<<<<< HEAD
-    "viewDetails": "הצג פרטים",
-    "viewAsTable": "הצג כטבלה (נגיש)"
-=======
     "back": "חזרה",
     "next": "הבא",
     "previous": "קודם",
@@ -226,6 +216,5 @@
     "theme": "ערכת נושא",
     "high_contrast": "ניגודיות גבוהה",
     "screen_reader_mode": "מצב קורא מסך"
->>>>>>> origin/claude/worker5-data-trust-catalog-01MP5u1wgV11fa33LqqEQWbp
   }
 }

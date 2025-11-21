@@ -22,6 +22,7 @@
     "vrt:baseline": "cd apps/corp-cockpit-astro && playwright test visual-comprehensive --update-snapshots",
     "vrt:check": "cd apps/corp-cockpit-astro && playwright test visual-comprehensive",
     "a11y:ci": "cd apps/corp-cockpit-astro && playwright test tests/a11y/accessibility.spec.ts",
+    "i18n:parity": "tsx scripts/ci/i18n-parity-check.ts",
     "k6:run": "k6 run tests/load/dashboard-load.js && k6 run tests/load/reporting-load.js",
     "k6:evidence": "k6 run tests/load/k6-evidence-gates.js",
     "k6:trust": "k6 run tests/load/k6-trust-api.js",
