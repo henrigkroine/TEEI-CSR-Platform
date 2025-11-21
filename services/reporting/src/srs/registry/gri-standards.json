@@ -1,0 +1,243 @@
+{
+  "version": "2021",
+  "name": "GRI Universal and Topic-Specific Standards",
+  "effectiveDate": "2023-01-01",
+  "disclosures": [
+    {
+      "id": "GRI-2-1",
+      "title": "Organizational details",
+      "description": "Report the name, legal form, ownership, location of headquarters, and countries of operation.",
+      "standard": "GRI 2: General Disclosures 2021",
+      "version": "2021",
+      "category": "universal",
+      "requirements": [
+        {
+          "id": "GRI-2-1-a",
+          "text": "Name of the organization",
+          "type": "narrative",
+          "guidance": "Provide official legal name"
+        },
+        {
+          "id": "GRI-2-1-b",
+          "text": "Nature of ownership and legal form",
+          "type": "narrative"
+        },
+        {
+          "id": "GRI-2-1-c",
+          "text": "Location of headquarters",
+          "type": "narrative"
+        },
+        {
+          "id": "GRI-2-1-d",
+          "text": "Countries of operation",
+          "type": "qualitative"
+        }
+      ],
+      "sdgMappings": []
+    },
+    {
+      "id": "GRI-2-7",
+      "title": "Employees",
+      "description": "Report total number of employees by gender and region.",
+      "standard": "GRI 2: General Disclosures 2021",
+      "version": "2021",
+      "category": "universal",
+      "requirements": [
+        {
+          "id": "GRI-2-7-a",
+          "text": "Total number of employees by gender",
+          "type": "quantitative",
+          "guidance": "Report headcount and FTE"
+        },
+        {
+          "id": "GRI-2-7-b",
+          "text": "Total number of employees by region",
+          "type": "quantitative"
+        },
+        {
+          "id": "GRI-2-7-c",
+          "text": "Permanent vs. temporary employees",
+          "type": "quantitative"
+        }
+      ],
+      "sdgMappings": ["SDG-8", "SDG-10"]
+    },
+    {
+      "id": "GRI-201-1",
+      "title": "Direct economic value generated and distributed",
+      "description": "Report direct economic value generated and distributed, including revenues, operating costs, employee wages, donations.",
+      "standard": "GRI 201: Economic Performance 2016",
+      "version": "2016",
+      "category": "topic-specific",
+      "requirements": [
+        {
+          "id": "GRI-201-1-a",
+          "text": "Economic value generated",
+          "type": "quantitative",
+          "guidance": "Revenues"
+        },
+        {
+          "id": "GRI-201-1-b",
+          "text": "Economic value distributed",
+          "type": "quantitative",
+          "guidance": "Operating costs, employee wages, payments to providers of capital, taxes, community investments"
+        },
+        {
+          "id": "GRI-201-1-c",
+          "text": "Economic value retained",
+          "type": "quantitative"
+        }
+      ],
+      "sdgMappings": ["SDG-8", "SDG-9"]
+    },
+    {
+      "id": "GRI-305-1",
+      "title": "Direct (Scope 1) GHG emissions",
+      "description": "Report gross direct (Scope 1) GHG emissions in metric tons of CO2 equivalent.",
+      "standard": "GRI 305: Emissions 2016",
+      "version": "2016",
+      "category": "topic-specific",
+      "requirements": [
+        {
+          "id": "GRI-305-1-a",
+          "text": "Gross direct (Scope 1) GHG emissions in metric tons of CO2 equivalent",
+          "type": "quantitative",
+          "guidance": "Exclude biogenic CO2 emissions"
+        },
+        {
+          "id": "GRI-305-1-b",
+          "text": "Gases included in the calculation",
+          "type": "qualitative",
+          "guidance": "CO2, CH4, N2O, HFCs, PFCs, SF6, NF3"
+        },
+        {
+          "id": "GRI-305-1-c",
+          "text": "Biogenic CO2 emissions in metric tons of CO2 equivalent",
+          "type": "quantitative"
+        }
+      ],
+      "sdgMappings": ["SDG-13", "SDG-14", "SDG-15"]
+    },
+    {
+      "id": "GRI-305-2",
+      "title": "Energy indirect (Scope 2) GHG emissions",
+      "description": "Report gross location-based and market-based energy indirect (Scope 2) GHG emissions.",
+      "standard": "GRI 305: Emissions 2016",
+      "version": "2016",
+      "category": "topic-specific",
+      "requirements": [
+        {
+          "id": "GRI-305-2-a",
+          "text": "Gross location-based energy indirect (Scope 2) GHG emissions in metric tons of CO2 equivalent",
+          "type": "quantitative"
+        },
+        {
+          "id": "GRI-305-2-b",
+          "text": "Gross market-based energy indirect (Scope 2) GHG emissions in metric tons of CO2 equivalent",
+          "type": "quantitative"
+        },
+        {
+          "id": "GRI-305-2-c",
+          "text": "Gases included in the calculation",
+          "type": "qualitative"
+        }
+      ],
+      "sdgMappings": ["SDG-13", "SDG-14", "SDG-15"]
+    },
+    {
+      "id": "GRI-305-3",
+      "title": "Other indirect (Scope 3) GHG emissions",
+      "description": "Report gross other indirect (Scope 3) GHG emissions in metric tons of CO2 equivalent.",
+      "standard": "GRI 305: Emissions 2016",
+      "version": "2016",
+      "category": "topic-specific",
+      "requirements": [
+        {
+          "id": "GRI-305-3-a",
+          "text": "Gross other indirect (Scope 3) GHG emissions in metric tons of CO2 equivalent",
+          "type": "quantitative"
+        },
+        {
+          "id": "GRI-305-3-b",
+          "text": "Gases included in the calculation",
+          "type": "qualitative"
+        },
+        {
+          "id": "GRI-305-3-c",
+          "text": "Categories of Scope 3 emissions included",
+          "type": "qualitative",
+          "guidance": "15 categories per GHG Protocol"
+        }
+      ],
+      "sdgMappings": ["SDG-13", "SDG-14", "SDG-15"]
+    },
+    {
+      "id": "GRI-401-1",
+      "title": "New employee hires and employee turnover",
+      "description": "Report total number and rate of new employee hires and employee turnover by age group, gender, and region.",
+      "standard": "GRI 401: Employment 2016",
+      "version": "2016",
+      "category": "topic-specific",
+      "requirements": [
+        {
+          "id": "GRI-401-1-a",
+          "text": "Total number and rate of new employee hires by age group, gender, and region",
+          "type": "quantitative"
+        },
+        {
+          "id": "GRI-401-1-b",
+          "text": "Total number and rate of employee turnover by age group, gender, and region",
+          "type": "quantitative"
+        }
+      ],
+      "sdgMappings": ["SDG-8", "SDG-10"]
+    },
+    {
+      "id": "GRI-403-9",
+      "title": "Work-related injuries",
+      "description": "Report types of work-related injuries, injury rate, and number of fatalities.",
+      "standard": "GRI 403: Occupational Health and Safety 2018",
+      "version": "2018",
+      "category": "topic-specific",
+      "requirements": [
+        {
+          "id": "GRI-403-9-a",
+          "text": "Number and rate of fatalities as a result of work-related injury",
+          "type": "quantitative"
+        },
+        {
+          "id": "GRI-403-9-b",
+          "text": "Number and rate of high-consequence work-related injuries",
+          "type": "quantitative"
+        },
+        {
+          "id": "GRI-403-9-c",
+          "text": "Number and rate of recordable work-related injuries",
+          "type": "quantitative"
+        }
+      ],
+      "sdgMappings": ["SDG-8"]
+    },
+    {
+      "id": "GRI-404-1",
+      "title": "Average hours of training per year per employee",
+      "description": "Report average hours of training per year per employee by gender and employee category.",
+      "standard": "GRI 404: Training and Education 2016",
+      "version": "2016",
+      "category": "topic-specific",
+      "requirements": [
+        {
+          "id": "GRI-404-1-a",
+          "text": "Average hours of training per year per employee by gender",
+          "type": "quantitative"
+        },
+        {
+          "id": "GRI-404-1-b",
+          "text": "Average hours of training per year per employee by employee category",
+          "type": "quantitative"
+        }
+      ],
+      "sdgMappings": ["SDG-4", "SDG-8"]
+    }
+  ]
+}

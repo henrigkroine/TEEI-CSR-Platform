@@ -3,6 +3,7 @@ import { createServiceLogger } from '@teei/shared-utils';
 import { genReportsRoutes } from './routes/gen-reports.js';
 import { exportRoutes } from './routes/export.js';
 import { trustRoutes } from './routes/trust.js';
+import { regulatoryRoutes } from './routes/regulatory.js';
 import { createHealthManager, setupHealthRoutes } from './health/index.js';
 import { costTrackingMiddleware } from './middleware/cost-tracking.js';
 
@@ -28,6 +29,7 @@ async function start() {
   app.register(genReportsRoutes, { prefix: '/v1' });
   app.register(exportRoutes, { prefix: '/v1' });
   app.register(trustRoutes);
+  app.register(regulatoryRoutes, { prefix: '/v1' });
 
   // Start server
   try {

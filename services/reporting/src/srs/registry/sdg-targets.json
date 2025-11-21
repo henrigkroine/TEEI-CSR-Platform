@@ -1,0 +1,168 @@
+{
+  "version": "2015",
+  "name": "UN Sustainable Development Goals - Selected Targets",
+  "effectiveDate": "2015-09-25",
+  "targets": [
+    {
+      "goal": 4,
+      "goalName": "Quality Education",
+      "target": "4.3",
+      "targetText": "By 2030, ensure equal access for all women and men to affordable and quality technical, vocational and tertiary education, including university",
+      "indicators": [
+        {
+          "id": "4.3.1",
+          "description": "Participation rate of youth and adults in formal and non-formal education and training in the previous 12 months, by sex",
+          "tier": "II"
+        }
+      ]
+    },
+    {
+      "goal": 4,
+      "goalName": "Quality Education",
+      "target": "4.4",
+      "targetText": "By 2030, substantially increase the number of youth and adults who have relevant skills, including technical and vocational skills, for employment, decent jobs and entrepreneurship",
+      "indicators": [
+        {
+          "id": "4.4.1",
+          "description": "Proportion of youth and adults with information and communications technology (ICT) skills, by type of skill",
+          "tier": "II"
+        }
+      ]
+    },
+    {
+      "goal": 5,
+      "goalName": "Gender Equality",
+      "target": "5.1",
+      "targetText": "End all forms of discrimination against all women and girls everywhere",
+      "indicators": [
+        {
+          "id": "5.1.1",
+          "description": "Whether or not legal frameworks are in place to promote, enforce and monitor equality and non‑discrimination on the basis of sex",
+          "tier": "II"
+        }
+      ]
+    },
+    {
+      "goal": 5,
+      "goalName": "Gender Equality",
+      "target": "5.5",
+      "targetText": "Ensure women's full and effective participation and equal opportunities for leadership at all levels of decision-making in political, economic and public life",
+      "indicators": [
+        {
+          "id": "5.5.2",
+          "description": "Proportion of women in managerial positions",
+          "tier": "I"
+        }
+      ]
+    },
+    {
+      "goal": 8,
+      "goalName": "Decent Work and Economic Growth",
+      "target": "8.2",
+      "targetText": "Achieve higher levels of economic productivity through diversification, technological upgrading and innovation",
+      "indicators": [
+        {
+          "id": "8.2.1",
+          "description": "Annual growth rate of real GDP per employed person",
+          "tier": "I"
+        }
+      ]
+    },
+    {
+      "goal": 8,
+      "goalName": "Decent Work and Economic Growth",
+      "target": "8.5",
+      "targetText": "By 2030, achieve full and productive employment and decent work for all women and men, including for young people and persons with disabilities, and equal pay for work of equal value",
+      "indicators": [
+        {
+          "id": "8.5.1",
+          "description": "Average hourly earnings of female and male employees, by occupation, age and persons with disabilities",
+          "tier": "II"
+        },
+        {
+          "id": "8.5.2",
+          "description": "Unemployment rate, by sex, age and persons with disabilities",
+          "tier": "I"
+        }
+      ]
+    },
+    {
+      "goal": 8,
+      "goalName": "Decent Work and Economic Growth",
+      "target": "8.8",
+      "targetText": "Protect labour rights and promote safe and secure working environments for all workers",
+      "indicators": [
+        {
+          "id": "8.8.1",
+          "description": "Fatal and non-fatal occupational injuries per 100,000 workers, by sex and migrant status",
+          "tier": "II"
+        }
+      ]
+    },
+    {
+      "goal": 10,
+      "goalName": "Reduced Inequalities",
+      "target": "10.2",
+      "targetText": "By 2030, empower and promote the social, economic and political inclusion of all, irrespective of age, sex, disability, race, ethnicity, origin, religion or economic or other status",
+      "indicators": [
+        {
+          "id": "10.2.1",
+          "description": "Proportion of people living below 50 per cent of median income, by sex, age and persons with disabilities",
+          "tier": "II"
+        }
+      ]
+    },
+    {
+      "goal": 10,
+      "goalName": "Reduced Inequalities",
+      "target": "10.3",
+      "targetText": "Ensure equal opportunity and reduce inequalities of outcome, including by eliminating discriminatory laws, policies and practices",
+      "indicators": [
+        {
+          "id": "10.3.1",
+          "description": "Proportion of population reporting having personally felt discriminated against or harassed in the previous 12 months",
+          "tier": "II"
+        }
+      ]
+    },
+    {
+      "goal": 13,
+      "goalName": "Climate Action",
+      "target": "13.2",
+      "targetText": "Integrate climate change measures into national policies, strategies and planning",
+      "indicators": [
+        {
+          "id": "13.2.1",
+          "description": "Number of countries that have communicated strengthening of institutional, systemic and individual capacity-building",
+          "tier": "III"
+        }
+      ]
+    },
+    {
+      "goal": 13,
+      "goalName": "Climate Action",
+      "target": "13.3",
+      "targetText": "Improve education, awareness-raising and human and institutional capacity on climate change mitigation, adaptation, impact reduction and early warning",
+      "indicators": [
+        {
+          "id": "13.3.1",
+          "description": "Number of countries that have integrated mitigation, adaptation, impact reduction and early warning into primary, secondary and tertiary curricula",
+          "tier": "III"
+        }
+      ]
+    },
+    {
+      "goal": 17,
+      "goalName": "Partnerships for the Goals",
+      "target": "17.17",
+      "targetText": "Encourage and promote effective public, public-private and civil society partnerships",
+      "indicators": [
+        {
+          "id": "17.17.1",
+          "description": "Amount of United States dollars committed to public-private and civil society partnerships",
+          "tier": "II"
+        }
+      ]
+    }
+  ]
+}
