@@ -1,0 +1,265 @@
+---
+import CockpitLayout from '../../../../layouts/CockpitLayout.astro';
+import CaseStudyGenerator from '../../../../components/generators/CaseStudyGenerator';
+import MethodsWhitepaperGenerator from '../../../../components/generators/MethodsWhitepaperGenerator';
+
+const { lang, companyId } = Astro.params;
+
+// Get authenticated user (from middleware/session)
+const user = Astro.locals.user;
+
+if (!user) {
+  return Astro.redirect(`/${lang}/login?redirect=/${lang}/cockpit/${companyId}/generators`);
+}
+
+// Page metadata
+const pageTitle = lang === 'en' ? 'Report Generators' :
+                  lang === 'es' ? 'Generadores de Informes' :
+                  lang === 'fr' ? 'Générateurs de Rapports' :
+                  lang === 'uk' ? 'Генератори Звітів' :
+                  'Rapportgeneratorer'; // Norwegian
+
+const pageDescription = lang === 'en' ? 'Generate case studies and methods whitepapers with AI-powered evidence-based narratives' :
+                        lang === 'es' ? 'Genere estudios de casos y documentos técnicos con narrativas basadas en evidencia impulsadas por IA' :
+                        lang === 'fr' ? 'Générez des études de cas et des livres blancs avec des récits basés sur des preuves alimentés par l\'IA' :
+                        lang === 'uk' ? 'Створюйте кейс-студії та методичні документи з AI-керованими доказовими наративами' :
+                        'Generer casestudier og metodehvitebøker med AI-drevne evidensbaserte narrativer';
+---
+
+<CockpitLayout
+  title={pageTitle}
+  description={pageDescription}
+  lang={lang}
+  companyId={companyId}
+>
+  <div class="generators-page">
+    <header class="page-header">
+      <h1>{pageTitle}</h1>
+      <p class="subtitle">{pageDescription}</p>
+    </header>
+
+    <div class="generators-grid">
+      <!-- Case Study Generator -->
+      <section class="generator-card">
+        <div class="generator-header">
+          <h2>
+            {lang === 'en' ? 'Customer Case Study' :
+             lang === 'es' ? 'Estudio de Caso de Cliente' :
+             lang === 'fr' ? 'Étude de Cas Client' :
+             lang === 'uk' ? 'Кейс-Студія Клієнта' :
+             'Kunde Casestudie'}
+          </h2>
+          <span class="badge badge-new">
+            {lang === 'en' ? 'New' :
+             lang === 'es' ? 'Nuevo' :
+             lang === 'fr' ? 'Nouveau' :
+             lang === 'uk' ? 'Новий' :
+             'Ny'}
+          </span>
+        </div>
+        <p class="generator-description">
+          {lang === 'en' ? 'Generate a compelling case study showcasing program impact from baseline through intervention to outcomes. Perfect for marketing materials, proposals, and stakeholder presentations.' :
+           lang === 'es' ? 'Genere un estudio de caso convincente que muestre el impacto del programa desde la línea base hasta los resultados. Perfecto para materiales de marketing, propuestas y presentaciones a partes interesadas.' :
+           lang === 'fr' ? 'Générez une étude de cas convaincante présentant l\'impact du programme de la ligne de base à l\'intervention aux résultats. Parfait pour les supports marketing, les propositions et les présentations aux parties prenantes.' :
+           lang === 'uk' ? 'Створіть переконливу кейс-студію, що демонструє вплив програми від базового рівня через втручання до результатів. Ідеально для маркетингових матеріалів, пропозицій та презентацій зацікавленим сторонам.' :
+           'Generer en overbevisende casestudie som viser programmets innvirkning fra grunnlinjen gjennom intervensjon til resultater. Perfekt for markedsføringsmaterialer, forslag og interessentpresentasjoner.'}
+        </p>
+        <CaseStudyGenerator
+          client:load
+          companyId={companyId}
+          lang={lang}
+        />
+      </section>
+
+      <!-- Methods Whitepaper Generator -->
+      <section class="generator-card">
+        <div class="generator-header">
+          <h2>
+            {lang === 'en' ? 'VIS/SROI Methods Whitepaper' :
+             lang === 'es' ? 'Documento Técnico de Métodos VIS/SROI' :
+             lang === 'fr' ? 'Livre Blanc sur les Méthodes VIS/SROI' :
+             lang === 'uk' ? 'Методичний Документ VIS/SROI' :
+             'VIS/SROI Metodehvitebok'}
+          </h2>
+          <span class="badge badge-technical">
+            {lang === 'en' ? 'Technical' :
+             lang === 'es' ? 'Técnico' :
+             lang === 'fr' ? 'Technique' :
+             lang === 'uk' ? 'Технічний' :
+             'Teknisk'}
+          </span>
+        </div>
+        <p class="generator-description">
+          {lang === 'en' ? 'Generate a comprehensive technical whitepaper documenting SROI and VIS calculation methodologies, data lineage, and quality frameworks. Ideal for auditors, compliance officers, and research teams.' :
+           lang === 'es' ? 'Genere un documento técnico completo que documente las metodologías de cálculo de SROI y VIS, el linaje de datos y los marcos de calidad. Ideal para auditores, oficiales de cumplimiento y equipos de investigación.' :
+           lang === 'fr' ? 'Générez un livre blanc technique complet documentant les méthodologies de calcul SROI et VIS, la lignée des données et les cadres de qualité. Idéal pour les auditeurs, les responsables de la conformité et les équipes de recherche.' :
+           lang === 'uk' ? 'Створіть комплексний технічний документ, що документує методології розрахунку SROI та VIS, походження даних та рамки якості. Ідеально для аудиторів, офіцерів відповідності та дослідницьких команд.' :
+           'Generer en omfattende teknisk hvitebok som dokumenterer SROI- og VIS-beregningsmetoder, dataopphav og kvalitetsrammeverk. Ideell for revisorer, compliance-offiserer og forskerteam.'}
+        </p>
+        <MethodsWhitepaperGenerator
+          client:load
+          companyId={companyId}
+          lang={lang}
+        />
+      </section>
+    </div>
+
+    <!-- Info Section -->
+    <aside class="info-panel">
+      <h3>
+        {lang === 'en' ? 'About Report Generators' :
+         lang === 'es' ? 'Acerca de los Generadores de Informes' :
+         lang === 'fr' ? 'À Propos des Générateurs de Rapports' :
+         lang === 'uk' ? 'Про Генератори Звітів' :
+         'Om Rapportgeneratorer'}
+      </h3>
+      <ul>
+        <li>
+          {lang === 'en' ? '✅ Evidence-first: Every claim is backed by citations from your program data' :
+           lang === 'es' ? '✅ Evidencia primero: Cada afirmación está respaldada por citas de los datos de su programa' :
+           lang === 'fr' ? '✅ Preuve d\'abord : chaque affirmation est étayée par des citations de vos données de programme' :
+           lang === 'uk' ? '✅ Докази на першому місці: кожне твердження підтверджено цитатами з даних вашої програми' :
+           '✅ Bevis først: Hver påstand er støttet av sitater fra programdataene dine'}
+        </li>
+        <li>
+          {lang === 'en' ? '🔒 PII Protection: All personal data is automatically redacted before AI processing' :
+           lang === 'es' ? '🔒 Protección de PII: Todos los datos personales se redactan automáticamente antes del procesamiento de IA' :
+           lang === 'fr' ? '🔒 Protection des données personnelles : toutes les données personnelles sont automatiquement rédigées avant le traitement IA' :
+           lang === 'uk' ? '🔒 Захист ПІІ: Усі персональні дані автоматично редагуються перед обробкою ШІ' :
+           '🔒 PII-beskyttelse: Alle personopplysninger redakteres automatisk før AI-behandling'}
+        </li>
+        <li>
+          {lang === 'en' ? '📊 Export Options: Download as PDF or PPTX with section table of contents' :
+           lang === 'es' ? '📊 Opciones de Exportación: Descargar como PDF o PPTX con tabla de contenido de sección' :
+           lang === 'fr' ? '📊 Options d\'exportation : télécharger au format PDF ou PPTX avec table des matières de section' :
+           lang === 'uk' ? '📊 Варіанти експорту: Завантажити як PDF або PPTX з розділом змісту' :
+           '📊 Eksportalternativer: Last ned som PDF eller PPTX med seksjonsinnholdsfortegnelse'}
+        </li>
+        <li>
+          {lang === 'en' ? '🌍 Multi-locale: Generate reports in English, Spanish, French, Ukrainian, and Norwegian' :
+           lang === 'es' ? '🌍 Multi-local: Genere informes en inglés, español, francés, ucraniano y noruego' :
+           lang === 'fr' ? '🌍 Multi-locale : générez des rapports en anglais, espagnol, français, ukrainien et norvégien' :
+           lang === 'uk' ? '🌍 Багатомовність: Створюйте звіти англійською, іспанською, французькою, українською та норвезькою' :
+           '🌍 Flerspråklig: Generer rapporter på engelsk, spansk, fransk, ukrainsk og norsk'}
+        </li>
+      </ul>
+    </aside>
+  </div>
+</CockpitLayout>
+
+<style>
+  .generators-page {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+
+  .page-header {
+    margin-bottom: 3rem;
+  }
+
+  .page-header h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    color: var(--color-text-primary, #1a202c);
+  }
+
+  .subtitle {
+    font-size: 1.125rem;
+    color: var(--color-text-secondary, #4a5568);
+    max-width: 800px;
+  }
+
+  .generators-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+    gap: 2rem;
+    margin-bottom: 3rem;
+  }
+
+  .generator-card {
+    background: var(--color-surface, white);
+    border: 1px solid var(--color-border, #e2e8f0);
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  .generator-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .generator-header h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--color-text-primary, #1a202c);
+    margin: 0;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .badge-new {
+    background-color: #10b981;
+    color: white;
+  }
+
+  .badge-technical {
+    background-color: #3b82f6;
+    color: white;
+  }
+
+  .generator-description {
+    color: var(--color-text-secondary, #4a5568);
+    line-height: 1.6;
+    margin-bottom: 1.5rem;
+  }
+
+  .info-panel {
+    background: var(--color-info-bg, #eff6ff);
+    border: 1px solid var(--color-info-border, #bfdbfe);
+    border-radius: 8px;
+    padding: 1.5rem;
+  }
+
+  .info-panel h3 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: var(--color-info-text, #1e40af);
+  }
+
+  .info-panel ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .info-panel li {
+    padding: 0.5rem 0;
+    color: var(--color-text-secondary, #4a5568);
+    line-height: 1.6;
+  }
+
+  @media (max-width: 768px) {
+    .generators-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .page-header h1 {
+      font-size: 2rem;
+    }
+  }
+</style>
