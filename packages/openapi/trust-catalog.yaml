@@ -1,0 +1,1095 @@
+openapi: 3.0.3
+info:
+  title: TEEI Data Trust Catalog API
+  version: 1.0.0
+  description: |
+    Data Trust Catalog API provides visibility into data governance, lineage,
+    quality metrics, and semantic layer definitions for the TEEI CSR Platform.
+
+    Features:
+    - Dataset catalog with freshness and quality metrics
+    - Column-level and dataset-level lineage tracking
+    - Great Expectations quality run results
+    - dbt semantic layer metric definitions
+    - GDPR classification and residency tracking
+    - Audit logging for data access and exports
+
+  contact:
+    name: TEEI Platform Team
+servers:
+  - url: http://localhost:3001
+    description: Local analytics service
+  - url: http://localhost:3000/trust
+    description: Local API gateway (proxied)
+
+security:
+  - bearerAuth: []
+
+paths:
+  /catalog/datasets:
+    get:
+      summary: List catalog datasets
+      operationId: listDatasets
+      tags:
+        - Catalog
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+          description: Page number for pagination
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+          description: Number of items per page
+        - name: domain
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [impact, reporting, analytics, identity, buddy, kintell, compliance, financials]
+          description: Filter by dataset domain
+        - name: gdprCategory
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [public, internal, confidential, pii, sensitive]
+          description: Filter by GDPR category
+        - name: freshnessStatus
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [ok, warn, critical, unknown]
+          description: Filter by freshness status
+        - name: qualityStatus
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [pass, warn, fail, unknown]
+          description: Filter by quality status
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search by dataset name or description
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            enum: [name, lastLoadedAt, qualityPassRate, freshnessStatus]
+            default: name
+          description: Sort field
+        - name: sortOrder
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: asc
+          description: Sort order
+      responses:
+        '200':
+          description: Paginated list of datasets
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatasetListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /catalog/datasets/{datasetId}:
+    get:
+      summary: Get dataset profile
+      operationId: getDatasetProfile
+      tags:
+        - Catalog
+      parameters:
+        - name: datasetId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Dataset ID
+        - name: includeLineage
+          in: query
+          schema:
+            type: boolean
+            default: true
+          description: Include lineage graph
+        - name: includeQualityHistory
+          in: query
+          schema:
+            type: boolean
+            default: true
+          description: Include quality run history
+        - name: includeSchema
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: Include column schema details
+      responses:
+        '200':
+          description: Dataset profile with lineage and quality details
+          headers:
+            ETag:
+              schema:
+                type: string
+              description: Entity tag for caching
+            Cache-Control:
+              schema:
+                type: string
+              description: Cache control directives
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatasetProfile'
+        '304':
+          description: Not modified (ETag match)
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /catalog/metrics:
+    get:
+      summary: List semantic metrics
+      operationId: listMetrics
+      tags:
+        - Metrics
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: category
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [impact, engagement, financial, operational]
+          description: Filter by metric category
+        - name: metricType
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [ratio, count, sum, average, derived]
+          description: Filter by metric type
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search by metric name or description
+      responses:
+        '200':
+          description: Paginated list of semantic metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetricListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /catalog/lineage/{datasetId}:
+    get:
+      summary: Get lineage graph for dataset
+      operationId: getLineageGraph
+      tags:
+        - Lineage
+      parameters:
+        - name: datasetId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Dataset ID
+        - name: direction
+          in: query
+          schema:
+            type: string
+            enum: [upstream, downstream, both]
+            default: both
+          description: Lineage direction
+        - name: maxDepth
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 10
+            default: 3
+          description: Maximum traversal depth
+      responses:
+        '200':
+          description: Lineage graph with nodes and edges
+          headers:
+            ETag:
+              schema:
+                type: string
+            Cache-Control:
+              schema:
+                type: string
+                default: max-age=300
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LineageGraph'
+        '304':
+          description: Not modified (ETag match)
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /catalog/quality/{datasetId}:
+    get:
+      summary: Get quality run history for dataset
+      operationId: getQualityHistory
+      tags:
+        - Quality
+      parameters:
+        - name: datasetId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Dataset ID
+        - name: days
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 90
+            default: 7
+          description: Number of days of history
+      responses:
+        '200':
+          description: Quality run history
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QualityRunHistory'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /catalog/summary:
+    get:
+      summary: Get catalog summary statistics
+      operationId: getCatalogSummary
+      tags:
+        - Catalog
+      responses:
+        '200':
+          description: Catalog summary statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /catalog/export:
+    post:
+      summary: Export catalog data
+      operationId: exportCatalogData
+      tags:
+        - Export
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExportRequest'
+      responses:
+        '200':
+          description: Export data in requested format
+          content:
+            application/json:
+              schema:
+                type: object
+            text/csv:
+              schema:
+                type: string
+            image/png:
+              schema:
+                type: string
+                format: binary
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /catalog/quality-events:
+    get:
+      summary: SSE stream for quality run completions
+      operationId: streamQualityEvents
+      tags:
+        - Quality
+        - SSE
+      responses:
+        '200':
+          description: Server-sent events stream
+          content:
+            text/event-stream:
+              schema:
+                type: object
+                properties:
+                  event:
+                    type: string
+                    enum: [quality_run_complete, quality_run_failed]
+                  data:
+                    $ref: '#/components/schemas/QualityRun'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    DatasetCard:
+      type: object
+      required:
+        - id
+        - name
+        - domain
+        - owner
+        - gdprCategory
+        - freshnessStatus
+        - qualityStatus
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        domain:
+          type: string
+          enum: [impact, reporting, analytics, identity, buddy, kintell, compliance, financials]
+        owner:
+          type: string
+        gdprCategory:
+          type: string
+          enum: [public, internal, confidential, pii, sensitive]
+        freshnessStatus:
+          type: string
+          enum: [ok, warn, critical, unknown]
+        qualityStatus:
+          type: string
+          enum: [pass, warn, fail, unknown]
+        qualityPassRate:
+          type: number
+          minimum: 0
+          maximum: 100
+          nullable: true
+        lastLoadedAt:
+          type: string
+          format: date-time
+          nullable: true
+        lastQualityRunAt:
+          type: string
+          format: date-time
+          nullable: true
+        tags:
+          type: array
+          items:
+            type: string
+
+    CatalogDataset:
+      allOf:
+        - $ref: '#/components/schemas/DatasetCard'
+        - type: object
+          properties:
+            description:
+              type: string
+              nullable: true
+            ownerEmail:
+              type: string
+              format: email
+              nullable: true
+            residency:
+              type: string
+              enum: [EU, US, UK, NO, GLOBAL]
+            schemaVersion:
+              type: string
+              nullable: true
+            columnCount:
+              type: integer
+              nullable: true
+            rowCountEstimate:
+              type: integer
+              nullable: true
+            freshnessThresholdHours:
+              type: integer
+            upstreamCount:
+              type: integer
+            downstreamCount:
+              type: integer
+            lineageCoverage:
+              type: number
+              minimum: 0
+              maximum: 100
+              nullable: true
+            tenantId:
+              type: string
+              format: uuid
+              nullable: true
+            createdAt:
+              type: string
+              format: date-time
+            updatedAt:
+              type: string
+              format: date-time
+
+    DatasetProfile:
+      type: object
+      required:
+        - dataset
+      properties:
+        dataset:
+          $ref: '#/components/schemas/CatalogDataset'
+        lineageGraph:
+          $ref: '#/components/schemas/LineageGraph'
+        qualityRunHistory:
+          $ref: '#/components/schemas/QualityRunHistory'
+        relatedMetrics:
+          type: array
+          items:
+            $ref: '#/components/schemas/SemanticMetric'
+        schemaDetails:
+          type: array
+          items:
+            $ref: '#/components/schemas/ColumnSchema'
+          nullable: true
+        freshnessHistory:
+          type: array
+          items:
+            $ref: '#/components/schemas/FreshnessDataPoint'
+
+    LineageGraph:
+      type: object
+      required:
+        - datasetId
+        - datasetName
+        - direction
+        - maxDepth
+        - nodes
+        - edges
+        - metadata
+      properties:
+        datasetId:
+          type: string
+          format: uuid
+        datasetName:
+          type: string
+        direction:
+          type: string
+          enum: [upstream, downstream, both]
+        maxDepth:
+          type: integer
+        nodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/LineageNode'
+        edges:
+          type: array
+          items:
+            $ref: '#/components/schemas/LineageEdge'
+        metadata:
+          type: object
+          properties:
+            totalNodes:
+              type: integer
+            totalEdges:
+              type: integer
+            computedAt:
+              type: string
+              format: date-time
+
+    LineageNode:
+      type: object
+      required:
+        - id
+        - name
+        - domain
+        - type
+        - depth
+        - freshnessStatus
+        - qualityStatus
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        domain:
+          type: string
+          enum: [impact, reporting, analytics, identity, buddy, kintell, compliance, financials]
+        type:
+          type: string
+          enum: [dataset, metric, report]
+        depth:
+          type: integer
+        freshnessStatus:
+          type: string
+          enum: [ok, warn, critical, unknown]
+        qualityStatus:
+          type: string
+          enum: [pass, warn, fail, unknown]
+
+    LineageEdge:
+      type: object
+      required:
+        - id
+        - sourceDatasetId
+        - sourceDatasetName
+        - targetDatasetId
+        - targetDatasetName
+        - edgeType
+        - confidence
+        - method
+      properties:
+        id:
+          type: string
+          format: uuid
+        sourceDatasetId:
+          type: string
+          format: uuid
+        sourceDatasetName:
+          type: string
+        targetDatasetId:
+          type: string
+          format: uuid
+        targetDatasetName:
+          type: string
+        edgeType:
+          type: string
+          enum: [derives_from, depends_on, feeds_into, transforms_to]
+        sourceColumns:
+          type: array
+          items:
+            type: string
+          nullable: true
+        targetColumns:
+          type: array
+          items:
+            type: string
+          nullable: true
+        transformationType:
+          type: string
+          nullable: true
+        transformationCode:
+          type: string
+          nullable: true
+        confidence:
+          type: integer
+          minimum: 0
+          maximum: 100
+        method:
+          type: string
+          enum: [manual, inferred, openlineage, dbt]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    QualityRun:
+      type: object
+      required:
+        - id
+        - datasetId
+        - datasetName
+        - runId
+        - runAt
+        - status
+        - expectationsTotal
+        - expectationsPassed
+        - expectationsFailed
+        - passRate
+      properties:
+        id:
+          type: string
+          format: uuid
+        datasetId:
+          type: string
+          format: uuid
+        datasetName:
+          type: string
+        runId:
+          type: string
+        runAt:
+          type: string
+          format: date-time
+        runDurationMs:
+          type: integer
+        status:
+          type: string
+          enum: [pass, warn, fail, unknown]
+        expectationsTotal:
+          type: integer
+        expectationsPassed:
+          type: integer
+        expectationsFailed:
+          type: integer
+        expectationsWarned:
+          type: integer
+        passRate:
+          type: number
+          minimum: 0
+          maximum: 100
+        failedExpectations:
+          type: array
+          items:
+            $ref: '#/components/schemas/FailedExpectation'
+        geVersion:
+          type: string
+          nullable: true
+        checkpointName:
+          type: string
+          nullable: true
+        batchIdentifier:
+          type: string
+          nullable: true
+
+    FailedExpectation:
+      type: object
+      required:
+        - expectationType
+        - expectationConfig
+        - result
+        - severity
+      properties:
+        expectationType:
+          type: string
+        column:
+          type: string
+          nullable: true
+        expectationConfig:
+          type: object
+        result:
+          type: object
+          properties:
+            observed_value:
+              type: object
+            expected_value:
+              type: object
+            unexpected_count:
+              type: integer
+            unexpected_percent:
+              type: number
+            partial_unexpected_list:
+              type: array
+              items:
+                type: object
+        severity:
+          type: string
+          enum: [error, warning]
+
+    QualityRunHistory:
+      type: object
+      required:
+        - datasetId
+        - datasetName
+        - runs
+        - trend
+      properties:
+        datasetId:
+          type: string
+          format: uuid
+        datasetName:
+          type: string
+        runs:
+          type: array
+          items:
+            $ref: '#/components/schemas/QualityRunSummary'
+        trend:
+          type: string
+          enum: [improving, stable, degrading, unknown]
+
+    QualityRunSummary:
+      type: object
+      required:
+        - runId
+        - runAt
+        - status
+        - passRate
+        - expectationsTotal
+        - expectationsFailed
+      properties:
+        runId:
+          type: string
+        runAt:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [pass, warn, fail, unknown]
+        passRate:
+          type: number
+        expectationsTotal:
+          type: integer
+        expectationsFailed:
+          type: integer
+
+    SemanticMetric:
+      type: object
+      required:
+        - id
+        - name
+        - displayName
+        - description
+        - metricType
+        - category
+        - formula
+        - formulaReadable
+        - baseDatasets
+        - baseColumns
+        - exposures
+        - owner
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        displayName:
+          type: string
+        description:
+          type: string
+        metricType:
+          type: string
+          enum: [ratio, count, sum, average, derived]
+        category:
+          type: string
+          enum: [impact, engagement, financial, operational]
+        formula:
+          type: string
+        formulaReadable:
+          type: string
+        baseDatasets:
+          type: array
+          items:
+            type: string
+            format: uuid
+        baseColumns:
+          type: array
+          items:
+            $ref: '#/components/schemas/MetricColumn'
+        lastRefreshedAt:
+          type: string
+          format: date-time
+          nullable: true
+        refreshFrequency:
+          type: string
+        freshnessStatus:
+          type: string
+          enum: [ok, warn, critical, unknown]
+        exposures:
+          type: array
+          items:
+            $ref: '#/components/schemas/MetricExposure'
+        goldStandardValue:
+          type: number
+          nullable: true
+        goldStandardTolerance:
+          type: number
+          nullable: true
+        lastValidationAt:
+          type: string
+          format: date-time
+          nullable: true
+        validationStatus:
+          type: string
+          enum: [pass, fail, unknown]
+        dbtModelName:
+          type: string
+          nullable: true
+        dbtMetricName:
+          type: string
+          nullable: true
+        owner:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    MetricColumn:
+      type: object
+      required:
+        - datasetId
+        - datasetName
+        - columnName
+      properties:
+        datasetId:
+          type: string
+          format: uuid
+        datasetName:
+          type: string
+        columnName:
+          type: string
+        aggregation:
+          type: string
+          nullable: true
+        filter:
+          type: string
+          nullable: true
+
+    MetricExposure:
+      type: object
+      required:
+        - type
+        - name
+      properties:
+        type:
+          type: string
+          enum: [dashboard, report, api, export]
+        name:
+          type: string
+        url:
+          type: string
+          nullable: true
+        lastAccessedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    ColumnSchema:
+      type: object
+      required:
+        - name
+        - dataType
+        - nullable
+        - hasPII
+        - hasLineage
+      properties:
+        name:
+          type: string
+        dataType:
+          type: string
+        nullable:
+          type: boolean
+        description:
+          type: string
+          nullable: true
+        hasPII:
+          type: boolean
+        hasLineage:
+          type: boolean
+
+    FreshnessDataPoint:
+      type: object
+      required:
+        - timestamp
+        - hoursSinceLastLoad
+        - status
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        hoursSinceLastLoad:
+          type: number
+        status:
+          type: string
+          enum: [ok, warn, critical, unknown]
+
+    CatalogSummary:
+      type: object
+      required:
+        - totalDatasets
+        - totalMetrics
+        - lineageCoveragePercent
+        - qualityPassRateAverage
+        - freshnessStats
+        - qualityStats
+        - lastUpdatedAt
+      properties:
+        totalDatasets:
+          type: integer
+        totalMetrics:
+          type: integer
+        lineageCoveragePercent:
+          type: number
+        qualityPassRateAverage:
+          type: number
+        freshnessStats:
+          type: object
+          properties:
+            ok:
+              type: integer
+            warn:
+              type: integer
+            critical:
+              type: integer
+            unknown:
+              type: integer
+        qualityStats:
+          type: object
+          properties:
+            pass:
+              type: integer
+            warn:
+              type: integer
+            fail:
+              type: integer
+            unknown:
+              type: integer
+        lastUpdatedAt:
+          type: string
+          format: date-time
+
+    DatasetListResponse:
+      type: object
+      required:
+        - data
+        - pagination
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/DatasetCard'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+        filters:
+          type: object
+
+    MetricListResponse:
+      type: object
+      required:
+        - data
+        - pagination
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/SemanticMetric'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    Pagination:
+      type: object
+      required:
+        - page
+        - limit
+        - total
+        - totalPages
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        totalPages:
+          type: integer
+
+    ExportRequest:
+      type: object
+      required:
+        - format
+        - entity
+        - entityIds
+      properties:
+        format:
+          type: string
+          enum: [json, csv, png]
+        entity:
+          type: string
+          enum: [datasets, metrics, lineage, quality]
+        entityIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+
+    Error:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+
+  responses:
+    Unauthorized:
+      description: Unauthorized - Invalid or missing JWT token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    BadRequest:
+      description: Bad request - Invalid parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    ServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
