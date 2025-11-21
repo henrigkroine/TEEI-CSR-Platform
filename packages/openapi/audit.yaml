@@ -1,0 +1,613 @@
+openapi: 3.0.3
+info:
+  title: Audit Log API
+  description: |
+    Unified audit log query and compliance export APIs.
+
+    **Features:**
+    - Query audit events with flexible filters
+    - Timeline aggregation for visualization
+    - Event detail retrieval with before/after diffs
+    - Signed compliance export bundles (ZIP)
+    - RBAC enforcement (AuditViewer, AuditAdmin)
+    - Tenant isolation
+    - PII redaction and secret masking
+
+    **Performance SLOs:**
+    - Query p95: ≤250ms for 30-day ranges
+    - Export streaming: ≤2 MB/s sustained
+  version: 1.0.0
+  contact:
+    name: TEEI Platform Team
+    email: platform@teei.io
+
+servers:
+  - url: https://api.teei.io/v1/audit
+    description: Production
+  - url: http://localhost:3000/v1/audit
+    description: Local development
+
+security:
+  - bearerAuth: []
+
+paths:
+  /events:
+    get:
+      summary: Query audit events
+      description: |
+        Query audit events with filters and pagination.
+        Requires AuditViewer or AuditAdmin role.
+        Enforces tenant isolation (non-admin users can only query their own tenant).
+      operationId: queryAuditEvents
+      tags:
+        - Audit
+      parameters:
+        - name: from
+          in: query
+          description: Start timestamp (ISO 8601)
+          schema:
+            type: string
+            format: date-time
+          example: "2024-01-01T00:00:00Z"
+        - name: to
+          in: query
+          description: End timestamp (ISO 8601)
+          schema:
+            type: string
+            format: date-time
+          example: "2024-01-31T23:59:59Z"
+        - name: tenantId
+          in: query
+          description: Tenant/company ID (required for non-admin users)
+          schema:
+            type: string
+            format: uuid
+        - name: actorId
+          in: query
+          description: Filter by actor user ID
+          schema:
+            type: string
+            format: uuid
+        - name: actorEmail
+          in: query
+          description: Filter by actor email (partial match, case-insensitive)
+          schema:
+            type: string
+          example: "user@example.com"
+        - name: resourceType
+          in: query
+          description: Filter by resource type
+          schema:
+            type: string
+            enum: [user, company, report, evidence, metric, dsar_request, ai_prompt, approval, consent, api_key, role, permission]
+        - name: resourceId
+          in: query
+          description: Filter by resource ID
+          schema:
+            type: string
+            format: uuid
+        - name: action
+          in: query
+          description: Filter by action
+          schema:
+            type: string
+            enum: [LOGIN, LOGOUT, LOGIN_FAILED, PASSWORD_RESET, MFA_ENABLED, MFA_DISABLED, CREATE, READ, UPDATE, DELETE, EXPORT, IMPORT, DSAR_REQUEST, DSAR_FULFILL, DSAR_CANCEL, CONSENT_GRANT, CONSENT_REVOKE, APPROVE, REJECT, REQUEST_REVIEW, AI_PROMPT, AI_RESPONSE, AI_REDACT, EVIDENCE_ADD, EVIDENCE_EDIT, EVIDENCE_VERIFY, EVIDENCE_CHALLENGE]
+        - name: actionCategory
+          in: query
+          description: Filter by action category
+          schema:
+            type: string
+            enum: [AUTH, DATA_ACCESS, DATA_MODIFICATION, PRIVACY, ADMIN, AI_GENERATION, EVIDENCE, APPROVAL]
+        - name: search
+          in: query
+          description: Full-text search in metadata and identifiers
+          schema:
+            type: string
+        - name: limit
+          in: query
+          description: Max results per page (1-1000)
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 100
+        - name: offset
+          in: query
+          description: Pagination offset
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data, meta]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    required: [events, total, hasMore]
+                    properties:
+                      events:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/AuditEvent'
+                      total:
+                        type: integer
+                        description: Total matching events
+                        example: 1523
+                      hasMore:
+                        type: boolean
+                        description: Whether more results are available
+                      nextOffset:
+                        type: integer
+                        description: Offset for next page (if hasMore)
+                  meta:
+                    type: object
+                    properties:
+                      queryTime:
+                        type: integer
+                        description: Query execution time (ms)
+                        example: 87
+                      filters:
+                        type: object
+                        description: Applied filters
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /events/{id}:
+    get:
+      summary: Get audit event by ID
+      description: Retrieve a single audit event with full details including before/after states
+      operationId: getAuditEvent
+      tags:
+        - Audit
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Audit event ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/AuditEvent'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /timeline:
+    get:
+      summary: Get timeline aggregation
+      description: Get time-bucketed event counts for heatmap visualization
+      operationId: getAuditTimeline
+      tags:
+        - Audit
+      parameters:
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: tenantId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: bucketSize
+          in: query
+          description: Time bucket size
+          schema:
+            type: string
+            enum: [hour, day, week]
+            default: day
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TimelineBucket'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /stats:
+    get:
+      summary: Get audit statistics
+      description: Get aggregated statistics for a given filter
+      operationId: getAuditStats
+      tags:
+        - Audit
+      parameters:
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: tenantId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/AuditStats'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /export:
+    post:
+      summary: Create compliance export
+      description: |
+        Create signed ZIP bundle with JSONL events, SHA-256 manifest, and PDF cover.
+        Requires AuditAdmin role.
+        Rate limited: 5 exports per hour per user.
+      operationId: exportAuditLog
+      tags:
+        - Compliance
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tenantId, from, to]
+              properties:
+                tenantId:
+                  type: string
+                  format: uuid
+                from:
+                  type: string
+                  format: date-time
+                to:
+                  type: string
+                  format: date-time
+                maskPII:
+                  type: boolean
+                  description: Generate PII-masked variant
+                  default: false
+                filters:
+                  type: object
+                  properties:
+                    actorId:
+                      type: string
+                      format: uuid
+                    resourceType:
+                      type: string
+                    action:
+                      type: string
+                    actionCategory:
+                      type: string
+      responses:
+        '200':
+          description: ZIP file stream
+          headers:
+            Content-Type:
+              schema:
+                type: string
+                example: application/zip
+            Content-Disposition:
+              schema:
+                type: string
+                example: attachment; filename="audit_export_tenant_2024-01-01_2024-01-31.zip"
+            X-Export-ID:
+              schema:
+                type: string
+                format: uuid
+              description: Unique export ID
+            X-Export-Event-Count:
+              schema:
+                type: integer
+              description: Number of events in export
+            X-Export-SHA256:
+              schema:
+                type: string
+              description: SHA-256 hash of events.jsonl
+          content:
+            application/zip:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    AuditEvent:
+      type: object
+      required: [id, timestamp, actor, resource, action, actionCategory, origin]
+      properties:
+        id:
+          type: string
+          format: uuid
+        timestamp:
+          type: string
+          format: date-time
+        tenantId:
+          type: string
+          format: uuid
+          nullable: true
+        actor:
+          type: object
+          required: [id, email, role]
+          properties:
+            id:
+              type: string
+              format: uuid
+            email:
+              type: string
+              format: email
+            role:
+              type: string
+            name:
+              type: string
+        resource:
+          type: object
+          required: [type]
+          properties:
+            type:
+              type: string
+            id:
+              type: string
+              format: uuid
+              nullable: true
+            identifier:
+              type: string
+              nullable: true
+        action:
+          type: string
+        actionCategory:
+          type: string
+          enum: [AUTH, DATA_ACCESS, DATA_MODIFICATION, PRIVACY, ADMIN, AI_GENERATION, EVIDENCE, APPROVAL]
+        before:
+          type: object
+          nullable: true
+          description: State before action (may contain redacted secrets)
+        after:
+          type: object
+          nullable: true
+          description: State after action (may contain redacted secrets)
+        origin:
+          type: object
+          properties:
+            ip:
+              type: string
+              nullable: true
+            userAgent:
+              type: string
+              nullable: true
+            endpoint:
+              type: string
+              nullable: true
+            requestId:
+              type: string
+              nullable: true
+            ref:
+              type: string
+              nullable: true
+        metadata:
+          type: object
+          nullable: true
+        gdprBasis:
+          type: string
+          nullable: true
+        retentionUntil:
+          type: string
+          format: date-time
+          nullable: true
+
+    TimelineBucket:
+      type: object
+      required: [timestamp, count, actionCounts]
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        count:
+          type: integer
+        actionCounts:
+          type: object
+          additionalProperties:
+            type: integer
+
+    AuditStats:
+      type: object
+      required: [totalEvents, eventsByCategory, eventsByAction, eventsByResourceType, topActors, dateRange]
+      properties:
+        totalEvents:
+          type: integer
+        eventsByCategory:
+          type: object
+          additionalProperties:
+            type: integer
+        eventsByAction:
+          type: object
+          additionalProperties:
+            type: integer
+        eventsByResourceType:
+          type: object
+          additionalProperties:
+            type: integer
+        topActors:
+          type: array
+          items:
+            type: object
+            required: [actorId, actorEmail, count]
+            properties:
+              actorId:
+                type: string
+                format: uuid
+              actorEmail:
+                type: string
+              count:
+                type: integer
+        dateRange:
+          type: object
+          required: [from, to]
+          properties:
+            from:
+              type: string
+              format: date-time
+            to:
+              type: string
+              format: date-time
+
+  responses:
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: string
+                example: Unauthorized
+              message:
+                type: string
+                example: Authentication required
+
+    Forbidden:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: string
+                example: Forbidden
+              message:
+                type: string
+                example: Insufficient permissions. Required role AuditViewer or AuditAdmin
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: string
+                example: NotFound
+              message:
+                type: string
+
+    RateLimited:
+      description: Rate limit exceeded
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: string
+                example: TooManyRequests
+              message:
+                type: string
+                example: Rate limit exceeded
+
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: string
+                example: InternalServerError
+              message:
+                type: string

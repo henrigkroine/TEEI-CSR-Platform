@@ -1,0 +1,307 @@
+name: Audit Log System CI
+
+on:
+  push:
+    paths:
+      - 'services/analytics/src/audit/**'
+      - 'services/api-gateway/src/routes/audit/**'
+      - 'apps/corp-cockpit-astro/src/admin/audit/**'
+      - 'packages/shared-types/src/audit.ts'
+      - 'packages/shared-schema/src/audit-mappers.ts'
+      - 'packages/shared-schema/src/schema/audits.ts'
+      - 'packages/openapi/audit.yaml'
+      - '.github/workflows/audit-ci.yml'
+  pull_request:
+    paths:
+      - 'services/analytics/src/audit/**'
+      - 'services/api-gateway/src/routes/audit/**'
+      - 'apps/corp-cockpit-astro/src/admin/audit/**'
+      - 'packages/shared-types/src/audit.ts'
+      - 'packages/shared-schema/src/audit-mappers.ts'
+      - 'packages/shared-schema/src/schema/audits.ts'
+      - 'packages/openapi/audit.yaml'
+      - '.github/workflows/audit-ci.yml'
+
+jobs:
+  lint:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint audit code
+        run: |
+          pnpm --filter @teei/analytics lint
+          pnpm --filter @teei/api-gateway lint
+          pnpm --filter @teei/shared-types lint
+          pnpm --filter @teei/shared-schema lint
+
+      - name: Type check
+        run: |
+          pnpm --filter @teei/analytics typecheck
+          pnpm --filter @teei/api-gateway typecheck
+          pnpm --filter @teei/shared-types typecheck
+
+  unit-tests:
+    name: Unit Tests (≥90% coverage)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run unit tests
+        run: pnpm --filter @teei/analytics test -- --run --coverage audit/__tests__
+
+      - name: Check coverage threshold
+        run: |
+          pnpm --filter @teei/analytics test:coverage-check -- \
+            --coverage.lines 90 \
+            --coverage.functions 90 \
+            --coverage.branches 90 \
+            --coverage.statements 90
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        with:
+          files: services/analytics/coverage/lcov.info
+          flags: audit-unit-tests
+
+  contract-tests:
+    name: API Contract Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: teei_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run database migrations
+        run: pnpm --filter @teei/shared-schema migrate
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/teei_test
+
+      - name: Run contract tests
+        run: pnpm --filter @teei/analytics test:contract -- audit
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/teei_test
+
+  e2e-tests:
+    name: E2E Tests (Playwright)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: teei_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run database migrations
+        run: pnpm --filter @teei/shared-schema migrate
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/teei_test
+
+      - name: Start services
+        run: |
+          pnpm --filter @teei/analytics dev &
+          pnpm --filter @teei/api-gateway dev &
+          pnpm --filter corp-cockpit-astro dev &
+          sleep 10
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/teei_test
+          PORT_ANALYTICS: 3008
+          PORT_API_GATEWAY: 3000
+
+      - name: Run E2E tests
+        run: pnpm --filter corp-cockpit-astro test:e2e -- audit
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: playwright-report
+          path: apps/corp-cockpit-astro/playwright-report/
+          retention-days: 30
+
+  security-audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Security audit (npm)
+        run: pnpm audit --prod --audit-level moderate
+
+      - name: Check for PII leakage in tests
+        run: |
+          ! grep -r "sk-[a-zA-Z0-9]" services/analytics/src/audit/__tests__/ || (echo "ERROR: API keys found in tests" && exit 1)
+          ! grep -r "password.*:" services/analytics/src/audit/__tests__/ || (echo "WARNING: Passwords in test fixtures (review redaction)")
+
+      - name: Validate OpenAPI spec
+        run: |
+          npm install -g @apidevtools/swagger-cli
+          swagger-cli validate packages/openapi/audit.yaml
+
+  performance-benchmark:
+    name: Performance Benchmark
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: teei_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Seed test data (30 days, ~50k events)
+        run: pnpm --filter @teei/shared-schema seed:audit-benchmark
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/teei_test
+
+      - name: Run performance benchmarks
+        run: pnpm --filter @teei/analytics benchmark:audit
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/teei_test
+
+      - name: Check SLO compliance
+        run: |
+          # Query p95 should be ≤250ms
+          # Export should be ≤2 MB/s
+          pnpm --filter @teei/analytics benchmark:validate
+
+  documentation:
+    name: Documentation Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check documentation exists
+        run: |
+          test -f docs/compliance/audit_explorer.md || (echo "ERROR: Missing audit_explorer.md" && exit 1)
+          test -f packages/openapi/audit.yaml || (echo "ERROR: Missing audit.yaml" && exit 1)
+
+      - name: Validate markdown links
+        uses: gaurav-nelson/github-action-markdown-link-check@v1
+        with:
+          use-quiet-mode: 'yes'
+          config-file: '.github/markdown-link-check-config.json'
+          file-path: 'docs/compliance/audit_explorer.md'
+
+  all-checks-passed:
+    name: All Checks Passed
+    runs-on: ubuntu-latest
+    needs: [lint, unit-tests, contract-tests, e2e-tests, security-audit, performance-benchmark, documentation]
+    steps:
+      - name: Summary
+        run: |
+          echo "✅ All audit log system checks passed!"
+          echo "- Lint & type check: PASSED"
+          echo "- Unit tests (≥90% coverage): PASSED"
+          echo "- Contract tests: PASSED"
+          echo "- E2E tests: PASSED"
+          echo "- Security audit: PASSED"
+          echo "- Performance benchmark (p95 ≤250ms): PASSED"
+          echo "- Documentation: PASSED"
