@@ -1,0 +1,54 @@
+---
+import type { TextBlockPayload } from '@teei/shared-types';
+
+export interface Props {
+  payload: TextBlockPayload;
+}
+
+const { payload } = Astro.props;
+---
+
+<div class="bg-white rounded-lg shadow-md p-8">
+  <div class="prose prose-lg max-w-none" set:html={payload.content} />
+</div>
+
+<style>
+  .prose {
+    color: #374151;
+  }
+
+  .prose h1,
+  .prose h2,
+  .prose h3,
+  .prose h4,
+  .prose h5,
+  .prose h6 {
+    color: #111827;
+    font-weight: 700;
+  }
+
+  .prose a {
+    color: #0ea5e9;
+    text-decoration: underline;
+  }
+
+  .prose a:hover {
+    color: #0284c7;
+  }
+
+  .prose strong {
+    font-weight: 600;
+  }
+
+  .prose ul,
+  .prose ol {
+    padding-left: 1.5rem;
+  }
+
+  .prose blockquote {
+    border-left: 4px solid #e5e7eb;
+    padding-left: 1rem;
+    font-style: italic;
+    color: #6b7280;
+  }
+</style>

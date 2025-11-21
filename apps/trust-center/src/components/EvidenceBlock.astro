@@ -1,0 +1,44 @@
+---
+import type { EvidenceBlockPayload } from '@teei/shared-types';
+
+export interface Props {
+  payload: EvidenceBlockPayload;
+}
+
+const { payload } = Astro.props;
+
+const formatDate = (dateString: string) => {
+  try {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  } catch {
+    return dateString;
+  }
+};
+---
+
+<div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-primary-500">
+  <div class="flex items-start justify-between mb-3">
+    <div class="flex-1">
+      {payload.category && (
+        <span class="inline-block px-2 py-1 text-xs font-medium text-primary-700 bg-primary-100 rounded">
+          {payload.category}
+        </span>
+      )}
+    </div>
+    <time class="text-sm text-gray-500" datetime={payload.date}>
+      {formatDate(payload.date)}
+    </time>
+  </div>
+
+  <blockquote class="text-gray-700 italic mb-3">
+    "{payload.snippet}"
+  </blockquote>
+
+  <footer class="text-sm text-gray-600">
+    <cite>— {payload.source}</cite>
+  </footer>
+</div>

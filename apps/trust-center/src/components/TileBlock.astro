@@ -1,0 +1,57 @@
+---
+import type { TileBlockPayload } from '@teei/shared-types';
+
+export interface Props {
+  payload: TileBlockPayload;
+}
+
+const { payload } = Astro.props;
+
+const getTrendIcon = (direction: string) => {
+  switch (direction) {
+    case 'up':
+      return '↑';
+    case 'down':
+      return '↓';
+    default:
+      return '→';
+  }
+};
+
+const getTrendColor = (direction: string) => {
+  switch (direction) {
+    case 'up':
+      return 'text-green-600';
+    case 'down':
+      return 'text-red-600';
+    default:
+      return 'text-gray-600';
+  }
+};
+---
+
+<div class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+  <div class="flex items-start justify-between">
+    <div class="flex-1">
+      <h3 class="text-sm font-medium text-gray-600 mb-1">{payload.title}</h3>
+      <p class="text-3xl font-bold text-gray-900">{payload.value}</p>
+      {payload.subtitle && (
+        <p class="text-sm text-gray-500 mt-1">{payload.subtitle}</p>
+      )}
+    </div>
+    {payload.icon && (
+      <div class="text-2xl" aria-hidden="true">
+        {payload.icon}
+      </div>
+    )}
+  </div>
+
+  {payload.trend && (
+    <div class={`mt-4 flex items-center text-sm ${getTrendColor(payload.trend.direction)}`}>
+      <span class="font-medium" aria-hidden="true">
+        {getTrendIcon(payload.trend.direction)} {payload.trend.value}%
+      </span>
+      <span class="ml-2 text-gray-600">{payload.trend.label}</span>
+    </div>
+  )}
+</div>
