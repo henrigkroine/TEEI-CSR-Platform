@@ -1,0 +1,91 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { hasPermission } from '../utils/rbac';
+import PublicationsManager from '../components/publications/PublicationsManager';
+
+const user = Astro.locals.user;
+
+if (!user) {
+  return Astro.redirect('/login');
+}
+
+// Only company admins can manage publications
+const canManagePublications = hasPermission(user.role, 'MANAGE_PUBLICATIONS') ||
+  user.role === 'company_admin' ||
+  user.role === 'system_admin';
+
+if (!canManagePublications) {
+  return Astro.redirect('/dashboard?error=unauthorized');
+}
+---
+
+<BaseLayout title="Impact Publications - TEEI Corporate Cockpit">
+  <div class="publications-header">
+    <div>
+      <h1>Public Impact Pages</h1>
+      <p class="subtitle">Create and publish impact pages to share with stakeholders</p>
+    </div>
+    <div class="header-actions">
+      <a href="/dashboard" class="btn btn-secondary">
+        ← Back to Dashboard
+      </a>
+    </div>
+  </div>
+
+  <PublicationsManager
+    companyId={user.company_id}
+    userId={user.id}
+    client:load
+  />
+</BaseLayout>
+
+<style>
+  .publications-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: calc(var(--spacing-unit) * 4);
+    flex-wrap: wrap;
+    gap: calc(var(--spacing-unit) * 2);
+  }
+
+  h1 {
+    font-size: 2rem;
+    margin-bottom: calc(var(--spacing-unit) * 0.5);
+  }
+
+  .subtitle {
+    color: var(--color-text-secondary);
+    font-size: 1rem;
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: calc(var(--spacing-unit) * 2);
+  }
+
+  .btn {
+    padding: calc(var(--spacing-unit) * 1.5) calc(var(--spacing-unit) * 2);
+    border: none;
+    border-radius: var(--border-radius);
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: calc(var(--spacing-unit) * 1);
+    transition: all 0.2s ease;
+  }
+
+  .btn-secondary {
+    background-color: var(--color-bg-secondary);
+    color: var(--color-text-primary);
+    border: 1px solid var(--color-border);
+  }
+
+  .btn-secondary:hover {
+    background-color: var(--color-bg-tertiary);
+  }
+</style>
