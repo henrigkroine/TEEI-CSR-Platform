@@ -40,6 +40,7 @@ import AtAGlance from '../widgets/AtAGlance';
 import SROIPanel from '../widgets/SROIPanel';
 import VISPanel from '../widgets/VISPanel';
 import Q2QFeed from '../widgets/Q2QFeed';
+import { CreateDeckButton } from './CreateDeckButton';
 
 export interface BoardroomViewProps {
   /** Company identifier */
@@ -492,6 +493,9 @@ export default function BoardroomView({
         </div>
       </footer>
 
+      {/* Create Deck Button */}
+      <CreateDeckButton companyId={companyId} lang={lang} />
+
       {/* Global styles for boardroom mode */}
       <style>{`
         /* Scale up typography for large displays */
@@ -537,10 +541,7 @@ export default function BoardroomView({
         /* Smooth scrolling */
         .boardroom-container {
           scroll-behavior: smooth;
-<<<<<<< HEAD
         }
-=======
->>>>>>> origin/claude/worker5-data-trust-catalog-01MP5u1wgV11fa33LqqEQWbp
       `}</style>
     </div>
   );

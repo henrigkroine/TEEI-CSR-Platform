@@ -15,21 +15,72 @@ Executive Packs provide professional, board-ready exports of your impact reports
 - Approver signature blocks (for approved reports)
 - Confidentiality notices
 - Professional typography and layout
+- Citation count badges on cover page
 
-**PowerPoint Export**
-- Executive presentation decks
+**PowerPoint Export (Boardroom v2 Deck Composer)**
+- Executive presentation decks with automated slide generation
 - Cover slide with company logo and period
-- At-a-Glance metrics slide
-- Key achievements slide
-- KPI slides with chart visualizations
-- Evidence reference slide
-- Closing slide with disclaimers
+- At-a-Glance metrics slide with KPI summary
+- Key achievements slide with evidence badges
+- KPI slides with chart visualizations (SROI, VIS, trends)
+- Evidence reference slide with citation lineage
+- Closing slide with disclaimers and verification links
+- Supports 4 report templates (Quarterly, Annual, Investor Update, Impact Deep Dive)
 
 **Bundle Export**
 - Download both PDF and PPTX in a single request
 - Consistent branding across formats
+- Synchronized citation counts across documents
 
-### 2. Narrative Controls
+### 2. Report Templates
+
+Executive Packs supports four AI-generated report templates with varying citation requirements:
+
+#### Quarterly Report (`quarterly-report.en.hbs`)
+- **Purpose**: Regular progress updates for stakeholders
+- **Length**: 1,000-1,500 words (Standard)
+- **Citation Requirements**:
+  - Minimum 1 citation per paragraph
+  - Citation density: 0.5 per 100 words
+  - Estimated citations: 5-8 per report
+- **Token Budget**: 2,000 tokens output
+- **Sections**: Executive Summary, Key Metrics (SROI, VIS), Highlights, Next Quarter Goals
+- **Locales**: EN, ES, FR, UK, NO
+
+#### Annual Report (`annual-report.en.hbs`)
+- **Purpose**: Comprehensive year-end reporting with CSRD alignment
+- **Length**: 2,500-3,500 words (Detailed)
+- **Citation Requirements**:
+  - Minimum 2 citations per paragraph (higher standard)
+  - Citation density: 0.8 per 100 words
+  - Estimated citations: 20-28 per report
+- **Token Budget**: 5,000 tokens output
+- **Sections**: Year in Review, CSRD Narratives, Financial Impact, Social Value, Evidence Appendix
+- **Locales**: EN, ES, FR, UK, NO
+
+#### Investor Update (`investor-update.en.hbs`)
+- **Purpose**: Impact metrics for investors and funders
+- **Length**: 800-1,200 words (Brief to Standard)
+- **Citation Requirements**:
+  - Minimum 1 citation per paragraph
+  - Citation density: 0.6 per 100 words (higher than quarterly)
+  - Estimated citations: 5-7 per report
+- **Token Budget**: 1,500 tokens output
+- **Sections**: SROI Highlights, Beneficiary Outcomes, Evidence-Backed Achievements
+- **Locales**: EN, ES, FR, UK, NO
+
+#### Impact Deep Dive (`impact-deep-dive.en.hbs`)
+- **Purpose**: Detailed analysis for auditors and researchers
+- **Length**: 3,500+ words (Very Detailed)
+- **Citation Requirements**:
+  - Minimum 2 citations per paragraph (highest standard)
+  - Citation density: 1.0 per 100 words (maximum rigor)
+  - Estimated citations: 35+ per report
+- **Token Budget**: 6,000 tokens output
+- **Sections**: Methodology, Evidence Lineage, Dimension Analysis, Statistical Validation, Full Evidence Appendix
+- **Locales**: EN, ES, FR, UK, NO
+
+### 3. Narrative Controls
 
 Customize the tone, length, and focus of your reports:
 
@@ -48,7 +99,7 @@ Customize the tone, length, and focus of your reports:
 - **Management Team**: Operational details, KPIs, actionable recommendations
 - **Public/Stakeholders**: Impact stories, community outcomes, transparency
 
-### 3. Watermarking & Security
+### 4. Watermarking & Security
 
 **Watermark Features**
 - Company name and reporting period
@@ -75,13 +126,129 @@ Customize the tone, length, and focus of your reports:
 - Legal disclaimer about proprietary information
 - Distribution restrictions
 
-### 4. Evidence Appendix
+### 5. Evidence Appendix
 
 Optionally include a complete evidence trail:
 - Full list of evidence IDs with descriptions
 - Evidence lineage and provenance
 - Clickable links to evidence verification
 - Adds approximately 10-15 pages to the report
+
+## Boardroom v2 Deck Composer
+
+### Overview
+
+The Boardroom v2 Deck Composer is an automated PowerPoint generation engine that creates executive presentation decks from report data. It uses template-based slide generation with dynamic chart rendering and evidence integration.
+
+### Architecture
+
+```
+services/reporting/src/utils/pptxGenerator.ts
+├── createPresentation()         # Main entry point
+├── addCoverSlide()               # Title slide with branding
+├── addAtAGlanceSlide()           # KPI summary table
+├── addKeyAchievementsSlide()     # Bullet points + evidence badges
+├── addKPISlides()                # Chart slides (SROI, VIS, trends)
+├── addEvidenceReferencesSlide()  # Citation list with lineage
+└── addClosingSlide()             # Disclaimers + verification
+```
+
+### Template Selection
+
+Deck composer automatically selects template based on report type:
+
+```typescript
+const templateMap = {
+  'quarterly-report': 'quarterly_deck_template.pptx',
+  'annual-report': 'annual_deck_template.pptx',
+  'investor-update': 'investor_deck_template.pptx',
+  'impact-deep-dive': 'impact_deep_dive_deck_template.pptx'
+};
+```
+
+### Slide Generation
+
+**Cover Slide**:
+- Company logo (auto-scaled to 200x60px)
+- Report title and period
+- Generation date
+- Citation count badge
+
+**At-a-Glance Slide**:
+- KPI summary table (SROI, VIS, participants, volunteers, hours, value)
+- Color-coded metrics (green for positive, yellow for neutral)
+- Evidence count indicator
+
+**Key Achievements Slide**:
+- Top 5 achievements (bullet points)
+- Evidence badges with citation IDs
+- Confidence score indicators
+
+**KPI Slides** (3 slides):
+- SROI Analysis: Bar chart with year-over-year comparison
+- VIS Breakdown: Pie chart by dimension
+- Trend Analysis: Line chart showing growth
+
+**Evidence References Slide**:
+- Table of all citations with IDs, sources, timestamps
+- Clickable links to Evidence Explorer (if online)
+- Hash verification instructions
+
+**Closing Slide**:
+- Methodology summary
+- Verification URL: `teei-platform.com/verify/{reportId}`
+- Contact information
+- Legal disclaimers
+
+### Export Workflow
+
+```typescript
+// 1. Generate report with AI
+const report = await generateReport(companyId, period, template);
+
+// 2. Validate citations (Evidence Gates)
+const validation = validateCitations(report.content, report.evidence);
+if (!validation.valid) {
+  throw new EvidenceGateViolation(validation.errors);
+}
+
+// 3. Create PDF with watermarks
+const pdf = await generatePDF(report, {
+  watermark: true,
+  includeSignature: true,
+  includeEvidenceAppendix: false
+});
+
+// 4. Create PowerPoint deck
+const pptx = await createPresentation(report, {
+  template: report.template,
+  includeCharts: true,
+  includeEvidence: true
+});
+
+// 5. Return both formats
+return {
+  pdfUrl: uploadToS3(pdf),
+  pptxUrl: uploadToS3(pptx),
+  citationCount: validation.citationCount
+};
+```
+
+### Citation Count Requirements by Template
+
+| Template | Min Citations/Para | Density (per 100 words) | Estimated Total |
+|----------|-------------------|-------------------------|-----------------|
+| Quarterly Report | 1 | 0.5 | 5-8 |
+| Annual Report | 2 | 0.8 | 20-28 |
+| Investor Update | 1 | 0.6 | 5-7 |
+| Impact Deep Dive | 2 | 1.0 | 35+ |
+
+### Performance Targets
+
+- PDF generation: <2.0s (p95)
+- PPTX generation: <3.0s (p95)
+- Chart rendering: <500ms per chart
+- Total export time: <5.0s for bundle
 
 ## How to Generate an Executive Pack
 

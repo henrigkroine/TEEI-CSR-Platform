@@ -1,0 +1,238 @@
+---
+import TrustLayout from '@layouts/TrustLayout.astro';
+---
+
+<TrustLayout
+  title="Sub-processors - TEEI Trust Center"
+  description="Third-party services and data processors used by the TEEI Platform."
+>
+  <div class="max-w-4xl mx-auto">
+    <h1 class="text-4xl font-bold text-gray-900 dark:text-white mb-4">
+      Sub-processors
+    </h1>
+
+    <p class="text-lg text-gray-600 dark:text-gray-300 mb-8">
+      Third-party services and data processors we work with to deliver the TEEI Platform.
+    </p>
+
+    <div class="card bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 mb-8">
+      <p class="text-gray-700 dark:text-gray-300">
+        All sub-processors are carefully vetted for security, privacy, and compliance.
+        We maintain data processing agreements (DPAs) with all vendors handling customer data.
+      </p>
+      <p class="text-sm text-gray-600 dark:text-gray-400 mt-3">
+        <strong>Last updated:</strong> {new Date().toLocaleDateString('en-GB')}
+      </p>
+    </div>
+
+    <section aria-labelledby="infrastructure-heading" class="mb-12">
+      <h2 id="infrastructure-heading" class="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
+        Infrastructure & Hosting
+      </h2>
+
+      <div class="space-y-4">
+        <div class="card">
+          <div class="flex justify-between items-start">
+            <div>
+              <h3 class="text-lg font-medium text-gray-900 dark:text-white">Amazon Web Services (AWS)</h3>
+              <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                Primary cloud infrastructure and data storage
+              </p>
+              <p class="text-sm text-gray-500 dark:text-gray-500 mt-2">
+                Regions: eu-central-1 (Frankfurt), eu-west-2 (London), us-east-1 (Virginia)
+              </p>
+            </div>
+            <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">
+              GDPR DPA
+            </span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="flex justify-between items-start">
+            <div>
+              <h3 class="text-lg font-medium text-gray-900 dark:text-white">Cloudflare</h3>
+              <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                CDN, DNS, and DDoS protection
+              </p>
+              <p class="text-sm text-gray-500 dark:text-gray-500 mt-2">
+                Data processed: IP addresses, request headers (anonymized)
+              </p>
+            </div>
+            <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">
+              GDPR DPA
+            </span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section aria-labelledby="ai-heading" class="mb-12">
+      <h2 id="ai-heading" class="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
+        AI & Machine Learning
+      </h2>
+
+      <div class="space-y-4">
+        <div class="card">
+          <div class="flex justify-between items-start">
+            <div>
+              <h3 class="text-lg font-medium text-gray-900 dark:text-white">OpenAI</h3>
+              <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                Gen-AI reporting and content generation
+              </p>
+              <p class="text-sm text-gray-500 dark:text-gray-500 mt-2">
+                Model: GPT-4 Turbo | Zero data retention (Enterprise tier)
+              </p>
+            </div>
+            <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">
+              GDPR DPA
+            </span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="flex justify-between items-start">
+            <div>
+              <h3 class="text-lg font-medium text-gray-900 dark:text-white">Anthropic</h3>
+              <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                Q2Q pipeline and evidence extraction
+              </p>
+              <p class="text-sm text-gray-500 dark:text-gray-500 mt-2">
+                Model: Claude 3.5 Sonnet | Zero data retention (Enterprise tier)
+              </p>
+            </div>
+            <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">
+              GDPR DPA
+            </span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section aria-labelledby="analytics-heading" class="mb-12">
+      <h2 id="analytics-heading" class="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
+        Analytics & Monitoring
+      </h2>
+
+      <div class="space-y-4">
+        <div class="card">
+          <div class="flex justify-between items-start">
+            <div>
+              <h3 class="text-lg font-medium text-gray-900 dark:text-white">Grafana Cloud</h3>
+              <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                Application performance monitoring and observability
+              </p>
+              <p class="text-sm text-gray-500 dark:text-gray-500 mt-2">
+                Data processed: Metrics, logs, traces (no PII)
+              </p>
+            </div>
+            <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">
+              GDPR DPA
+            </span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="flex justify-between items-start">
+            <div>
+              <h3 class="text-lg font-medium text-gray-900 dark:text-white">PostHog</h3>
+              <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                Self-hosted product analytics (opt-in)
+              </p>
+              <p class="text-sm text-gray-500 dark:text-gray-500 mt-2">
+                Data processed: Usage events, feature flags (anonymized user IDs)
+              </p>
+            </div>
+            <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
+              Self-hosted
+            </span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section aria-labelledby="communication-heading" class="mb-12">
+      <h2 id="communication-heading" class="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
+        Communication & Notifications
+      </h2>
+
+      <div class="space-y-4">
+        <div class="card">
+          <div class="flex justify-between items-start">
+            <div>
+              <h3 class="text-lg font-medium text-gray-900 dark:text-white">SendGrid (Twilio)</h3>
+              <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                Transactional email delivery
+              </p>
+              <p class="text-sm text-gray-500 dark:text-gray-500 mt-2">
+                Data processed: Email addresses, email content (notifications only)
+              </p>
+            </div>
+            <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">
+              GDPR DPA
+            </span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="flex justify-between items-start">
+            <div>
+              <h3 class="text-lg font-medium text-gray-900 dark:text-white">Discord (Webhook only)</h3>
+              <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                Optional feedback notifications for customers
+              </p>
+              <p class="text-sm text-gray-500 dark:text-gray-500 mt-2">
+                Data processed: Feedback messages (no PII, opt-in)
+              </p>
+            </div>
+            <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300">
+              Opt-in
+            </span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section aria-labelledby="security-heading" class="mb-12">
+      <h2 id="security-heading" class="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
+        Security & Authentication
+      </h2>
+
+      <div class="space-y-4">
+        <div class="card">
+          <div class="flex justify-between items-start">
+            <div>
+              <h3 class="text-lg font-medium text-gray-900 dark:text-white">Auth0 (Okta)</h3>
+              <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                SSO and identity management
+              </p>
+              <p class="text-sm text-gray-500 dark:text-gray-500 mt-2">
+                Data processed: User identities, authentication events
+              </p>
+            </div>
+            <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">
+              GDPR DPA
+            </span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section aria-labelledby="notifications-heading">
+      <h2 id="notifications-heading" class="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
+        Sub-processor Change Notifications
+      </h2>
+
+      <div class="card bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800">
+        <p class="text-gray-700 dark:text-gray-300 mb-3">
+          We will notify all customers at least 30 days before adding or changing any sub-processor
+          that handles customer data.
+        </p>
+        <p class="text-sm text-gray-600 dark:text-gray-400">
+          To receive notifications about sub-processor changes, ensure your contact information
+          is up to date in your account settings.
+        </p>
+      </div>
+    </section>
+  </div>
+</TrustLayout>

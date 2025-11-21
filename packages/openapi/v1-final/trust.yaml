@@ -1,0 +1,597 @@
+openapi: 3.0.3
+info:
+  title: TEEI Trust Center API
+  version: 1.0.0
+  description: |
+    Evidence transparency and audit APIs for the TEEI Trust Center.
+    Provides access to citation evidence, audit ledgers, and data governance policies.
+    Enables stakeholders to verify report claims through evidence lineage.
+  contact:
+    name: TEEI Platform Team
+    email: platform@teei.io
+
+servers:
+  - url: https://api.teei.io/v1
+    description: Production
+  - url: https://staging-api.teei.io/v1
+    description: Staging
+  - url: http://localhost:3009/v1
+    description: Local development
+
+security:
+  - bearerAuth: []
+
+paths:
+  /trust/evidence/{reportId}:
+    get:
+      summary: Get evidence for report
+      description: |
+        Retrieves all evidence snippets and citations used in a generated report.
+        Returns full citation lineage with relevance scores and snippet hashes for verification.
+      operationId: getReportEvidence
+      tags:
+        - Evidence
+      parameters:
+        - name: reportId
+          in: path
+          required: true
+          description: Report identifier
+          schema:
+            type: string
+            format: uuid
+          example: "rpt_7f8a9b0c1d2e3f4a"
+        - name: minRelevance
+          in: query
+          description: Filter citations by minimum relevance score
+          schema:
+            type: number
+            format: float
+            minimum: 0
+            maximum: 1
+            default: 0.0
+          example: 0.5
+        - name: includeHash
+          in: query
+          description: Include snippet content hash for verification
+          schema:
+            type: boolean
+            default: true
+          example: true
+      responses:
+        '200':
+          description: Evidence retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvidenceResponse'
+              examples:
+                full:
+                  summary: Full evidence response
+                  value:
+                    reportId: "rpt_7f8a9b0c1d2e3f4a"
+                    generatedAt: "2024-11-14T10:30:00Z"
+                    citationCount: 15
+                    citations:
+                      - id: "cite-0"
+                        snippetId: "snip_abc123"
+                        text: "150 young participants completed the program with 450 total sessions"
+                        relevanceScore: 0.95
+                        snippetHash: "a3b2c1d4e5f6789012345678901234567890123456789012345678901234abcd"
+                        sourceType: "kintell_session"
+                        sourceId: "session_xyz789"
+                        extractedAt: "2024-11-10T15:20:00Z"
+                      - id: "cite-1"
+                        snippetId: "snip_def456"
+                        text: "Belonging scores increased from 0.45 to 0.82 (82% improvement)"
+                        relevanceScore: 0.92
+                        snippetHash: "b4c3d2e1f098765432109876543210987654321098765432109876543210bcde"
+                        sourceType: "outcome_score"
+                        sourceId: "outcome_456"
+                        extractedAt: "2024-11-11T09:15:00Z"
+                    metadata:
+                      companyId: "550e8400-e29b-41d4-a716-446655440000"
+                      periodStart: "2024-01-01"
+                      periodEnd: "2024-12-31"
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /trust/ledger/{reportId}:
+    get:
+      summary: Get audit ledger for report
+      description: |
+        Returns immutable audit trail for report generation.
+        Tracks all transformations, redactions, and LLM interactions with timestamps.
+      operationId: getReportLedger
+      tags:
+        - Audit
+      parameters:
+        - name: reportId
+          in: path
+          required: true
+          description: Report identifier
+          schema:
+            type: string
+            format: uuid
+          example: "rpt_7f8a9b0c1d2e3f4a"
+      responses:
+        '200':
+          description: Ledger retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LedgerResponse'
+              examples:
+                standard:
+                  summary: Standard audit ledger
+                  value:
+                    reportId: "rpt_7f8a9b0c1d2e3f4a"
+                    events:
+                      - eventType: "evidence_extraction"
+                        timestamp: "2024-11-14T10:25:00Z"
+                        actor: "system"
+                        details:
+                          snippetsExtracted: 42
+                          sourceTables: ["kintell_sessions", "outcome_scores", "buddy_feedback"]
+                      - eventType: "pii_redaction"
+                        timestamp: "2024-11-14T10:26:30Z"
+                        actor: "redaction-service"
+                        details:
+                          redactionsApplied: 8
+                          piiTypesFound: ["email", "phone"]
+                          postRedactionLeakDetected: false
+                      - eventType: "llm_generation"
+                        timestamp: "2024-11-14T10:28:15Z"
+                        actor: "openai-gpt4-turbo"
+                        details:
+                          modelName: "gpt-4-turbo"
+                          promptVersion: "v2.1.0"
+                          tokensUsed: 1500
+                          estimatedCostUsd: "0.0195"
+                          temperature: 0.7
+                      - eventType: "citation_validation"
+                        timestamp: "2024-11-14T10:29:00Z"
+                        actor: "citation-validator"
+                        details:
+                          citationsFound: 15
+                          citationDensity: 0.52
+                          minimumRelevance: 0.85
+                          validationPassed: true
+                      - eventType: "report_finalized"
+                        timestamp: "2024-11-14T10:30:00Z"
+                        actor: "reporting-service"
+                        details:
+                          sections: ["impact-summary", "sroi-narrative"]
+                          wordCount: 842
+                          locale: "en"
+                    metadata:
+                      companyId: "550e8400-e29b-41d4-a716-446655440000"
+                      generatedBy: "user_admin123"
+                      auditTrailHash: "c5d4e3f2a109876543210987654321098765432109876543210987654321cdef"
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /trust/policies:
+    get:
+      summary: Get data policies summary
+      description: |
+        Returns public-facing data governance policies.
+        Includes retention policies, GDPR compliance, and data residency information.
+        Public endpoint - no authentication required.
+      operationId: getDataPolicies
+      tags:
+        - Policies
+      security: []
+      responses:
+        '200':
+          description: Policies retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PoliciesResponse'
+              examples:
+                standard:
+                  summary: Standard policies
+                  value:
+                    policies:
+                      - category: "retention"
+                        title: "Data Retention"
+                        description: "Participant data retained for 7 years per compliance requirements"
+                        details:
+                          piiRetention: "7 years"
+                          evidenceRetention: "10 years"
+                          reportRetention: "indefinite"
+                      - category: "residency"
+                        title: "Data Residency"
+                        description: "Data stored in region matching company location"
+                        details:
+                          regions: ["EU", "US", "UK"]
+                          gdprCompliant: true
+                          soc2Certified: true
+                      - category: "privacy"
+                        title: "Privacy & Consent"
+                        description: "Participant consent required for all data collection"
+                        details:
+                          consentMechanisms: ["opt-in", "explicit-consent"]
+                          dsarSupported: true
+                          rightToErasure: true
+                      - category: "quality"
+                        title: "Data Quality"
+                        description: "Automated quality checks on all evidence"
+                        details:
+                          schemaValidation: true
+                          nullRateThreshold: "10%"
+                          freshnessCheck: "24h"
+                    lastUpdated: "2024-11-01T00:00:00Z"
+                    version: "1.0.0"
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /trust/verify/{snippetHash}:
+    get:
+      summary: Verify evidence snippet by hash
+      description: |
+        Allows third-party verification of evidence snippet integrity.
+        Returns snippet metadata without exposing PII.
+      operationId: verifySnippet
+      tags:
+        - Verification
+      parameters:
+        - name: snippetHash
+          in: path
+          required: true
+          description: SHA-256 hash of snippet content
+          schema:
+            type: string
+            pattern: '^[a-f0-9]{64}$'
+          example: "a3b2c1d4e5f6789012345678901234567890123456789012345678901234abcd"
+      responses:
+        '200':
+          description: Snippet verified
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerifyResponse'
+              examples:
+                verified:
+                  summary: Successfully verified snippet
+                  value:
+                    verified: true
+                    snippetId: "snip_abc123"
+                    sourceType: "kintell_session"
+                    extractedAt: "2024-11-10T15:20:00Z"
+                    usedInReports: 3
+                    hashAlgorithm: "SHA-256"
+        '404':
+          description: Snippet not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerifyResponse'
+              examples:
+                notFound:
+                  summary: Snippet not verified
+                  value:
+                    verified: false
+                    message: "No snippet found with this hash"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: RS256 JWT token with company_id claim
+
+  schemas:
+    EvidenceResponse:
+      type: object
+      required:
+        - reportId
+        - generatedAt
+        - citationCount
+        - citations
+        - metadata
+      properties:
+        reportId:
+          type: string
+          description: Report identifier
+          example: "rpt_7f8a9b0c1d2e3f4a"
+        generatedAt:
+          type: string
+          format: date-time
+          description: Report generation timestamp
+          example: "2024-11-14T10:30:00Z"
+        citationCount:
+          type: integer
+          description: Total number of citations
+          example: 15
+        citations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Citation'
+        metadata:
+          type: object
+          properties:
+            companyId:
+              type: string
+              format: uuid
+            periodStart:
+              type: string
+              format: date
+            periodEnd:
+              type: string
+              format: date
+
+    Citation:
+      type: object
+      required:
+        - id
+        - snippetId
+        - text
+        - relevanceScore
+      properties:
+        id:
+          type: string
+          description: Citation identifier in report
+          example: "cite-0"
+        snippetId:
+          type: string
+          description: Source evidence snippet ID
+          example: "snip_abc123"
+        text:
+          type: string
+          description: Citation text excerpt (redacted if PII)
+          example: "150 young participants completed the program"
+        relevanceScore:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Citation relevance score
+          example: 0.95
+        snippetHash:
+          type: string
+          pattern: '^[a-f0-9]{64}$'
+          description: SHA-256 hash of original snippet content
+          example: "a3b2c1d4e5f6789012345678901234567890123456789012345678901234abcd"
+        sourceType:
+          type: string
+          description: Type of source data
+          enum: [kintell_session, outcome_score, buddy_feedback, learning_progress, enrollment]
+          example: "kintell_session"
+        sourceId:
+          type: string
+          description: Original source record ID
+          example: "session_xyz789"
+        extractedAt:
+          type: string
+          format: date-time
+          description: When snippet was extracted
+          example: "2024-11-10T15:20:00Z"
+
+    LedgerResponse:
+      type: object
+      required:
+        - reportId
+        - events
+        - metadata
+      properties:
+        reportId:
+          type: string
+          description: Report identifier
+          example: "rpt_7f8a9b0c1d2e3f4a"
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditEvent'
+        metadata:
+          type: object
+          properties:
+            companyId:
+              type: string
+              format: uuid
+            generatedBy:
+              type: string
+              description: User who generated report
+            auditTrailHash:
+              type: string
+              pattern: '^[a-f0-9]{64}$'
+              description: Hash of entire audit trail for integrity
+
+    AuditEvent:
+      type: object
+      required:
+        - eventType
+        - timestamp
+        - actor
+        - details
+      properties:
+        eventType:
+          type: string
+          enum:
+            - evidence_extraction
+            - pii_redaction
+            - llm_generation
+            - citation_validation
+            - report_finalized
+            - export_generated
+          description: Type of audit event
+          example: "llm_generation"
+        timestamp:
+          type: string
+          format: date-time
+          description: Event timestamp (ISO 8601)
+          example: "2024-11-14T10:28:15Z"
+        actor:
+          type: string
+          description: System or user that performed action
+          example: "openai-gpt4-turbo"
+        details:
+          type: object
+          additionalProperties: true
+          description: Event-specific details (no PII logged)
+          example:
+            modelName: "gpt-4-turbo"
+            tokensUsed: 1500
+
+    PoliciesResponse:
+      type: object
+      required:
+        - policies
+        - lastUpdated
+        - version
+      properties:
+        policies:
+          type: array
+          items:
+            $ref: '#/components/schemas/Policy'
+        lastUpdated:
+          type: string
+          format: date-time
+          description: When policies were last updated
+          example: "2024-11-01T00:00:00Z"
+        version:
+          type: string
+          description: Policies version
+          example: "1.0.0"
+
+    Policy:
+      type: object
+      required:
+        - category
+        - title
+        - description
+      properties:
+        category:
+          type: string
+          enum: [retention, residency, privacy, quality, security]
+          description: Policy category
+          example: "retention"
+        title:
+          type: string
+          description: Policy title
+          example: "Data Retention"
+        description:
+          type: string
+          description: Policy description
+          example: "Participant data retained for 7 years"
+        details:
+          type: object
+          additionalProperties: true
+          description: Category-specific policy details
+
+    VerifyResponse:
+      type: object
+      required:
+        - verified
+      properties:
+        verified:
+          type: boolean
+          description: Whether snippet was verified
+          example: true
+        snippetId:
+          type: string
+          description: Snippet identifier (if verified)
+          example: "snip_abc123"
+        sourceType:
+          type: string
+          description: Source data type (if verified)
+          example: "kintell_session"
+        extractedAt:
+          type: string
+          format: date-time
+          description: Extraction timestamp (if verified)
+          example: "2024-11-10T15:20:00Z"
+        usedInReports:
+          type: integer
+          description: Number of reports using this snippet (if verified)
+          example: 3
+        hashAlgorithm:
+          type: string
+          description: Hash algorithm used
+          example: "SHA-256"
+        message:
+          type: string
+          description: Error message (if not verified)
+          example: "No snippet found with this hash"
+
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Error message
+          example: "Validation error"
+        message:
+          type: string
+          description: Detailed error message
+          example: "Invalid reportId format"
+        details:
+          type: object
+          description: Additional error details
+          additionalProperties: true
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Validation error"
+            message: "Invalid hash format. Expected 64-character hex string"
+
+    Unauthorized:
+      description: Missing or invalid authentication
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Unauthorized"
+            message: "Invalid or expired JWT token"
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Not Found"
+            message: "Report not found"
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Internal Server Error"
+            message: "Failed to retrieve evidence"
+
+tags:
+  - name: Evidence
+    description: Report evidence and citation retrieval
+  - name: Audit
+    description: Immutable audit trail for report generation
+  - name: Policies
+    description: Data governance policies (public)
+  - name: Verification
+    description: Third-party evidence verification

@@ -23,6 +23,8 @@ export interface CitationConfig {
   minCitationsPerParagraph?: number;
   minCitationDensity?: number; // Citations per 100 words
   strictValidation?: boolean; // If true, throw errors instead of warnings
+  enforceEvidenceGates?: boolean; // NEW: Throw EvidenceGateViolation on missing evidence
+  blockOnMissingEvidence?: boolean; // NEW: Return 422 instead of 500 on violations
 }
 
 const DEFAULT_CONFIG: CitationConfig = {
@@ -32,7 +34,34 @@ const DEFAULT_CONFIG: CitationConfig = {
   minCitationsPerParagraph: 1,
   minCitationDensity: 0.5, // At least 1 citation per 200 words
   strictValidation: true, // Phase D: enforce citations strictly
+  enforceEvidenceGates: true, // Phase D: strict evidence gates
+  blockOnMissingEvidence: true, // Phase D: return 422 on violations
 };
+
+/**
+ * Evidence gate violation error - thrown when content lacks required citations
+ * Enables HTTP 422 responses for unprocessable content
+ */
+export class EvidenceGateViolation extends Error {
+  constructor(
+    message: string,
+    public readonly violations: {
+      paragraph: string; // First 50 chars of paragraph
+      citationCount: number;
+      requiredCount: number;
+    }[],
+    public readonly totalCitationCount: number,
+    public readonly totalParagraphCount: number,
+    public readonly citationDensity: number
+  ) {
+    super(message);
+    this.name = 'EvidenceGateViolation';
+    // Maintain proper stack trace for where error was thrown
+    if (Error.captureStackTrace) {
+      Error.captureStackTrace(this, EvidenceGateViolation);
+    }
+  }
+}
 
 /**
  * Citation extractor - queries evidence snippets from database
@@ -170,9 +199,30 @@ export class CitationExtractor {
   }
 
   /**
+   * Parse content into meaningful paragraphs
+   * Filters out headers and short strings (<10 words)
+   */
+  private parseParagraphs(content: string): string[] {
+    const paragraphs = content.split(/\n\n+/).filter(p => {
+      const trimmed = p.trim();
+      // Skip empty lines
+      if (trimmed.length === 0) return false;
+      // Skip headers (starts with #)
+      if (trimmed.startsWith('#')) return false;
+      // Skip short paragraphs (<10 words or <50 chars)
+      const wordCount = trimmed.split(/\s+/).length;
+      if (wordCount < 10 || trimmed.length < 50) return false;
+      return true;
+    });
+    return paragraphs;
+  }
+
+  /**
    * Validate citations in generated content
    * Ensures every citation ID exists in the evidence set
    * Enforces minimum citation density requirements
+   *
+   * @throws {EvidenceGateViolation} When enforceEvidenceGates is true and violations detected
    */
   validateCitations(
     content: string,
@@ -227,22 +277,26 @@ export class CitationExtractor {
       }
     }
 
-    // Check minimum citations per paragraph
-    const paragraphs = content.split(/\n\n+/).filter(p => p.trim().length > 0);
+    // Check minimum citations per paragraph using new parser
+    const paragraphs = this.parseParagraphs(content);
     const minPerParagraph = this.config.minCitationsPerParagraph || 1;
+    const paragraphViolations: { paragraph: string; citationCount: number; requiredCount: number }[] = [];
 
     for (let i = 0; i < paragraphs.length; i++) {
       const para = paragraphs[i];
-      // Skip if paragraph is a header (starts with #) or very short (<50 chars)
-      if (para.trim().startsWith('#') || para.trim().length < 50) {
-        continue;
-      }
-
       const paraCitations = para.match(citationRegex);
       const paraCount = paraCitations ? paraCitations.length : 0;
 
       if (paraCount < minPerParagraph) {
-        const msg = `Paragraph ${i + 1} has ${paraCount} citation(s), minimum ${minPerParagraph} required`;
+        const snippet = para.trim().substring(0, 50) + (para.trim().length > 50 ? '...' : '');
+
+        paragraphViolations.push({
+          paragraph: snippet,
+          citationCount: paraCount,
+          requiredCount: minPerParagraph,
+        });
+
+        const msg = `Paragraph ${i + 1} has ${paraCount} citation(s), minimum ${minPerParagraph} required: "${snippet}"`;
         if (this.config.strictValidation) {
           errors.push(msg);
         } else {
@@ -268,6 +322,17 @@ export class CitationExtractor {
       errorCount: errors.length,
       warningCount: warnings.length,
     });
+
+    // NEW: If enforceEvidenceGates is true and there are violations, throw EvidenceGateViolation
+    if (this.config.enforceEvidenceGates && !result.valid && paragraphViolations.length > 0) {
+      throw new EvidenceGateViolation(
+        `Evidence gate violation: ${paragraphViolations.length} paragraph(s) lack required citations`,
+        paragraphViolations,
+        citationCount,
+        paragraphs.length,
+        citationDensity
+      );
+    }
 
     return result;
   }

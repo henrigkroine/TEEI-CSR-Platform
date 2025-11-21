@@ -1,0 +1,11 @@
+# TEEI Trust Center - Robots.txt
+# Allow all search engines to index trust center pages
+
+User-agent: *
+Allow: /
+
+# Sitemap location
+Sitemap: https://trust.teei-platform.com/sitemap.xml
+
+# Crawl-delay (optional, for polite crawling)
+Crawl-delay: 1

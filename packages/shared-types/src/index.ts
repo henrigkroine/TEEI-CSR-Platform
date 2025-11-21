@@ -2,3 +2,4 @@
 export * from './evidence';
 export * from './reporting';
 export * from './demo';
+export * from './deck';

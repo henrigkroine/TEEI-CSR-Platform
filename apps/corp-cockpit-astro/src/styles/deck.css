@@ -1,0 +1,316 @@
+/**
+ * Deck Component Styles
+ *
+ * Styles for boardroom deck slides, citations, and preview components.
+ * Complements TailwindCSS utility classes with custom animations and print styles.
+ */
+
+/* ========================================
+   Slide Container
+   ======================================== */
+
+.slide-container {
+  /* Base container for all slides */
+  container-type: inline-size;
+  container-name: slide;
+}
+
+/* Responsive text scaling for smaller containers */
+@container slide (max-width: 600px) {
+  .slide-container h2 {
+    font-size: 1.5rem;
+  }
+
+  .slide-content {
+    font-size: 0.9rem;
+  }
+}
+
+/* ========================================
+   Citation Badge
+   ======================================== */
+
+.citation-badge {
+  /* Smooth transitions for hover states */
+  transition: all 0.2s ease-in-out;
+}
+
+.citation-badge:hover {
+  transform: scale(1.05);
+}
+
+/* Animation for badge appearance */
+@keyframes badge-appear {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.citation-badge {
+  animation: badge-appear 0.3s ease-out;
+}
+
+/* ========================================
+   Slide Content
+   ======================================== */
+
+.slide-content {
+  /* Enhanced prose styling for slide content */
+  line-height: 1.8;
+}
+
+.slide-content p {
+  margin-bottom: 1rem;
+}
+
+.slide-content ul,
+.slide-content ol {
+  margin-left: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.slide-content li {
+  margin-bottom: 0.5rem;
+}
+
+/* Citation markers within content */
+.slide-content .citation-marker {
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 3px;
+}
+
+/* ========================================
+   Explainer Panel
+   ======================================== */
+
+.explainer-panel {
+  /* Subtle animation on appearance */
+  animation: slide-in-left 0.4s ease-out;
+}
+
+@keyframes slide-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Print styles: make explainer more subtle */
+@media print {
+  .explainer-panel {
+    border-left-width: 2px;
+    padding: 0.5rem;
+    background-color: transparent;
+    border-color: #94a3b8; /* gray-400 */
+  }
+}
+
+/* ========================================
+   Citations Footer
+   ======================================== */
+
+.citations-footer {
+  /* Ensure footer stays at bottom with flex */
+  margin-top: auto;
+}
+
+.citation-item {
+  /* Smooth hover transitions */
+  transition: all 0.15s ease-in-out;
+}
+
+.citation-item:hover {
+  transform: translateX(4px);
+}
+
+/* Citation number badge styling */
+.citation-number {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.5px;
+}
+
+/* Relevance score pill */
+.relevance-score {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.3px;
+  white-space: nowrap;
+}
+
+/* Scrollbar styling for citation list */
+.citations-footer > div {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent; /* gray-300 */
+}
+
+.citations-footer > div::-webkit-scrollbar {
+  width: 6px;
+}
+
+.citations-footer > div::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.citations-footer > div::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1; /* gray-300 */
+  border-radius: 3px;
+}
+
+.citations-footer > div::-webkit-scrollbar-thumb:hover {
+  background-color: #94a3b8; /* gray-400 */
+}
+
+/* ========================================
+   Slide Preview
+   ======================================== */
+
+.slide-preview {
+  /* Smooth transitions for all interactive states */
+  transition: all 0.2s ease-in-out;
+}
+
+.slide-preview:focus-visible {
+  outline: 2px solid var(--primary, #3b82f6);
+  outline-offset: 2px;
+}
+
+/* Aspect ratio enforcement */
+.slide-preview img {
+  object-fit: cover;
+  object-position: center;
+}
+
+/* Preview grid layout */
+.slide-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+@media (max-width: 640px) {
+  .slide-preview-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ========================================
+   Print Styles
+   ======================================== */
+
+@media print {
+  .slide-container {
+    page-break-inside: avoid;
+    page-break-after: always;
+    box-shadow: none;
+    border: 1px solid #e5e7eb; /* gray-200 */
+  }
+
+  .citation-badge {
+    background-color: white !important;
+    border: 1px solid #000;
+    color: #000 !important;
+  }
+
+  .citations-footer {
+    max-height: none;
+    overflow: visible;
+  }
+
+  /* Hide interactive elements in print */
+  .slide-preview-grid {
+    display: none;
+  }
+}
+
+/* ========================================
+   Dark Mode Adjustments
+   ======================================== */
+
+@media (prefers-color-scheme: dark) {
+  .citations-footer > div {
+    scrollbar-color: #4b5563 transparent; /* gray-600 */
+  }
+
+  .citations-footer > div::-webkit-scrollbar-thumb {
+    background-color: #4b5563; /* gray-600 */
+  }
+
+  .citations-footer > div::-webkit-scrollbar-thumb:hover {
+    background-color: #6b7280; /* gray-500 */
+  }
+}
+
+/* ========================================
+   Accessibility Enhancements
+   ======================================== */
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .citation-badge {
+    border-width: 2px;
+    font-weight: 700;
+  }
+
+  .explainer-panel {
+    border-left-width: 6px;
+  }
+
+  .citation-item {
+    border: 1px solid currentColor;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .citation-badge,
+  .explainer-panel,
+  .citation-item,
+  .slide-preview {
+    animation: none;
+    transition: none;
+  }
+
+  .citation-item:hover {
+    transform: none;
+  }
+
+  .citation-badge:hover {
+    transform: none;
+  }
+}
+
+/* Focus visible enhancements */
+.citation-badge:focus-visible,
+.slide-preview:focus-visible {
+  outline: 3px solid var(--primary, #3b82f6);
+  outline-offset: 3px;
+}
+
+/* ========================================
+   Utility Classes
+   ======================================== */
+
+/* Line clamp utilities for text truncation */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-4 {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

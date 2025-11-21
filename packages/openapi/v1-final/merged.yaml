@@ -8,6 +8,8 @@ info:
     - **Analytics**: ClickHouse-powered analytics (trends, cohorts, funnels, benchmarks)
     - **Impact-In**: External platform integrations (Benevity, Goodera, Workday)
     - **Notifications**: Multi-channel notifications (email, SMS, push)
+    - **Trust**: Evidence transparency and audit APIs
+    - **Deck**: Executive deck exports (PPTX)
 
     All endpoints require RS256 JWT authentication with company_id claim.
   contact:
@@ -53,6 +55,18 @@ tags:
     description: Check notification quotas
   - name: Notifications - Webhooks
     description: Webhook endpoints for delivery status events
+  - name: Trust - Evidence
+    description: Report evidence and citation retrieval
+  - name: Trust - Audit
+    description: Immutable audit trail for report generation
+  - name: Trust - Policies
+    description: Data governance policies (public)
+  - name: Trust - Verification
+    description: Third-party evidence verification
+  - name: Deck - Export
+    description: Deck export and download operations
+  - name: Deck - Templates
+    description: Available deck templates and metadata
 
 paths:
   # ==================== REPORTING SERVICE ====================
@@ -473,6 +487,232 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  # ==================== TRUST CENTER ====================
+  /trust/evidence/{reportId}:
+    get:
+      summary: Get evidence for report
+      description: Retrieves all evidence snippets and citations used in a generated report
+      operationId: getReportEvidence
+      tags:
+        - Trust - Evidence
+      parameters:
+        - name: reportId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: minRelevance
+          in: query
+          schema:
+            type: number
+            minimum: 0
+            maximum: 1
+            default: 0.0
+      responses:
+        '200':
+          description: Evidence retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrustEvidenceResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /trust/ledger/{reportId}:
+    get:
+      summary: Get audit ledger for report
+      description: Returns immutable audit trail for report generation
+      operationId: getReportLedger
+      tags:
+        - Trust - Audit
+      parameters:
+        - name: reportId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Ledger retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrustLedgerResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /trust/policies:
+    get:
+      summary: Get data policies summary
+      description: Returns public-facing data governance policies (no auth required)
+      operationId: getDataPolicies
+      tags:
+        - Trust - Policies
+      security: []
+      responses:
+        '200':
+          description: Policies retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrustPoliciesResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /trust/verify/{snippetHash}:
+    get:
+      summary: Verify evidence snippet by hash
+      description: Allows third-party verification of evidence snippet integrity
+      operationId: verifySnippet
+      tags:
+        - Trust - Verification
+      parameters:
+        - name: snippetHash
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[a-f0-9]{64}$'
+      responses:
+        '200':
+          description: Snippet verified
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrustVerifyResponse'
+        '404':
+          description: Snippet not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrustVerifyResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # ==================== DECK EXPORT ====================
+  /deck/export:
+    post:
+      summary: Export executive deck as PPTX
+      description: Creates an asynchronous export job to generate a PowerPoint deck
+      operationId: exportDeck
+      tags:
+        - Deck - Export
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeckExportRequest'
+      responses:
+        '202':
+          description: Export job created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeckExportJobResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /deck/export/{jobId}/status:
+    get:
+      summary: Check export job status
+      description: Retrieves current status of an export job
+      operationId: getExportStatus
+      tags:
+        - Deck - Export
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Job status retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeckExportStatusResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /deck/export/{jobId}/download:
+    get:
+      summary: Download generated deck
+      description: Downloads the completed PPTX file (24h expiry)
+      operationId: downloadDeck
+      tags:
+        - Deck - Export
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Deck downloaded
+          content:
+            application/vnd.openxmlformats-officedocument.presentationml.presentation:
+              schema:
+                type: string
+                format: binary
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '410':
+          description: File expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /deck/templates:
+    get:
+      summary: List available deck templates
+      description: Returns available deck templates with metadata
+      operationId: listTemplates
+      tags:
+        - Deck - Templates
+      responses:
+        '200':
+          description: Templates retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeckTemplatesResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
 components:
   securitySchemes:
     bearerAuth:
@@ -807,6 +1047,191 @@ components:
           type: string
         quotas:
           type: object
+
+    # Trust Schemas
+    TrustEvidenceResponse:
+      type: object
+      required:
+        - reportId
+        - generatedAt
+        - citationCount
+        - citations
+        - metadata
+      properties:
+        reportId:
+          type: string
+        generatedAt:
+          type: string
+          format: date-time
+        citationCount:
+          type: integer
+        citations:
+          type: array
+          items:
+            type: object
+        metadata:
+          type: object
+
+    TrustLedgerResponse:
+      type: object
+      required:
+        - reportId
+        - events
+        - metadata
+      properties:
+        reportId:
+          type: string
+        events:
+          type: array
+          items:
+            type: object
+        metadata:
+          type: object
+
+    TrustPoliciesResponse:
+      type: object
+      required:
+        - policies
+        - lastUpdated
+        - version
+      properties:
+        policies:
+          type: array
+          items:
+            type: object
+        lastUpdated:
+          type: string
+          format: date-time
+        version:
+          type: string
+
+    TrustVerifyResponse:
+      type: object
+      required:
+        - verified
+      properties:
+        verified:
+          type: boolean
+        snippetId:
+          type: string
+        sourceType:
+          type: string
+        extractedAt:
+          type: string
+          format: date-time
+        usedInReports:
+          type: integer
+        hashAlgorithm:
+          type: string
+        message:
+          type: string
+
+    # Deck Schemas
+    DeckExportRequest:
+      type: object
+      required:
+        - companyId
+        - template
+        - periodStart
+        - periodEnd
+      properties:
+        companyId:
+          type: string
+          format: uuid
+        template:
+          type: string
+          enum: [quarterly, annual, investor, impact-deep-dive]
+        periodStart:
+          type: string
+          format: date-time
+        periodEnd:
+          type: string
+          format: date-time
+        locale:
+          type: string
+          enum: [en, es, fr, uk, no]
+          default: en
+        tiles:
+          type: array
+          items:
+            type: string
+        watermark:
+          type: string
+        includeEvidenceLinks:
+          type: boolean
+        branding:
+          type: object
+
+    DeckExportJobResponse:
+      type: object
+      required:
+        - success
+        - jobId
+        - status
+        - statusUrl
+      properties:
+        success:
+          type: boolean
+        jobId:
+          type: string
+        status:
+          type: string
+          enum: [queued, processing, completed, failed]
+        estimatedDurationSeconds:
+          type: integer
+        statusUrl:
+          type: string
+        message:
+          type: string
+
+    DeckExportStatusResponse:
+      type: object
+      required:
+        - jobId
+        - status
+        - progress
+        - createdAt
+      properties:
+        jobId:
+          type: string
+        status:
+          type: string
+          enum: [queued, processing, completed, failed]
+        progress:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        startedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+        failedAt:
+          type: string
+          format: date-time
+        downloadUrl:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+        fileSize:
+          type: integer
+        error:
+          type: string
+        message:
+          type: string
+
+    DeckTemplatesResponse:
+      type: object
+      required:
+        - templates
+      properties:
+        templates:
+          type: array
+          items:
+            type: object
 
     # Common Schemas
     Pagination:

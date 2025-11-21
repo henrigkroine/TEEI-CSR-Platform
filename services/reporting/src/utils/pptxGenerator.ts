@@ -704,7 +704,563 @@ function addWatermarkToAllSlides(pptx: any, text: string): void {
 }
 
 /**
- * Create executive summary PPTX template
+ * Quarterly report template data
+ */
+export interface QuarterlyData {
+  company: string;
+  period: string; // "Q1 2025"
+  quarter: {
+    year: number;
+    quarter: number;
+  };
+  metrics: {
+    sroi: number;
+    beneficiaries: number;
+    volunteer_hours: number;
+    social_value: number;
+    engagement_rate: number;
+  };
+  top_achievements: string[]; // Top 3
+  quarterly_trend: ChartData;
+  dimensions: {
+    name: string;
+    score: number;
+    change: number; // +/- % from previous quarter
+  }[];
+  evidenceIds?: string[];
+  includeEvidenceAppendix?: boolean;
+}
+
+/**
+ * Annual report template data
+ */
+export interface AnnualData {
+  company: string;
+  year: number;
+  logo_url?: string;
+  metrics: {
+    sroi: number;
+    beneficiaries: number;
+    volunteer_hours: number;
+    social_value: number;
+    programs_count: number;
+  };
+  timeline: {
+    quarter: string;
+    milestone: string;
+  }[];
+  csrd_narrative: string;
+  sdg_alignment: {
+    goal_number: number;
+    goal_name: string;
+    contribution: string;
+  }[];
+  volunteer_impact_map?: ImageData;
+  citations: {
+    slideNumber: number;
+    references: string[];
+  }[];
+  evidenceIds: string[];
+}
+
+/**
+ * Investor update template data
+ */
+export interface InvestorData {
+  company: string;
+  period: string;
+  sroi_headline: number;
+  financial_impact: {
+    total_investment: number;
+    social_value_created: number;
+    cost_per_beneficiary: number;
+    efficiency_ratio: number;
+  };
+  growth_metrics: ChartData[]; // Growth trajectories
+  risk_mitigation: {
+    risk: string;
+    mitigation: string;
+    status: 'mitigated' | 'monitoring' | 'active';
+  }[];
+  executive_summary: string;
+  evidenceIds?: string[]; // High-level only
+}
+
+/**
+ * Impact deep dive template data
+ */
+export interface ImpactData {
+  company: string;
+  period: string;
+  dimensions: {
+    name: string;
+    score: number;
+    evidence_count: number;
+    breakdown: {
+      metric: string;
+      value: number;
+      evidence_ids: string[];
+    }[];
+    lineage_chart?: ChartData; // Sparkline data
+  }[];
+  evidenceAppendix: {
+    evidence_id: string;
+    type: string;
+    description: string;
+    source: string;
+    date: string;
+  }[];
+  citations_per_slide: number; // Target citation density
+  explainer_boxes: {
+    title: string;
+    content: string;
+  }[];
+}
+
+/**
+ * Create quarterly report PPTX template
+ *
+ * Template structure:
+ * - Title slide with company branding
+ * - Executive summary (1 slide)
+ * - Key metrics table (SROI, VIS, engagement)
+ * - Top 3 achievements
+ * - Quarterly trend chart
+ * - Dimension scorecard
+ * - Optional evidence appendix
+ */
+export function createQuarterlyTemplate(data: QuarterlyData): PPTXSlide[] {
+  const slides: PPTXSlide[] = [];
+
+  // Title slide
+  slides.push({
+    type: 'title',
+    title: `${data.company} - Q${data.quarter.quarter} ${data.quarter.year} Impact Report`,
+    content: data.period,
+    notes: `Quarterly impact report for ${data.period}`,
+  });
+
+  // Executive summary
+  slides.push({
+    type: 'content',
+    title: 'Executive Summary',
+    bullets: [
+      `Achieved ${data.metrics.sroi.toFixed(2)}:1 social return on investment`,
+      `Reached ${data.metrics.beneficiaries.toLocaleString()} beneficiaries through ${data.metrics.volunteer_hours.toLocaleString()} volunteer hours`,
+      `Generated $${data.metrics.social_value.toLocaleString()} in social value`,
+      `Maintained ${(data.metrics.engagement_rate * 100).toFixed(1)}% engagement rate`,
+    ],
+    notes: 'High-level summary of quarterly performance',
+    evidenceIds: data.evidenceIds,
+  });
+
+  // Key metrics table
+  slides.push({
+    type: 'data-table',
+    title: 'Key Metrics',
+    table: {
+      headers: ['Metric', 'Q' + data.quarter.quarter + ' ' + data.quarter.year, 'Change'],
+      rows: [
+        ['Social ROI', `${data.metrics.sroi.toFixed(2)}:1`, '↑'],
+        ['Total Beneficiaries', data.metrics.beneficiaries.toLocaleString(), '↑'],
+        ['Volunteer Hours', data.metrics.volunteer_hours.toLocaleString(), '↑'],
+        ['Social Value Created', `$${data.metrics.social_value.toLocaleString()}`, '↑'],
+        ['Engagement Rate', `${(data.metrics.engagement_rate * 100).toFixed(1)}%`, '→'],
+      ],
+      columnWidths: [4.0, 3.0, 2.0],
+    },
+    notes: 'Quarterly metrics with trend indicators',
+  });
+
+  // Top 3 achievements
+  slides.push({
+    type: 'content',
+    title: 'Top 3 Achievements',
+    bullets: data.top_achievements.slice(0, 3),
+    notes: 'Highlight major accomplishments this quarter',
+  });
+
+  // Quarterly trend chart
+  slides.push({
+    type: 'chart',
+    title: 'Quarterly Performance Trend',
+    chart: data.quarterly_trend,
+    notes: 'Performance trends over past 4 quarters',
+  });
+
+  // Dimension scorecard
+  if (data.dimensions.length > 0) {
+    const dimensionRows = data.dimensions.map((dim) => [
+      dim.name,
+      dim.score.toFixed(1),
+      dim.change >= 0 ? `+${dim.change.toFixed(1)}%` : `${dim.change.toFixed(1)}%`,
+    ]);
+
+    slides.push({
+      type: 'data-table',
+      title: 'Impact Dimension Scorecard',
+      table: {
+        headers: ['Dimension', 'Score', 'Δ vs Q' + (data.quarter.quarter - 1)],
+        rows: dimensionRows,
+        columnWidths: [4.5, 2.25, 2.25],
+      },
+      notes: 'Dimension-level performance with quarter-over-quarter changes',
+    });
+  }
+
+  // Evidence appendix (optional)
+  if (data.includeEvidenceAppendix && data.evidenceIds && data.evidenceIds.length > 0) {
+    slides.push({
+      type: 'content',
+      title: 'Evidence Appendix',
+      content: `This report is backed by ${data.evidenceIds.length} validated evidence records. Full lineage available in speaker notes.`,
+      notes: 'Evidence appendix - see speaker notes for detailed lineage',
+      evidenceIds: data.evidenceIds,
+    });
+  }
+
+  return slides;
+}
+
+/**
+ * Create annual report PPTX template
+ *
+ * Template structure:
+ * - Cover with company logo
+ * - Year in review (timeline)
+ * - Annual metrics (2 slides)
+ * - CSRD-aligned narrative
+ * - SDG alignment chart
+ * - Volunteer impact map
+ * - Citations in speaker notes
+ */
+export function createAnnualTemplate(data: AnnualData): PPTXSlide[] {
+  const slides: PPTXSlide[] = [];
+
+  // Cover slide with logo
+  slides.push({
+    type: 'title',
+    title: `${data.company} - ${data.year} Annual Impact Report`,
+    content: 'Creating Measurable Social Impact',
+    notes: `Annual impact report for fiscal year ${data.year}`,
+  });
+
+  // Year in review - Timeline
+  const timelineContent = data.timeline
+    .map((item) => `${item.quarter}: ${item.milestone}`)
+    .join('\n');
+
+  slides.push({
+    type: 'content',
+    title: `${data.year} - Year in Review`,
+    bullets: data.timeline.map((item) => `**${item.quarter}**: ${item.milestone}`),
+    notes: 'Key milestones and achievements throughout the year',
+  });
+
+  // Annual metrics - Slide 1
+  slides.push({
+    type: 'data-table',
+    title: `${data.year} Impact By The Numbers`,
+    table: {
+      headers: ['Metric', 'Annual Total'],
+      rows: [
+        ['Social Return on Investment', `${data.metrics.sroi.toFixed(2)}:1`],
+        ['Total Beneficiaries Reached', data.metrics.beneficiaries.toLocaleString()],
+        ['Volunteer Hours Contributed', data.metrics.volunteer_hours.toLocaleString()],
+      ],
+      columnWidths: [5.0, 4.0],
+    },
+    notes: 'Core impact metrics for the full year',
+    evidenceIds: data.evidenceIds.slice(0, 5),
+  });
+
+  // Annual metrics - Slide 2
+  slides.push({
+    type: 'data-table',
+    title: 'Social Value & Program Reach',
+    table: {
+      headers: ['Metric', 'Annual Total'],
+      rows: [
+        ['Social Value Generated', `$${data.metrics.social_value.toLocaleString()}`],
+        ['Active Programs', data.metrics.programs_count.toString()],
+        ['Cost per Beneficiary', `$${(data.metrics.social_value / data.metrics.beneficiaries).toFixed(2)}`],
+      ],
+      columnWidths: [5.0, 4.0],
+    },
+    notes: 'Financial impact and program efficiency',
+    evidenceIds: data.evidenceIds.slice(5, 10),
+  });
+
+  // CSRD-aligned narrative
+  slides.push({
+    type: 'content',
+    title: 'Corporate Sustainability Reporting (CSRD)',
+    content: data.csrd_narrative,
+    notes: 'CSRD-compliant narrative summary of social impact activities',
+  });
+
+  // SDG alignment
+  if (data.sdg_alignment.length > 0) {
+    slides.push({
+      type: 'two-column',
+      title: 'UN Sustainable Development Goals Alignment',
+      bullets: data.sdg_alignment.map(
+        (sdg) => `**SDG ${sdg.goal_number}: ${sdg.goal_name}** - ${sdg.contribution}`
+      ),
+      notes: 'How our programs contribute to UN SDGs',
+    });
+  }
+
+  // Volunteer impact map (if provided)
+  if (data.volunteer_impact_map) {
+    slides.push({
+      type: 'image',
+      title: 'Volunteer Impact Geographic Distribution',
+      images: [data.volunteer_impact_map],
+      notes: 'Geographic heatmap of volunteer activities and beneficiary reach',
+    });
+  }
+
+  // Citations slide
+  const citationsContent = data.citations
+    .map((cite) => `Slide ${cite.slideNumber}: ${cite.references.length} citations`)
+    .join(', ');
+
+  slides.push({
+    type: 'content',
+    title: 'Report Citations & Validation',
+    content: `This report includes ${data.citations.length} cited slides with ${data.citations.reduce((sum, c) => sum + c.references.length, 0)} total evidence references. All claims are validated against source data.`,
+    notes: `Citation details:\n${citationsContent}`,
+    evidenceIds: data.evidenceIds,
+  });
+
+  return slides;
+}
+
+/**
+ * Create investor update PPTX template
+ *
+ * Template structure:
+ * - Clean, formal title slide
+ * - SROI front and center
+ * - Financial impact metrics
+ * - Growth trajectories
+ * - Risk mitigation narrative
+ * - Limited evidence (high-level only)
+ */
+export function createInvestorTemplate(data: InvestorData): PPTXSlide[] {
+  const slides: PPTXSlide[] = [];
+
+  // Title slide - Clean and formal
+  slides.push({
+    type: 'title',
+    title: `${data.company} - Investor Update`,
+    content: data.period,
+    notes: 'Investor-focused impact and financial performance update',
+  });
+
+  // SROI headline
+  slides.push({
+    type: 'content',
+    title: 'Social Return on Investment',
+    content: `${data.sroi_headline.toFixed(2)}:1`,
+    notes: `Every dollar invested generates $${data.sroi_headline.toFixed(2)} in social value`,
+  });
+
+  // Financial impact metrics
+  slides.push({
+    type: 'data-table',
+    title: 'Financial Impact Summary',
+    table: {
+      headers: ['Metric', 'Value'],
+      rows: [
+        ['Total Investment', `$${data.financial_impact.total_investment.toLocaleString()}`],
+        ['Social Value Created', `$${data.financial_impact.social_value_created.toLocaleString()}`],
+        ['Cost per Beneficiary', `$${data.financial_impact.cost_per_beneficiary.toFixed(2)}`],
+        ['Efficiency Ratio', `${(data.financial_impact.efficiency_ratio * 100).toFixed(1)}%`],
+      ],
+      columnWidths: [5.0, 4.0],
+    },
+    notes: 'Key financial metrics demonstrating program efficiency and value creation',
+  });
+
+  // Growth trajectories
+  for (const chart of data.growth_metrics) {
+    slides.push({
+      type: 'chart',
+      title: chart.title,
+      chart,
+      notes: 'Growth trajectory analysis',
+    });
+  }
+
+  // Risk mitigation
+  const riskRows = data.risk_mitigation.map((risk) => [
+    risk.risk,
+    risk.mitigation,
+    risk.status.toUpperCase(),
+  ]);
+
+  slides.push({
+    type: 'data-table',
+    title: 'Risk Mitigation & Controls',
+    table: {
+      headers: ['Risk', 'Mitigation Strategy', 'Status'],
+      rows: riskRows,
+      columnWidths: [3.0, 4.5, 1.5],
+    },
+    notes: 'Comprehensive risk management approach',
+  });
+
+  // Executive summary
+  slides.push({
+    type: 'content',
+    title: 'Strategic Outlook',
+    content: data.executive_summary,
+    notes: 'Forward-looking strategic narrative for investors',
+    evidenceIds: data.evidenceIds, // High-level evidence only
+  });
+
+  return slides;
+}
+
+/**
+ * Create impact deep dive PPTX template
+ *
+ * Template structure:
+ * - Evidence-heavy presentation (15-20 slides)
+ * - Per-dimension breakdown
+ * - Citation counts on every slide
+ * - "Why this section?" explainer boxes
+ * - Lineage sparklines
+ * - Full evidence appendix
+ */
+export function createImpactTemplate(data: ImpactData): PPTXSlide[] {
+  const slides: PPTXSlide[] = [];
+
+  // Title slide
+  slides.push({
+    type: 'title',
+    title: `${data.company} - Impact Deep Dive`,
+    content: data.period,
+    notes: 'Comprehensive evidence-based impact analysis',
+  });
+
+  // Overview with explainer
+  const overviewExplainer = data.explainer_boxes.find((box) => box.title === 'Overview');
+  slides.push({
+    type: 'content',
+    title: 'Why This Deep Dive?',
+    content: overviewExplainer?.content || 'This deep dive provides granular analysis of impact across all dimensions, backed by validated evidence and full lineage tracking.',
+    notes: 'Purpose and scope of the deep dive analysis',
+  });
+
+  // Per-dimension breakdown
+  for (const dimension of data.dimensions) {
+    // Dimension overview
+    slides.push({
+      type: 'content',
+      title: `${dimension.name} - Overview`,
+      bullets: [
+        `Overall Score: ${dimension.score.toFixed(1)}/10`,
+        `Evidence Records: ${dimension.evidence_count}`,
+        `Citation Density: ${data.citations_per_slide} per slide`,
+      ],
+      notes: `${dimension.name} dimension overview with evidence summary`,
+    });
+
+    // Dimension metrics breakdown
+    const metricRows = dimension.breakdown.map((metric) => [
+      metric.metric,
+      metric.value.toFixed(2),
+      `${metric.evidence_ids.length} citations`,
+    ]);
+
+    slides.push({
+      type: 'data-table',
+      title: `${dimension.name} - Metrics Breakdown`,
+      table: {
+        headers: ['Metric', 'Value', 'Evidence'],
+        rows: metricRows,
+        columnWidths: [4.0, 2.5, 2.5],
+      },
+      notes: `Detailed metrics for ${dimension.name} with evidence citations`,
+      evidenceIds: dimension.breakdown.flatMap((m) => m.evidence_ids).slice(0, data.citations_per_slide),
+    });
+
+    // Lineage sparkline (if available)
+    if (dimension.lineage_chart) {
+      slides.push({
+        type: 'chart',
+        title: `${dimension.name} - Evidence Lineage`,
+        chart: dimension.lineage_chart,
+        notes: 'Lineage sparkline showing evidence flow and transformations',
+      });
+    }
+
+    // "Why this matters" explainer
+    const dimensionExplainer = data.explainer_boxes.find(
+      (box) => box.title === `${dimension.name} Explainer`
+    );
+    if (dimensionExplainer) {
+      slides.push({
+        type: 'content',
+        title: `Why ${dimension.name} Matters`,
+        content: dimensionExplainer.content,
+        notes: `Contextual explanation of ${dimension.name} dimension`,
+      });
+    }
+  }
+
+  // Full evidence appendix
+  if (data.evidenceAppendix.length > 0) {
+    // Split appendix into multiple slides (max 10 records per slide)
+    const recordsPerSlide = 10;
+    const appendixSlides = Math.ceil(data.evidenceAppendix.length / recordsPerSlide);
+
+    for (let i = 0; i < appendixSlides; i++) {
+      const startIdx = i * recordsPerSlide;
+      const endIdx = Math.min(startIdx + recordsPerSlide, data.evidenceAppendix.length);
+      const slideRecords = data.evidenceAppendix.slice(startIdx, endIdx);
+
+      const appendixRows = slideRecords.map((record) => [
+        record.evidence_id,
+        record.type,
+        record.description.substring(0, 50) + (record.description.length > 50 ? '...' : ''),
+      ]);
+
+      slides.push({
+        type: 'data-table',
+        title: `Evidence Appendix (${i + 1}/${appendixSlides})`,
+        table: {
+          headers: ['Evidence ID', 'Type', 'Description'],
+          rows: appendixRows,
+          columnWidths: [2.0, 2.0, 5.0],
+        },
+        notes: `Evidence appendix page ${i + 1} of ${appendixSlides}\n\nFull details:\n${slideRecords.map((r) => `${r.evidence_id}: ${r.description} (${r.source}, ${r.date})`).join('\n')}`,
+        evidenceIds: slideRecords.map((r) => r.evidence_id),
+      });
+    }
+  }
+
+  // Summary slide
+  slides.push({
+    type: 'content',
+    title: 'Deep Dive Summary',
+    bullets: [
+      `Analyzed ${data.dimensions.length} impact dimensions`,
+      `Validated ${data.evidenceAppendix.length} evidence records`,
+      `Maintained ${data.citations_per_slide} citations per slide average`,
+      `Full lineage tracking for all metrics`,
+    ],
+    notes: 'Summary of deep dive analysis with evidence coverage statistics',
+  });
+
+  return slides;
+}
+
+/**
+ * Create executive summary PPTX template (legacy - for backward compatibility)
  */
 export function createExecutiveSummaryTemplate(data: {
   title: string;

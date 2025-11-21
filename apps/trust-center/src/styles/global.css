@@ -1,0 +1,204 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Trust Center brand colors */
+  --color-primary: #2563eb;
+  --color-secondary: #1e40af;
+  --color-accent: #047857;
+  --color-text-on-primary: #FFFFFF;
+  --color-text-on-secondary: #FFFFFF;
+  --color-text-on-accent: #FFFFFF;
+
+  /* Dark mode overrides (WCAG AA compliant) */
+  --color-primary-dark: #60a5fa;
+  --color-secondary-dark: #3b82f6;
+  --color-accent-dark: #34d399;
+
+  /* Neutral colors - Light mode (WCAG AA compliant) */
+  --color-background: #FFFFFF;
+  --color-foreground: #111827;
+  --color-border: #6b7280;
+  --color-border-hover: #4b5563;
+  --color-muted: #F5F5F5;
+  --color-muted-foreground: #6b7280;
+
+  /* Text hierarchy - Light mode */
+  --color-text-primary: #111827;
+  --color-text-secondary: #6b7280;
+  --color-text-tertiary: #6b7280;
+
+  /* Status colors - Light mode (WCAG AA) */
+  --color-success: #047857;
+  --color-warning: #b45309;
+  --color-error: #dc2626;
+
+  /* Typography */
+  --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-size-base: 1rem;
+  --line-height-normal: 1.5;
+
+  /* Spacing */
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+}
+
+[data-theme="dark"],
+html.dark {
+  --color-background: #111827;
+  --color-foreground: #f9fafb;
+  --color-border: #6b7280;
+  --color-border-hover: #9ca3af;
+  --color-muted: #1E1E1E;
+  --color-muted-foreground: #d1d5db;
+
+  /* Text hierarchy - Dark mode */
+  --color-text-primary: #f9fafb;
+  --color-text-secondary: #d1d5db;
+  --color-text-tertiary: #d1d5db;
+
+  /* Use dark mode brand colors if available */
+  --color-primary: var(--color-primary-dark, var(--color-primary));
+  --color-secondary: var(--color-secondary-dark, var(--color-secondary));
+  --color-accent: var(--color-accent-dark, var(--color-accent));
+
+  /* Status colors - Dark mode (WCAG AA) */
+  --color-success: #34d399;
+  --color-warning: #fbbf24;
+  --color-error: #f87171;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-family);
+    font-size: var(--font-size-base);
+    line-height: var(--line-height-normal);
+  }
+
+  /* Focus visible for accessibility - WCAG 2.2 AA compliant */
+  *:focus-visible {
+    @apply outline-2 outline-offset-2;
+    outline-style: solid;
+    outline-color: #2563eb; /* Blue-600 - Light mode */
+  }
+
+  /* Dark mode focus outline - lighter blue for contrast */
+  html.dark *:focus-visible,
+  [data-theme="dark"] *:focus-visible {
+    outline-color: #60a5fa; /* Blue-400 - Dark mode (≥3:1 contrast on dark backgrounds) */
+  }
+
+  /* Enhanced focus styles for interactive elements */
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible,
+  [tabindex]:focus-visible,
+  [role="button"]:focus-visible,
+  [role="link"]:focus-visible,
+  [role="menuitem"]:focus-visible {
+    @apply ring-2 ring-offset-2;
+    ring-color: #2563eb; /* Blue-600 - Light mode */
+  }
+
+  /* Dark mode ring colors for enhanced visibility */
+  html.dark a:focus-visible,
+  html.dark button:focus-visible,
+  html.dark input:focus-visible,
+  html.dark textarea:focus-visible,
+  html.dark select:focus-visible,
+  html.dark [tabindex]:focus-visible,
+  html.dark [role="button"]:focus-visible,
+  html.dark [role="link"]:focus-visible,
+  html.dark [role="menuitem"]:focus-visible,
+  [data-theme="dark"] a:focus-visible,
+  [data-theme="dark"] button:focus-visible,
+  [data-theme="dark"] input:focus-visible,
+  [data-theme="dark"] textarea:focus-visible,
+  [data-theme="dark"] select:focus-visible,
+  [data-theme="dark"] [tabindex]:focus-visible,
+  [data-theme="dark"] [role="button"]:focus-visible,
+  [data-theme="dark"] [role="link"]:focus-visible,
+  [data-theme="dark"] [role="menuitem"]:focus-visible {
+    ring-color: #60a5fa; /* Blue-400 - Dark mode */
+    @apply ring-offset-gray-900;
+  }
+
+  /* Remove default focus outline to use our custom styles */
+  *:focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  /* Ensure disabled elements don't show focus */
+  *:disabled:focus-visible,
+  [aria-disabled="true"]:focus-visible {
+    outline: none;
+    box-shadow: none;
+  }
+
+  /* Skip link for accessibility */
+  .skip-link {
+    @apply absolute left-0 top-0 z-50 bg-primary px-4 py-2 text-white rounded-br-md;
+    @apply -translate-y-full transform;
+    @apply transition-transform focus:translate-y-0;
+    @apply focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-primary;
+  }
+
+  /* Screen reader only class */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium;
+    @apply transition-colors focus-visible:outline focus-visible:outline-2;
+    @apply disabled:pointer-events-none disabled:opacity-50;
+    min-height: 44px; /* WCAG 2.2 Level AA (2.5.8) - 44x44px touch target */
+    min-width: 44px;
+  }
+
+  .btn-primary {
+    @apply btn bg-primary text-white hover:opacity-90;
+  }
+
+  .btn-secondary {
+    @apply btn border border-border bg-background;
+    transition: opacity 0.2s;
+  }
+
+  .btn-secondary:hover {
+    opacity: 0.8;
+  }
+
+  .card {
+    @apply rounded-lg border border-border bg-background p-6 shadow-sm;
+  }
+
+  /* Form controls - WCAG 2.2 Level AA minimum touch targets */
+  input[type="checkbox"],
+  input[type="radio"] {
+    min-width: 24px;
+    min-height: 24px;
+    cursor: pointer;
+  }
+}

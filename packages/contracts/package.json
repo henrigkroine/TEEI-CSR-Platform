@@ -7,6 +7,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:pact": "vitest run --config vitest.pact.config.ts",
+    "pact:trust": "vitest run pact-tests/trust-evidence.pact.test.ts pact-tests/trust-ledger.pact.test.ts",
+    "pact:deck": "vitest run pact-tests/deck-export.pact.test.ts",
+    "pact:all": "pnpm test:pact",
     "pact:publish": "pact-broker publish ./pacts --consumer-app-version=$npm_package_version --broker-base-url=$PACT_BROKER_BASE_URL"
   },
   "keywords": ["pact", "contract-testing", "api"],
