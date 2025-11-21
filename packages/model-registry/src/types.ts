@@ -102,6 +102,46 @@ export type VISWeights = z.infer<typeof VISWeightsSchema>;
 export type VISConfig = z.infer<typeof VISConfigSchema>;
 
 // ============================================================================
+// Regional Policy (Worker 8 - Regional AI Controls)
+// ============================================================================
+
+/**
+ * Supported data residency regions
+ */
+export const RegionSchema = z.enum([
+  'eu-central-1',  // Frankfurt, Germany
+  'eu-west-1',     // Ireland
+  'us-east-1',     // Virginia, USA
+  'us-west-2',     // Oregon, USA
+  'ap-southeast-1', // Singapore
+]);
+
+export type Region = z.infer<typeof RegionSchema>;
+
+/**
+ * Regional policy enforcement mode
+ */
+export const RegionEnforcementModeSchema = z.enum([
+  'strict',   // Block requests to disallowed regions (GDPR)
+  'advisory', // Log warnings but allow
+  'disabled', // No enforcement
+]);
+
+export type RegionEnforcementMode = z.infer<typeof RegionEnforcementModeSchema>;
+
+/**
+ * Regional policy for model selection
+ */
+export const RegionPolicySchema = z.object({
+  allowedRegions: z.array(RegionSchema),
+  primaryRegion: RegionSchema,
+  enforcementMode: RegionEnforcementModeSchema.default('strict'),
+  fallbackBehavior: z.enum(['use_primary', 'fail']).default('use_primary'),
+});
+
+export type RegionPolicy = z.infer<typeof RegionPolicySchema>;
+
+// ============================================================================
 // Guardrails
 // ============================================================================
 
@@ -156,6 +196,7 @@ export const TenantOverrideSchema = z.object({
   // Guardrails and Rollback
   guardrails: GuardrailsSchema.optional(),
   rollback: RollbackConfigSchema.optional(),
+  regionPolicy: RegionPolicySchema.optional(),
 });
 
 export type TenantOverride = z.infer<typeof TenantOverrideSchema>;
@@ -206,6 +247,12 @@ export const GLOBAL_DEFAULTS: Required<Omit<TenantOverride, 'tenantId' | 'versio
     minFairnessThreshold: 0.9,
     minPrivacyRedaction: true,
     maxCostPerRequest: 0.5,
+  },
+  regionPolicy: {
+    allowedRegions: ['eu-central-1', 'eu-west-1', 'us-east-1', 'us-west-2', 'ap-southeast-1'],
+    primaryRegion: 'us-east-1',
+    enforcementMode: 'advisory',
+    fallbackBehavior: 'use_primary',
   },
 };
 

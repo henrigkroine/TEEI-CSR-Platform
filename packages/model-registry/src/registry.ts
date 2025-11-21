@@ -34,6 +34,7 @@ export interface MergedConfig {
   sroi: Required<SROIConfig>;
   vis: Required<VISConfig>;
   guardrails: Required<Guardrails>;
+  regionPolicy: Required<import('./types.js').RegionPolicy>;
 }
 
 export class ModelRegistry {
@@ -156,6 +157,73 @@ export class ModelRegistry {
         minPrivacyRedaction: override?.guardrails?.minPrivacyRedaction ?? GLOBAL_DEFAULTS.guardrails.minPrivacyRedaction!,
         maxCostPerRequest: override?.guardrails?.maxCostPerRequest ?? GLOBAL_DEFAULTS.guardrails.maxCostPerRequest!,
       },
+      regionPolicy: {
+        allowedRegions: override?.regionPolicy?.allowedRegions || GLOBAL_DEFAULTS.regionPolicy.allowedRegions,
+        primaryRegion: override?.regionPolicy?.primaryRegion || GLOBAL_DEFAULTS.regionPolicy.primaryRegion,
+        enforcementMode: override?.regionPolicy?.enforcementMode || GLOBAL_DEFAULTS.regionPolicy.enforcementMode,
+        fallbackBehavior: override?.regionPolicy?.fallbackBehavior || GLOBAL_DEFAULTS.regionPolicy.fallbackBehavior,
+      },
+    };
+  }
+
+  /**
+   * Get model configuration for a specific region
+   * Enforces regional policy and returns appropriate model
+   *
+   * @param tenantId - Tenant identifier
+   * @param requestedRegion - Region where model will be executed
+   * @returns Model config with region enforcement applied
+   */
+  getModelForRegion(
+    tenantId: string,
+    requestedRegion: string
+  ): {
+    model: string;
+    region: string;
+    allowed: boolean;
+    reason?: string;
+  } {
+    const config = this.getConfig(tenantId);
+    const policy = config.regionPolicy;
+
+    // Check if requested region is allowed
+    const isAllowed = policy.allowedRegions.includes(requestedRegion as any);
+
+    if (!isAllowed) {
+      if (policy.enforcementMode === 'strict') {
+        if (policy.fallbackBehavior === 'use_primary') {
+          return {
+            model: config.q2q.model,
+            region: policy.primaryRegion,
+            allowed: false,
+            reason: `Region ${requestedRegion} not allowed. Using primary region ${policy.primaryRegion} (strict mode).`,
+          };
+        } else {
+          throw new ValidationError(
+            `Region ${requestedRegion} not allowed for tenant ${tenantId} and fallback disabled`,
+            'region',
+            requestedRegion
+          );
+        }
+      } else if (policy.enforcementMode === 'advisory') {
+        // Log warning but allow
+        console.warn(
+          `[ModelRegistry] Advisory: Region ${requestedRegion} not in allowed list for tenant ${tenantId}`
+        );
+        return {
+          model: config.q2q.model,
+          region: requestedRegion,
+          allowed: false,
+          reason: `Region ${requestedRegion} not in allowed list (advisory mode - allowing).`,
+        };
+      }
+    }
+
+    // Region allowed or enforcement disabled
+    return {
+      model: config.q2q.model,
+      region: requestedRegion,
+      allowed: true,
     };
   }
 
