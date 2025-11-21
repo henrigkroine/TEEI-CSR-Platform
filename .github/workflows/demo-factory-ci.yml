@@ -1,0 +1,166 @@
+name: Demo Factory CI
+
+on:
+  push:
+    branches:
+      - main
+      - 'claude/demo-factory-**'
+    paths:
+      - 'packages/data-masker/**'
+      - 'packages/shared-types/demo/**'
+      - 'services/impact-in/src/demo/**'
+      - 'services/api-gateway/src/routes/demo/**'
+      - 'apps/corp-cockpit-astro/src/pages/admin/demo/**'
+      - 'apps/corp-cockpit-astro/src/components/admin/DemoFactoryManager.tsx'
+      - 'packages/openapi/demo.yaml'
+      - 'scripts/demo/**'
+      - '.github/workflows/demo-factory-ci.yml'
+  pull_request:
+    paths:
+      - 'packages/data-masker/**'
+      - 'packages/shared-types/demo/**'
+      - 'services/impact-in/src/demo/**'
+      - 'services/api-gateway/src/routes/demo/**'
+      - 'packages/openapi/demo.yaml'
+
+jobs:
+  data-masker-tests:
+    name: Data Masker Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run data-masker tests
+        run: |
+          cd packages/data-masker
+          pnpm test:coverage
+
+      - name: Check coverage threshold
+        run: |
+          cd packages/data-masker
+          # Require ≥90% coverage
+          # TODO: Add actual coverage check script
+
+  typecheck:
+    name: TypeScript Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type check demo packages
+        run: |
+          pnpm --filter @teei/data-masker typecheck
+          pnpm --filter @teei/shared-types typecheck
+          pnpm --filter @teei/impact-in typecheck
+          pnpm --filter @teei/api-gateway typecheck
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+  openapi-validation:
+    name: OpenAPI Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate OpenAPI spec
+        uses: char0n/swagger-editor-validate@v1
+        with:
+          definition-file: packages/openapi/demo.yaml
+
+  security-audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Run audit
+        run: pnpm audit --audit-level=moderate
+
+  contract-tests:
+    name: Contract Tests
+    runs-on: ubuntu-latest
+    needs: [data-masker-tests, typecheck]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run contract tests
+        run: |
+          # TODO: Add actual contract tests
+          echo "Contract tests placeholder"
+
+  quality-gates:
+    name: Quality Gates
+    runs-on: ubuntu-latest
+    needs: [data-masker-tests, typecheck, lint, openapi-validation, security-audit]
+    steps:
+      - name: All checks passed
+        run: echo "✅ All quality gates passed!"

@@ -1,0 +1,43 @@
+---
+/**
+ * Demo Factory Admin UI
+ * Create and manage demo tenants
+ */
+import Layout from '../../../layouts/Layout.astro';
+import DemoFactoryManager from '../../../components/admin/DemoFactoryManager';
+---
+
+<Layout title="Demo Factory | TEEI Admin">
+  <div class="demo-factory-page">
+    <header class="page-header">
+      <h1>Demo Factory</h1>
+      <p>Create and manage demo tenants with realistic seeded data</p>
+    </header>
+
+    <DemoFactoryManager client:load />
+  </div>
+</Layout>
+
+<style>
+  .demo-factory-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+
+  .page-header {
+    margin-bottom: 2rem;
+  }
+
+  .page-header h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #1a202c;
+    margin-bottom: 0.5rem;
+  }
+
+  .page-header p {
+    font-size: 1rem;
+    color: #718096;
+  }
+</style>
