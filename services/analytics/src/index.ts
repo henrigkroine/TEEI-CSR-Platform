@@ -76,6 +76,17 @@ async function start() {
     logger.info('    GET  /v1/audit/stats - Audit statistics');
     logger.info('    POST /v1/audit/export - Create compliance export bundle (ZIP)');
     logger.info('');
+    logger.info('  FinOps APIs:');
+    logger.info('    GET  /v1/analytics/finops/costs - Query costs with filtering and grouping');
+    logger.info('    GET  /v1/analytics/finops/costs/summary - Cost summary for dashboard');
+    logger.info('    GET  /v1/analytics/finops/costs/top-drivers - Top cost drivers');
+    logger.info('    GET  /v1/analytics/finops/costs/by-model - Costs by AI model');
+    logger.info('    GET  /v1/analytics/finops/costs/by-region - Costs by region');
+    logger.info('    GET  /v1/analytics/finops/costs/by-service - Costs by service');
+    logger.info('    GET  /v1/analytics/finops/forecast - Cost forecast');
+    logger.info('    GET  /v1/analytics/finops/anomalies - Cost anomalies');
+    logger.info('    POST /v1/analytics/finops/aggregate - Trigger cost aggregation');
+    logger.info('');
     logger.info('Environment:');
     logger.info(`  ClickHouse: ${process.env.CLICKHOUSE_URL || 'http://localhost:8123'}`);
     logger.info(`  Redis: ${process.env.REDIS_URL || 'redis://localhost:6379'}`);
