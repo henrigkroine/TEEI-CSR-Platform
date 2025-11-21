@@ -43,6 +43,11 @@ async function start() {
     await instance.register(scenarioRoutes, { prefix: '/scenarios' });
   }, { prefix: '/v1/analytics' });
 
+  // Register scenario planner API routes
+  app.register(async (instance) => {
+    await instance.register(scenarioRoutes, { prefix: '/v1' });
+  });
+
   // Start server
   try {
     await app.listen({ port: PORT, host: '0.0.0.0' });
