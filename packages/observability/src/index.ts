@@ -122,3 +122,25 @@ export {
   type Run,
   type OpenLineageEvent,
 } from './openlineage.js';
+
+// SLO and Error Budget exports
+export {
+  SLOManager,
+  getSLOManager,
+  calculateErrorBudget,
+  evaluateSLO,
+  calculateBurnRateAlerts,
+  PLATFORM_SLOS,
+  type SLODefinition,
+  type SLOStatus,
+  type ErrorBudget,
+  type BurnRateAlert,
+} from './slo.js';
+
+// SLO Metrics exports
+export {
+  SLOMetrics,
+  getSLOMetrics,
+  registerSLOMetricsEndpoint,
+  generatePrometheusAlertRules,
+} from './slo-metrics.js';

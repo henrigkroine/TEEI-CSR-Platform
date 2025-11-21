@@ -20,6 +20,10 @@
     "monitor:export-pdf": "tsx pilot-routes/export-pdf.ts",
     "monitor:approval-workflow": "tsx pilot-routes/approval-workflow.ts",
     "monitor:evidence-explorer": "tsx pilot-routes/evidence-explorer.ts",
+    "monitor:boardroom-deck": "tsx pilot-routes/boardroom-deck.ts",
+    "monitor:export-pptx": "tsx pilot-routes/export-pptx.ts",
+    "monitor:connectors-health": "tsx pilot-routes/connectors-health.ts",
+    "monitor:trust-center-status": "tsx pilot-routes/trust-center-status.ts",
     "monitor:all": "tsx src/index.ts"
   },
   "dependencies": {
