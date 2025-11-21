@@ -20,8 +20,8 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
 
 // Stripe Price IDs (configure these in env)
 const STRIPE_PRICE_IDS: Record<string, string> = {
-  starter: process.env.STRIPE_PRICE_ID_STARTER || 'price_starter',
-  pro: process.env.STRIPE_PRICE_ID_PRO || 'price_pro',
+  essentials: process.env.STRIPE_PRICE_ID_ESSENTIALS || 'price_essentials',
+  professional: process.env.STRIPE_PRICE_ID_PROFESSIONAL || 'price_professional',
   enterprise: process.env.STRIPE_PRICE_ID_ENTERPRISE || 'price_enterprise',
   custom: process.env.STRIPE_PRICE_ID_CUSTOM || 'price_custom',
 };
@@ -31,7 +31,7 @@ const STRIPE_PRICE_IDS: Record<string, string> = {
  */
 const CreateSubscriptionSchema = z.object({
   companyId: z.string().uuid(),
-  plan: z.enum(['starter', 'pro', 'enterprise', 'custom']),
+  plan: z.enum(['essentials', 'professional', 'enterprise', 'custom']),
   seatCount: z.number().int().min(1).default(1),
   trialDays: z.number().int().min(0).max(30).optional(),
   paymentMethodId: z.string().optional(),
@@ -42,7 +42,7 @@ const CreateSubscriptionSchema = z.object({
  */
 const UpdateSubscriptionSchema = z.object({
   seatCount: z.number().int().min(1).optional(),
-  plan: z.enum(['starter', 'pro', 'enterprise', 'custom']).optional(),
+  plan: z.enum(['essentials', 'professional', 'enterprise', 'custom']).optional(),
   cancelAtPeriodEnd: z.boolean().optional(),
 });
 
@@ -373,8 +373,8 @@ export async function subscriptionRoutes(fastify: FastifyInstance) {
 async function createPlanPolicies(companyId: string, plan: string, subscriptionId: string): Promise<void> {
 
   const featuresByPlan: Record<string, string[]> = {
-    starter: ['report_builder', 'export_pdf', 'export_csv'],
-    pro: [
+    essentials: ['report_builder', 'export_pdf', 'export_csv'],
+    professional: [
       'report_builder',
       'boardroom_live',
       'forecast',
@@ -384,6 +384,7 @@ async function createPlanPolicies(companyId: string, plan: string, subscriptionI
       'export_csv',
       'export_pptx',
       'api_access',
+      'connectors',
     ],
     enterprise: [
       'report_builder',
@@ -392,6 +393,9 @@ async function createPlanPolicies(companyId: string, plan: string, subscriptionI
       'benchmarking',
       'nlq',
       'gen_ai_reports',
+      'copilot',
+      'multi_region',
+      'connectors',
       'export_pdf',
       'export_csv',
       'export_pptx',

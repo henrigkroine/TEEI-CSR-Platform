@@ -55,6 +55,8 @@ const start = async () => {
     console.log(`📊 Usage endpoint: http://${host}:${port}/api/billing/usage/:tenantId`);
     console.log(`💰 Budget endpoint: http://${host}:${port}/api/billing/budgets/:tenantId`);
     console.log(`📄 Invoice endpoint: http://${host}:${port}/api/billing/invoices/generate`);
+    console.log(`🎯 L2I Bundles: http://${host}:${port}/api/billing/l2i/bundles/:companyId`);
+    console.log(`🔐 Entitlements: http://${host}:${port}/api/entitlements/me?companyId=:id`);
   } catch (err) {
     fastify.log.error(err);
     process.exit(1);

@@ -24,6 +24,11 @@ export const usageEventTypeEnum = pgEnum('usage_event_type', [
   'compute_hours'
 ]);
 
+// L2I Bundle Enums
+export const l2iBundleTierEnum = pgEnum('l2i_bundle_tier', ['foundation', 'growth', 'expand', 'launch']);
+export const l2iProgramTagEnum = pgEnum('l2i_program_tag', ['language', 'mentorship', 'upskilling', 'weei']);
+export const l2iBundleStatusEnum = pgEnum('l2i_bundle_status', ['active', 'expired', 'consumed', 'revoked']);
+
 /**
  * Billing Customers - Links companies to Stripe customers
  */
@@ -248,6 +253,9 @@ export const billingPlanFeatures = pgTable('billing_plan_features', {
     nlq: boolean;
     aiCopilot: boolean;
     genAiReports: boolean;
+    copilot: boolean;
+    multiRegion: boolean;
+    connectors: boolean;
     apiAccess: boolean;
     externalConnectors: boolean;
     sso: boolean;

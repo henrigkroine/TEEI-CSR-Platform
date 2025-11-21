@@ -15,6 +15,9 @@ export enum Feature {
   NLQ = 'nlq',
   AI_COPILOT = 'ai_copilot',
   GEN_AI_REPORTS = 'gen_ai_reports',
+  COPILOT = 'copilot',
+  MULTI_REGION = 'multi_region',
+  CONNECTORS = 'connectors',
   API_ACCESS = 'api_access',
   EXTERNAL_CONNECTORS = 'external_connectors',
   SSO = 'sso',
@@ -178,7 +181,7 @@ export type EntitlementPolicy = z.infer<typeof EntitlementPolicySchema>;
  * Subscription plan features
  */
 export interface PlanFeatures {
-  starter: {
+  essentials: {
     maxSeats: number;
     maxReportsPerMonth: number;
     maxAiTokensPerMonth: number;
@@ -187,7 +190,7 @@ export interface PlanFeatures {
     maxExternalConnectors: number;
     features: Set<Feature>;
   };
-  pro: {
+  professional: {
     maxSeats: number;
     maxReportsPerMonth: number;
     maxAiTokensPerMonth: number;
@@ -226,7 +229,7 @@ export interface PlanFeatures {
 }
 
 /**
- * Default plan features
+ * Default plan features (Founding-8 Licensing Tiers)
  */
 export const DEFAULT_PLAN_FEATURES: PlanFeatures = {
   // Legacy plans (for existing customers)
@@ -243,7 +246,7 @@ export const DEFAULT_PLAN_FEATURES: PlanFeatures = {
       Feature.EXPORT_CSV,
     ]),
   },
-  pro: {
+  professional: {
     maxSeats: 25,
     maxReportsPerMonth: 100,
     maxAiTokensPerMonth: 1000000,
@@ -260,6 +263,7 @@ export const DEFAULT_PLAN_FEATURES: PlanFeatures = {
       Feature.EXPORT_CSV,
       Feature.EXPORT_PPTX,
       Feature.API_ACCESS,
+      Feature.CONNECTORS,
     ]),
   },
   enterprise: {
@@ -277,6 +281,9 @@ export const DEFAULT_PLAN_FEATURES: PlanFeatures = {
       Feature.NLQ,
       Feature.AI_COPILOT,
       Feature.GEN_AI_REPORTS,
+      Feature.COPILOT,
+      Feature.MULTI_REGION,
+      Feature.CONNECTORS,
       Feature.EXPORT_PDF,
       Feature.EXPORT_CSV,
       Feature.EXPORT_PPTX,
