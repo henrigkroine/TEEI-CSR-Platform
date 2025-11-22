@@ -8,7 +8,7 @@
  * - ✅ Agent 8: CSV/JSON/XLSX parsers
  * - ✅ Agent 9: Zod validators
  * - ✅ Agent 10-12: Transformers
- * - ⏳ Agent 13: Persistors
+ * - ✅ Agent 13: Persistors
  * - ⏳ Agent 14: CLI tools
  *
  * @module ingestion-buddy
@@ -24,9 +24,9 @@ export * from './validators';
 // Transformers (Agents 10-12)
 export * from './transformers';
 
+// Persistors (Agent 13)
+export * from './persistors';
+
 // Utils (Agents 4-5)
 export * from './utils/identity-matcher';
 export * from './utils/activity-taxonomy';
-
-// Persistors (Agent 13) - Coming soon
-// export * from './persistors';
