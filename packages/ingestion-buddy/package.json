@@ -1,0 +1,45 @@
+{
+  "name": "@teei/ingestion-buddy",
+  "version": "0.1.0",
+  "description": "Buddy Program ingestion layer for TEEI CSR Platform",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./parsers": "./dist/parsers/index.js",
+    "./validators": "./dist/validators/index.js",
+    "./transformers": "./dist/transformers/index.js",
+    "./utils": "./dist/utils/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@teei/shared-schema": "workspace:*",
+    "@teei/shared-utils": "workspace:*",
+    "csv-parse": "^5.5.6",
+    "drizzle-orm": "^0.35.1",
+    "xlsx": "^0.18.5",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.10",
+    "typescript": "^5.5.3",
+    "vitest": "^2.0.5"
+  },
+  "keywords": [
+    "buddy-program",
+    "ingestion",
+    "csr",
+    "teei"
+  ],
+  "author": "TEEI Platform Team",
+  "license": "UNLICENSED",
+  "private": true
+}
