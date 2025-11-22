@@ -1,0 +1,81 @@
+---
+/**
+ * Campaign Detail Dashboard Page
+ *
+ * SWARM 6: Agent 6.2 - campaign-detail-dashboard
+ *
+ * Displays comprehensive campaign performance metrics with:
+ * - Overview metrics (participants, hours, SROI, VIS)
+ * - Capacity utilization gauges
+ * - Time-series charts
+ * - Budget tracking
+ * - Volunteer leaderboard
+ * - Evidence highlights
+ *
+ * Route: /[lang]/cockpit/[companyId]/campaigns/[campaignId]
+ */
+
+import BaseLayout from '../../../../../../layouts/BaseLayout.astro';
+import { hasPermission } from '../../../../../../utils/rbac';
+import CampaignDetailDashboard from '../../../../../../components/campaigns/CampaignDetailDashboard';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+// Extract route parameters
+const { lang, companyId, campaignId } = Astro.params;
+const user = Astro.locals.user;
+const tenantContext = Astro.locals.tenantContext;
+
+// Middleware handles auth/tenant validation, but double-check
+if (!user || !tenantContext) {
+  return Astro.redirect(`/${lang}/login`);
+}
+
+// Verify the tenant context matches the route
+if (tenantContext.companyId !== companyId || tenantContext.lang !== lang) {
+  return Astro.redirect(`/${lang}/cockpit/401`);
+}
+
+// Check permissions
+const canViewCampaigns = hasPermission(user.role, 'VIEW_CAMPAIGNS') || hasPermission(user.role, 'ADMIN_CONSOLE');
+const canEditCampaigns = hasPermission(user.role, 'EDIT_CAMPAIGNS') || hasPermission(user.role, 'ADMIN_CONSOLE');
+
+if (!canViewCampaigns) {
+  return Astro.redirect(`/${lang}/cockpit/401`);
+}
+
+// Create QueryClient for React Query
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      refetchOnWindowFocus: false,
+    },
+  },
+});
+---
+
+<BaseLayout title="Campaign Dashboard - TEEI Corporate Cockpit" lang={lang}>
+  <div class="campaign-dashboard-page">
+    <QueryClientProvider client={queryClient}>
+      <CampaignDetailDashboard
+        campaignId={campaignId}
+        companyId={companyId}
+        client:load
+      />
+    </QueryClientProvider>
+  </div>
+</BaseLayout>
+
+<style>
+  .campaign-dashboard-page {
+    min-height: 100vh;
+    background: var(--color-bg, #f9fafb);
+  }
+
+  /* Ensure proper spacing and responsive layout */
+  @media (max-width: 768px) {
+    .campaign-dashboard-page {
+      padding: 0;
+    }
+  }
+</style>

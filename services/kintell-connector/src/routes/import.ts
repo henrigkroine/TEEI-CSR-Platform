@@ -71,6 +71,29 @@ export async function importRoutes(app: FastifyInstance) {
           continue;
         }
 
+        // SWARM 6: Associate session to campaign (if possible)
+        // Use participant's company for campaign matching
+        const participantCompanyId = participant.companyId;
+        const sessionDate = mapped.completedAt || new Date();
+
+        let programInstanceId: string | null = null;
+        if (participantCompanyId) {
+          try {
+            // Dynamic import to avoid hard dependency
+            const { associateSessionDuringIngestion } = await import('../lib/campaign-association.js');
+            programInstanceId = await associateSessionDuringIngestion(
+              mapped.externalSessionId || crypto.randomUUID(),
+              participant.id,
+              volunteer.id,
+              participantCompanyId,
+              sessionDate
+            );
+          } catch (error) {
+            // Graceful degradation: Continue without campaign association
+            logger.warn({ error }, 'Campaign association unavailable - continuing without association');
+          }
+        }
+
         // Insert session
         const [session] = await db
           .insert(kintellSessions)
@@ -85,6 +108,7 @@ export async function importRoutes(app: FastifyInstance) {
             rating: mapped.rating?.toString(),
             feedbackText: mapped.feedbackText,
             languageLevel: mapped.languageLevel,
+            programInstanceId: programInstanceId, // SWARM 6: Link to campaign
           })
           .returning();
 

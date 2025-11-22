@@ -1,5 +1,6 @@
 import { pgTable, uuid, varchar, timestamp, text, decimal, jsonb, index } from 'drizzle-orm/pg-core';
 import { users } from './users.js';
+import { programInstances } from './program-instances.js';
 
 export const buddyMatches = pgTable('buddy_matches', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -8,6 +9,8 @@ export const buddyMatches = pgTable('buddy_matches', {
   matchedAt: timestamp('matched_at', { withTimezone: true }).defaultNow().notNull(),
   status: varchar('status', { length: 50 }).notNull().default('active'), // active, inactive, ended
   endedAt: timestamp('ended_at', { withTimezone: true }),
+  // SWARM 6: Link to campaign via program instance
+  programInstanceId: uuid('program_instance_id').references(() => programInstances.id, { onDelete: 'set null' }),
 });
 
 export const buddyEvents = pgTable('buddy_events', {

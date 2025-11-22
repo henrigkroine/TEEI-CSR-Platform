@@ -61,6 +61,172 @@ export function calculateSROI(inputs: SROIInputs): Omit<SROIResponse, 'company_i
 }
 
 /**
+ * Fetch SROI data from database for a campaign
+ *
+ * Aggregates metrics across all program instances linked to the campaign.
+ * Calculates SROI based on volunteer hours and outcome improvements at campaign level.
+ *
+ * @param campaignId - Campaign UUID
+ * @param period - Quarter string (YYYY-QN) or null for entire campaign duration
+ * @returns SROI response with ratio and breakdown
+ */
+export async function getSROIForCampaign(
+  campaignId: string,
+  period: string | null = null
+): Promise<SROIResponse> {
+  const client = await pool.connect();
+  try {
+    // Query campaign details
+    const campaignQuery = `
+      SELECT
+        id,
+        name,
+        company_id,
+        quarter,
+        start_date,
+        end_date
+      FROM campaigns
+      WHERE id = $1
+    `;
+    const campaignResult = await client.query(campaignQuery, [campaignId]);
+
+    if (campaignResult.rows.length === 0) {
+      throw new Error(`Campaign not found: ${campaignId}`);
+    }
+
+    const campaign = campaignResult.rows[0];
+
+    // Query program instances for this campaign
+    // Filter by period if provided, otherwise use entire campaign duration
+    const instancesQuery = period
+      ? `
+        SELECT
+          total_hours_logged,
+          outcome_scores,
+          enrolled_volunteers,
+          enrolled_beneficiaries
+        FROM program_instances
+        WHERE campaign_id = $1
+          AND status IN ('active', 'completed')
+          AND start_date <= $3::date
+          AND end_date >= $2::date
+      `
+      : `
+        SELECT
+          total_hours_logged,
+          outcome_scores,
+          enrolled_volunteers,
+          enrolled_beneficiaries
+        FROM program_instances
+        WHERE campaign_id = $1
+          AND status IN ('active', 'completed')
+      `;
+
+    const instancesParams = period
+      ? [
+          campaignId,
+          `${period.split('-Q')[0]}-01-01`, // Start of quarter year
+          `${period.split('-Q')[0]}-12-31`, // End of quarter year
+        ]
+      : [campaignId];
+
+    const instancesResult = await client.query(instancesQuery, instancesParams);
+
+    if (instancesResult.rows.length === 0) {
+      // No active instances yet - return zero SROI
+      return {
+        company_id: campaign.company_id,
+        period: period || campaign.quarter || 'all-time',
+        sroi_ratio: 0,
+        breakdown: {
+          total_investment: 0,
+          total_social_value: 0,
+          components: {
+            volunteer_hours_value: 0,
+            integration_value: 0,
+            language_value: 0,
+            job_readiness_value: 0,
+          },
+        },
+      };
+    }
+
+    // Aggregate metrics across all program instances
+    let totalHours = 0;
+    const dimensionScores: Record<string, number[]> = {
+      integration: [],
+      language: [],
+      language_proficiency: [],
+      job_readiness: [],
+      career_readiness: [],
+      workplace_readiness: [],
+    };
+
+    for (const instance of instancesResult.rows) {
+      // Sum volunteer hours
+      totalHours += parseFloat(instance.total_hours_logged || 0);
+
+      // Collect outcome scores (JSONB format: {"integration": 0.72, "language": 0.68, ...})
+      const outcomeScores = instance.outcome_scores || {};
+      for (const [dimension, score] of Object.entries(outcomeScores)) {
+        if (typeof score === 'number') {
+          if (!dimensionScores[dimension]) {
+            dimensionScores[dimension] = [];
+          }
+          dimensionScores[dimension].push(score);
+        }
+      }
+    }
+
+    // Calculate average scores per dimension
+    const avgScores: Record<string, number> = {};
+    for (const [dimension, scores] of Object.entries(dimensionScores)) {
+      if (scores.length > 0) {
+        avgScores[dimension] = scores.reduce((sum, s) => sum + s, 0) / scores.length;
+      }
+    }
+
+    // Map campaign outcome dimensions to SROI dimensions
+    // Campaigns may use different dimension names (e.g., "career_readiness" vs "job_readiness")
+    const baseline = 0.3; // Conservative baseline assumption
+    const integrationImprovement = Math.max(
+      0,
+      (avgScores.integration || 0) - baseline
+    );
+    const languageImprovement = Math.max(
+      0,
+      (avgScores.language || avgScores.language_proficiency || 0) - baseline
+    );
+    const jobReadinessImprovement = Math.max(
+      0,
+      (avgScores.job_readiness || avgScores.career_readiness || avgScores.workplace_readiness || 0) -
+        baseline
+    );
+
+    // Confidence: use 0.85 default (campaign metrics are aggregated, so reasonably confident)
+    const averageConfidence = 0.85;
+
+    // Calculate SROI using the core formula
+    const sroi = calculateSROI({
+      totalVolunteerHours: totalHours,
+      programCosts: 0, // TODO: Add campaign-level cost tracking
+      integrationImprovement,
+      languageImprovement,
+      jobReadinessImprovement,
+      averageConfidence,
+    });
+
+    return {
+      company_id: campaign.company_id,
+      period: period || campaign.quarter || 'all-time',
+      ...sroi,
+    };
+  } finally {
+    client.release();
+  }
+}
+
+/**
  * Fetch SROI data from database for a company and period
  *
  * @param companyId - Company UUID

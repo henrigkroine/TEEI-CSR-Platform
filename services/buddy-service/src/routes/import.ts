@@ -68,6 +68,28 @@ export async function importRoutes(app: FastifyInstance) {
           continue;
         }
 
+        // SWARM 6: Associate match to campaign (if possible)
+        const participantCompanyId = participant.companyId;
+        const matchDate = row.matched_at ? new Date(row.matched_at) : new Date();
+
+        let programInstanceId: string | null = null;
+        if (participantCompanyId) {
+          try {
+            // Dynamic import to avoid hard dependency
+            const { associateMatchDuringIngestion } = await import('../lib/campaign-association.js');
+            programInstanceId = await associateMatchDuringIngestion(
+              crypto.randomUUID(), // Temp ID (will be replaced by actual match.id)
+              participant.id,
+              buddy.id,
+              participantCompanyId,
+              matchDate
+            );
+          } catch (error) {
+            // Graceful degradation: Continue without campaign association
+            logger.warn({ error }, 'Campaign association unavailable - continuing without association');
+          }
+        }
+
         // Insert match
         const [match] = await db
           .insert(buddyMatches)
@@ -76,6 +98,7 @@ export async function importRoutes(app: FastifyInstance) {
             buddyId: buddy.id,
             matchedAt: row.matched_at ? new Date(row.matched_at) : new Date(),
             status: row.status || 'active',
+            programInstanceId: programInstanceId, // SWARM 6: Link to campaign
           })
           .returning();
 

@@ -12,6 +12,7 @@ import { enforceRedaction } from './redaction.js';
 
 /**
  * Evidence snippet for notes
+ * SWARM 6: Agent 4.4 - Enhanced with campaign context
  */
 export interface EvidenceSnippet {
   id: string;
@@ -20,6 +21,10 @@ export interface EvidenceSnippet {
   source: string;
   collected_at: Date;
   snippet?: string;
+  // SWARM 6: Campaign linking
+  campaign_id?: string;
+  campaign_name?: string;
+  program_instance_id?: string;
 }
 
 /**
@@ -109,6 +114,11 @@ function formatEvidenceNotes(snippets: EvidenceSnippet[]): string {
         `Collected: ${formatDate(snippet.collected_at)}`,
       ];
 
+      // SWARM 6: Agent 4.4 - Add campaign context
+      if (snippet.campaign_name) {
+        parts.push(`Campaign: ${snippet.campaign_name}`);
+      }
+
       if (snippet.snippet) {
         parts.push(`Note: ${snippet.snippet}`);
       }
@@ -195,22 +205,38 @@ export function extractEvidenceIds(content: string): string[] {
  * Build evidence lineage graph for a metric
  * Shows how evidence was transformed and calculated
  *
+ * SWARM 6: Agent 4.4 - Enhanced to include campaign context
+ *
  * @param evidenceId - Root evidence ID
  * @param companyId - Company ID
- * @returns Lineage tree structure for notes
+ * @param options - Optional campaign/instance context
+ * @returns Lineage tree structure for notes showing: metric → campaign → instance → evidence
  */
 export async function buildEvidenceLineageTree(
   evidenceId: string,
-  companyId: string
+  companyId: string,
+  options?: {
+    campaignId?: string;
+    campaignName?: string;
+    programInstanceId?: string;
+    programInstanceName?: string;
+  }
 ): Promise<string> {
   // TODO: Implement lineage tree traversal
   // In production: Query lineage graph from database
 
-  // Mock implementation
-  const tree = `
-Evidence Lineage for ${evidenceId}:
+  // SWARM 6: Enhanced lineage showing full chain
+  let tree = `Evidence Lineage for ${evidenceId}:\n\n`;
 
-├── Input: Volunteer Hours (1,250 hrs)
+  // Add campaign context if available
+  if (options?.campaignId && options?.campaignName) {
+    tree += `Campaign: ${options.campaignName} (${options.campaignId})\n`;
+    if (options.programInstanceId && options.programInstanceName) {
+      tree += `├── Program Instance: ${options.programInstanceName}\n│\n`;
+    }
+  }
+
+  tree += `├── Input: Volunteer Hours (1,250 hrs)
 │   └── Source: Benevity Integration
 │
 ├── Input: Beneficiary Count (450)
@@ -220,8 +246,7 @@ Evidence Lineage for ${evidenceId}:
 │   └── Result: $37,437.50
 │
 └── Calculation: SROI = Social Value / Investment
-    └── Result: 2.45:1
-`;
+    └── Result: 2.45:1`;
 
   return tree.trim();
 }

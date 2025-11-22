@@ -1,0 +1,140 @@
+---
+/**
+ * Campaign Creation Wizard Page
+ *
+ * SWARM 6: Agent 6.3 - campaign-creation-wizard
+ *
+ * Route: /cockpit/[companyId]/campaigns/new
+ *
+ * Features:
+ * - 5-step wizard for creating campaigns
+ * - Program template selection
+ * - Beneficiary group selection
+ * - Dates & capacity configuration
+ * - Pricing model integration
+ * - Review and submit
+ */
+import BaseLayout from '../../../../layouts/BaseLayout.astro';
+import { hasPermission } from '../../../../utils/rbac';
+import CampaignCreationWizard from '../../../../components/campaigns/CampaignCreationWizard';
+
+// Extract route parameters
+const { companyId } = Astro.params;
+const user = Astro.locals.user;
+const tenantContext = Astro.locals.tenantContext;
+
+// Middleware handles auth/tenant validation, but double-check
+if (!user || !tenantContext) {
+  return Astro.redirect('/login');
+}
+
+// Verify the tenant context matches the route
+if (tenantContext.companyId !== companyId) {
+  return Astro.redirect('/cockpit/401');
+}
+
+// Check permissions - only admins can create campaigns
+const canCreateCampaigns = hasPermission(user.role, 'ADMIN_CONSOLE');
+if (!canCreateCampaigns) {
+  return Astro.redirect(`/cockpit/${companyId}`);
+}
+
+const lang = tenantContext.lang || 'en';
+---
+
+<BaseLayout title="Create New Campaign - TEEI Corporate Cockpit" lang={lang}>
+  <div class="campaign-creation-page">
+    <header class="page-header">
+      <div>
+        <h1>Create New Campaign</h1>
+        <p class="subtitle">Configure and launch a new impact campaign for your organization</p>
+      </div>
+      <nav class="breadcrumbs" aria-label="Breadcrumb">
+        <a href={`/cockpit/${companyId}`}>Dashboard</a>
+        <span aria-hidden="true">/</span>
+        <a href={`/cockpit/${companyId}/campaigns`}>Campaigns</a>
+        <span aria-hidden="true">/</span>
+        <span aria-current="page">New Campaign</span>
+      </nav>
+    </header>
+
+    <main class="wizard-container">
+      <CampaignCreationWizard
+        companyId={companyId}
+        client:load
+      />
+    </main>
+  </div>
+</BaseLayout>
+
+<style>
+  .campaign-creation-page {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .page-header {
+    margin-bottom: calc(var(--spacing-unit) * 4);
+  }
+
+  h1 {
+    font-size: 2rem;
+    margin-bottom: calc(var(--spacing-unit) * 1);
+    color: var(--color-text);
+  }
+
+  .subtitle {
+    color: var(--color-text-secondary);
+    font-size: 1rem;
+    margin-bottom: calc(var(--spacing-unit) * 2);
+  }
+
+  .breadcrumbs {
+    display: flex;
+    align-items: center;
+    gap: calc(var(--spacing-unit) * 1);
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+  }
+
+  .breadcrumbs a {
+    color: var(--color-primary);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+
+  .breadcrumbs a:hover {
+    color: var(--color-primary-dark, #0052a3);
+    text-decoration: underline;
+  }
+
+  .breadcrumbs span[aria-current="page"] {
+    color: var(--color-text);
+    font-weight: 500;
+  }
+
+  .wizard-container {
+    background-color: var(--color-bg);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-md);
+    padding: calc(var(--spacing-unit) * 4);
+  }
+
+  @media (max-width: 768px) {
+    .campaign-creation-page {
+      padding: calc(var(--spacing-unit) * 2);
+    }
+
+    h1 {
+      font-size: 1.5rem;
+    }
+
+    .wizard-container {
+      padding: calc(var(--spacing-unit) * 2);
+    }
+
+    .breadcrumbs {
+      flex-wrap: wrap;
+    }
+  }
+</style>

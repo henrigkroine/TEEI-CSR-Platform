@@ -100,6 +100,16 @@ export async function evidenceRoutes(fastify: FastifyInstance) {
             format: 'date',
             description: 'Filter to date (ISO 8601)',
           },
+          campaign_id: {
+            type: 'string',
+            format: 'uuid',
+            description: 'Filter by campaign ID (SWARM 6)',
+          },
+          program_instance_id: {
+            type: 'string',
+            format: 'uuid',
+            description: 'Filter by program instance ID (SWARM 6)',
+          },
           limit: {
             type: 'integer',
             minimum: 1,
