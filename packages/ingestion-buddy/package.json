@@ -18,7 +18,11 @@
     "clean": "rm -rf dist",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "import": "node dist/cli/import-buddy.js"
+  },
+  "bin": {
+    "buddy-import": "./dist/cli/import-buddy.js"
   },
   "dependencies": {
     "@teei/shared-schema": "workspace:*",
