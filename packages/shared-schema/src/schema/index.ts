@@ -20,4 +20,7 @@ export * from './nlq.js';
 export * from './billing.js';
 export * from './entitlements.js';
 export * from './partner-apps.js';
-export * from './evidence_ledger.js';
+
+// NEW: Kintell ingestion layer schemas (Swarm 1)
+export * from './program-instances.js';
+export * from './ingestion-batches.js';

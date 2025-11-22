@@ -39,6 +39,10 @@ export const programEnrollments = pgTable('program_enrollments', {
   id: uuid('id').defaultRandom().primaryKey(),
   userId: uuid('user_id').notNull().references(() => users.id),
   programType: varchar('program_type', { length: 50 }).notNull(), // buddy, language, mentorship, upskilling
+
+  // NEW: Link to specific program instance (nullable for backward compatibility)
+  programInstanceId: uuid('program_instance_id'), // Will add FK after program_instances table created
+
   enrolledAt: timestamp('enrolled_at', { withTimezone: true }).defaultNow().notNull(),
   status: varchar('status', { length: 50 }).notNull().default('active'), // active, completed, dropped
   completedAt: timestamp('completed_at', { withTimezone: true }),
