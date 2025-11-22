@@ -1,0 +1,558 @@
+openapi: 3.0.0
+info:
+  title: TEEI Program Template Service API
+  version: 1.0.0
+  description: |
+    REST API for managing program templates, programs, and campaigns in the TEEI CSR Platform.
+
+    **Agent 27: openapi-spec-generator**
+
+    This service enables:
+    - Template management (create, version, publish, deprecate)
+    - Program instantiation from templates with config overrides
+    - Campaign creation for company-specific program deployments
+    - Configuration inheritance (Template → Program → Campaign)
+
+  contact:
+    name: TEEI Engineering
+    email: engineering@teei.io
+
+servers:
+  - url: http://localhost:3021
+    description: Local development
+  - url: https://api.teei.io/program-service
+    description: Production
+
+tags:
+  - name: Templates
+    description: Program template management
+  - name: Programs
+    description: Global program instances
+  - name: Campaigns
+    description: Company-specific program deployments
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      tags: [Health]
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  service:
+                    type: string
+                    example: program-service
+
+  /templates:
+    post:
+      summary: Create a new program template
+      tags: [Templates]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTemplateInput'
+      responses:
+        '201':
+          description: Template created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProgramTemplate'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    get:
+      summary: List program templates
+      tags: [Templates]
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+            enum: [mentorship, language, buddy, upskilling]
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, active, deprecated, archived]
+        - name: tenantId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: List of templates
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProgramTemplate'
+
+  /templates/{id}:
+    get:
+      summary: Get template by ID
+      tags: [Templates]
+      parameters:
+        - $ref: '#/components/parameters/TemplateId'
+      responses:
+        '200':
+          description: Template details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProgramTemplate'
+        '404':
+          description: Template not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      summary: Update template metadata
+      tags: [Templates]
+      parameters:
+        - $ref: '#/components/parameters/TemplateId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTemplateInput'
+      responses:
+        '200':
+          description: Template updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProgramTemplate'
+        '400':
+          description: Invalid input
+        '404':
+          description: Template not found
+
+  /templates/{id}/publish:
+    post:
+      summary: Publish a draft template
+      tags: [Templates]
+      parameters:
+        - $ref: '#/components/parameters/TemplateId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                deprecatePrevious:
+                  type: boolean
+                  description: Whether to deprecate previous version
+      responses:
+        '200':
+          description: Template published
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProgramTemplate'
+        '400':
+          description: Template not in draft status
+
+  /templates/{id}/versions:
+    post:
+      summary: Create a new version of a template
+      tags: [Templates]
+      parameters:
+        - $ref: '#/components/parameters/TemplateId'
+      responses:
+        '201':
+          description: New version created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProgramTemplate'
+
+  /templates/{id}/deprecate:
+    post:
+      summary: Deprecate a template
+      tags: [Templates]
+      parameters:
+        - $ref: '#/components/parameters/TemplateId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                newTemplateId:
+                  type: string
+                  format: uuid
+                  description: ID of replacement template
+      responses:
+        '200':
+          description: Template deprecated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProgramTemplate'
+
+  /programs:
+    post:
+      summary: Create a program from a template
+      tags: [Programs]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProgramInput'
+      responses:
+        '201':
+          description: Program created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Program'
+        '400':
+          description: Invalid input or config validation failed
+
+  /programs/{id}:
+    get:
+      summary: Get program by ID
+      tags: [Programs]
+      parameters:
+        - $ref: '#/components/parameters/ProgramId'
+      responses:
+        '200':
+          description: Program details with relations
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProgramWithRelations'
+        '404':
+          description: Program not found
+
+  /programs/{id}/config:
+    put:
+      summary: Update program configuration
+      tags: [Programs]
+      parameters:
+        - $ref: '#/components/parameters/ProgramId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              description: Configuration overrides (validated against template schema)
+      responses:
+        '200':
+          description: Configuration updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Program'
+        '400':
+          description: Config validation failed
+
+  /programs/{id}/status:
+    put:
+      summary: Update program status
+      tags: [Programs]
+      parameters:
+        - $ref: '#/components/parameters/ProgramId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [draft, active, paused, completed, archived]
+      responses:
+        '200':
+          description: Status updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Program'
+
+  /campaigns:
+    post:
+      summary: Create a campaign (placeholder)
+      tags: [Campaigns]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Campaign created
+        '400':
+          description: Invalid input
+
+  /campaigns/{id}:
+    get:
+      summary: Get campaign by ID (placeholder)
+      tags: [Campaigns]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Campaign details
+        '404':
+          description: Campaign not found
+
+components:
+  parameters:
+    TemplateId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Template ID
+
+    ProgramId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Program ID
+
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+          description: Error message
+        details:
+          type: object
+          additionalProperties: true
+
+    ProgramTemplate:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        templateKey:
+          type: string
+          example: mentorship-ukrainian
+        name:
+          type: string
+          example: Mentorship for Ukrainian Refugees
+        description:
+          type: string
+        category:
+          type: string
+          enum: [mentorship, language, buddy, upskilling]
+        defaultConfig:
+          type: object
+          additionalProperties: true
+        configSchema:
+          type: object
+          additionalProperties: true
+        version:
+          type: integer
+          example: 1
+        status:
+          type: string
+          enum: [draft, active, deprecated, archived]
+        deprecatedBy:
+          type: string
+          format: uuid
+          nullable: true
+        tenantId:
+          type: string
+          format: uuid
+          nullable: true
+        createdBy:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateTemplateInput:
+      type: object
+      required: [templateKey, name, category, defaultConfig, configSchema]
+      properties:
+        templateKey:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+          enum: [mentorship, language, buddy, upskilling]
+        defaultConfig:
+          type: object
+          additionalProperties: true
+        configSchema:
+          type: object
+          additionalProperties: true
+        tenantId:
+          type: string
+          format: uuid
+
+    UpdateTemplateInput:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        defaultConfig:
+          type: object
+        configSchema:
+          type: object
+
+    Program:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        programKey:
+          type: string
+          example: mentorship-ukrainian-2024-abc123
+        templateId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        programType:
+          type: string
+          description: Denormalized from template.category (backward compatibility)
+        config:
+          type: object
+          additionalProperties: true
+          description: Effective configuration (template defaults + overrides)
+        configOverrides:
+          type: object
+          additionalProperties: true
+          description: Overrides applied to template defaults
+        beneficiaryGroupId:
+          type: string
+          format: uuid
+          nullable: true
+        status:
+          type: string
+          enum: [draft, active, paused, completed, archived]
+        enrollmentCount:
+          type: integer
+        startDate:
+          type: string
+          format: date
+          nullable: true
+        endDate:
+          type: string
+          format: date
+          nullable: true
+        tags:
+          type: array
+          items:
+            type: string
+        sdgGoals:
+          type: array
+          items:
+            type: integer
+            minimum: 1
+            maximum: 17
+        externalId:
+          type: string
+          nullable: true
+        createdBy:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ProgramWithRelations:
+      allOf:
+        - $ref: '#/components/schemas/Program'
+        - type: object
+          properties:
+            template:
+              $ref: '#/components/schemas/ProgramTemplate'
+            beneficiaryGroup:
+              type: object
+              nullable: true
+
+    CreateProgramInput:
+      type: object
+      required: [templateId, name]
+      properties:
+        templateId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        beneficiaryGroupId:
+          type: string
+          format: uuid
+        configOverrides:
+          type: object
+          additionalProperties: true
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        tags:
+          type: array
+          items:
+            type: string
+        sdgGoals:
+          type: array
+          items:
+            type: integer
+            minimum: 1
+            maximum: 17
+        externalId:
+          type: string
