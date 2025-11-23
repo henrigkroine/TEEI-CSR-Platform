@@ -1,0 +1,379 @@
+# ============================================================================
+# Database Performance Alert Rules
+# SWARM 12: Analytics Hardening - Agent 1.7 (slow-query-logger)
+# ============================================================================
+# Purpose: Alert on database performance degradation and slow queries
+# Deployment: Copy to Prometheus rules directory and reload
+# ============================================================================
+
+groups:
+  - name: database_performance
+    interval: 30s
+    rules:
+
+      # ----------------------------------------------------------------------
+      # SLOW QUERY ALERTS
+      # ----------------------------------------------------------------------
+
+      - alert: SlowQueryDetected
+        expr: |
+          rate(postgres_slow_queries_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          component: database
+          team: platform
+        annotations:
+          summary: "High rate of slow queries detected (>1s execution time)"
+          description: |
+            Database {{ $labels.instance }} is experiencing {{ $value }} slow queries per second.
+            Slow queries are defined as queries taking >1 second to execute.
+
+            Investigate:
+            1. Check pg_stat_statements for slowest queries
+            2. Run EXPLAIN ANALYZE on problematic queries
+            3. Review missing indexes
+            4. Check for table bloat or lock contention
+
+            Runbook: /docs/runbooks/slow-queries.md
+          dashboard: https://grafana.example.com/d/database-performance
+
+      - alert: CriticalSlowQueryRate
+        expr: |
+          rate(postgres_slow_queries_total[5m]) > 50
+        for: 2m
+        labels:
+          severity: critical
+          component: database
+          team: platform
+          pagerduty: database-oncall
+        annotations:
+          summary: "CRITICAL: Very high rate of slow queries (>50/sec)"
+          description: |
+            Database {{ $labels.instance }} is experiencing {{ $value }} slow queries per second.
+            This is above the critical threshold and may indicate a serious performance issue.
+
+            Immediate actions:
+            1. Check for long-running transactions: SELECT * FROM pg_stat_activity WHERE state != 'idle'
+            2. Identify blocking queries: SELECT * FROM pg_locks WHERE NOT granted
+            3. Consider killing problematic queries if affecting production
+            4. Page database on-call engineer
+
+            Runbook: /docs/runbooks/database-critical.md
+
+      # ----------------------------------------------------------------------
+      # QUERY DURATION ALERTS (p95, p99)
+      # ----------------------------------------------------------------------
+
+      - alert: HighQueryLatencyP95
+        expr: |
+          histogram_quantile(0.95, rate(postgres_query_duration_seconds_bucket[5m])) > 2
+        for: 10m
+        labels:
+          severity: warning
+          component: database
+          team: platform
+        annotations:
+          summary: "Database p95 query latency above 2 seconds"
+          description: |
+            95th percentile query duration is {{ $value }}s on {{ $labels.instance }}.
+            Target: <0.5s for most queries, <2s for analytics.
+
+            Check:
+            - VIS/SROI calculation queries (expected to be slow initially)
+            - Dashboard tile aggregations
+            - Missing materialized views
+
+            Expected to improve after SWARM 12 Batch 2 optimizations.
+
+      - alert: HighQueryLatencyP99
+        expr: |
+          histogram_quantile(0.99, rate(postgres_query_duration_seconds_bucket[5m])) > 5
+        for: 10m
+        labels:
+          severity: critical
+          component: database
+          team: platform
+        annotations:
+          summary: "Database p99 query latency above 5 seconds"
+          description: |
+            99th percentile query duration is {{ $value }}s on {{ $labels.instance }}.
+            This indicates some queries are taking extremely long.
+
+            Investigate:
+            - Full table scans on large tables
+            - Missing indexes
+            - Query plan regressions
+            - Increased data volume
+
+      # ----------------------------------------------------------------------
+      # CONNECTION POOL ALERTS
+      # ----------------------------------------------------------------------
+
+      - alert: DatabaseConnectionPoolNearExhaustion
+        expr: |
+          (sum(postgres_connections_active) by (instance) /
+           sum(postgres_connections_max) by (instance)) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          component: database
+          team: platform
+        annotations:
+          summary: "Database connection pool usage above 80%"
+          description: |
+            Connection pool on {{ $labels.instance }} is {{ $value | humanizePercentage }} utilized.
+            Current: {{ $labels.active }} / {{ $labels.max }} connections.
+
+            Actions:
+            1. Check for connection leaks in services
+            2. Review connection pool settings (min/max)
+            3. Consider deploying PgBouncer for connection pooling
+            4. Increase max_connections if server has capacity
+
+            Runbook: /docs/runbooks/connection-pool-exhaustion.md
+
+      - alert: DatabaseConnectionPoolExhausted
+        expr: |
+          (sum(postgres_connections_active) by (instance) /
+           sum(postgres_connections_max) by (instance)) > 0.95
+        for: 2m
+        labels:
+          severity: critical
+          component: database
+          team: platform
+          pagerduty: database-oncall
+        annotations:
+          summary: "CRITICAL: Database connection pool exhausted (>95%)"
+          description: |
+            Connection pool on {{ $labels.instance }} is {{ $value | humanizePercentage }} utilized.
+            New connection attempts will fail.
+
+            Immediate actions:
+            1. Identify services with high connection counts
+            2. Kill idle connections if necessary: SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE state = 'idle' AND query_start < NOW() - INTERVAL '10 minutes'
+            3. Deploy PgBouncer urgently if not already deployed
+            4. Page database on-call engineer
+
+      # ----------------------------------------------------------------------
+      # TABLE BLOAT ALERTS
+      # ----------------------------------------------------------------------
+
+      - alert: TableBloatHigh
+        expr: |
+          postgres_table_bloat_ratio > 0.20
+        for: 1h
+        labels:
+          severity: warning
+          component: database
+          team: platform
+        annotations:
+          summary: "Table bloat detected: {{ $labels.table }} ({{ $value | humanizePercentage }})"
+          description: |
+            Table {{ $labels.table }} on {{ $labels.instance }} has {{ $value | humanizePercentage }} bloat.
+            Dead tuples are occupying significant space.
+
+            Actions:
+            1. Run VACUUM ANALYZE {{ $labels.table }};
+            2. If bloat persists, run VACUUM FULL {{ $labels.table }}; (requires table lock)
+            3. Review autovacuum settings for this table
+            4. Consider increasing autovacuum_vacuum_scale_factor
+
+            Note: audit_logs and ai_token_usage are expected to have higher bloat.
+
+      - alert: TableBloatCritical
+        expr: |
+          postgres_table_bloat_ratio > 0.40
+        for: 30m
+        labels:
+          severity: critical
+          component: database
+          team: platform
+        annotations:
+          summary: "CRITICAL: Severe table bloat: {{ $labels.table }} ({{ $value | humanizePercentage }})"
+          description: |
+            Table {{ $labels.table }} on {{ $labels.instance }} has {{ $value | humanizePercentage }} bloat.
+            This is severely impacting query performance.
+
+            Immediate actions:
+            1. Schedule maintenance window for VACUUM FULL
+            2. Consider table rewrite or partition migration
+            3. Page database on-call engineer
+
+      # ----------------------------------------------------------------------
+      # CACHE HIT RATIO ALERTS
+      # ----------------------------------------------------------------------
+
+      - alert: DatabaseCacheHitRatioLow
+        expr: |
+          rate(postgres_blocks_hit_total[5m]) /
+          (rate(postgres_blocks_hit_total[5m]) + rate(postgres_blocks_read_total[5m])) < 0.95
+        for: 15m
+        labels:
+          severity: warning
+          component: database
+          team: platform
+        annotations:
+          summary: "Database cache hit ratio below 95% ({{ $value | humanizePercentage }})"
+          description: |
+            Cache hit ratio on {{ $labels.instance }} is {{ $value | humanizePercentage }}.
+            Target: >99% for optimal performance.
+
+            Possible causes:
+            1. shared_buffers too small (currently {{ $labels.shared_buffers }})
+            2. Working set larger than available cache
+            3. Sequential scans on large tables (missing indexes)
+            4. Recent server restart (cache still warming)
+
+            Tuning:
+            - Increase shared_buffers (25% of RAM)
+            - Increase effective_cache_size (75% of RAM)
+            - Add missing indexes
+
+      # ----------------------------------------------------------------------
+      # LOCK CONTENTION ALERTS
+      # ----------------------------------------------------------------------
+
+      - alert: DatabaseLockContention
+        expr: |
+          rate(postgres_lock_wait_time_seconds_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          component: database
+          team: platform
+        annotations:
+          summary: "High lock wait time detected ({{ $value }}s per second)"
+          description: |
+            Database {{ $labels.instance }} is experiencing lock contention.
+            Queries are waiting {{ $value }}s per second for locks.
+
+            Investigate:
+            1. Check pg_locks for blocking queries
+            2. Identify long-running transactions
+            3. Review application transaction patterns
+            4. Consider reducing transaction scope
+
+            Query to identify blockers:
+            SELECT * FROM pg_blocking_pids();
+
+      # ----------------------------------------------------------------------
+      # VACUUM & AUTOVACUUM ALERTS
+      # ----------------------------------------------------------------------
+
+      - alert: VacuumNotRunning
+        expr: |
+          time() - postgres_last_autovacuum_timestamp{table=~"audit_logs|ai_token_usage|outcome_scores"} > 86400
+        for: 1h
+        labels:
+          severity: warning
+          component: database
+          team: platform
+        annotations:
+          summary: "Critical table {{ $labels.table }} not vacuumed in 24+ hours"
+          description: |
+            Table {{ $labels.table }} on {{ $labels.instance }} has not been vacuumed for {{ $value | humanizeDuration }}.
+            This may lead to bloat and performance degradation.
+
+            Actions:
+            1. Check autovacuum_naptime and autovacuum_max_workers
+            2. Manually run VACUUM ANALYZE {{ $labels.table }};
+            3. Review autovacuum logs for errors
+            4. Consider increasing autovacuum workers for high-churn tables
+
+      # ----------------------------------------------------------------------
+      # DISK I/O ALERTS
+      # ----------------------------------------------------------------------
+
+      - alert: HighDiskIOWait
+        expr: |
+          rate(postgres_disk_io_wait_seconds_total[5m]) > 0.5
+        for: 10m
+        labels:
+          severity: warning
+          component: database
+          team: platform
+        annotations:
+          summary: "High disk I/O wait time ({{ $value }}s per second)"
+          description: |
+            Database {{ $labels.instance }} is experiencing high disk I/O wait.
+            Queries are waiting {{ $value }}s per second for disk I/O.
+
+            Possible causes:
+            1. Insufficient disk IOPS
+            2. Large sequential scans
+            3. Heavy write workload (vacuum, checkpoints)
+            4. Undersized shared_buffers or work_mem
+
+            Tuning:
+            - Upgrade to faster disks (SSD, NVMe)
+            - Increase shared_buffers and effective_cache_size
+            - Add indexes to avoid sequential scans
+            - Tune autovacuum settings
+
+      # ----------------------------------------------------------------------
+      # SPECIFIC QUERY PATTERN ALERTS (VIS/SROI)
+      # ----------------------------------------------------------------------
+
+      - alert: VISCalculationTooSlow
+        expr: |
+          histogram_quantile(0.95, rate(vis_calculation_duration_seconds_bucket[5m])) > 0.5
+        for: 10m
+        labels:
+          severity: warning
+          component: analytics
+          team: platform
+        annotations:
+          summary: "VIS calculation p95 latency above 500ms ({{ $value }}s)"
+          description: |
+            VIS (Volunteer Impact Score) calculation is taking {{ $value }}s at p95.
+            Target: <100ms after SWARM 12 Batch 2 optimizations.
+
+            Expected fixes (Batch 2):
+            - Create mv_volunteer_metrics materialized view
+            - Add composite indexes on outcome_scores, volunteer_hours
+            - Rewrite query to use MV
+
+            This alert should resolve after Batch 2 implementation.
+
+      - alert: SROICalculationTooSlow
+        expr: |
+          histogram_quantile(0.95, rate(sroi_calculation_duration_seconds_bucket[5m])) > 0.2
+        for: 10m
+        labels:
+          severity: warning
+          component: analytics
+          team: platform
+        annotations:
+          summary: "SROI calculation p95 latency above 200ms ({{ $value }}s)"
+          description: |
+            SROI (Social Return on Investment) calculation is taking {{ $value }}s at p95.
+            Target: <50ms after SWARM 12 Batch 2 optimizations.
+
+            Expected fixes (Batch 2):
+            - Add composite index on buddy_system_events
+            - Implement Redis caching for SROI calculations
+
+            This alert should resolve after Batch 2/3 implementation.
+
+# ============================================================================
+# DEPLOYMENT INSTRUCTIONS
+# ============================================================================
+#
+# 1. Copy this file to Prometheus rules directory:
+#    kubectl create configmap prometheus-database-rules \
+#      --from-file=database-performance-alerts.yaml \
+#      --namespace observability
+#
+# 2. Update Prometheus ConfigMap to include new rules:
+#    kubectl edit configmap prometheus-config -n observability
+#    # Add: rule_files: - /etc/prometheus/rules/database-performance-alerts.yaml
+#
+# 3. Reload Prometheus configuration:
+#    kubectl exec -it prometheus-0 -n observability -- \
+#      kill -HUP 1
+#
+# 4. Verify alerts are loaded:
+#    curl http://prometheus:9090/api/v1/rules | jq '.data.groups[] | select(.name == "database_performance")'
+#
+# ============================================================================
