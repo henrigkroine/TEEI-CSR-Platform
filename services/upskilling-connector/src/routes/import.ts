@@ -61,6 +61,26 @@ export async function importRoutes(app: FastifyInstance) {
         const finalScore = row.final_score ? parseFloat(row.final_score) : undefined;
         const completedAt = new Date(row.completed_at);
 
+        // SWARM 6: Associate completion to campaign (if possible)
+        const userCompanyId = user.companyId;
+
+        let programInstanceId: string | null = null;
+        if (userCompanyId) {
+          try {
+            // Dynamic import to avoid hard dependency
+            const { associateCompletionDuringIngestion } = await import('../lib/campaign-association.js');
+            programInstanceId = await associateCompletionDuringIngestion(
+              crypto.randomUUID(), // Temp ID (will be replaced by actual progress.id)
+              user.id,
+              userCompanyId,
+              completedAt
+            );
+          } catch (error) {
+            // Graceful degradation: Continue without campaign association
+            logger.warn({ error }, 'Campaign association unavailable - continuing without association');
+          }
+        }
+
         // Insert/update learning progress
         const [progress] = await db
           .insert(learningProgress)
@@ -73,6 +93,7 @@ export async function importRoutes(app: FastifyInstance) {
             progressPercent: 100,
             completedAt: completedAt,
             credentialRef: row.credential_ref || null,
+            programInstanceId: programInstanceId, // SWARM 6: Link to campaign
           })
           .returning();
 

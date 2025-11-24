@@ -21,3 +21,8 @@ export * from './billing.js';
 export * from './entitlements.js';
 export * from './partner-apps.js';
 export * from './evidence_ledger.js';
+export * from './beneficiary-groups.js';
+export * from './campaigns.js';
+export * from './program-templates.js';
+export * from './program-instances.js';
+export * from './campaign-metrics-snapshots.js';

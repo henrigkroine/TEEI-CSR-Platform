@@ -38,10 +38,20 @@ export const evidenceSnippets = pgTable('evidence_snippets', {
   embeddingRef: varchar('embedding_ref', { length: 255 }), // Reference to vector DB
   embedding: text('embedding'), // JSON array of embedding vector
   sourceRef: varchar('source_ref', { length: 255 }), // Reference to original text position
+
+  // Campaign linking (SWARM 6: Agent 4.4 - evidence-campaign-linker)
+  // Denormalized for query performance (follows pattern in program_instances)
+  programInstanceId: uuid('program_instance_id'), // FK to program_instances (optional - may not always be linked)
+  campaignId: uuid('campaign_id'), // FK to campaigns (denormalized from instance)
+
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 }, (table) => ({
   outcomeScoreIdIdx: index('evidence_snippets_outcome_score_idx').on(table.outcomeScoreId),
   snippetHashIdx: index('evidence_snippets_hash_idx').on(table.snippetHash),
+
+  // Campaign filtering indexes (SWARM 6)
+  programInstanceIdIdx: index('evidence_snippets_program_instance_idx').on(table.programInstanceId),
+  campaignIdIdx: index('evidence_snippets_campaign_id_idx').on(table.campaignId),
 }));
 
 // Model Registry table for Q2Q model governance

@@ -1,5 +1,6 @@
 import { pgTable, uuid, varchar, timestamp, integer, jsonb } from 'drizzle-orm/pg-core';
 import { users } from './users.js';
+import { programInstances } from './program-instances.js';
 
 export const learningProgress = pgTable('learning_progress', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -13,6 +14,8 @@ export const learningProgress = pgTable('learning_progress', {
   completedAt: timestamp('completed_at', { withTimezone: true }),
   credentialRef: varchar('credential_ref', { length: 255 }),
   metadata: jsonb('metadata'),
+  // SWARM 6: Link to campaign via program instance
+  programInstanceId: uuid('program_instance_id').references(() => programInstances.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });

@@ -1,0 +1,963 @@
+openapi: 3.0.3
+info:
+  title: TEEI Campaign Service API
+  description: |
+    Campaign management service for creating, managing, and tracking CSR campaigns.
+
+    **SWARM 6: Agent 3.6 - Campaign Service API**
+
+    Features:
+    - Campaign CRUD operations
+    - Campaign metrics and analytics
+    - Program instance management
+    - State transition workflows
+    - Beneficiary group reference data
+    - Program template reference data
+  version: 1.0.0
+  contact:
+    name: TEEI Platform Team
+    url: https://teei.io
+  license:
+    name: Proprietary
+
+servers:
+  - url: http://localhost:3020/api
+    description: Local development
+  - url: https://api.teei.io/campaigns/api
+    description: Production
+
+tags:
+  - name: campaigns
+    description: Campaign management operations
+  - name: metrics
+    description: Campaign metrics and analytics
+  - name: instances
+    description: Program instances
+  - name: beneficiary-groups
+    description: Beneficiary group reference data
+  - name: program-templates
+    description: Program template reference data
+
+paths:
+  # ============================================================================
+  # CAMPAIGN ENDPOINTS
+  # ============================================================================
+
+  /campaigns:
+    post:
+      summary: Create Campaign
+      description: Create a new campaign with template, beneficiary group, and commercial terms
+      operationId: createCampaign
+      tags: [campaigns]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCampaignRequest'
+      responses:
+        '200':
+          description: Campaign created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  campaign:
+                    $ref: '#/components/schemas/Campaign'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Template or group not found
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    get:
+      summary: List Campaigns
+      description: List campaigns with filters
+      operationId: listCampaigns
+      tags: [campaigns]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CompanyIdQuery'
+        - $ref: '#/components/parameters/CampaignStatus'
+        - $ref: '#/components/parameters/ProgramTemplateId'
+        - $ref: '#/components/parameters/BeneficiaryGroupId'
+        - $ref: '#/components/parameters/PricingModel'
+        - $ref: '#/components/parameters/Quarter'
+        - $ref: '#/components/parameters/IsNearCapacity'
+        - $ref: '#/components/parameters/IsOverCapacity'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Campaign list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  campaigns:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Campaign'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /campaigns/{id}:
+    get:
+      summary: Get Campaign
+      description: Get campaign details by ID
+      operationId: getCampaign
+      tags: [campaigns]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CampaignId'
+      responses:
+        '200':
+          description: Campaign details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  campaign:
+                    $ref: '#/components/schemas/Campaign'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    patch:
+      summary: Update Campaign
+      description: Update campaign details
+      operationId: updateCampaign
+      tags: [campaigns]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CampaignId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCampaignRequest'
+      responses:
+        '200':
+          description: Campaign updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  campaign:
+                    $ref: '#/components/schemas/Campaign'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    delete:
+      summary: Delete Campaign
+      description: Soft delete campaign (mark as archived)
+      operationId: deleteCampaign
+      tags: [campaigns]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CampaignId'
+      responses:
+        '200':
+          description: Campaign deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  campaign:
+                    $ref: '#/components/schemas/Campaign'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /campaigns/{id}/metrics:
+    get:
+      summary: Get Campaign Metrics
+      description: Get aggregated metrics for a campaign
+      operationId: getCampaignMetrics
+      tags: [campaigns, metrics]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CampaignId'
+      responses:
+        '200':
+          description: Campaign metrics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  metrics:
+                    $ref: '#/components/schemas/CampaignMetrics'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /campaigns/{id}/instances:
+    get:
+      summary: List Program Instances
+      description: List program instances for a campaign
+      operationId: listProgramInstances
+      tags: [campaigns, instances]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CampaignId'
+      responses:
+        '200':
+          description: Program instances
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  instances:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ProgramInstance'
+                  count:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /campaigns/{id}/transition:
+    post:
+      summary: Transition Campaign State
+      description: Manually transition campaign to a new state
+      operationId: transitionCampaignState
+      tags: [campaigns]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CampaignId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - targetStatus
+              properties:
+                targetStatus:
+                  $ref: '#/components/schemas/CampaignStatus'
+                notes:
+                  type: string
+                  description: Optional notes about the transition
+      responses:
+        '200':
+          description: State transition successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  campaign:
+                    $ref: '#/components/schemas/Campaign'
+        '400':
+          description: Invalid state transition
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  error:
+                    type: string
+                  message:
+                    type: string
+                  allowedTargets:
+                    type: array
+                    items:
+                      type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  # ============================================================================
+  # BENEFICIARY GROUP ENDPOINTS
+  # ============================================================================
+
+  /beneficiary-groups:
+    get:
+      summary: List Beneficiary Groups
+      description: List beneficiary groups with filters (for campaign creation wizard)
+      operationId: listBeneficiaryGroups
+      tags: [beneficiary-groups]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: groupType
+          in: query
+          schema:
+            $ref: '#/components/schemas/BeneficiaryGroupType'
+        - name: countryCode
+          in: query
+          schema:
+            type: string
+            minLength: 2
+            maxLength: 2
+        - name: search
+          in: query
+          schema:
+            type: string
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Beneficiary groups list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  groups:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/BeneficiaryGroup'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /beneficiary-groups/{id}:
+    get:
+      summary: Get Beneficiary Group
+      description: Get beneficiary group details by ID
+      operationId: getBeneficiaryGroup
+      tags: [beneficiary-groups]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Beneficiary group details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  group:
+                    $ref: '#/components/schemas/BeneficiaryGroup'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  # ============================================================================
+  # PROGRAM TEMPLATE ENDPOINTS
+  # ============================================================================
+
+  /program-templates:
+    get:
+      summary: List Program Templates
+      description: List program templates with filters (for campaign creation wizard)
+      operationId: listProgramTemplates
+      tags: [program-templates]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: programType
+          in: query
+          schema:
+            $ref: '#/components/schemas/ProgramType'
+        - name: search
+          in: query
+          schema:
+            type: string
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Program templates list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  templates:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ProgramTemplate'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /program-templates/{id}:
+    get:
+      summary: Get Program Template
+      description: Get program template details by ID
+      operationId: getProgramTemplate
+      tags: [program-templates]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Program template details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  template:
+                    $ref: '#/components/schemas/ProgramTemplate'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+# ============================================================================
+# COMPONENTS
+# ============================================================================
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    CampaignId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Campaign ID
+
+    CompanyIdQuery:
+      name: companyId
+      in: query
+      schema:
+        type: string
+        format: uuid
+      description: Filter by company ID
+
+    CampaignStatus:
+      name: status
+      in: query
+      schema:
+        $ref: '#/components/schemas/CampaignStatus'
+      description: Filter by campaign status
+
+    ProgramTemplateId:
+      name: programTemplateId
+      in: query
+      schema:
+        type: string
+        format: uuid
+      description: Filter by program template ID
+
+    BeneficiaryGroupId:
+      name: beneficiaryGroupId
+      in: query
+      schema:
+        type: string
+        format: uuid
+      description: Filter by beneficiary group ID
+
+    PricingModel:
+      name: pricingModel
+      in: query
+      schema:
+        $ref: '#/components/schemas/PricingModel'
+      description: Filter by pricing model
+
+    Quarter:
+      name: quarter
+      in: query
+      schema:
+        type: string
+        pattern: '^\d{4}-Q[1-4]$'
+        example: '2025-Q1'
+      description: Filter by quarter
+
+    IsNearCapacity:
+      name: isNearCapacity
+      in: query
+      schema:
+        type: boolean
+      description: Filter by near capacity flag
+
+    IsOverCapacity:
+      name: isOverCapacity
+      in: query
+      schema:
+        type: boolean
+      description: Filter by over capacity flag
+
+    Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 50
+      description: Maximum number of results
+
+    Offset:
+      name: offset
+      in: query
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+      description: Number of results to skip
+
+  schemas:
+    Campaign:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        companyId:
+          type: string
+          format: uuid
+        programTemplateId:
+          type: string
+          format: uuid
+        beneficiaryGroupId:
+          type: string
+          format: uuid
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        quarter:
+          type: string
+          pattern: '^\d{4}-Q[1-4]$'
+        status:
+          $ref: '#/components/schemas/CampaignStatus'
+        priority:
+          $ref: '#/components/schemas/CampaignPriority'
+        targetVolunteers:
+          type: integer
+        currentVolunteers:
+          type: integer
+        targetBeneficiaries:
+          type: integer
+        currentBeneficiaries:
+          type: integer
+        budgetAllocated:
+          type: number
+        budgetSpent:
+          type: number
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+        pricingModel:
+          $ref: '#/components/schemas/PricingModel'
+        cumulativeSROI:
+          type: number
+        averageVIS:
+          type: number
+        totalHoursLogged:
+          type: number
+        totalSessionsCompleted:
+          type: integer
+        capacityUtilization:
+          type: number
+        isNearCapacity:
+          type: boolean
+        isOverCapacity:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateCampaignRequest:
+      type: object
+      required:
+        - name
+        - companyId
+        - programTemplateId
+        - beneficiaryGroupId
+        - startDate
+        - endDate
+        - targetVolunteers
+        - targetBeneficiaries
+        - budgetAllocated
+        - pricingModel
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        companyId:
+          type: string
+          format: uuid
+        programTemplateId:
+          type: string
+          format: uuid
+        beneficiaryGroupId:
+          type: string
+          format: uuid
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        quarter:
+          type: string
+          pattern: '^\d{4}-Q[1-4]$'
+        targetVolunteers:
+          type: integer
+          minimum: 1
+        targetBeneficiaries:
+          type: integer
+          minimum: 1
+        maxSessions:
+          type: integer
+          minimum: 1
+        budgetAllocated:
+          type: number
+          minimum: 0
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+          default: EUR
+        pricingModel:
+          $ref: '#/components/schemas/PricingModel'
+        committedSeats:
+          type: integer
+        seatPricePerMonth:
+          type: number
+        creditAllocation:
+          type: integer
+        creditConsumptionRate:
+          type: number
+        iaasMetrics:
+          type: object
+        l2iSubscriptionId:
+          type: string
+          format: uuid
+        bundleAllocationPercentage:
+          type: number
+        tags:
+          type: array
+          items:
+            type: string
+        internalNotes:
+          type: string
+
+    UpdateCampaignRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        targetVolunteers:
+          type: integer
+        targetBeneficiaries:
+          type: integer
+        budgetAllocated:
+          type: number
+        tags:
+          type: array
+          items:
+            type: string
+        internalNotes:
+          type: string
+
+    CampaignMetrics:
+      type: object
+      properties:
+        current:
+          type: object
+        targets:
+          type: object
+        utilization:
+          type: object
+        impact:
+          type: object
+        capacity:
+          type: object
+        upsell:
+          type: object
+
+    ProgramInstance:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        campaignId:
+          type: string
+          format: uuid
+        status:
+          type: string
+        enrolledVolunteers:
+          type: integer
+        enrolledBeneficiaries:
+          type: integer
+
+    BeneficiaryGroup:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        groupType:
+          $ref: '#/components/schemas/BeneficiaryGroupType'
+        countryCode:
+          type: string
+        region:
+          type: string
+        city:
+          type: string
+
+    ProgramTemplate:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        programType:
+          $ref: '#/components/schemas/ProgramType'
+        version:
+          type: string
+        defaultConfig:
+          type: object
+
+    CampaignStatus:
+      type: string
+      enum:
+        - draft
+        - planned
+        - recruiting
+        - active
+        - paused
+        - completed
+        - closed
+
+    CampaignPriority:
+      type: string
+      enum:
+        - low
+        - medium
+        - high
+        - critical
+
+    PricingModel:
+      type: string
+      enum:
+        - seats
+        - credits
+        - bundle
+        - iaas
+        - custom
+
+    BeneficiaryGroupType:
+      type: string
+      enum:
+        - refugees
+        - migrants
+        - asylum_seekers
+        - women_in_tech
+        - youth
+        - seniors
+        - displaced_persons
+        - newcomers
+        - students
+        - job_seekers
+        - caregivers
+        - veterans
+        - other
+
+    ProgramType:
+      type: string
+      enum:
+        - mentorship
+        - language
+        - buddy
+        - upskilling
+        - weei
+
+    Pagination:
+      type: object
+      properties:
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+        error:
+          type: string
+        message:
+          type: string
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Forbidden:
+      description: Forbidden
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    ServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

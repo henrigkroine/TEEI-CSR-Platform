@@ -36,6 +36,8 @@ export async function getEvidence(
     search,
     date_from,
     date_to,
+    campaign_id,
+    program_instance_id,
     limit = 50,
     offset = 0,
   } = request.query;
@@ -84,6 +86,15 @@ export async function getEvidence(
     if (date_to) {
       const toDate = new Date(date_to);
       evidence = evidence.filter((e) => e.collected_at <= toDate);
+    }
+
+    // SWARM 6: Agent 4.4 - Campaign filtering
+    if (campaign_id) {
+      evidence = evidence.filter((e) => (e as any).campaign_id === campaign_id);
+    }
+
+    if (program_instance_id) {
+      evidence = evidence.filter((e) => (e as any).program_instance_id === program_instance_id);
     }
 
     // Sort by collected_at DESC

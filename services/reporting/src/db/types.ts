@@ -164,6 +164,28 @@ export interface VISResponse {
   }>;
 }
 
+export interface CampaignVISResponse {
+  campaign_id: string;
+  campaign_name: string;
+  aggregate_vis: number;
+  volunteer_count: number;
+  top_volunteers: Array<{
+    volunteer_id: string;
+    name: string;
+    vis_score: number;
+    hours: number;
+    consistency: number;
+    outcome_impact: number;
+  }>;
+  distribution: {
+    exceptional: number; // Count of volunteers ≥90
+    high_impact: number; // Count of volunteers ≥75
+    good: number; // Count of volunteers ≥60
+    developing: number; // Count of volunteers ≥40
+    needs_improvement: number; // Count of volunteers <40
+  };
+}
+
 export interface Q2QFeedItem {
   id: string;
   insight_text: string;

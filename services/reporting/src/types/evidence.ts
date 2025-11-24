@@ -50,6 +50,9 @@ export interface EvidenceFilters {
   search?: string;
   date_from?: string;
   date_to?: string;
+  // SWARM 6: Agent 4.4 - Campaign filtering
+  campaign_id?: string;
+  program_instance_id?: string;
 }
 
 export interface EvidenceLineage {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { calculateVIS, getVISBand } from './vis.js';
+import { calculateVIS, getVISBand, getCampaignVISBand, CAMPAIGN_VIS_BANDS } from './vis.js';
 import { VIS_WEIGHTS } from '../config/visWeights.js';
 
 describe('VIS Calculator', () => {
@@ -196,5 +196,56 @@ describe('VIS Calculator', () => {
     expect(result.hours_score).toBe(5);
     expect(result.consistency_score).toBe(100);
     expect(result.vis_score).toBeLessThan(80); // Dragged down by hours
+  });
+});
+
+describe('Campaign VIS Extensions (SWARM 6 - Agent 4.2)', () => {
+  describe('Campaign VIS Bands', () => {
+    it('should have higher thresholds than individual VIS bands', () => {
+      // Campaign bands require higher performance for same label
+      expect(CAMPAIGN_VIS_BANDS.exceptional).toBeGreaterThan(VIS_WEIGHTS.bands.exceptional);
+      expect(CAMPAIGN_VIS_BANDS.highImpact).toBeGreaterThan(VIS_WEIGHTS.bands.highImpact);
+    });
+
+    it('should categorize campaign VIS scores correctly', () => {
+      expect(getCampaignVISBand(95)).toBe('Exceptional');
+      expect(getCampaignVISBand(85)).toBe('High Impact');
+      expect(getCampaignVISBand(65)).toBe('Good');
+      expect(getCampaignVISBand(50)).toBe('Developing');
+      expect(getCampaignVISBand(30)).toBe('Needs Improvement');
+    });
+
+    it('should use different labels than individual bands', () => {
+      // Individual: Exceptional, High Impact, Contributing, Emerging
+      // Campaign: Exceptional, High Impact, Good, Developing, Needs Improvement
+
+      // Score of 55 would be "High Impact" for individual but "Developing" for campaign
+      expect(getVISBand(55)).toBe('High Impact');
+      expect(getCampaignVISBand(55)).toBe('Developing');
+    });
+  });
+
+  describe('Backward Compatibility', () => {
+    it('should not affect existing getVISBand function', () => {
+      // Original individual bands should still work
+      expect(getVISBand(80)).toBe('Exceptional');
+      expect(getVISBand(60)).toBe('High Impact');
+      expect(getVISBand(40)).toBe('Contributing');
+      expect(getVISBand(20)).toBe('Emerging');
+    });
+
+    it('should maintain existing VIS calculation behavior', () => {
+      const result = calculateVIS({
+        totalHours: 50,
+        sessionsPerMonth: 4,
+        averageParticipantImprovement: 0.6,
+      });
+
+      // Should return same structure as before
+      expect(result).toHaveProperty('vis_score');
+      expect(result).toHaveProperty('hours_score');
+      expect(result).toHaveProperty('consistency_score');
+      expect(result).toHaveProperty('outcome_impact_score');
+    });
   });
 });

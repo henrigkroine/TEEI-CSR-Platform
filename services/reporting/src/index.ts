@@ -4,6 +4,7 @@ import { genReportsRoutes } from './routes/gen-reports.js';
 import { exportRoutes } from './routes/export.js';
 import { trustRoutes } from './routes/trust.js';
 import { regulatoryRoutes } from './routes/regulatory.js';
+import { campaignDashboardRoutes } from './routes/campaign-dashboard.js';
 import { createHealthManager, setupHealthRoutes } from './health/index.js';
 import { costTrackingMiddleware } from './middleware/cost-tracking.js';
 
@@ -30,6 +31,7 @@ async function start() {
   app.register(exportRoutes, { prefix: '/v1' });
   app.register(trustRoutes);
   app.register(regulatoryRoutes, { prefix: '/v1' });
+  app.register(campaignDashboardRoutes, { prefix: '/api' });
 
   // Start server
   try {
@@ -49,6 +51,12 @@ async function start() {
     logger.info(`  GET  /trust/v1/evidence/:reportId - Get evidence lineage`);
     logger.info(`  GET  /trust/v1/ledger/:reportId - Get integrity ledger`);
     logger.info(`  GET  /trust/v1/policies - Get retention/residency policies`);
+    logger.info(`  GET  /api/campaigns/:id/dashboard - Get campaign dashboard (all metrics)`);
+    logger.info(`  GET  /api/campaigns/:id/time-series - Get campaign time-series data`);
+    logger.info(`  GET  /api/campaigns/:id/capacity - Get campaign capacity metrics`);
+    logger.info(`  GET  /api/campaigns/:id/financials - Get campaign financial metrics`);
+    logger.info(`  GET  /api/campaigns/:id/volunteers - Get campaign volunteer leaderboard`);
+    logger.info(`  GET  /api/campaigns/:id/impact - Get campaign impact summary`);
     logger.info('');
     logger.info('Environment:');
     logger.info(`  LLM Provider: ${process.env.LLM_PROVIDER || 'openai'}`);

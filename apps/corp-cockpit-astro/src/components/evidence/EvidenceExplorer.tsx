@@ -6,6 +6,12 @@ interface EvidenceExplorerProps {
   lang: string;
 }
 
+interface Campaign {
+  id: string;
+  name: string;
+  status: string;
+}
+
 export default function EvidenceExplorer({ companyId, lang }: EvidenceExplorerProps) {
   const [evidence, setEvidence] = useState<EvidenceResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -17,10 +23,45 @@ export default function EvidenceExplorer({ companyId, lang }: EvidenceExplorerPr
   const [search, setSearch] = useState('');
   const [startDate, setStartDate] = useState('2024-01-01');
   const [endDate, setEndDate] = useState('2024-03-31');
+  // SWARM 6: Agent 6.4 - Campaign filter (enhanced)
+  const [campaignId, setCampaignId] = useState<string>('');
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [campaignsLoading, setCampaignsLoading] = useState(true);
+
+  // Load campaigns on mount
+  useEffect(() => {
+    fetchCampaigns();
+  }, [companyId]);
+
+  // Parse URL query params on mount (deep link support)
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const campaignIdParam = urlParams.get('campaignId');
+    if (campaignIdParam) {
+      setCampaignId(campaignIdParam);
+    }
+  }, []);
 
   useEffect(() => {
     fetchEvidence();
-  }, [programType, dimension, startDate, endDate]);
+  }, [programType, dimension, startDate, endDate, campaignId]);
+
+  async function fetchCampaigns() {
+    setCampaignsLoading(true);
+    try {
+      const response = await fetch(`/api/campaigns?companyId=${companyId}&limit=100`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch campaigns');
+      }
+      const data = await response.json();
+      setCampaigns(data.campaigns || []);
+    } catch (err) {
+      console.error('Failed to fetch campaigns:', err);
+      setCampaigns([]);
+    } finally {
+      setCampaignsLoading(false);
+    }
+  }
 
   async function fetchEvidence() {
     setLoading(true);
@@ -35,6 +76,8 @@ export default function EvidenceExplorer({ companyId, lang }: EvidenceExplorerPr
       if (programType) params.append('programType', programType);
       if (dimension) params.append('dimension', dimension);
       if (search) params.append('search', search);
+      // SWARM 6: Agent 4.4 - Campaign filtering
+      if (campaignId) params.append('campaignId', campaignId);
 
       const response = await fetch(`/api/evidence?${params.toString()}`);
 
@@ -84,6 +127,20 @@ export default function EvidenceExplorer({ companyId, lang }: EvidenceExplorerPr
       well_being: 'Well-being',
     };
     return labels[dim];
+  }
+
+  function getSelectedCampaignName(): string | null {
+    if (!campaignId) return null;
+    const campaign = campaigns.find(c => c.id === campaignId);
+    return campaign ? campaign.name : null;
+  }
+
+  function clearCampaignFilter() {
+    setCampaignId('');
+    // Update URL to remove query param
+    const url = new URL(window.location.href);
+    url.searchParams.delete('campaignId');
+    window.history.replaceState({}, '', url.toString());
   }
 
   return (
@@ -170,7 +227,51 @@ export default function EvidenceExplorer({ companyId, lang }: EvidenceExplorerPr
               <option value="well_being">Well-being</option>
             </select>
           </div>
+
+          {/* SWARM 6: Agent 6.4 - Campaign filter (fully functional) */}
+          <div>
+            <label htmlFor="campaign" className="mb-1 block text-sm font-medium">
+              Campaign
+            </label>
+            <select
+              id="campaign"
+              value={campaignId}
+              onChange={(e) => setCampaignId(e.target.value)}
+              disabled={campaignsLoading}
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <option value="">
+                {campaignsLoading ? 'Loading campaigns...' : 'All Campaigns'}
+              </option>
+              {campaigns.map((campaign) => (
+                <option key={campaign.id} value={campaign.id}>
+                  {campaign.name} ({campaign.status})
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
+
+        {/* SWARM 6: Agent 6.4 - Campaign filter badge & clear button */}
+        {campaignId && getSelectedCampaignName() && (
+          <div className="mt-4 flex items-center gap-3 rounded-md bg-primary/10 px-4 py-3 border border-primary/20">
+            <div className="flex-1">
+              <div className="text-sm font-medium text-primary">
+                Filtered by campaign: {getSelectedCampaignName()}
+              </div>
+              <div className="text-xs text-foreground/60 mt-0.5">
+                Showing evidence specific to this campaign
+              </div>
+            </div>
+            <button
+              onClick={clearCampaignFilter}
+              className="rounded-md bg-background hover:bg-foreground/5 px-3 py-1.5 text-sm font-medium text-foreground transition-colors"
+              aria-label="Clear campaign filter"
+            >
+              Clear Filter
+            </button>
+          </div>
+        )}
 
         {/* Search */}
         <div className="mt-4">
@@ -208,6 +309,7 @@ export default function EvidenceExplorer({ companyId, lang }: EvidenceExplorerPr
         </div>
       ) : evidence ? (
         <>
+          {/* SWARM 6: Agent 6.4 - Evidence count with campaign context */}
           <div className="flex items-center justify-between text-sm text-foreground/60">
             <span>
               Showing {evidence.pagination.offset + 1} -{' '}
@@ -216,11 +318,52 @@ export default function EvidenceExplorer({ companyId, lang }: EvidenceExplorerPr
                 evidence.pagination.total
               )}{' '}
               of {evidence.pagination.total} evidence snippets
+              {campaignId && getSelectedCampaignName() && (
+                <span className="font-medium text-primary ml-1">
+                  for {getSelectedCampaignName()}
+                </span>
+              )}
             </span>
           </div>
 
-          <div className="space-y-4">
-            {evidence.evidence.map(({ snippet, outcomeScores }) => (
+          {/* SWARM 6: Agent 6.4 - Empty state for campaign filter */}
+          {evidence.evidence.length === 0 && campaignId ? (
+            <div className="card text-center py-12">
+              <svg
+                className="mx-auto h-12 w-12 text-foreground/20 mb-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                aria-hidden="true"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                />
+              </svg>
+              <h3 className="text-lg font-medium text-foreground mb-2">
+                No evidence yet for this campaign
+              </h3>
+              <p className="text-foreground/60 mb-4 max-w-md mx-auto">
+                Evidence will appear as volunteers complete activities and feedback is collected
+                for <span className="font-medium">{getSelectedCampaignName()}</span>.
+              </p>
+              <button onClick={clearCampaignFilter} className="btn-secondary">
+                View All Evidence
+              </button>
+            </div>
+          ) : evidence.evidence.length === 0 ? (
+            <div className="card text-center py-12">
+              <p className="text-foreground/60">No evidence found matching your filters.</p>
+            </div>
+          ) : null}
+
+          {/* Evidence list - only show if we have evidence */}
+          {evidence.evidence.length > 0 && (
+            <div className="space-y-4">
+              {evidence.evidence.map(({ snippet, outcomeScores }) => (
               <div key={snippet.id} className="card">
                 <div className="mb-3 flex items-start justify-between">
                   <div>
@@ -230,6 +373,12 @@ export default function EvidenceExplorer({ companyId, lang }: EvidenceExplorerPr
                     <div className="text-xs text-foreground/40">
                       {new Date(snippet.submittedAt).toLocaleDateString()}
                     </div>
+                    {/* SWARM 6: Agent 4.4 - Campaign context */}
+                    {(snippet as any).campaignName && (
+                      <div className="mt-1 text-xs text-foreground/50">
+                        From: <span className="font-medium">{(snippet as any).campaignName}</span>
+                      </div>
+                    )}
                   </div>
                   <span className="rounded-full bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
                     {snippet.programType}
@@ -256,11 +405,12 @@ export default function EvidenceExplorer({ companyId, lang }: EvidenceExplorerPr
                   ))}
                 </div>
               </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
 
-          {/* Pagination */}
-          {evidence.pagination.hasMore && (
+          {/* Pagination - only show if we have evidence */}
+          {evidence.evidence.length > 0 && evidence.pagination.hasMore && (
             <div className="text-center">
               <button className="btn-secondary">Load More</button>
             </div>
