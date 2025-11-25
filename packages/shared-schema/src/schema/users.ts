@@ -38,32 +38,15 @@ export const companyUsers = pgTable('company_users', {
 export const programEnrollments = pgTable('program_enrollments', {
   id: uuid('id').defaultRandom().primaryKey(),
   userId: uuid('user_id').notNull().references(() => users.id),
-
-  // NEW: Program Context (Agent 11: enrollment-schema-enhancer)
-  programId: uuid('program_id'), // Will add FK after programs table exists
-  campaignId: uuid('campaign_id'), // Will add FK after program_campaigns table exists
-  beneficiaryGroupId: uuid('beneficiary_group_id'), // Will add FK after beneficiary_groups table exists
-
-  // LEGACY: Backward Compatibility (denormalized from program.programType)
   programType: varchar('program_type', { length: 50 }).notNull(), // buddy, language, mentorship, upskilling
 
-  // Lifecycle
+  // NEW: Link to specific program instance (nullable for backward compatibility)
+  programInstanceId: uuid('program_instance_id'), // Will add FK after program_instances table created
+
   enrolledAt: timestamp('enrolled_at', { withTimezone: true }).defaultNow().notNull(),
   status: varchar('status', { length: 50 }).notNull().default('active'), // active, completed, dropped
   completedAt: timestamp('completed_at', { withTimezone: true }),
-
-  // Source Tracking
-  sourceSystem: varchar('source_system', { length: 50 }), // kintell, buddy, upskilling, manual
-  sourceId: varchar('source_id', { length: 255 }), // External ID in source system
-
-  // Metadata
-  enrollmentMetadata: jsonb('enrollment_metadata').default('{}'),
-}, (table) => ({
-  // Add indexes for new columns
-  programIdIdx: index('program_enrollments_program_id_idx').on(table.programId),
-  campaignIdIdx: index('program_enrollments_campaign_id_idx').on(table.campaignId),
-  beneficiaryGroupIdIdx: index('program_enrollments_beneficiary_group_id_idx').on(table.beneficiaryGroupId),
-}));
+});
 
 // External ID mapping for surrogate keys
 export const externalIdMappings = pgTable('external_id_mappings', {
