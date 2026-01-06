@@ -250,7 +250,7 @@ Use the TEEI platform Corporate Cockpit to view:
    ```bash
    DISCORD_BOT_TOKEN=your-bot-token
    DISCORD_APPLICATION_ID=your-app-id
-   REPORTING_SERVICE_URL=http://localhost:3003
+   REPORTING_SERVICE_URL=http://localhost:3019
    REPORTING_SERVICE_API_KEY=your-api-key
    ```
 

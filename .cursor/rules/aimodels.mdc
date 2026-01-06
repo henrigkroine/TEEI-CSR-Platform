@@ -1,0 +1,42 @@
+
+---
+alwaysApply: true
+---
+description: AI Model Configuration - NEVER downgrade models, search for correct strings
+globs:
+  - "**/*.py"
+  - "**/*.ts"
+  - "**/*.tsx"
+alwaysApply: true
+---
+
+# AI Model Configuration Rules
+
+## CRITICAL: Correct Model Strings (November 2025)
+
+When working with AI APIs in this codebase, you MUST use these exact model strings:
+
+### Gemini (Google)
+- **CORRECT**: `gemini-3-pro-preview`
+- **ALSO VALID**: `gemini-3-pro-latest`, `gemini-3-pro-preview-11-2025`
+- **WRONG (404 error)**: `gemini-3-pro`, `gemini-3.0-pro`, `gemini-3.0-pro-latest`
+- **WRONG (old model)**: `gemini-1.5-pro-latest`, `gemini-1.5-pro`, `gemini-2.0-flash`
+
+### Claude (Anthropic)
+- **CORRECT**: `claude-opus-4-5-20251101`
+- **WRONG**: `claude-4.5-opus`, `claude-opus-4.5`, `claude-4-opus`
+
+### GPT (OpenAI)
+- **CORRECT**: `gpt-5.1`
+- **WRONG**: `gpt-5.1-turbo`, `gpt-4o`, `gpt-4-turbo`
+
+## MANDATORY BEHAVIOR
+
+### If a model API returns 404 or "model not found":
+
+1. **NEVER downgrade to an older model** (e.g., don't change gemini-3 to gemini-1.5)
+2. **ALWAYS search online** for the correct model string
+3. **Check official documentation**:
+   - Gemini: https://ai.google.dev/gemini-api/docs/models
+   - Claude: https://docs.anthropic.com/en/docs/models-overview
+   - OpenAI: https://platform.openai.com/docs/models

@@ -11,7 +11,13 @@
  * 5. Pricing & Review
  */
 import React, { useState, useEffect } from 'react';
-import { AlertCircle, ChevronLeft, ChevronRight, X, Loader2 } from 'lucide-react';
+import {
+  AlertCircleIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  CloseIcon,
+  LoaderIcon,
+} from '../icons';
 import WizardProgressBar from './WizardProgressBar';
 import TemplateCard, { ProgramTemplate } from './TemplateCard';
 import BeneficiaryGroupCard, { BeneficiaryGroup } from './BeneficiaryGroupCard';
@@ -456,7 +462,7 @@ export function CampaignCreationWizard({ companyId }: CampaignCreationWizardProp
 
       {isLoadingData ? (
         <div className="loading-state">
-          <Loader2 className="spinner" />
+          <LoaderIcon className="spinner" />
           <p>Loading templates...</p>
         </div>
       ) : (
@@ -528,7 +534,7 @@ export function CampaignCreationWizard({ companyId }: CampaignCreationWizardProp
 
       {isLoadingData ? (
         <div className="loading-state">
-          <Loader2 className="spinner" />
+          <LoaderIcon className="spinner" />
           <p>Loading beneficiary groups...</p>
         </div>
       ) : (
@@ -753,7 +759,7 @@ export function CampaignCreationWizard({ companyId }: CampaignCreationWizardProp
       <div className="review-section">
         <h3 className="review-title">Projected Impact</h3>
         <div className="impact-notice">
-          <AlertCircle className="notice-icon" />
+          <AlertCircleIcon className="notice-icon" />
           <p>SROI and impact projections will be calculated after the first 30 days of campaign activity.</p>
         </div>
       </div>
@@ -768,7 +774,7 @@ export function CampaignCreationWizard({ companyId }: CampaignCreationWizardProp
       {/* Data Loading Error */}
       {dataError && (
         <div className="error-banner">
-          <AlertCircle className="error-icon" />
+          <AlertCircleIcon className="error-icon" />
           <div>
             <strong>Error loading data:</strong> {dataError}
           </div>
@@ -778,7 +784,7 @@ export function CampaignCreationWizard({ companyId }: CampaignCreationWizardProp
       {/* Validation Errors */}
       {validationErrors.length > 0 && (
         <div className="error-banner">
-          <AlertCircle className="error-icon" />
+          <AlertCircleIcon className="error-icon" />
           <div>
             <strong>Please fix the following errors:</strong>
             <ul className="error-list">
@@ -818,7 +824,7 @@ export function CampaignCreationWizard({ companyId }: CampaignCreationWizardProp
               className="btn btn-secondary"
               disabled={isSubmitting}
             >
-              <ChevronLeft className="btn-icon" />
+              <ChevronLeftIcon className="btn-icon" />
               Previous
             </button>
           )}
@@ -830,7 +836,7 @@ export function CampaignCreationWizard({ companyId }: CampaignCreationWizardProp
               className="btn btn-primary"
             >
               Next
-              <ChevronRight className="btn-icon" />
+              <ChevronRightIcon className="btn-icon" />
             </button>
           )}
 
@@ -843,7 +849,7 @@ export function CampaignCreationWizard({ companyId }: CampaignCreationWizardProp
             >
               {isSubmitting ? (
                 <>
-                  <Loader2 className="btn-icon spinner" />
+                  <LoaderIcon className="btn-icon spinner" />
                   Creating Campaign...
                 </>
               ) : (
@@ -866,7 +872,7 @@ export function CampaignCreationWizard({ companyId }: CampaignCreationWizardProp
                 className="modal-close"
                 aria-label="Close dialog"
               >
-                <X />
+                <CloseIcon />
               </button>
             </div>
             <div className="modal-body">

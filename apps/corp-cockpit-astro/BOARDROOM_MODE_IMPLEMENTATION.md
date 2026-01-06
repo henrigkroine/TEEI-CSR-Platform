@@ -209,7 +209,7 @@ test('boardroom mode shows stale data banner when offline', async ({ page, conte
 ### Performance Testing
 ```bash
 # Lighthouse audit
-npx lighthouse http://localhost:4321/en/cockpit/test123/boardroom \
+npx lighthouse http://localhost:6509/en/cockpit/test123/boardroom \
   --output=html \
   --output-path=./reports/boardroom-lighthouse.html
 
@@ -225,7 +225,7 @@ npx lighthouse http://localhost:4321/en/cockpit/test123/boardroom \
 ### Accessibility Testing
 ```bash
 # Pa11y audit
-npx pa11y http://localhost:4321/en/cockpit/test123/boardroom \
+npx pa11y http://localhost:6509/en/cockpit/test123/boardroom \
   --standard WCAG2AA \
   --reporter cli
 

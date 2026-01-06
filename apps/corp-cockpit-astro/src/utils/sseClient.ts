@@ -91,10 +91,46 @@ export class SSEClient {
       return;
     }
 
+    // Validate companyId
+    if (!this.options.companyId || this.options.companyId === 'undefined') {
+      console.error('[SSE] Invalid companyId:', this.options.companyId);
+      const invalidError: SSEError = {
+        message: 'Invalid companyId provided',
+        code: 'INVALID_COMPANY_ID',
+        timestamp: Date.now(),
+        retryable: false,
+      };
+      this.options.onError(invalidError);
+      this.setState('error');
+      return;
+    }
+
+    // Validate URL
+    if (!this.options.url || this.options.url.trim() === '') {
+      console.error('[SSE] Invalid URL:', this.options.url);
+      const invalidError: SSEError = {
+        message: 'Invalid URL provided',
+        code: 'INVALID_URL',
+        timestamp: Date.now(),
+        retryable: false,
+      };
+      this.options.onError(invalidError);
+      this.setState('error');
+      return;
+    }
+
     try {
       this.setState('connecting');
 
-      const url = new URL(this.options.url);
+      // Handle relative URLs by using window.location.origin as base
+      let url: URL;
+      try {
+        // Try to construct URL directly (works for absolute URLs)
+        url = new URL(this.options.url);
+      } catch {
+        // If that fails, assume it's a relative URL and use current origin
+        url = new URL(this.options.url, window.location.origin);
+      }
 
       // Add company ID and last event ID to URL
       url.searchParams.set('companyId', this.options.companyId);

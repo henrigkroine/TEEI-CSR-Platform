@@ -32,6 +32,8 @@ export interface UseSSEConnectionOptions {
   companyId: string;
   /** Event channel to subscribe to */
   channel: string;
+  /** SSE endpoint URL (default: /api/sse/dashboard) */
+  url?: string;
   /** Enable automatic connection on mount (default: true) */
   autoConnect?: boolean;
   /** Enable polling fallback on SSE failure (default: true) */
@@ -74,6 +76,7 @@ export function useSSEConnection(
   const {
     companyId,
     channel,
+    url = '/api/sse/dashboard',
     autoConnect = true,
     enablePollingFallback = true,
     pollingInterval = 5000,
@@ -175,17 +178,36 @@ export function useSSEConnection(
     // Stop polling if active
     stopPolling();
 
+    // Validate companyId before connecting
+    if (!companyId || companyId === 'undefined') {
+      console.error('[useSSEConnection] Invalid companyId:', companyId);
+      const invalidError: SSEError = {
+        message: 'Invalid companyId provided',
+        code: 'INVALID_COMPANY_ID',
+        timestamp: Date.now(),
+        retryable: false,
+      };
+      handleError(invalidError);
+      return;
+    }
+
     // Create SSE client if not exists
     if (!sseClientRef.current) {
       sseClientRef.current = createSSEClient({
+        url,
         companyId,
-        channel,
-        initialRetryDelay: retryOptions.initialDelay,
-        maxRetryDelay: retryOptions.maxDelay,
-        maxRetries: retryOptions.maxRetries,
-        onConnectionChange: handleConnectionChange,
-        onMessage: handleMessage,
+        onEvent: handleMessage,
         onError: handleError,
+        onStateChange: handleConnectionChange,
+        onConnect: () => {
+          setError(null);
+        },
+        onDisconnect: () => {
+          // Keep last state
+        },
+        maxReconnectAttempts: retryOptions.maxRetries ?? 10,
+        baseDelay: retryOptions.initialDelay ?? 2000,
+        maxDelay: retryOptions.maxDelay ?? 32000,
       });
     }
 
@@ -193,6 +215,7 @@ export function useSSEConnection(
   }, [
     companyId,
     channel,
+    url,
     retryOptions,
     handleConnectionChange,
     handleMessage,
@@ -235,7 +258,7 @@ export function useSSEConnection(
       disconnect();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [companyId, channel, autoConnect]);
+  }, [companyId, channel, url, autoConnect]);
 
   return {
     state,

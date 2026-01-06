@@ -191,7 +191,7 @@ export default function CostSummary({
         </details>
       )}
 
-      <style jsx>{`
+      <style>{`
         .cost-summary {
           background: white;
           border: 1px solid #e5e7eb;
@@ -479,7 +479,7 @@ export function CompactCostDisplay({
         <span className="cost-value">{modelName}</span>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .compact-cost {
           display: flex;
           gap: 16px;

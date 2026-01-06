@@ -1,4 +1,4 @@
-import { useMemo, useEffect, useState } from 'react';
+import { useMemo, useEffect, useState, memo } from 'react';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -13,10 +13,6 @@ import {
   type ChartOptions,
 } from 'chart.js';
 import { Line, Bar, Pie, Doughnut } from 'react-chartjs-2';
-<<<<<<< HEAD
-import { useEffect, useState } from 'react';
-=======
->>>>>>> origin/claude/worker5-data-trust-catalog-01MP5u1wgV11fa33LqqEQWbp
 import { applyChartThemeDefaults, generateChartColors } from '../lib/themes/chartColors';
 
 // Register Chart.js components
@@ -42,7 +38,7 @@ export interface ChartProps {
   height?: number;
 }
 
-export default function Chart({ type, data, options, className = '', height = 300 }: ChartProps) {
+function Chart({ type, data, options, className = '', height = 300 }: ChartProps) {
   const [isDark, setIsDark] = useState(false);
 
   // Detect current theme
@@ -134,3 +130,13 @@ export default function Chart({ type, data, options, className = '', height = 30
     </div>
   );
 }
+
+export default memo(Chart, (prev, next) => {
+  return (
+    prev.type === next.type &&
+    prev.height === next.height &&
+    prev.className === next.className &&
+    JSON.stringify(prev.data) === JSON.stringify(next.data) &&
+    JSON.stringify(prev.options) === JSON.stringify(next.options)
+  );
+});

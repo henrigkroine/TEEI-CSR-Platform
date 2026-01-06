@@ -2,10 +2,12 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "rootDir": "./src",
     "composite": true,
     "declaration": true
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "src/seed/**/*"]
+  "exclude": ["node_modules", "dist", "src/seed/**/*"],
+  "references": [
+    { "path": "../shared-types" }
+  ]
 }

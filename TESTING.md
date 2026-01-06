@@ -296,7 +296,7 @@ Comprehensive OpenAPI 3.0 schema at `services/reporting/src/openapi.json`
 
 ### Interactive Docs
 
-Swagger UI available at: `http://localhost:3001/docs`
+Swagger UI available at: `http://localhost:3018/docs`
 
 ### Postman Collection
 
@@ -418,7 +418,7 @@ pnpm chromatic
 # 5. Validate API
 cd services/reporting
 pnpm dev
-# Visit http://localhost:3001/docs
+# Visit http://localhost:3018/docs
 ```
 
 ### Debugging Tests
@@ -495,7 +495,7 @@ echo $CHROMATIC_PROJECT_TOKEN
 **Newman failing:**
 ```bash
 # Check services are running
-curl http://localhost:3001/health
+curl http://localhost:3018/health
 ```
 
 ---

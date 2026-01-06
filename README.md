@@ -85,6 +85,26 @@ pnpm test
 pnpm build
 ```
 
+## 🌐 Service Ports
+
+**TEEI CSR Platform Services** (65xx Range - Managed by PM2 ecosystem):
+
+| Service | PM2 Name | Port | URL |
+|---------|----------|------|-----|
+| API Gateway | `csr-api-gateway` | **6501** | http://localhost:6501 |
+| Unified Profile | `csr-unified-profile` | **6502** | http://localhost:6502 |
+| Kintell Connector | `csr-kintell-connector` | **6503** | http://localhost:6503 |
+| Buddy Service | `csr-buddy-service` | **6504** | http://localhost:6504 |
+| Buddy Connector | `csr-buddy-connector` | **6505** | http://localhost:6505 |
+| Upskilling Connector | `csr-upskilling-connector` | **6506** | http://localhost:6506 |
+| Q2Q AI | `csr-q2q-ai` | **6507** | http://localhost:6507 |
+| Safety Moderation | `csr-safety-moderation` | **6508** | http://localhost:6508 |
+| Corp Cockpit (Dashboard) | `csr-corp-cockpit` | **6509** | http://localhost:6509 |
+
+> **Note**: Services are managed by the global PM2 ecosystem config at `D:\Dev\docker\ecosystem.config.cjs`.  
+> Use `pm2 list | findstr csr` to view all CSR services.  
+> See [CLAUDE.md](./CLAUDE.md) for detailed port information and PM2 commands.
+
 ## Development
 
 ### Scripts
@@ -135,6 +155,8 @@ See [SECURITY.md](./SECURITY.md) for:
 - Implemented security features
 
 ## 📚 Documentation
+
+> **📖 Start Here:** [TEEI Platform Overview](./docs/TEEI_PLATFORM_OVERVIEW.md) - Complete guide to TEEI, its programs, and what the CSR Platform does. Essential reading for all developers and stakeholders.
 
 - [Platform Architecture](./docs/Platform_Architecture.md)
 - [System Diagram](./docs/System_Diagram.md)

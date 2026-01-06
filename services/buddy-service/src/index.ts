@@ -5,7 +5,7 @@ import { importRoutes } from './routes/import.js';
 import { createHealthManager, setupHealthRoutes } from './health/index.js';
 
 const logger = createServiceLogger('buddy-service');
-const PORT = parseInt(process.env.PORT_BUDDY_SERVICE || '3003');
+const PORT = parseInt(process.env.PORT_BUDDY_SERVICE || '3019');
 
 async function start() {
   const app = Fastify({

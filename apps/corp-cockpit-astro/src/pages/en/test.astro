@@ -1,0 +1,496 @@
+---
+/**
+ * CSR Platform Services Test Page
+ *
+ * Displays health status of all 9 microservices running on ports 6501-6509.
+ * This is a development/debugging page to verify the platform is operational.
+ */
+
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+interface ServiceInfo {
+  name: string;
+  port: number;
+  pm2Name: string;
+  description: string;
+}
+
+const services: ServiceInfo[] = [
+  { name: 'API Gateway', port: 6501, pm2Name: 'csr-api-gateway', description: 'GraphQL/REST gateway, authentication, rate limiting' },
+  { name: 'Unified Profile', port: 6502, pm2Name: 'csr-unified-profile', description: 'User identity and profile management' },
+  { name: 'Kintell Connector', port: 6503, pm2Name: 'csr-kintell-connector', description: 'Kintell language/mentorship integration' },
+  { name: 'Buddy Service', port: 6504, pm2Name: 'csr-buddy-service', description: 'Buddy matching and pairing system' },
+  { name: 'Buddy Connector', port: 6505, pm2Name: 'csr-buddy-connector', description: 'External buddy platform webhooks' },
+  { name: 'Upskilling Connector', port: 6506, pm2Name: 'csr-upskilling-connector', description: 'Training platform integration' },
+  { name: 'Q2Q AI', port: 6507, pm2Name: 'csr-q2q-ai', description: 'Qualitative-to-Quantitative AI pipeline' },
+  { name: 'Safety Moderation', port: 6508, pm2Name: 'csr-safety-moderation', description: 'Content moderation and safety checks' },
+  { name: 'Corp Cockpit', port: 6509, pm2Name: 'csr-corp-cockpit', description: 'Executive dashboard (this page!)' },
+];
+---
+
+<BaseLayout title="CSR Platform Test - Service Health" lang="en">
+  <div class="test-page">
+    <div class="page-header">
+      <div class="header-content">
+        <h1>CSR Platform Services</h1>
+        <p class="subtitle">
+          Health status of all 9 microservices (ports 6501-6509)
+        </p>
+      </div>
+      <div class="header-actions">
+        <button id="refresh-btn" class="btn-primary">
+          Refresh Status
+        </button>
+      </div>
+    </div>
+
+    <div class="alert-info">
+      <span class="alert-icon">ℹ️</span>
+      <div class="alert-content">
+        <strong>Development Test Page</strong>
+        <p>
+          This page checks the health endpoints of all CSR Platform services.
+          Green = healthy, Red = unreachable, Yellow = checking.
+        </p>
+      </div>
+    </div>
+
+    <section class="services-grid">
+      {services.map((service) => (
+        <div class="service-card" data-port={service.port} data-name={service.name}>
+          <div class="service-header">
+            <div class="service-status" id={`status-${service.port}`}>
+              <span class="status-dot checking"></span>
+            </div>
+            <div class="service-info">
+              <h3>{service.name}</h3>
+              <code class="port-badge">:{service.port}</code>
+            </div>
+          </div>
+          <p class="service-description">{service.description}</p>
+          <div class="service-meta">
+            <span class="pm2-name">{service.pm2Name}</span>
+            <a 
+              href={`http://localhost:${service.port}/health`} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              class="health-link"
+            >
+              /health →
+            </a>
+          </div>
+          <div class="response-time" id={`time-${service.port}`}>
+            Checking...
+          </div>
+        </div>
+      ))}
+    </section>
+
+    <section class="summary-section">
+      <h2>Quick Actions</h2>
+      <div class="actions-grid">
+        <div class="action-card">
+          <h3>PM2 Dashboard</h3>
+          <p>View all PM2 managed processes</p>
+          <code>pm2 monit</code>
+        </div>
+        <div class="action-card">
+          <h3>Restart All Services</h3>
+          <p>Restart all CSR Platform services</p>
+          <code>pm2 restart all --only csr-*</code>
+        </div>
+        <div class="action-card">
+          <h3>View Logs</h3>
+          <p>Stream logs from all services</p>
+          <code>pm2 logs --lines 50</code>
+        </div>
+      </div>
+    </section>
+
+    <div class="page-footer">
+      <p>
+        Last checked: <span id="last-check-time">Never</span>
+      </p>
+      <p class="note">
+        Auto-refresh every 30 seconds
+      </p>
+    </div>
+  </div>
+</BaseLayout>
+
+<style>
+  .test-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 2px solid var(--color-border, #e5e7eb);
+  }
+
+  .header-content h1 {
+    font-size: 2.5rem;
+    margin: 0 0 0.5rem 0;
+    color: var(--color-text, #111827);
+  }
+
+  .subtitle {
+    font-size: 1.125rem;
+    color: var(--color-text-secondary, #6b7280);
+    margin: 0;
+  }
+
+  .btn-primary {
+    padding: 0.75rem 1.5rem;
+    background: #00393f;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-primary:hover {
+    background: #004d54;
+    transform: translateY(-1px);
+  }
+
+  .alert-info {
+    display: flex;
+    gap: 1rem;
+    background: #dbeafe;
+    border: 1px solid #3b82f6;
+    border-left: 4px solid #3b82f6;
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+  }
+
+  .alert-icon {
+    font-size: 1.5rem;
+    flex-shrink: 0;
+  }
+
+  .alert-content strong {
+    display: block;
+    margin-bottom: 0.25rem;
+    color: #1e40af;
+  }
+
+  .alert-content p {
+    margin: 0;
+    color: #1e3a8a;
+    line-height: 1.6;
+  }
+
+  .services-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 3rem;
+  }
+
+  .service-card {
+    background: white;
+    border: 1px solid var(--color-border, #e5e7eb);
+    border-radius: 12px;
+    padding: 1.5rem;
+    transition: all 0.2s;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  .service-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+  }
+
+  .service-card.healthy {
+    border-color: #10b981;
+    background: linear-gradient(to bottom right, #ecfdf5, white);
+  }
+
+  .service-card.unhealthy {
+    border-color: #ef4444;
+    background: linear-gradient(to bottom right, #fef2f2, white);
+  }
+
+  .service-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .service-status {
+    flex-shrink: 0;
+  }
+
+  .status-dot {
+    display: block;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+
+  .status-dot.checking {
+    background: #fbbf24;
+  }
+
+  .status-dot.healthy {
+    background: #10b981;
+    animation: none;
+  }
+
+  .status-dot.unhealthy {
+    background: #ef4444;
+    animation: none;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  .service-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex: 1;
+  }
+
+  .service-info h3 {
+    margin: 0;
+    font-size: 1.125rem;
+    color: var(--color-text, #111827);
+  }
+
+  .port-badge {
+    background: #00393f;
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-family: 'Courier New', monospace;
+  }
+
+  .service-description {
+    margin: 0 0 1rem 0;
+    color: var(--color-text-secondary, #6b7280);
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+
+  .service-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--color-border, #e5e7eb);
+    margin-bottom: 0.5rem;
+  }
+
+  .pm2-name {
+    font-family: 'Courier New', monospace;
+    font-size: 0.75rem;
+    color: #9ca3af;
+  }
+
+  .health-link {
+    font-size: 0.75rem;
+    color: #00393f;
+    text-decoration: none;
+    font-weight: 600;
+  }
+
+  .health-link:hover {
+    text-decoration: underline;
+  }
+
+  .response-time {
+    font-size: 0.75rem;
+    color: #6b7280;
+    font-style: italic;
+  }
+
+  .response-time.fast {
+    color: #10b981;
+  }
+
+  .response-time.slow {
+    color: #f59e0b;
+  }
+
+  .response-time.error {
+    color: #ef4444;
+  }
+
+  .summary-section {
+    margin-bottom: 2rem;
+  }
+
+  .summary-section h2 {
+    font-size: 1.5rem;
+    margin: 0 0 1rem 0;
+    color: var(--color-text, #111827);
+  }
+
+  .actions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+  }
+
+  .action-card {
+    background: #f9fafb;
+    border: 1px solid var(--color-border, #e5e7eb);
+    border-radius: 8px;
+    padding: 1.25rem;
+  }
+
+  .action-card h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1rem;
+    color: var(--color-text, #111827);
+  }
+
+  .action-card p {
+    margin: 0 0 0.75rem 0;
+    font-size: 0.875rem;
+    color: var(--color-text-secondary, #6b7280);
+  }
+
+  .action-card code {
+    display: block;
+    background: #1f2937;
+    color: #10b981;
+    padding: 0.5rem 0.75rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-family: 'Courier New', monospace;
+  }
+
+  .page-footer {
+    text-align: center;
+    padding-top: 2rem;
+    border-top: 1px solid var(--color-border, #e5e7eb);
+    color: var(--color-text-secondary, #6b7280);
+  }
+
+  .page-footer p {
+    margin: 0.5rem 0;
+  }
+
+  .page-footer .note {
+    font-size: 0.875rem;
+    color: #9ca3af;
+  }
+
+  @media (max-width: 768px) {
+    .test-page {
+      padding: 1rem;
+    }
+
+    .page-header {
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .header-content h1 {
+      font-size: 1.75rem;
+    }
+
+    .services-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<script>
+  const services = [
+    { port: 6501, name: 'API Gateway' },
+    { port: 6502, name: 'Unified Profile' },
+    { port: 6503, name: 'Kintell Connector' },
+    { port: 6504, name: 'Buddy Service' },
+    { port: 6505, name: 'Buddy Connector' },
+    { port: 6506, name: 'Upskilling Connector' },
+    { port: 6507, name: 'Q2Q AI' },
+    { port: 6508, name: 'Safety Moderation' },
+    { port: 6509, name: 'Corp Cockpit' },
+  ];
+
+  async function checkHealth(port: number): Promise<{ healthy: boolean; time: number }> {
+    const start = performance.now();
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      
+      const response = await fetch(`http://localhost:${port}/health`, {
+        signal: controller.signal,
+        mode: 'no-cors'
+      });
+      
+      clearTimeout(timeoutId);
+      const time = Math.round(performance.now() - start);
+      
+      return { healthy: true, time };
+    } catch (error) {
+      const time = Math.round(performance.now() - start);
+      return { healthy: false, time };
+    }
+  }
+
+  async function updateStatus(port: number) {
+    const statusEl = document.getElementById(`status-${port}`);
+    const timeEl = document.getElementById(`time-${port}`);
+    const card = document.querySelector(`[data-port="${port}"]`);
+    
+    if (!statusEl || !timeEl || !card) return;
+
+    const dot = statusEl.querySelector('.status-dot');
+    if (dot) {
+      dot.className = 'status-dot checking';
+    }
+    timeEl.textContent = 'Checking...';
+    timeEl.className = 'response-time';
+    card.classList.remove('healthy', 'unhealthy');
+
+    const result = await checkHealth(port);
+
+    if (dot) {
+      dot.className = `status-dot ${result.healthy ? 'healthy' : 'unhealthy'}`;
+    }
+    
+    if (result.healthy) {
+      card.classList.add('healthy');
+      timeEl.textContent = `Response: ${result.time}ms`;
+      timeEl.className = `response-time ${result.time < 100 ? 'fast' : result.time < 500 ? '' : 'slow'}`;
+    } else {
+      card.classList.add('unhealthy');
+      timeEl.textContent = `Unreachable (${result.time}ms)`;
+      timeEl.className = 'response-time error';
+    }
+  }
+
+  async function checkAllServices() {
+    const lastCheckEl = document.getElementById('last-check-time');
+    if (lastCheckEl) {
+      lastCheckEl.textContent = new Date().toLocaleTimeString();
+    }
+
+    await Promise.all(services.map(s => updateStatus(s.port)));
+  }
+
+  document.getElementById('refresh-btn')?.addEventListener('click', checkAllServices);
+
+  checkAllServices();
+
+  setInterval(checkAllServices, 30000);
+</script>

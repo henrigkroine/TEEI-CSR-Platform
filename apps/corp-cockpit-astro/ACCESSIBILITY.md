@@ -72,7 +72,7 @@ Accessibility tests run automatically on every PR:
 - **Full Guide:** [docs/accessibility.md](../../../docs/accessibility.md)
 - **Testing Guide:** [tests/a11y/README.md](./tests/a11y/README.md)
 - **Audit Report:** [reports/PHASE-C-E-03-a11y-audit.md](../../../reports/PHASE-C-E-03-a11y-audit.md)
-- **Public Statement:** [/accessibility](http://localhost:4321/accessibility)
+- **Public Statement:** [/accessibility](http://localhost:6509/accessibility)
 
 ## Quick Reference
 

@@ -1,0 +1,1600 @@
+---
+// /en/platform/dashboard.astro - Corporate Cockpit Dashboard Marketing Page
+import BaseLayout from '@layouts/BaseLayout.astro';
+import '@/styles/premium-cards.css';
+---
+
+<BaseLayout title="Corporate Cockpit - Real-Time CSR Dashboard | TEEI" lang="en">
+  <!-- FIXED NAVIGATION -->
+  <nav class="nav">
+    <div class="nav-container">
+      <a href="/" class="nav-logo">TEEI</a>
+      <div class="nav-links">
+        <a href="/en#programs">Programs</a>
+        <a href="/en#platform">Platform</a>
+        <a href="/en#about">About</a>
+      </div>
+      <a href="/en/contact" class="nav-cta">Get a Demo</a>
+    </div>
+  </nav>
+
+  <!-- HERO SECTION - Split layout with dashboard preview -->
+  <section class="hero">
+    <div class="hero-content animate-on-scroll">
+      <p class="hero-eyebrow">CORPORATE COCKPIT</p>
+      <h1>
+        Your CSR <span class="accent">Command Center</span>
+      </h1>
+      <p class="hero-subtitle">
+        Real-time impact metrics, volunteer tracking, and executive reporting in one dashboard. See your social impact as it happens.
+      </p>
+      <div class="hero-ctas">
+        <a href="/en/contact" class="btn btn-primary btn-premium">Request Demo</a>
+        <a href="#features" class="btn btn-secondary btn-premium">See Features →</a>
+      </div>
+    </div>
+
+    <!-- Dashboard Preview Mockup -->
+    <div class="dashboard-preview animate-on-scroll">
+      <div class="browser-frame">
+        <div class="browser-chrome">
+          <div class="browser-dots">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+          <div class="browser-url">app.teei.org/cockpit/dashboard</div>
+        </div>
+        <div class="browser-content">
+          <div class="mock-sidebar">
+            <div class="mock-nav-item active"></div>
+            <div class="mock-nav-item"></div>
+            <div class="mock-nav-item"></div>
+            <div class="mock-nav-item"></div>
+          </div>
+          <div class="mock-main">
+            <div class="mock-kpi-grid">
+              <div class="mock-kpi-card">
+                <div class="mock-label"></div>
+                <div class="mock-value">3.5:1</div>
+                <div class="mock-trend"></div>
+              </div>
+              <div class="mock-kpi-card">
+                <div class="mock-label"></div>
+                <div class="mock-value">2,847</div>
+                <div class="mock-trend"></div>
+              </div>
+              <div class="mock-kpi-card">
+                <div class="mock-label"></div>
+                <div class="mock-value">78</div>
+                <div class="mock-trend"></div>
+              </div>
+              <div class="mock-kpi-card">
+                <div class="mock-label"></div>
+                <div class="mock-value">156</div>
+                <div class="mock-trend"></div>
+              </div>
+            </div>
+            <div class="mock-chart"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- KEY FEATURES SECTION -->
+  <section id="features" class="features-section">
+    <div class="container">
+      <div class="section-header animate-on-scroll">
+        <span class="section-label">KEY FEATURES</span>
+        <h2>Everything You Need to Track Impact</h2>
+      </div>
+
+      <div class="features-grid">
+        <div class="feature-card animate-on-scroll">
+          <div class="feature-icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+            </svg>
+          </div>
+          <h3>Real-Time Metrics</h3>
+          <p>Server-Sent Events push updates to your dashboard instantly. No refresh needed. Watch volunteer hours, SROI, and VIS scores update live.</p>
+        </div>
+
+        <div class="feature-card animate-on-scroll">
+          <div class="feature-icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="7" height="7"/>
+              <rect x="14" y="3" width="7" height="7"/>
+              <rect x="14" y="14" width="7" height="7"/>
+              <rect x="3" y="14" width="7" height="7"/>
+            </svg>
+          </div>
+          <h3>KPI Dashboard</h3>
+          <p>Track SROI, VIS scores, volunteer hours, and beneficiary reach. All metrics automatically calculated and updated from live session data.</p>
+        </div>
+
+        <div class="feature-card animate-on-scroll">
+          <div class="feature-icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="16" x2="12" y2="12"/>
+              <line x1="12" y1="8" x2="12.01" y2="8"/>
+            </svg>
+          </div>
+          <h3>Evidence Explorer</h3>
+          <p>Click any number to trace it back to source. See session notes, feedback forms, and timestamps. Full audit trail for every metric.</p>
+        </div>
+
+        <div class="feature-card animate-on-scroll">
+          <div class="feature-icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+              <line x1="8" y1="21" x2="16" y2="21"/>
+              <line x1="12" y1="17" x2="12" y2="21"/>
+            </svg>
+          </div>
+          <h3>Boardroom Mode</h3>
+          <p>Full-screen executive view with auto-cycling charts. Perfect for presentations, town halls, and leadership meetings.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DASHBOARD PREVIEW DETAIL SECTION -->
+  <section class="preview-detail-section">
+    <div class="container">
+      <div class="section-header animate-on-scroll">
+        <span class="section-label">SEE IT IN ACTION</span>
+        <h2>Your Impact at a Glance</h2>
+      </div>
+
+      <div class="detail-browser animate-on-scroll">
+        <div class="browser-frame-large">
+          <div class="browser-chrome">
+            <div class="browser-dots">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+            <div class="browser-url">app.teei.org/cockpit/dashboard</div>
+          </div>
+          <div class="browser-content-large">
+            <!-- Sidebar -->
+            <div class="detail-sidebar">
+              <div class="sidebar-logo">TEEI</div>
+              <nav class="sidebar-nav">
+                <a href="#" class="nav-item active">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="7" height="7"/>
+                    <rect x="14" y="3" width="7" height="7"/>
+                    <rect x="14" y="14" width="7" height="7"/>
+                    <rect x="3" y="14" width="7" height="7"/>
+                  </svg>
+                  Dashboard
+                </a>
+                <a href="#" class="nav-item">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                  </svg>
+                  Volunteers
+                </a>
+                <a href="#" class="nav-item">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                  </svg>
+                  Analytics
+                </a>
+                <a href="#" class="nav-item">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                  </svg>
+                  Reports
+                </a>
+              </nav>
+            </div>
+
+            <!-- Main Content -->
+            <div class="detail-main">
+              <!-- KPI Cards -->
+              <div class="detail-kpi-grid">
+                <div class="detail-kpi-card">
+                  <div class="kpi-label">Social ROI</div>
+                  <div class="kpi-value">3.5:1</div>
+                  <div class="kpi-trend positive">↑ 12% vs last quarter</div>
+                </div>
+                <div class="detail-kpi-card">
+                  <div class="kpi-label">Volunteer Hours</div>
+                  <div class="kpi-value">2,847</div>
+                  <div class="kpi-trend positive">↑ 234 this month</div>
+                </div>
+                <div class="detail-kpi-card">
+                  <div class="kpi-label">Avg VIS Score</div>
+                  <div class="kpi-value">78</div>
+                  <div class="kpi-trend neutral">→ Stable</div>
+                </div>
+                <div class="detail-kpi-card">
+                  <div class="kpi-label">Active Volunteers</div>
+                  <div class="kpi-value">156</div>
+                  <div class="kpi-trend positive">↑ 8 new this week</div>
+                </div>
+              </div>
+
+              <!-- Chart Placeholder -->
+              <div class="detail-chart">
+                <div class="chart-header">
+                  <h4>Impact Over Time</h4>
+                  <div class="chart-legend">
+                    <span class="legend-item">
+                      <span class="legend-dot" style="background: #BA8F5A;"></span>
+                      SROI
+                    </span>
+                    <span class="legend-item">
+                      <span class="legend-dot" style="background: #00393f;"></span>
+                      VIS Score
+                    </span>
+                  </div>
+                </div>
+                <div class="chart-content">
+                  <!-- Stylized chart visualization -->
+                  <svg viewBox="0 0 400 150" class="chart-svg">
+                    <polyline
+                      points="0,120 50,110 100,95 150,85 200,75 250,70 300,65 350,60 400,55"
+                      fill="none"
+                      stroke="#BA8F5A"
+                      stroke-width="2"
+                      opacity="0.8"
+                    />
+                    <polyline
+                      points="0,100 50,95 100,90 150,88 200,85 250,83 300,80 350,78 400,75"
+                      fill="none"
+                      stroke="#00393f"
+                      stroke-width="2"
+                      opacity="0.6"
+                    />
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CAPABILITIES SECTION -->
+  <section class="capabilities-section">
+    <div class="container">
+      <div class="section-header animate-on-scroll">
+        <span class="section-label">CAPABILITIES</span>
+        <h2>Enterprise-Grade Features</h2>
+      </div>
+
+      <div class="capabilities-grid">
+        <div class="capability-category animate-on-scroll">
+          <h3>Analytics</h3>
+          <ul>
+            <li>Real-time SROI calculations</li>
+            <li>VIS scores for every volunteer</li>
+            <li>Quarter-over-quarter trends</li>
+            <li>Cohort analysis and segmentation</li>
+          </ul>
+        </div>
+
+        <div class="capability-category animate-on-scroll">
+          <h3>Reporting</h3>
+          <ul>
+            <li>AI-generated narratives</li>
+            <li>PDF and PPTX export</li>
+            <li>Scheduled email reports</li>
+            <li>Full evidence citations</li>
+          </ul>
+        </div>
+
+        <div class="capability-category animate-on-scroll">
+          <h3>Enterprise</h3>
+          <ul>
+            <li>SSO with SAML 2.0</li>
+            <li>Role-based access control</li>
+            <li>Multi-tenant isolation</li>
+            <li>Complete audit logs</li>
+          </ul>
+        </div>
+
+        <div class="capability-category animate-on-scroll">
+          <h3>Experience</h3>
+          <ul>
+            <li>Dark mode support</li>
+            <li>Multi-language (8 languages)</li>
+            <li>PWA for offline access</li>
+            <li>Mobile-responsive design</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TESTIMONIAL SECTION -->
+  <section class="testimonial-section">
+    <div class="container">
+      <div class="testimonial-card">
+        <div class="testimonial-content">
+          <svg class="quote-icon" width="48" height="48" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z"/>
+          </svg>
+          <blockquote>
+            The Corporate Cockpit changed how our leadership sees CSR. We went from quarterly spreadsheets to live dashboards. Now the board asks for the dashboard link before every meeting.
+          </blockquote>
+          <div class="testimonial-attribution">
+            <div class="attribution-avatar">
+              <span>MK</span>
+            </div>
+            <div class="attribution-text">
+              <span class="attribution-name">Marcus Klein</span>
+              <span class="attribution-role">Director of Social Impact, Fortune 500</span>
+            </div>
+          </div>
+        </div>
+        <div class="testimonial-stats">
+          <div class="stat">
+            <span class="stat-value">4.2:1</span>
+            <span class="stat-label">Current SROI</span>
+          </div>
+          <div class="stat">
+            <span class="stat-value">3,200</span>
+            <span class="stat-label">Volunteer Hours</span>
+          </div>
+          <div class="stat">
+            <span class="stat-value">91</span>
+            <span class="stat-label">Average VIS</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA SECTION -->
+  <section class="cta-section">
+    <div class="cta-background"></div>
+    <div class="container">
+      <div class="cta-content">
+        <span class="cta-label">GET STARTED</span>
+        <h2>See Your Impact Dashboard</h2>
+        <p>Stop guessing. Start measuring. Get real-time visibility into your CSR program in under 30 days.</p>
+        <div class="cta-buttons">
+          <a href="/en/contact" class="btn btn-primary">Request Demo</a>
+          <a href="/en" class="btn btn-secondary">Learn More</a>
+        </div>
+        <p class="cta-note">Custom onboarding and training included</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <!-- Brand Column -->
+        <div class="footer-brand">
+          <a href="/en" class="footer-logo">
+            <span class="logo-text">TEEI</span>
+          </a>
+          <p class="footer-tagline">Equality Through Education</p>
+          <p class="footer-description">The Educational Equality Institute connects corporations with refugees through measurable volunteer programs.</p>
+          <div class="footer-social">
+            <a href="https://linkedin.com/company/teei" aria-label="LinkedIn">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+              </svg>
+            </a>
+            <a href="https://twitter.com/teikiorg" aria-label="Twitter">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+              </svg>
+            </a>
+          </div>
+        </div>
+
+        <!-- Programs Column -->
+        <div class="footer-column">
+          <h4>Programs</h4>
+          <ul>
+            <li><a href="/en/programs/buddy">Buddy Program</a></li>
+            <li><a href="/en/programs/language">Language Connect</a></li>
+            <li><a href="/en/programs/mentorship">Mentors for Ukraine</a></li>
+            <li><a href="/en/programs/upskilling">Upskilling Academy</a></li>
+          </ul>
+        </div>
+
+        <!-- Platform Column -->
+        <div class="footer-column">
+          <h4>Platform</h4>
+          <ul>
+            <li><a href="/en/platform/dashboard">Corporate Cockpit</a></li>
+            <li><a href="/en/platform/sroi">SROI Calculator</a></li>
+            <li><a href="/en/platform/reports">Impact Reports</a></li>
+            <li><a href="/en/docs">Documentation</a></li>
+          </ul>
+        </div>
+
+        <!-- Company Column -->
+        <div class="footer-column">
+          <h4>Company</h4>
+          <ul>
+            <li><a href="/en/about">About TEEI</a></li>
+            <li><a href="/en/impact">Our Impact</a></li>
+            <li><a href="/en/partners">Partners</a></li>
+            <li><a href="/en/contact">Contact</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <div class="footer-legal">
+          <p>&copy; 2025 The Educational Equality Institute. All rights reserved.</p>
+          <nav class="footer-legal-links">
+            <a href="/en/privacy">Privacy Policy</a>
+            <a href="/en/terms">Terms of Service</a>
+            <a href="/en/cookies">Cookie Policy</a>
+          </nav>
+        </div>
+        <div class="footer-certifications">
+          <span class="certification">501(c)(3) Nonprofit</span>
+          <span class="certification">GDPR Compliant</span>
+        </div>
+      </div>
+    </div>
+  </footer>
+</BaseLayout>
+
+<style>
+  /* Import base design tokens from landing page */
+  html { scroll-behavior: smooth; }
+
+  /* GLOBAL: FORCE NO ITALICS ON ANY HEADING */
+  h1, h2, h3, h4, h5, h6 {
+    font-style: normal !important;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Variables - matching landing page */
+  :root {
+    --space-xs: 0.25rem;
+    --space-sm: 0.5rem;
+    --space-md: 1rem;
+    --space-lg: 2rem;
+    --space-xl: 3rem;
+    --space-3xl: 5rem;
+    --font-heading: 'Lora', Georgia, serif;
+    --font-body: 'Roboto Flex', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --color-primary: #00393f;
+    --color-accent: #BA8F5A;
+    --radius-lg: 12px;
+    --radius-xl: 20px;
+    --radius-md: 8px;
+    --radius-full: 9999px;
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 20px 60px rgba(0, 57, 63, 0.15);
+    --text-primary: #00393f;
+    --text-body: #475569;
+    --text-light: #64748b;
+    --border-light: #e2e8f0;
+    --bg-light: #f8fafc;
+    --bg-white: #ffffff;
+    --section-spacing: 5rem;
+  }
+
+  /* NAVIGATION */
+  .nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    padding: var(--space-sm) var(--space-xl);
+    background: transparent;
+    transition: all 0.3s ease;
+  }
+
+  .nav.scrolled {
+    background: rgba(0, 57, 63, 0.95);
+    backdrop-filter: blur(10px);
+    box-shadow: var(--shadow-md);
+  }
+
+  .nav-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .nav-logo {
+    font-family: var(--font-heading);
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--color-accent);
+    text-decoration: none;
+  }
+
+  .nav-links {
+    display: flex;
+    gap: var(--space-lg);
+  }
+
+  .nav-links a {
+    color: white;
+    text-decoration: none;
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    transition: color 0.2s;
+  }
+
+  .nav-links a:hover {
+    color: var(--color-accent);
+  }
+
+  .nav-cta {
+    background: var(--color-accent);
+    color: var(--color-primary) !important;
+    padding: 10px 24px;
+    border-radius: var(--radius-full);
+    text-decoration: none;
+    font-family: var(--font-body);
+    font-weight: 600;
+    transition: all 0.3s ease;
+  }
+
+  .nav-cta:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(186, 143, 90, 0.4);
+  }
+
+  /* HERO SECTION - Split layout */
+  .hero {
+    position: relative;
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: center;
+    gap: var(--space-3xl);
+    padding: var(--section-spacing) var(--space-xl);
+    background: linear-gradient(165deg, #00393f 0%, #004a52 40%, #003840 100%);
+    color: white;
+    overflow: hidden;
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at 30% 20%, rgba(10, 89, 97, 0.4) 0%, transparent 50%),
+      radial-gradient(ellipse at 70% 30%, rgba(186, 143, 90, 0.12) 0%, transparent 50%);
+    pointer-events: none;
+  }
+
+  .hero-content { position: relative; z-index: 1; }
+
+  .hero-eyebrow {
+    font-size: 13px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #BA8F5A;
+    margin-bottom: 24px;
+    font-weight: 700;
+    display: inline-block;
+    position: relative;
+  }
+
+  .hero-eyebrow::before {
+    content: '';
+    position: absolute;
+    left: -40px;
+    top: 50%;
+    width: 30px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #BA8F5A);
+  }
+
+  .hero h1 {
+    font-size: 88px;
+    font-weight: 900;
+    line-height: 1.05;
+    margin-bottom: 32px;
+    letter-spacing: -0.03em;
+    text-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    color: white !important;
+  }
+
+  .accent {
+    color: var(--color-accent);
+  }
+
+  .hero-subtitle {
+    font-size: 22px;
+    line-height: 1.6;
+    color: rgba(255,255,255,0.9);
+    margin-bottom: 48px;
+    max-width: 600px;
+    font-weight: 400;
+  }
+
+  .hero-ctas {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+
+  /* PREMIUM BUTTONS */
+  .btn {
+    padding: 16px 32px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 16px;
+    text-decoration: none;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    position: relative;
+    overflow: hidden;
+    border: none;
+    cursor: pointer;
+  }
+
+  .btn-premium::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(120deg, transparent, rgba(255,255,255,0.3), transparent);
+    transform: translateX(-100%);
+    transition: transform 0.6s ease;
+  }
+
+  .btn-premium:hover::before {
+    transform: translateX(100%);
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, #BA8F5A 0%, #d4a66a 100%);
+    color: #00393f;
+    box-shadow: 0 4px 16px rgba(186, 143, 90, 0.4);
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 32px rgba(186, 143, 90, 0.5);
+  }
+
+  .btn-secondary {
+    background: rgba(255,255,255,0.05);
+    color: white;
+    border: 2px solid rgba(255,255,255,0.2);
+    backdrop-filter: blur(8px);
+  }
+
+  .btn-secondary:hover {
+    border-color: #BA8F5A;
+    background: rgba(186, 143, 90, 0.1);
+    transform: translateY(-2px);
+  }
+
+  /* DASHBOARD PREVIEW MOCKUP */
+  .dashboard-preview {
+    position: relative;
+    z-index: 1;
+  }
+
+  .browser-frame {
+    background: var(--bg-white);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  }
+
+  .browser-chrome {
+    background: #e2e8f0;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .browser-dots {
+    display: flex;
+    gap: 6px;
+  }
+
+  .browser-dots span {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #94a3b8;
+  }
+
+  .browser-url {
+    flex: 1;
+    background: white;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    color: var(--text-light);
+    font-family: var(--font-body);
+  }
+
+  .browser-content {
+    display: flex;
+    height: 400px;
+    background: #f8fafc;
+  }
+
+  .mock-sidebar {
+    width: 60px;
+    background: var(--color-primary);
+    padding: 16px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .mock-nav-item {
+    height: 32px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+  }
+
+  .mock-nav-item.active {
+    background: var(--color-accent);
+  }
+
+  .mock-main {
+    flex: 1;
+    padding: 20px;
+  }
+
+  .mock-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .mock-kpi-card {
+    background: white;
+    border-radius: 8px;
+    padding: 16px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  .mock-label {
+    width: 60%;
+    height: 8px;
+    background: var(--border-light);
+    border-radius: 4px;
+    margin-bottom: 8px;
+  }
+
+  .mock-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--color-primary);
+    margin-bottom: 4px;
+  }
+
+  .mock-trend {
+    width: 40%;
+    height: 6px;
+    background: var(--color-accent);
+    border-radius: 3px;
+    opacity: 0.3;
+  }
+
+  .mock-chart {
+    background: white;
+    border-radius: 8px;
+    height: 250px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    background: linear-gradient(to bottom, white 0%, white 80%, rgba(186, 143, 90, 0.05) 100%);
+  }
+
+  /* SECTIONS */
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 max(1rem, 5%);
+  }
+
+  .section-header {
+    text-align: center;
+    margin-bottom: 3rem;
+  }
+
+  .section-label {
+    display: inline-block;
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--color-accent);
+    margin-bottom: 1rem;
+  }
+
+  .section-header h2 {
+    font-family: var(--font-heading);
+    font-size: clamp(2rem, 4vw, 2.75rem);
+    font-weight: 600;
+    color: var(--color-primary);
+    margin: 0;
+  }
+
+  /* FEATURES SECTION */
+  .features-section {
+    padding: clamp(4rem, 8vw, 6rem) 0;
+    background: var(--bg-light);
+  }
+
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2rem;
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+
+  .feature-card {
+    background: white;
+    border: 1px solid var(--border-light);
+    border-radius: 16px;
+    padding: 2rem;
+    transition: all 0.3s ease;
+  }
+
+  .feature-card:hover {
+    border-color: var(--color-primary);
+    box-shadow: 0 8px 32px rgba(0, 57, 63, 0.08);
+    transform: translateY(-4px);
+  }
+
+  .feature-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    background: rgba(0, 57, 63, 0.05);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-primary);
+    margin-bottom: 1.5rem;
+  }
+
+  .feature-card h3 {
+    font-family: var(--font-heading);
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--color-primary);
+    margin: 0 0 0.75rem 0;
+  }
+
+  .feature-card p {
+    font-family: var(--font-body);
+    font-size: 0.9375rem;
+    color: var(--text-body);
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  /* PREVIEW DETAIL SECTION */
+  .preview-detail-section {
+    padding: clamp(4rem, 8vw, 6rem) 0;
+    background: var(--color-primary);
+  }
+
+  .preview-detail-section .section-header h2 {
+    color: white;
+  }
+
+  .browser-frame-large {
+    background: var(--bg-white);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  }
+
+  .browser-content-large {
+    display: flex;
+    min-height: 500px;
+    background: #f8fafc;
+  }
+
+  .detail-sidebar {
+    width: 200px;
+    background: var(--color-primary);
+    padding: 24px 16px;
+  }
+
+  .sidebar-logo {
+    font-family: var(--font-heading);
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--color-accent);
+    margin-bottom: 32px;
+  }
+
+  .sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 8px;
+    color: rgba(255, 255, 255, 0.7);
+    text-decoration: none;
+    font-family: var(--font-body);
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+  }
+
+  .nav-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: white;
+  }
+
+  .nav-item.active {
+    background: var(--color-accent);
+    color: var(--color-primary);
+  }
+
+  .detail-main {
+    flex: 1;
+    padding: 32px;
+  }
+
+  .detail-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .detail-kpi-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  }
+
+  .kpi-label {
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-light);
+    margin-bottom: 8px;
+  }
+
+  .kpi-value {
+    font-family: var(--font-heading);
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--color-primary);
+    margin-bottom: 8px;
+  }
+
+  .kpi-trend {
+    font-family: var(--font-body);
+    font-size: 0.8125rem;
+    font-weight: 500;
+  }
+
+  .kpi-trend.positive {
+    color: #10b981;
+  }
+
+  .kpi-trend.neutral {
+    color: var(--text-light);
+  }
+
+  .detail-chart {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  }
+
+  .chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+  }
+
+  .chart-header h4 {
+    font-family: var(--font-heading);
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--color-primary);
+    margin: 0;
+  }
+
+  .chart-legend {
+    display: flex;
+    gap: 16px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-body);
+    font-size: 0.8125rem;
+    color: var(--text-body);
+  }
+
+  .legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+
+  .chart-content {
+    height: 200px;
+  }
+
+  .chart-svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* CAPABILITIES SECTION */
+  .capabilities-section {
+    padding: clamp(4rem, 8vw, 6rem) 0;
+    background: var(--bg-light);
+  }
+
+  .capabilities-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 3rem;
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+
+  .capability-category h3 {
+    font-family: var(--font-heading);
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--color-primary);
+    margin: 0 0 1.5rem 0;
+  }
+
+  .capability-category ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .capability-category li {
+    font-family: var(--font-body);
+    font-size: 1rem;
+    color: var(--text-body);
+    line-height: 1.6;
+    padding: 0.75rem 0;
+    padding-left: 1.5rem;
+    position: relative;
+  }
+
+  .capability-category li::before {
+    content: '✓';
+    position: absolute;
+    left: 0;
+    color: var(--color-accent);
+    font-weight: 700;
+  }
+
+  /* TESTIMONIAL SECTION */
+  .testimonial-section {
+    padding: clamp(4rem, 8vw, 6rem) 0;
+    background: linear-gradient(180deg, var(--color-primary) 0%, #002a2f 100%);
+  }
+
+  .testimonial-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 24px;
+    padding: 3rem;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 3rem;
+    align-items: center;
+  }
+
+  .testimonial-content {
+    position: relative;
+  }
+
+  .quote-icon {
+    color: var(--color-accent);
+    opacity: 0.5;
+    margin-bottom: 1.5rem;
+  }
+
+  blockquote {
+    font-family: var(--font-heading);
+    font-size: clamp(1.25rem, 2.5vw, 1.5rem);
+    font-weight: 400;
+    color: white;
+    line-height: 1.6;
+    margin: 0 0 2rem 0;
+  }
+
+  .testimonial-attribution {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .attribution-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--color-accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: var(--color-primary);
+  }
+
+  .attribution-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .attribution-name {
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 1rem;
+    color: white;
+  }
+
+  .attribution-role {
+    font-family: var(--font-body);
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.6);
+  }
+
+  .testimonial-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    padding-left: 3rem;
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .testimonial-stats .stat {
+    text-align: left;
+  }
+
+  .stat-value {
+    display: block;
+    font-family: var(--font-heading);
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--color-accent);
+    line-height: 1;
+    margin-bottom: 0.25rem;
+  }
+
+  .stat-label {
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.5);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  /* CTA SECTION */
+  .cta-section {
+    position: relative;
+    padding: clamp(5rem, 10vw, 8rem) 0;
+    background: var(--bg-light);
+    overflow: hidden;
+  }
+
+  .cta-background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background:
+      radial-gradient(ellipse at 20% 50%, rgba(0, 57, 63, 0.03) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 50%, rgba(186, 143, 90, 0.05) 0%, transparent 50%);
+    pointer-events: none;
+  }
+
+  .cta-section .container {
+    max-width: 800px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .cta-content {
+    text-align: center;
+  }
+
+  .cta-label {
+    display: inline-block;
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--color-accent);
+    margin-bottom: 1rem;
+  }
+
+  .cta-section h2 {
+    font-family: var(--font-heading);
+    font-size: clamp(2rem, 4vw, 3rem);
+    font-weight: 600;
+    color: var(--color-primary);
+    margin: 0 0 1rem 0;
+  }
+
+  .cta-content > p {
+    font-family: var(--font-body);
+    font-size: 1.125rem;
+    color: var(--text-body);
+    margin: 0 0 2rem 0;
+  }
+
+  .cta-buttons {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+  }
+
+  .cta-section .btn-primary {
+    background: var(--color-primary);
+    color: white;
+    border: 2px solid var(--color-primary);
+  }
+
+  .cta-section .btn-primary:hover {
+    background: var(--color-accent);
+    border-color: var(--color-accent);
+  }
+
+  .cta-section .btn-secondary {
+    background: transparent;
+    color: var(--color-primary);
+    border: 2px solid var(--color-primary);
+  }
+
+  .cta-section .btn-secondary:hover {
+    background: var(--color-primary);
+    color: white;
+  }
+
+  .cta-note {
+    font-family: var(--font-body);
+    font-size: 0.875rem;
+    color: var(--text-light);
+    margin: 0;
+  }
+
+  /* FOOTER */
+  .site-footer {
+    background: var(--color-primary);
+    color: white;
+    padding: 4rem 0 2rem;
+  }
+
+  .footer-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    gap: 3rem;
+    margin-bottom: 3rem;
+  }
+
+  .footer-brand {
+    padding-right: 2rem;
+  }
+
+  .footer-logo {
+    display: inline-block;
+    text-decoration: none;
+    margin-bottom: 1rem;
+  }
+
+  .logo-text {
+    font-family: var(--font-heading);
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--color-accent);
+  }
+
+  .footer-tagline {
+    font-family: var(--font-body);
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--color-accent);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin: 0 0 1rem 0;
+  }
+
+  .footer-description {
+    font-family: var(--font-body);
+    font-size: 0.9375rem;
+    color: rgba(255, 255, 255, 0.7);
+    line-height: 1.6;
+    margin: 0 0 1.5rem 0;
+  }
+
+  .footer-social {
+    display: flex;
+    gap: 1rem;
+  }
+
+  .footer-social a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    transition: all 0.3s ease;
+  }
+
+  .footer-social a:hover {
+    background: var(--color-accent);
+    color: var(--color-primary);
+    transform: translateY(-2px);
+  }
+
+  .footer-column h4 {
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--color-accent);
+    margin: 0 0 1.5rem 0;
+  }
+
+  .footer-column ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .footer-column li {
+    margin-bottom: 0.75rem;
+  }
+
+  .footer-column a {
+    font-family: var(--font-body);
+    font-size: 0.9375rem;
+    color: rgba(255, 255, 255, 0.7);
+    text-decoration: none;
+    transition: color 0.2s ease;
+  }
+
+  .footer-column a:hover {
+    color: white;
+  }
+
+  .footer-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 2rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .footer-legal p {
+    font-family: var(--font-body);
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.5);
+    margin: 0 0 0.5rem 0;
+  }
+
+  .footer-legal-links {
+    display: flex;
+    gap: 1.5rem;
+  }
+
+  .footer-legal-links a {
+    font-family: var(--font-body);
+    font-size: 0.8125rem;
+    color: rgba(255, 255, 255, 0.5);
+    text-decoration: none;
+    transition: color 0.2s ease;
+  }
+
+  .footer-legal-links a:hover {
+    color: white;
+  }
+
+  .footer-certifications {
+    display: flex;
+    gap: 1rem;
+  }
+
+  .certification {
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.5);
+    padding: 0.5rem 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 500px;
+  }
+
+  /* ANIMATIONS */
+  .animate-on-scroll {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+
+  .animate-on-scroll.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 1024px) {
+    .hero {
+      grid-template-columns: 1fr;
+      gap: 60px;
+      min-height: auto;
+      padding: 100px 24px 60px;
+    }
+
+    .hero h1 {
+      font-size: 64px;
+    }
+
+    .features-grid,
+    .capabilities-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .footer-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .footer-brand {
+      grid-column: span 2;
+      padding-bottom: 2rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+  }
+
+  @media (max-width: 768px) {
+    .hero {
+      padding: 100px 24px 60px;
+    }
+
+    .hero h1 {
+      font-size: 48px;
+    }
+
+    .browser-content {
+      flex-direction: column;
+      height: auto;
+    }
+
+    .mock-sidebar {
+      width: 100%;
+      flex-direction: row;
+    }
+
+    .mock-kpi-grid,
+    .detail-kpi-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .browser-content-large {
+      flex-direction: column;
+    }
+
+    .detail-sidebar {
+      width: 100%;
+    }
+
+    .testimonial-card {
+      grid-template-columns: 1fr;
+      padding: 2rem;
+    }
+
+    .testimonial-stats {
+      flex-direction: row;
+      justify-content: space-between;
+      padding-left: 0;
+      padding-top: 2rem;
+      border-left: none;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .nav-links {
+      display: none;
+    }
+
+    .footer-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .footer-brand {
+      grid-column: span 1;
+    }
+
+    .footer-bottom {
+      flex-direction: column;
+      gap: 1.5rem;
+      text-align: center;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-on-scroll {
+      opacity: 1;
+      transform: none;
+      transition: none;
+    }
+  }
+</style>
+
+<script>
+  // Nav scroll effect
+  window.addEventListener('scroll', () => {
+    const nav = document.querySelector('.nav');
+    if (nav) {
+      if (window.scrollY > 50) {
+        nav.classList.add('scrolled');
+      } else {
+        nav.classList.remove('scrolled');
+      }
+    }
+  });
+
+  // Intersection Observer for fade-in animations
+  const observerOptions = {
+    threshold: 0.1,
+    rootMargin: '0px 0px -50px 0px'
+  };
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+      }
+    });
+  }, observerOptions);
+
+  document.querySelectorAll('.animate-on-scroll').forEach(el => {
+    observer.observe(el);
+  });
+</script>

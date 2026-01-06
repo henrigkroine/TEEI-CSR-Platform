@@ -53,14 +53,14 @@ export type EngagementMetrics = z.infer<typeof EngagementMetricsSchema>;
 /**
  * Outcome scores by category
  */
-export const OutcomeScoresSchema = z.object({
+export const CampaignOutcomeScoresSchema = z.object({
   integration: z.number().min(0).max(1).optional(),
   language: z.number().min(0).max(1).optional(),
   jobReadiness: z.number().min(0).max(1).optional(),
   wellbeing: z.number().min(0).max(1).optional(),
 });
 
-export type OutcomeScores = z.infer<typeof OutcomeScoresSchema>;
+export type CampaignOutcomeScores = z.infer<typeof CampaignOutcomeScoresSchema>;
 
 /**
  * Snapshot metadata
@@ -85,7 +85,7 @@ export const FullSnapshotSchema = z.object({
 
   programInstances: ProgramInstancesSummarySchema.optional(),
   engagement: EngagementMetricsSchema.optional(),
-  outcomeScores: OutcomeScoresSchema.optional(),
+  outcomeScores: CampaignOutcomeScoresSchema.optional(),
 
   topEvidenceIds: z.array(z.string().uuid()).optional(),
   alerts: z.array(AlertSchema).optional(),

@@ -6,8 +6,9 @@
  * Displays all campaigns for a company with filtering, sorting, and upsell badges
  */
 import BaseLayout from '../../../../../layouts/BaseLayout.astro';
-import { hasPermission } from '../../../../../types/roles';
+import { hasPermission } from '../../../../../utils/rbac';
 import CampaignList from '../../../../../components/campaigns/CampaignList';
+import PageHeader from '../../../../../components/ui/PageHeader';
 
 // Extract route parameters
 const { lang, companyId } = Astro.params;
@@ -28,22 +29,25 @@ const canManageCampaigns = hasPermission(user.role, 'MANAGE_CAMPAIGNS');
 ---
 
 <BaseLayout title="Campaigns - TEEI Corporate Cockpit" lang={lang}>
-  <div class="campaigns-header">
-    <div>
-      <h1>Campaigns</h1>
-      <p class="breadcrumb">
-        <a href={`/${lang}/cockpit/${companyId}`}>Dashboard</a>
-        <span class="separator">›</span>
-        <span>Campaigns</span>
-      </p>
-    </div>
-    {canManageCampaigns && (
-      <a href={`/${lang}/cockpit/${companyId}/campaigns/new`} class="btn btn-primary">
-        <span class="icon">➕</span>
-        Create Campaign
-      </a>
-    )}
-  </div>
+  <PageHeader
+    title="Campaigns"
+    subtitle="Manage and monitor your social impact campaigns"
+    breadcrumbs={[
+      { label: 'Dashboard', href: `/${lang}/cockpit/${companyId}` },
+      { label: 'Campaigns' },
+    ]}
+    actions={
+      canManageCampaigns ? (
+        <a href={`/${lang}/cockpit/${companyId}/campaigns/new`} class="btn btn-primary">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="margin-right: 8px;">
+            <path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+          </svg>
+          Create Campaign
+        </a>
+      ) : undefined
+    }
+    client:load
+  />
 
   <div class="campaigns-container">
     <CampaignList
@@ -56,88 +60,36 @@ const canManageCampaigns = hasPermission(user.role, 'MANAGE_CAMPAIGNS');
 </BaseLayout>
 
 <style>
-  .campaigns-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: calc(var(--spacing-unit) * 4);
-    flex-wrap: wrap;
-    gap: calc(var(--spacing-unit) * 2);
-    padding-bottom: calc(var(--spacing-unit) * 3);
-    border-bottom: 2px solid var(--color-border);
-  }
-
-  h1 {
-    font-size: 2rem;
-    margin-bottom: calc(var(--spacing-unit) * 1);
-    color: var(--color-text);
-  }
-
-  .breadcrumb {
-    font-size: 0.875rem;
-    color: var(--color-text-secondary);
-    margin: 0;
-  }
-
-  .breadcrumb a {
-    color: var(--color-primary);
-    text-decoration: none;
-    transition: color 0.2s;
-  }
-
-  .breadcrumb a:hover {
-    color: var(--color-primary-dark);
-  }
-
-  .separator {
-    margin: 0 calc(var(--spacing-unit) * 1);
-  }
-
-  .btn {
-    display: inline-flex;
-    align-items: center;
-    gap: calc(var(--spacing-unit) * 1);
-    padding: calc(var(--spacing-unit) * 1.5) calc(var(--spacing-unit) * 2.5);
-    border: none;
-    border-radius: var(--border-radius);
-    font-size: 0.9375rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-    text-decoration: none;
-    text-align: center;
-    min-height: 44px; /* WCAG 2.2 Level AA touch target */
-  }
-
-  .btn-primary {
-    background-color: var(--color-primary);
-    color: white;
-  }
-
-  .btn-primary:hover {
-    background-color: #0052a3;
-  }
-
-  .icon {
-    font-size: 1.25rem;
-  }
-
   .campaigns-container {
-    background-color: var(--color-bg);
-    padding: calc(var(--spacing-unit) * 4);
-    border-radius: var(--border-radius);
-    box-shadow: var(--shadow-md);
+    background-color: var(--color-surface);
+    border-radius: var(--card-radius);
+    box-shadow: var(--shadow-card);
     border: 1px solid var(--color-border);
+    padding: var(--space-24);
+    animation: pageEnter 0.3s var(--ease-out) backwards;
+    animation-delay: 50ms;
+  }
+
+  @keyframes pageEnter {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
   @media (max-width: 768px) {
-    .campaigns-header {
-      flex-direction: column;
-      align-items: flex-start;
-    }
-
     .campaigns-container {
-      padding: calc(var(--spacing-unit) * 2);
+      padding: var(--space-16);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .campaigns-container {
+      animation: none;
     }
   }
 </style>

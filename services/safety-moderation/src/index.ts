@@ -5,7 +5,7 @@ import { screenRoutes } from './routes/screen.js';
 import { createHealthManager, setupHealthRoutes } from './health/index.js';
 
 const logger = createServiceLogger('safety-moderation');
-const PORT = parseInt(process.env.PORT_SAFETY_MODERATION || '3006');
+const PORT = parseInt(process.env.PORT_SAFETY_MODERATION || '3022');
 
 async function start() {
   const app = Fastify({

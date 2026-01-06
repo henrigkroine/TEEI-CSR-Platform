@@ -15,6 +15,7 @@ import { getTemplateManager, SectionType, Locale } from '../lib/prompts/index.js
 import { getCostAggregator } from '../middleware/cost-tracking.js';
 import { getAuditIntegration } from '../lib/audit-integration.js';
 import { createEvidenceLedger, EvidenceLedger } from '../evidence/ledger.js';
+import { pool } from '../db/connection.js';
 
 const logger = createServiceLogger('reporting:gen-reports');
 
@@ -91,6 +92,158 @@ interface GenerateReportResponse {
     estimatedCostUsd: string;
   };
   warnings?: string[];
+}
+
+/**
+ * Metrics data interface for report generation
+ */
+interface MetricsData {
+  companyName: string;
+  participantsCount: number;
+  sessionsCount: number;
+  volunteersCount: number;
+  avgConfidence: number;
+  avgBelonging: number;
+  avgJobReadiness: number;
+  avgLanguageLevel: number;
+  avgWellBeing: number;
+  sroiRatio: number;
+  visScore: number;
+}
+
+/**
+ * Fetch metrics for a company and period from database
+ */
+async function fetchMetricsForPeriod(
+  companyId: string,
+  periodStart: Date,
+  periodEnd: Date
+): Promise<MetricsData> {
+  const client = await pool.connect();
+  try {
+    // Query company name
+    const companyResult = await client.query(
+      'SELECT name FROM companies WHERE id = $1',
+      [companyId]
+    );
+    const companyName = companyResult.rows[0]?.name || 'Unknown Company';
+
+    // Query participant count (program enrollments)
+    const participantsResult = await client.query(
+      `SELECT COUNT(DISTINCT pe.id) as count
+       FROM program_enrollments pe
+       WHERE pe.company_id = $1
+         AND pe.enrolled_at >= $2
+         AND pe.enrolled_at <= $3`,
+      [companyId, periodStart, periodEnd]
+    );
+    const participantsCount = parseInt(participantsResult.rows[0]?.count || '0', 10);
+
+    // Query session count (kintell_sessions)
+    const sessionsResult = await client.query(
+      `SELECT COUNT(DISTINCT ks.id) as count
+       FROM kintell_sessions ks
+       WHERE ks.company_id = $1
+         AND ks.session_date >= $2
+         AND ks.session_date <= $3`,
+      [companyId, periodStart, periodEnd]
+    );
+    const sessionsCount = parseInt(sessionsResult.rows[0]?.count || '0', 10);
+
+    // Query volunteer count (buddy_matches)
+    const volunteersResult = await client.query(
+      `SELECT COUNT(DISTINCT bm.volunteer_id) as count
+       FROM buddy_matches bm
+       WHERE bm.company_id = $1
+         AND bm.matched_at >= $2
+         AND bm.matched_at <= $3`,
+      [companyId, periodStart, periodEnd]
+    );
+    const volunteersCount = parseInt(volunteersResult.rows[0]?.count || '0', 10);
+
+    // Query outcome averages (outcome_scores)
+    const outcomesResult = await client.query(
+      `SELECT
+         dimension,
+         AVG(score) as avg_score
+       FROM outcome_scores
+       WHERE company_id = $1
+         AND created_at >= $2
+         AND created_at <= $3
+       GROUP BY dimension`,
+      [companyId, periodStart, periodEnd]
+    );
+
+    let avgConfidence = 0;
+    let avgBelonging = 0;
+    let avgJobReadiness = 0;
+    let avgLanguageLevel = 0;
+    let avgWellBeing = 0;
+
+    for (const row of outcomesResult.rows) {
+      const score = parseFloat(row.avg_score || '0');
+      switch (row.dimension) {
+        case 'confidence':
+          avgConfidence = score;
+          break;
+        case 'belonging':
+        case 'integration':
+          avgBelonging = score;
+          break;
+        case 'job_readiness':
+          avgJobReadiness = score;
+          break;
+        case 'language':
+        case 'language_level':
+          avgLanguageLevel = score;
+          break;
+        case 'wellbeing':
+        case 'well_being':
+          avgWellBeing = score;
+          break;
+      }
+    }
+
+    // Query SROI and VIS from metrics_company_period
+    const metricsResult = await client.query(
+      `SELECT
+         sroi_ratio,
+         vis_score
+       FROM metrics_company_period
+       WHERE company_id = $1
+         AND period_start >= $2
+         AND period_end <= $3
+       ORDER BY period_end DESC
+       LIMIT 1`,
+      [companyId, periodStart, periodEnd]
+    );
+
+    const sroiRatio = metricsResult.rows[0]?.sroi_ratio
+      ? parseFloat(metricsResult.rows[0].sroi_ratio)
+      : 0;
+    const visScore = metricsResult.rows[0]?.vis_score
+      ? parseFloat(metricsResult.rows[0].vis_score)
+      : 0;
+
+    return {
+      companyName,
+      participantsCount,
+      sessionsCount,
+      volunteersCount,
+      avgConfidence,
+      avgBelonging,
+      avgJobReadiness,
+      avgLanguageLevel,
+      avgWellBeing,
+      sroiRatio,
+      visScore,
+    };
+  } catch (error) {
+    logger.error('Failed to fetch metrics from database', { error, companyId, periodStart, periodEnd });
+    throw new Error(`Failed to fetch metrics: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  } finally {
+    client.release();
+  }
 }
 
 /**
@@ -201,21 +354,22 @@ class ReportGenerator {
       logger.warn(`Failed to emit redaction completed event: ${error.message}`);
     }
 
-    // Step 3: Fetch metrics for the company/period
-    // TODO: Query metrics_company_period table
-    const metrics = {
-      companyName: 'Sample Company', // TODO: Fetch from database
-      participantsCount: 150,
-      sessionsCount: 450,
-      volunteersCount: 30,
-      avgConfidence: 0.78,
-      avgBelonging: 0.82,
-      avgJobReadiness: 0.65,
-      avgLanguageLevel: 0.71,
-      avgWellBeing: 0.76,
-      sroiRatio: 5.23,
-      visScore: 87.5,
-    };
+    // Step 3: Fetch metrics for the company/period from database
+    const metrics = await fetchMetricsForPeriod(
+      request.companyId,
+      periodStart,
+      periodEnd
+    );
+
+    logger.info('Fetched metrics from database', {
+      companyId: request.companyId,
+      companyName: metrics.companyName,
+      participantsCount: metrics.participantsCount,
+      sessionsCount: metrics.sessionsCount,
+      volunteersCount: metrics.volunteersCount,
+      sroiRatio: metrics.sroiRatio,
+      visScore: metrics.visScore,
+    });
 
     // Step 4: Generate each section using LLM
     const templateManager = getTemplateManager();
@@ -481,6 +635,7 @@ export async function genReportsRoutes(
     evidenceLedger
   );
 
+
   /**
    * POST /gen-reports/generate
    * Generate AI report with citations
@@ -534,6 +689,148 @@ export async function genReportsRoutes(
   );
 
   /**
+   * GET /companies/:companyId/gen-reports
+   * List generated reports for a company
+   */
+  app.get<{
+    Params: { companyId: string };
+    Querystring: {
+      type?: string;
+      status?: string;
+      sortBy?: 'date' | 'type';
+      sortOrder?: 'asc' | 'desc';
+    };
+  }>('/companies/:companyId/gen-reports', async (request, reply) => {
+    try {
+      const { companyId } = request.params;
+      const { type, status, sortBy = 'date', sortOrder = 'desc' } = request.query;
+
+      // Build query
+      let query = `
+        SELECT
+          rl.report_id as "reportId",
+          rl.period_start as "periodStart",
+          rl.period_end as "periodEnd",
+          rl.created_at as "generatedAt",
+          rl.tokens_total as "tokensUsed",
+          rl.sections,
+          rl.locale
+        FROM report_lineage rl
+        WHERE rl.company_id = $1
+      `;
+
+      const params: any[] = [companyId];
+      let paramIndex = 2;
+
+      // Filter by type (extract from sections JSONB array)
+      if (type && type !== 'all') {
+        // Map frontend report types to backend section types
+        const typeMap: Record<string, string> = {
+          quarterly: 'quarterly-report',
+          annual: 'annual-report',
+          board_presentation: 'board-presentation',
+          csrd: 'csrd-report',
+        };
+        const sectionType = typeMap[type] || type;
+        query += ` AND rl.sections::text LIKE $${paramIndex}`;
+        params.push(`%${sectionType}%`);
+        paramIndex++;
+      }
+
+      // Note: status filtering is not available in report_lineage table
+      // We'll default all reports to 'draft' status for now
+      // TODO: Add status field to report_lineage table or use a separate reports table
+
+      // Sort
+      if (sortBy === 'date') {
+        query += ` ORDER BY rl.created_at ${sortOrder.toUpperCase()}`;
+      } else if (sortBy === 'type') {
+        query += ` ORDER BY rl.sections::text ${sortOrder.toUpperCase()}`;
+      }
+
+      const result = await pool.query(query, params);
+
+      // Map database results to frontend format
+      const reports = result.rows.map((row) => {
+        // Extract report type from sections array
+        const sections = Array.isArray(row.sections) ? row.sections : JSON.parse(row.sections || '[]');
+        let reportType: string = 'quarterly'; // default
+        if (sections.length > 0) {
+          const firstSection = sections[0];
+          if (firstSection.includes('quarterly')) reportType = 'quarterly';
+          else if (firstSection.includes('annual')) reportType = 'annual';
+          else if (firstSection.includes('board')) reportType = 'board_presentation';
+          else if (firstSection.includes('csrd')) reportType = 'csrd';
+        }
+
+        return {
+          reportId: row.reportId,
+          reportType: reportType as any,
+          status: 'draft' as const, // Default to draft since status is not stored
+          period: {
+            from: row.periodStart.toISOString(),
+            to: row.periodEnd.toISOString(),
+          },
+          generatedAt: row.generatedAt.toISOString(),
+          tokensUsed: parseInt(row.tokensUsed, 10) || 0,
+        };
+      });
+
+      // Apply status filter in memory (since it's not in DB)
+      const filteredReports = status && status !== 'all'
+        ? reports.filter(r => r.status === status)
+        : reports;
+
+      reply.code(200).send({ reports: filteredReports });
+    } catch (error: any) {
+      logger.error(`Failed to list gen-reports: ${error.message}`, { error });
+      reply.code(500).send({
+        error: 'Failed to list reports',
+        message: error.message,
+      });
+    }
+  });
+
+  /**
+   * DELETE /companies/:companyId/gen-reports/:reportId
+   * Delete a generated report
+   */
+  app.delete<{
+    Params: { companyId: string; reportId: string };
+  }>('/companies/:companyId/gen-reports/:reportId', async (request, reply) => {
+    try {
+      const { companyId, reportId } = request.params;
+
+      // Verify the report belongs to the company
+      const checkResult = await pool.query(
+        'SELECT id FROM report_lineage WHERE report_id = $1 AND company_id = $2',
+        [reportId, companyId]
+      );
+
+      if (checkResult.rows.length === 0) {
+        return reply.code(404).send({
+          error: 'Report not found',
+          message: 'Report does not exist or does not belong to this company',
+        });
+      }
+
+      // Delete report (cascade will delete sections and citations)
+      await pool.query(
+        'DELETE FROM report_lineage WHERE report_id = $1 AND company_id = $2',
+        [reportId, companyId]
+      );
+
+      reply.code(200).send({ success: true });
+    } catch (error: any) {
+      logger.error(`Failed to delete gen-report: ${error.message}`, { error });
+      reply.code(500).send({
+        error: 'Failed to delete report',
+        message: error.message,
+      });
+    }
+  });
+
+  /**
    * GET /gen-reports/cost-summary
    * Get cost summary for generated reports
    */
@@ -552,3 +849,4 @@ export async function genReportsRoutes(
     }
   });
 }
+

@@ -217,10 +217,67 @@ export const CreateBeneficiaryGroupSchema = z.object({
 export type CreateBeneficiaryGroupInput = z.infer<typeof CreateBeneficiaryGroupSchema>;
 
 /**
- * Update beneficiary group request
- * All fields optional, same validation rules as create
+ * Base schema for beneficiary group (without refinements)
+ * Used for creating partial schemas
  */
-export const UpdateBeneficiaryGroupSchema = CreateBeneficiaryGroupSchema.partial();
+const BeneficiaryGroupBaseSchema = z.object({
+  name: z.string()
+    .min(1, "Group name is required")
+    .max(255, "Group name must be 255 characters or less")
+    .refine(
+      (val) => !val.toLowerCase().includes('email') && !val.toLowerCase().includes('@'),
+      "Group name must not contain email addresses or individual identifiers"
+    ),
+
+  groupType: BeneficiaryGroupTypeEnum,
+
+  countryCode: z.string()
+    .length(2, "Country code must be ISO 3166-1 alpha-2 (2 letters)")
+    .toUpperCase(),
+
+  primaryLanguages: z.array(z.string().length(2))
+    .min(1, "At least one primary language is required")
+    .max(10, "Maximum 10 languages allowed"),
+
+  eligibleProgramTypes: z.array(EligibleProgramTypeEnum)
+    .min(1, "At least one eligible program type is required"),
+
+  description: z.string().max(2000, "Description must be 2000 characters or less").optional(),
+  region: z.string().max(100).optional(),
+  city: z.string().max(100).optional(),
+
+  ageRange: AgeRangeSchema.optional(),
+  genderFocus: GenderFocusEnum.optional(),
+  languageRequirement: LanguageRequirementEnum.optional(),
+
+  legalStatusCategories: z.array(LegalStatusCategoryEnum)
+    .max(5, "Maximum 5 legal status categories")
+    .optional(),
+
+  eligibilityRules: EligibilityRulesSchema,
+
+  minGroupSize: z.number().int().min(1).max(10000).optional(),
+  maxGroupSize: z.number().int().min(1).max(100000).optional(),
+
+  tags: z.array(z.string().max(50))
+    .max(20, "Maximum 20 tags allowed")
+    .optional(),
+
+  partnerOrganizations: z.array(z.string().max(255))
+    .max(50, "Maximum 50 partner organizations")
+    .optional(),
+
+  internalNotes: z.string().max(5000).optional(),
+
+  isActive: z.boolean().optional(),
+  isPublic: z.boolean().optional(),
+});
+
+/**
+ * Update beneficiary group request
+ * All fields optional for partial updates
+ */
+export const UpdateBeneficiaryGroupSchema = BeneficiaryGroupBaseSchema.partial();
 
 export type UpdateBeneficiaryGroupInput = z.infer<typeof UpdateBeneficiaryGroupSchema>;
 

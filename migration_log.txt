@@ -1,0 +1,24 @@
+
+> @teei/shared-schema@1.0.0 db:migrate D:\Dev\VS Projects\TEEI\TEEI_CSR_Platform\packages\shared-schema
+> tsx src/migrate.ts
+
+Running migrations...
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P06',
+  message: 'schema "drizzle" already exists, skipping',
+  file: 'schemacmds.c',
+  line: '132',
+  routine: 'CreateSchemaCommand'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "__drizzle_migrations" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+Migrations completed successfully!

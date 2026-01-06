@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { ReportListItem, ReportType, ReportStatus } from '../../types/reports';
 import GenerateReportModal from './GenerateReportModal';
 
@@ -19,25 +19,21 @@ export default function ReportsListTable({ companyId, lang = 'en' }: ReportsList
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showGenerateModal, setShowGenerateModal] = useState(false);
-  
+
   // Filters
   const [filterType, setFilterType] = useState<ReportType | 'all'>('all');
   const [filterStatus, setFilterStatus] = useState<ReportStatus | 'all'>('all');
   const [sortBy, setSortBy] = useState<'date' | 'type'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  
+
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
 
-  useEffect(() => {
-    fetchReports();
-  }, [companyId, filterType, filterStatus, sortBy, sortOrder]);
-
-  const fetchReports = async () => {
+  const fetchReports = useCallback(async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const params = new URLSearchParams({
         ...(filterType !== 'all' && { type: filterType }),
@@ -61,7 +57,11 @@ export default function ReportsListTable({ companyId, lang = 'en' }: ReportsList
     } finally {
       setLoading(false);
     }
-  };
+  }, [companyId, filterType, filterStatus, sortBy, sortOrder]);
+
+  useEffect(() => {
+    fetchReports();
+  }, [fetchReports]);
 
   const handleDelete = async (reportId: string) => {
     if (!confirm('Are you sure you want to delete this report? This action cannot be undone.')) {

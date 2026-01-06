@@ -13,10 +13,10 @@ export default function ParameterControls({ parameters, onChange }: ParameterCon
     });
   };
 
-  const handleGrantAmountChange = (value: number) => {
+  const handleCampaignBudgetChange = (value: number) => {
     onChange({
       ...parameters,
-      grantAmount: { ...parameters.grantAmount, adjustment: value, currency: 'EUR' },
+      campaignBudget: { ...parameters.campaignBudget, adjustment: value, currency: 'EUR' },
     });
   };
 
@@ -54,7 +54,7 @@ export default function ParameterControls({ parameters, onChange }: ParameterCon
   };
 
   const volunteerHoursAdjustment = parameters.volunteerHours?.adjustment || 1.0;
-  const grantAmountAdjustment = parameters.grantAmount?.adjustment || 1.0;
+  const campaignBudgetAdjustment = parameters.campaignBudget?.adjustment || 1.0;
   const cohortSizeAdjustment = parameters.cohortSize?.adjustment || 1.0;
 
   return (
@@ -100,12 +100,12 @@ export default function ParameterControls({ parameters, onChange }: ParameterCon
         </div>
       </div>
 
-      {/* Grant Amount */}
+      {/* Campaign Budget */}
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Grant Amount (EUR)
+          Campaign Budget (EUR)
           <span className="ml-2 text-sm font-normal text-gray-500">
-            ({((grantAmountAdjustment - 1) * 100).toFixed(0)}% change)
+            ({((campaignBudgetAdjustment - 1) * 100).toFixed(0)}% change)
           </span>
         </label>
         <div className="flex items-center gap-4">
@@ -114,24 +114,24 @@ export default function ParameterControls({ parameters, onChange }: ParameterCon
             min="0.5"
             max="3.0"
             step="0.1"
-            value={grantAmountAdjustment}
-            onChange={(e) => handleGrantAmountChange(parseFloat(e.target.value))}
+            value={campaignBudgetAdjustment}
+            onChange={(e) => handleCampaignBudgetChange(parseFloat(e.target.value))}
             className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
-            aria-label="Adjust grant amount multiplier"
+            aria-label="Adjust campaign budget multiplier"
             aria-valuemin={0.5}
             aria-valuemax={3.0}
-            aria-valuenow={grantAmountAdjustment}
-            aria-valuetext={`${(grantAmountAdjustment * 100).toFixed(0)}% of baseline`}
+            aria-valuenow={campaignBudgetAdjustment}
+            aria-valuetext={`${(campaignBudgetAdjustment * 100).toFixed(0)}% of baseline`}
           />
           <input
             type="number"
-            value={grantAmountAdjustment.toFixed(1)}
-            onChange={(e) => handleGrantAmountChange(parseFloat(e.target.value) || 1.0)}
+            value={campaignBudgetAdjustment.toFixed(1)}
+            onChange={(e) => handleCampaignBudgetChange(parseFloat(e.target.value) || 1.0)}
             min="0.5"
             max="3.0"
             step="0.1"
             className="w-20 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm dark:bg-gray-700 dark:text-white"
-            aria-label="Grant amount multiplier value"
+            aria-label="Campaign budget multiplier value"
           />
         </div>
         <div className="mt-1 text-xs text-gray-500 flex justify-between">

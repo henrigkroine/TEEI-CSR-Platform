@@ -4,7 +4,7 @@
 
 The Analytics Service provides high-performance time-series analytics and business intelligence for the TEEI CSR Platform. Built on ClickHouse for columnar analytics, Redis for caching, and Postgres for metadata, it offers real-time insights into program outcomes, cohort comparisons, conversion funnels, and industry benchmarks.
 
-**Base URL**: `http://localhost:3008`
+**Base URL**: `http://localhost:3023`
 **API Version**: `v1`
 
 ## Architecture
@@ -108,7 +108,7 @@ Get time-series trends for outcome scores over time.
 #### Example Request
 
 ```bash
-curl -X GET "http://localhost:3008/v1/analytics/trends?companyId=123e4567-e89b-12d3-a456-426614174000&dimension=confidence&granularity=week&startDate=2025-01-01&endDate=2025-11-14&page=1&pageSize=10" \
+curl -X GET "http://localhost:3023/v1/analytics/trends?companyId=123e4567-e89b-12d3-a456-426614174000&dimension=confidence&granularity=week&startDate=2025-01-01&endDate=2025-11-14&page=1&pageSize=10" \
   -H "Authorization: Bearer <token>"
 ```
 
@@ -176,7 +176,7 @@ Compare multiple companies or cohorts across a specific dimension.
 #### Example Request
 
 ```bash
-curl -X GET "http://localhost:3008/v1/analytics/cohorts?companyIds=123e4567-e89b-12d3-a456-426614174000,223e4567-e89b-12d3-a456-426614174001&dimension=job_readiness&startDate=2025-01-01&endDate=2025-11-14" \
+curl -X GET "http://localhost:3023/v1/analytics/cohorts?companyIds=123e4567-e89b-12d3-a456-426614174000,223e4567-e89b-12d3-a456-426614174001&dimension=job_readiness&startDate=2025-01-01&endDate=2025-11-14" \
   -H "Authorization: Bearer <token>"
 ```
 
@@ -240,7 +240,7 @@ Analyze conversion funnels to identify drop-off points in user journeys.
 #### Example Request
 
 ```bash
-curl -X GET "http://localhost:3008/v1/analytics/funnels?companyId=123e4567-e89b-12d3-a456-426614174000&stages=enrolled,matched,session_completed,program_completed&startDate=2025-01-01&endDate=2025-11-14" \
+curl -X GET "http://localhost:3023/v1/analytics/funnels?companyId=123e4567-e89b-12d3-a456-426614174000&stages=enrolled,matched,session_completed,program_completed&startDate=2025-01-01&endDate=2025-11-14" \
   -H "Authorization: Bearer <token>"
 ```
 
@@ -313,7 +313,7 @@ Compare company performance against industry, region, or company size benchmarks
 #### Example Request
 
 ```bash
-curl -X GET "http://localhost:3008/v1/analytics/benchmarks?companyId=123e4567-e89b-12d3-a456-426614174000&compareWith=industry&dimension=well_being&startDate=2025-01-01&endDate=2025-11-14" \
+curl -X GET "http://localhost:3023/v1/analytics/benchmarks?companyId=123e4567-e89b-12d3-a456-426614174000&compareWith=industry&dimension=well_being&startDate=2025-01-01&endDate=2025-11-14" \
   -H "Authorization: Bearer <token>"
 ```
 
@@ -373,7 +373,7 @@ curl -X GET "http://localhost:3008/v1/analytics/benchmarks?companyId=123e4567-e8
 Basic health check.
 
 ```bash
-curl -X GET "http://localhost:3008/health"
+curl -X GET "http://localhost:3023/health"
 ```
 
 **Response**:
@@ -574,7 +574,7 @@ NATS_URL=nats://localhost:4222
 import axios from 'axios';
 
 const analyticsClient = axios.create({
-  baseURL: 'http://localhost:3008',
+  baseURL: 'http://localhost:3023',
   headers: {
     Authorization: `Bearer ${jwtToken}`,
   },

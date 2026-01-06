@@ -11,7 +11,6 @@
  */
 
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import { broadcastDashboardUpdate } from '../routes/sse.js';
 
 export interface CacheEntry {
   data: unknown;
@@ -226,11 +225,7 @@ export function invalidateDashboardCache(companyId: string): void {
 
   console.log(`[Cache] Invalidated ${invalidated} entries for company ${companyId}`);
 
-  // Notify clients to refetch
-  broadcastDashboardUpdate(companyId, {
-    type: 'cache_invalidated',
-    timestamp: new Date().toISOString(),
-  });
+  // Note: SSE notification is handled by the caller to avoid circular dependency
 }
 
 /**

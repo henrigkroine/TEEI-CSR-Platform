@@ -77,8 +77,8 @@ docker-compose -f docker-compose.e2e.yml down -v
 ```bash
 export BUDDY_SYSTEM_URL="http://localhost:3001"
 export CSR_PLATFORM_URL="http://localhost:4321"
-export API_GATEWAY_URL="http://localhost:3000"
-export BUDDY_CONNECTOR_URL="http://localhost:3010"
+export API_GATEWAY_URL="http://localhost:3017"
+export BUDDY_CONNECTOR_URL="http://localhost:3025"
 export BUDDY_WEBHOOK_SECRET="test-webhook-secret-buddy-e2e"
 ```
 
@@ -178,7 +178,7 @@ await takeScreenshot(page, 'dashboard');
 const value = await getMetricValue(page, '[data-widget="matches"]');
 
 // Check service health
-const healthy = await checkServiceHealth('http://localhost:3000');
+const healthy = await checkServiceHealth('http://localhost:3017');
 ```
 
 ## Webhook Helpers

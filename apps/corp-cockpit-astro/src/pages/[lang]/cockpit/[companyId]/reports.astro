@@ -2,6 +2,7 @@
 import BaseLayout from '../../../../layouts/BaseLayout.astro';
 import { hasPermission } from '../../../../utils/rbac';
 import ReportsListTable from '../../../../components/reports/ReportsListTable';
+import PageHeader from '../../../../components/ui/PageHeader';
 
 // Extract route parameters
 const { lang, companyId } = Astro.params;
@@ -32,81 +33,84 @@ const pageTitles = {
 };
 
 const pageTitle = pageTitles[lang as keyof typeof pageTitles] || pageTitles.en;
+const pageSubtitles = {
+  en: 'View and manage your generated impact reports',
+  no: 'Se og administrer dine genererte innvirkningsrapporter',
+  uk: 'Переглядайте та керуйте згенерованими звітами про вплив'
+};
+
+const pageSubtitle = pageSubtitles[lang as keyof typeof pageSubtitles] || pageSubtitles.en;
 ---
 
 <BaseLayout title={`${pageTitle} - TEEI Corporate Cockpit`} lang={lang}>
   <div class="reports-page">
-    {/* Breadcrumb */}
-    <nav aria-label="Breadcrumb" class="breadcrumb">
-      <ol>
-        <li>
-          <a href={`/${lang}/cockpit/${companyId}`}>Dashboard</a>
-        </li>
-        <li aria-current="page">{pageTitle}</li>
-      </ol>
-    </nav>
+    <PageHeader
+      title={pageTitle}
+      subtitle={pageSubtitle}
+      breadcrumbs={[
+        { label: 'Dashboard', href: `/${lang}/cockpit/${companyId}` },
+        { label: pageTitle },
+      ]}
+      client:load
+    />
 
     {/* Main Content */}
     <main class="reports-content">
-      <ReportsListTable 
-        companyId={companyId} 
-        lang={lang}
-        client:load
-      />
+      <div class="reports-container">
+        <ReportsListTable 
+          companyId={companyId} 
+          lang={lang}
+          client:load
+        />
+      </div>
     </main>
   </div>
 
   <style>
     .reports-page {
-      padding: 2rem;
+      padding: var(--space-24);
       max-width: 1400px;
       margin: 0 auto;
-    }
-
-    .breadcrumb {
-      margin-bottom: 2rem;
-    }
-
-    .breadcrumb ol {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      list-style: none;
-      padding: 0;
-      margin: 0;
-      font-size: 0.875rem;
-    }
-
-    .breadcrumb li:not(:last-child)::after {
-      content: '›';
-      margin-left: 0.5rem;
-      color: var(--color-foreground);
-      opacity: 0.4;
-    }
-
-    .breadcrumb a {
-      color: var(--color-primary);
-      text-decoration: none;
-      transition: opacity 0.2s;
-    }
-
-    .breadcrumb a:hover {
-      opacity: 0.8;
-      text-decoration: underline;
-    }
-
-    .breadcrumb li[aria-current='page'] {
-      color: var(--color-foreground);
-      opacity: 0.6;
     }
 
     .reports-content {
       background: var(--color-background);
     }
 
+    .reports-container {
+      background-color: var(--color-surface);
+      border-radius: var(--card-radius);
+      box-shadow: var(--shadow-card);
+      border: 1px solid var(--color-border);
+      padding: var(--space-24);
+      animation: pageEnter 0.3s var(--ease-out) backwards;
+      animation-delay: 50ms;
+    }
+
+    @keyframes pageEnter {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
     @media (max-width: 768px) {
       .reports-page {
-        padding: 1rem;
+        padding: var(--space-16);
+      }
+
+      .reports-container {
+        padding: var(--space-16);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .reports-container {
+        animation: none;
       }
     }
   </style>

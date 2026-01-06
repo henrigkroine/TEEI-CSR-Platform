@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { EvidenceResponse, EvidenceFilters, OutcomeDimension } from '@teei/shared-types';
 
 interface EvidenceExplorerProps {
@@ -28,11 +28,6 @@ export default function EvidenceExplorer({ companyId, lang }: EvidenceExplorerPr
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [campaignsLoading, setCampaignsLoading] = useState(true);
 
-  // Load campaigns on mount
-  useEffect(() => {
-    fetchCampaigns();
-  }, [companyId]);
-
   // Parse URL query params on mount (deep link support)
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -42,11 +37,7 @@ export default function EvidenceExplorer({ companyId, lang }: EvidenceExplorerPr
     }
   }, []);
 
-  useEffect(() => {
-    fetchEvidence();
-  }, [programType, dimension, startDate, endDate, campaignId]);
-
-  async function fetchCampaigns() {
+  const fetchCampaigns = useCallback(async () => {
     setCampaignsLoading(true);
     try {
       const response = await fetch(`/api/campaigns?companyId=${companyId}&limit=100`);
@@ -61,9 +52,14 @@ export default function EvidenceExplorer({ companyId, lang }: EvidenceExplorerPr
     } finally {
       setCampaignsLoading(false);
     }
-  }
+  }, [companyId]);
 
-  async function fetchEvidence() {
+  // Load campaigns on mount
+  useEffect(() => {
+    fetchCampaigns();
+  }, [fetchCampaigns]);
+
+  const fetchEvidence = useCallback(async () => {
     setLoading(true);
     setError(null);
 
@@ -92,7 +88,11 @@ export default function EvidenceExplorer({ companyId, lang }: EvidenceExplorerPr
     } finally {
       setLoading(false);
     }
-  }
+  }, [startDate, endDate, programType, dimension, search, campaignId]);
+
+  useEffect(() => {
+    fetchEvidence();
+  }, [fetchEvidence]);
 
   async function exportCSRD() {
     try {

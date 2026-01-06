@@ -44,7 +44,7 @@ const METHOD_ACTION_MAP: Record<string, Action> = {
 const engine = new EntitlementEngine({
   cache: {
     host: process.env.REDIS_HOST || 'localhost',
-    port: parseInt(process.env.REDIS_PORT || '6379'),
+    port: parseInt(process.env.REDIS_PORT || '6381'),
     password: process.env.REDIS_PASSWORD,
     ttl: 300, // 5 minutes
     keyPrefix: 'entitlement',

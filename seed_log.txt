@@ -1,0 +1,30 @@
+
+> @teei/shared-schema@1.0.0 db:seed D:\Dev\VS Projects\TEEI\TEEI_CSR_Platform\packages\shared-schema
+> tsx src/seed/index.ts
+
+Seeding database...
+Creating companies...
+Creating users...
+Seeding failed: PostgresError: duplicate key value violates unique constraint "users_email_key"
+    at ErrorResponse (file:///D:/Dev/VS%20Projects/TEEI/TEEI_CSR_Platform/node_modules/postgres/src/connection.js:794:26)
+    at handle (file:///D:/Dev/VS%20Projects/TEEI/TEEI_CSR_Platform/node_modules/postgres/src/connection.js:480:6)
+    at Socket.data (file:///D:/Dev/VS%20Projects/TEEI/TEEI_CSR_Platform/node_modules/postgres/src/connection.js:315:9)
+    at Socket.emit (node:events:519:28)
+    at addChunk (node:internal/streams/readable:561:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:512:3)
+    at Readable.push (node:internal/streams/readable:392:5)
+    at TCP.onStreamRead (node:internal/stream_base_commons:189:23) {
+  severity_local: 'ERROR',
+  severity: 'ERROR',
+  code: '23505',
+  detail: 'Key (email)=(admin@teei.org) already exists.',
+  schema_name: 'public',
+  table_name: 'users',
+  constraint_name: 'users_email_key',
+  file: 'nbtinsert.c',
+  line: '666',
+  routine: '_bt_check_unique'
+}
+D:\Dev\VS Projects\TEEI\TEEI_CSR_Platform\packages\shared-schema:
+ΓÇëERR_PNPM_RECURSIVE_RUN_FIRST_FAILΓÇë @teei/shared-schema@1.0.0 db:seed: `tsx src/seed/index.ts`
+Exit status 1

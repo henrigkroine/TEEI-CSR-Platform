@@ -93,6 +93,11 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Skip external resources (fonts, CDNs) - let browser handle them directly
+  if (url.origin !== self.location.origin) {
+    return;
+  }
+
   // Strategy 1: API calls - Network first, fall back to cache, then offline
   if (isApiRequest(url)) {
     event.respondWith(networkFirstStrategy(request, API_CACHE));
@@ -246,10 +251,14 @@ async function cacheFirstStrategy(request, cacheName) {
 async function staleWhileRevalidateStrategy(request, cacheName) {
   const cachedResponse = await caches.match(request);
 
+  // IMPORTANT: clone immediately. If we wait for caches.open() first, the browser may
+  // start consuming the response body and Response.clone() will throw.
   const fetchPromise = fetch(request).then((networkResponse) => {
     if (networkResponse && networkResponse.status === 200) {
-      const cache = caches.open(cacheName);
-      cache.then((c) => c.put(request, networkResponse.clone()));
+      const responseClone = networkResponse.clone();
+      caches.open(cacheName).then((c) => c.put(request, responseClone)).catch((err) => {
+        console.log('[SW] Cache put failed:', err);
+      });
     }
     return networkResponse;
   }).catch((error) => {

@@ -242,25 +242,25 @@ Transform qualitative social impact data from youth empowerment programs into qu
 
 | Service | Port | Status |
 |---------|------|--------|
-| API Gateway | 3000 | ✅ |
-| Unified Profile | 3001 | ✅ |
-| Kintell Connector | 3002 | ✅ |
-| Buddy Service | 3003 | ✅ |
-| Upskilling Connector | 3004 | ✅ |
-| Q2Q AI | 3005 | ✅ |
-| Safety Moderation | 3006 | ✅ |
-| Analytics | 3007 | ⚠️ Partial |
-| Impact-In | 3008 | ⚠️ Stub |
-| Journey Engine | 3009 | ⚠️ Partial |
-| Reporting | 3010 | ✅ |
-| Discord Bot | 3011 | ⚠️ Partial |
-| Buddy Connector | 3012 | ⚠️ Stub |
+| API Gateway | 3017 | ✅ |
+| Unified Profile | 3018 | ✅ |
+| Kintell Connector | 3027 | ✅ |
+| Buddy Service | 3019 | ✅ |
+| Upskilling Connector | 3028 | ✅ |
+| Q2Q AI | 3021 | ✅ |
+| Safety Moderation | 3022 | ✅ |
+| Analytics | 3023 | ⚠️ Partial |
+| Impact-In | 3025 | ⚠️ Stub |
+| Journey Engine | 3024 | ⚠️ Partial |
+| Reporting | 4017 | ✅ |
+| Discord Bot | 3026 | ⚠️ Partial |
+| Buddy Connector | 3029 | ⚠️ Stub |
 
 ---
 
 ## Service-by-Service Status
 
-### 1. API Gateway (Port 3000) ✅ Complete
+### 1. API Gateway (Port 3017) ✅ Complete
 **Status**: Production-ready
 **Routes**: 12 versioned endpoints
 **Features**:
@@ -279,7 +279,7 @@ Transform qualitative social impact data from youth empowerment programs into qu
 
 ---
 
-### 2. Unified Profile Service (Port 3001) ✅ Complete
+### 2. Unified Profile Service (Port 3018) ✅ Complete
 **Status**: Operational
 **Features**:
 - ✅ Single source of truth for user identity
@@ -294,7 +294,7 @@ Transform qualitative social impact data from youth empowerment programs into qu
 
 ---
 
-### 3. Kintell Connector (Port 3002) ✅ Complete
+### 3. Kintell Connector (Port 3027) ✅ Complete
 **Status**: Production-ready
 **Features**:
 - ✅ CSV upload with validation
@@ -309,7 +309,7 @@ Transform qualitative social impact data from youth empowerment programs into qu
 
 ---
 
-### 4. Buddy Service (Port 3003) ✅ Complete
+### 4. Buddy Service (Port 3019) ✅ Complete
 **Status**: Operational
 **Features**:
 - ✅ Match lifecycle management

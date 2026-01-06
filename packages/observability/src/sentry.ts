@@ -13,8 +13,18 @@
  */
 
 import * as Sentry from '@sentry/node';
-import { ProfilingIntegration } from '@sentry/profiling-node';
 import type { Event, EventHint, Breadcrumb } from '@sentry/node';
+
+let ProfilingIntegration: any = null;
+let profilingAvailable = false;
+
+try {
+  const profilingModule = require('@sentry/profiling-node');
+  ProfilingIntegration = profilingModule.ProfilingIntegration;
+  profilingAvailable = true;
+} catch {
+  console.warn('Sentry profiling-node not available (native module may be incompatible with Node version). Profiling disabled.');
+}
 
 export interface SentryConfig {
   dsn: string;
@@ -57,8 +67,8 @@ export function initializeSentry(config: SentryConfig): void {
     // Default integrations
   ];
 
-  // Add profiling integration if enabled
-  if (enableProfiling) {
+  // Add profiling integration if enabled AND available
+  if (enableProfiling && profilingAvailable && ProfilingIntegration) {
     integrations.push(new ProfilingIntegration());
   }
 
@@ -71,7 +81,7 @@ export function initializeSentry(config: SentryConfig): void {
     // Sampling configuration
     sampleRate,
     tracesSampleRate: enableTracing ? tracesSampleRate : 0,
-    profilesSampleRate: enableProfiling ? profilesSampleRate : 0,
+    profilesSampleRate: (enableProfiling && profilingAvailable) ? profilesSampleRate : 0,
 
     // Integrations
     integrations,
@@ -125,7 +135,7 @@ export function initializeSentry(config: SentryConfig): void {
   console.log(`  - Release: ${release}`);
   console.log(`  - Sample Rate: ${sampleRate * 100}%`);
   console.log(`  - Traces Sample Rate: ${tracesSampleRate * 100}%`);
-  console.log(`  - Profiling: ${enableProfiling ? 'enabled' : 'disabled'}`);
+  console.log(`  - Profiling: ${enableProfiling && profilingAvailable ? 'enabled' : 'disabled'}${enableProfiling && !profilingAvailable ? ' (native module unavailable)' : ''}`);
 }
 
 /**

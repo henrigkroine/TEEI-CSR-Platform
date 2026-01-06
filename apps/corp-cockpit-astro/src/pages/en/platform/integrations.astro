@@ -1,0 +1,1504 @@
+---
+// /en/platform/integrations.astro - Integrations Marketing Page
+import BaseLayout from '@layouts/BaseLayout.astro';
+import '@/styles/premium-cards.css';
+---
+
+<BaseLayout title="Integrations - TEEI CSR Platform" lang="en">
+  <!-- FIXED NAVIGATION -->
+  <nav class="nav">
+    <div class="nav-container">
+      <a href="/en" class="nav-logo">TEEI</a>
+      <div class="nav-links">
+        <a href="/en#programs">Programs</a>
+        <a href="/en#platform">Platform</a>
+        <a href="/en#about">About</a>
+      </div>
+      <a href="/en/contact" class="nav-cta">Get a Demo</a>
+    </div>
+  </nav>
+
+  <!-- HERO SECTION -->
+  <section class="hero">
+    <div class="hero-content animate-on-scroll">
+      <p class="hero-eyebrow">INTEGRATIONS</p>
+      <h1>
+        Connects With Your <span class="accent">CSR Stack</span>
+      </h1>
+      <p class="hero-subtitle">
+        Export impact data to Benevity, Goodera, Workday, and more. Seamless data flow.
+      </p>
+      <div class="hero-ctas">
+        <a href="/en/docs/api" class="btn btn-primary btn-premium">View API Docs</a>
+        <a href="/en/contact" class="btn btn-secondary btn-premium">Contact Sales →</a>
+      </div>
+    </div>
+
+    <!-- Scroll Indicator -->
+    <div class="scroll-indicator">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="6 9 12 15 18 9"></polyline>
+      </svg>
+    </div>
+  </section>
+
+  <!-- INTEGRATION CARDS SECTION -->
+  <section class="integrations-section">
+    <div class="container">
+      <div class="section-header animate-on-scroll">
+        <span class="section-label">PARTNER ECOSYSTEM</span>
+        <h2>Built for Your CSR Tools</h2>
+        <p class="section-subtitle">
+          Whether you're using enterprise platforms or building custom workflows, TEEI connects seamlessly.
+        </p>
+      </div>
+
+      <div class="integrations-grid">
+        <!-- Benevity -->
+        <div class="integration-card animate-on-scroll">
+          <div class="integration-header">
+            <div class="integration-logo">
+              <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                <line x1="12" y1="22.08" x2="12" y2="12"></line>
+              </svg>
+            </div>
+            <span class="status-badge status-production">Production Ready</span>
+          </div>
+          <h3>Benevity</h3>
+          <p class="integration-description">
+            Bi-directional sync, volunteer matching, and automatic hours tracking. Full integration with Benevity's volunteer management platform.
+          </p>
+          <ul class="feature-list">
+            <li>Automatic session logging</li>
+            <li>Two-way data sync</li>
+            <li>Impact metrics export</li>
+          </ul>
+        </div>
+
+        <!-- Goodera -->
+        <div class="integration-card animate-on-scroll">
+          <div class="integration-header">
+            <div class="integration-logo">
+              <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+              </svg>
+            </div>
+            <span class="status-badge status-coming">Coming Q2 2025</span>
+          </div>
+          <h3>Goodera</h3>
+          <p class="integration-description">
+            Campaign data, reporting, and CSR program analytics. Seamless integration with Goodera's impact platform.
+          </p>
+          <ul class="feature-list">
+            <li>Campaign performance data</li>
+            <li>Custom report generation</li>
+            <li>Beneficiary metrics</li>
+          </ul>
+        </div>
+
+        <!-- Workday -->
+        <div class="integration-card animate-on-scroll">
+          <div class="integration-header">
+            <div class="integration-logo">
+              <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+              </svg>
+            </div>
+            <span class="status-badge status-coming">Coming Q3 2025</span>
+          </div>
+          <h3>Workday</h3>
+          <p class="integration-description">
+            HR integration, employee data synchronization, and volunteer profile management through Workday's HCM platform.
+          </p>
+          <ul class="feature-list">
+            <li>Employee directory sync</li>
+            <li>Skills matching</li>
+            <li>Time tracking integration</li>
+          </ul>
+        </div>
+
+        <!-- Kintell -->
+        <div class="integration-card animate-on-scroll">
+          <div class="integration-header">
+            <div class="integration-logo">
+              <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect>
+                <polyline points="17 2 12 7 7 2"></polyline>
+              </svg>
+            </div>
+            <span class="status-badge status-internal">Internal</span>
+          </div>
+          <h3>Kintell</h3>
+          <p class="integration-description">
+            Video session platform integration with automatic logging of mentoring calls, language practice, and buddy sessions.
+          </p>
+          <ul class="feature-list">
+            <li>Auto-session logging</li>
+            <li>Video call metadata</li>
+            <li>Participant tracking</li>
+          </ul>
+        </div>
+
+        <!-- Upskilling Academy -->
+        <div class="integration-card animate-on-scroll">
+          <div class="integration-header">
+            <div class="integration-logo">
+              <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 10v6M2 10l10-5 10 5-10 5z"></path>
+                <path d="M6 12v5c3 3 9 3 12 0v-5"></path>
+              </svg>
+            </div>
+            <span class="status-badge status-internal">Internal</span>
+          </div>
+          <h3>Upskilling Academy</h3>
+          <p class="integration-description">
+            Course data, certifications, and learning outcomes. Track professional development impact across refugee programs.
+          </p>
+          <ul class="feature-list">
+            <li>Course completion tracking</li>
+            <li>Certification awards</li>
+            <li>Learning analytics</li>
+          </ul>
+        </div>
+
+        <!-- Buddy System -->
+        <div class="integration-card animate-on-scroll">
+          <div class="integration-header">
+            <div class="integration-logo">
+              <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+              </svg>
+            </div>
+            <span class="status-badge status-internal">Internal</span>
+          </div>
+          <h3>Buddy System</h3>
+          <p class="integration-description">
+            Matching algorithms, session tracking, and relationship analytics for the Buddy integration program.
+          </p>
+          <ul class="feature-list">
+            <li>Smart matching</li>
+            <li>Session scheduling</li>
+            <li>Relationship tracking</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TECHNICAL SPECIFICATIONS SECTION -->
+  <section class="specs-section">
+    <div class="container">
+      <div class="section-header animate-on-scroll">
+        <span class="section-label">TECHNICAL FOUNDATION</span>
+        <h2>Enterprise-Grade Integration</h2>
+        <p class="section-subtitle">
+          Built for security, scalability, and reliability. Our API follows industry best practices.
+        </p>
+      </div>
+
+      <div class="specs-grid">
+        <div class="spec-card animate-on-scroll">
+          <div class="spec-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="16 18 22 12 16 6"></polyline>
+              <polyline points="8 6 2 12 8 18"></polyline>
+            </svg>
+          </div>
+          <h3>RESTful API</h3>
+          <p>OpenAPI 3.0 specification with JSON responses. Comprehensive documentation and interactive testing.</p>
+        </div>
+
+        <div class="spec-card animate-on-scroll">
+          <div class="spec-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+          </div>
+          <h3>OAuth 2.0</h3>
+          <p>Secure authentication with token refresh support. Industry-standard authorization flows.</p>
+        </div>
+
+        <div class="spec-card animate-on-scroll">
+          <div class="spec-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="1" x2="12" y2="23"></line>
+              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+            </svg>
+          </div>
+          <h3>Rate Limiting</h3>
+          <p>1,000 requests per hour with burst support. Fair usage policies and quota management.</p>
+        </div>
+
+        <div class="spec-card animate-on-scroll">
+          <div class="spec-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+            </svg>
+          </div>
+          <h3>Webhooks</h3>
+          <p>Real-time event notifications for session completions, campaign updates, and impact metrics.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- API PREVIEW SECTION -->
+  <section class="api-preview-section">
+    <div class="container">
+      <div class="section-header animate-on-scroll">
+        <span class="section-label">QUICK START</span>
+        <h2>Simple, Powerful API</h2>
+        <p class="section-subtitle">
+          Get started in minutes. Fetch impact data with a single request.
+        </p>
+      </div>
+
+      <div class="api-preview-container animate-on-scroll">
+        <div class="code-header">
+          <div class="code-dots">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+          <span class="code-title">GET /api/v1/campaigns/:id/impact</span>
+        </div>
+        <pre class="code-block"><code>{`{
+  "campaign_id": "camp_abc123",
+  "name": "Q4 2024 Language Connect",
+  "metrics": {
+    "total_sessions": 1247,
+    "total_volunteers": 89,
+    "total_beneficiaries": 234,
+    "total_hours": 623.5,
+    "sroi": 3.8
+  },
+  "outcomes": {
+    "language_proficiency_gain": 0.87,
+    "employment_rate_increase": 0.23,
+    "social_integration_score": 0.91
+  },
+  "evidence_items": 156,
+  "last_updated": "2024-12-01T10:30:00Z"
+}`}</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOR DEVELOPERS SECTION -->
+  <section class="developers-section">
+    <div class="container">
+      <div class="section-header animate-on-scroll">
+        <span class="section-label">DEVELOPER RESOURCES</span>
+        <h2>Everything You Need to Build</h2>
+      </div>
+
+      <div class="resources-grid">
+        <a href="/en/docs/api" class="resource-card animate-on-scroll">
+          <div class="resource-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+              <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+          </div>
+          <h3>API Documentation</h3>
+          <p>Complete API reference with examples, authentication guides, and endpoint descriptions.</p>
+          <span class="resource-link">View Docs →</span>
+        </a>
+
+        <a href="/en/docs/sdk" class="resource-card animate-on-scroll">
+          <div class="resource-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="16 18 22 12 16 6"></polyline>
+              <polyline points="8 6 2 12 8 18"></polyline>
+            </svg>
+          </div>
+          <h3>SDK Downloads</h3>
+          <p>Official SDKs for JavaScript, Python, and Ruby. Get started with pre-built client libraries.</p>
+          <span class="resource-link">Download SDKs →</span>
+        </a>
+
+        <a href="/en/docs/sandbox" class="resource-card animate-on-scroll">
+          <div class="resource-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="9" y1="9" x2="15" y2="15"></line>
+              <line x1="15" y1="9" x2="9" y2="15"></line>
+            </svg>
+          </div>
+          <h3>Sandbox Environment</h3>
+          <p>Test your integration safely with sample data before connecting to production systems.</p>
+          <span class="resource-link">Access Sandbox →</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA SECTION -->
+  <section class="cta-section">
+    <div class="cta-background"></div>
+    <div class="container">
+      <div class="cta-content">
+        <span class="cta-label">GET STARTED</span>
+        <h2>Build Your Integration</h2>
+        <p>Connect your CSR tools to TEEI's impact data. Start with our API documentation or reach out to our integration team.</p>
+        <div class="cta-buttons">
+          <a href="/en/docs/api" class="btn btn-primary">View API Docs</a>
+          <a href="/en/contact" class="btn btn-secondary">Contact Sales</a>
+        </div>
+        <p class="cta-note">Need custom integration support? Enterprise plans include dedicated technical support.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <!-- Brand Column -->
+        <div class="footer-brand">
+          <a href="/en" class="footer-logo">
+            <span class="logo-text">TEEI</span>
+          </a>
+          <p class="footer-tagline">Equality Through Education</p>
+          <p class="footer-description">The Educational Equality Institute connects corporations with refugees through measurable volunteer programs.</p>
+          <div class="footer-social">
+            <a href="https://linkedin.com/company/teei" aria-label="LinkedIn">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+              </svg>
+            </a>
+            <a href="https://twitter.com/teikiorg" aria-label="Twitter">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+              </svg>
+            </a>
+          </div>
+        </div>
+
+        <!-- Programs Column -->
+        <div class="footer-column">
+          <h4>Programs</h4>
+          <ul>
+            <li><a href="/en/programs/buddy">Buddy Program</a></li>
+            <li><a href="/en/programs/language">Language Connect</a></li>
+            <li><a href="/en/programs/mentorship">Mentors for Ukraine</a></li>
+            <li><a href="/en/programs/upskilling">Upskilling Academy</a></li>
+            <li><a href="/en/programs/weei">Women's Entrepreneurship</a></li>
+          </ul>
+        </div>
+
+        <!-- Platform Column -->
+        <div class="footer-column">
+          <h4>Platform</h4>
+          <ul>
+            <li><a href="/en/platform/dashboard">Corporate Cockpit</a></li>
+            <li><a href="/en/platform/sroi">SROI Calculator</a></li>
+            <li><a href="/en/platform/reports">Impact Reports</a></li>
+            <li><a href="/en/platform/integrations">Integrations</a></li>
+            <li><a href="/en/docs">Documentation</a></li>
+          </ul>
+        </div>
+
+        <!-- Company Column -->
+        <div class="footer-column">
+          <h4>Company</h4>
+          <ul>
+            <li><a href="/en/about">About TEEI</a></li>
+            <li><a href="/en/impact">Our Impact</a></li>
+            <li><a href="/en/partners">Partners</a></li>
+            <li><a href="/en/careers">Careers</a></li>
+            <li><a href="/en/contact">Contact</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <div class="footer-legal">
+          <p>&copy; 2025 The Educational Equality Institute. All rights reserved.</p>
+          <nav class="footer-legal-links">
+            <a href="/en/privacy">Privacy Policy</a>
+            <a href="/en/terms">Terms of Service</a>
+            <a href="/en/cookies">Cookie Policy</a>
+          </nav>
+        </div>
+        <div class="footer-certifications">
+          <span class="certification">501(c)(3) Nonprofit</span>
+          <span class="certification">GDPR Compliant</span>
+        </div>
+      </div>
+    </div>
+  </footer>
+</BaseLayout>
+
+<style>
+  /* Import design tokens from landing page */
+  html { scroll-behavior: smooth; }
+
+  /* GLOBAL: FORCE NO ITALICS ON ANY HEADING */
+  h1, h2, h3, h4, h5, h6,
+  .section-title,
+  [class*="heading"],
+  [class*="headline"],
+  .hero h1,
+  .hero h1 span,
+  .cta h2,
+  .cta-section h2 {
+    font-style: normal !important;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Variables - matching landing page */
+  :root {
+    --space-xs: 0.25rem;
+    --space-sm: 0.5rem;
+    --space-md: 1rem;
+    --space-lg: 2rem;
+    --space-xl: 3rem;
+    --space-3xl: 5rem;
+    --font-heading: 'Lora', Georgia, serif;
+    --font-body: 'Roboto Flex', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --color-primary: #00393f;
+    --color-accent: #BA8F5A;
+    --radius-lg: 12px;
+    --radius-xl: 20px;
+    --radius-md: 8px;
+    --radius-full: 9999px;
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 20px 60px rgba(0, 57, 63, 0.15);
+    --text-primary: #00393f;
+    --text-body: #475569;
+    --text-light: #64748b;
+    --border-light: #e2e8f0;
+    --bg-light: #f8fafc;
+    --bg-white: #ffffff;
+    --section-spacing: 5rem;
+  }
+
+  /* FIXED NAVIGATION */
+  .nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    padding: var(--space-sm) var(--space-xl);
+    background: transparent;
+    transition: all 0.3s ease;
+  }
+
+  .nav.scrolled {
+    background: rgba(0, 57, 63, 0.95);
+    backdrop-filter: blur(10px);
+    box-shadow: var(--shadow-md);
+  }
+
+  .nav-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .nav-logo {
+    font-family: var(--font-heading);
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--color-accent);
+    text-decoration: none;
+  }
+
+  .nav-links {
+    display: flex;
+    gap: var(--space-lg);
+  }
+
+  .nav-links a {
+    color: white;
+    text-decoration: none;
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    transition: color 0.2s;
+  }
+
+  .nav-links a:hover {
+    color: var(--color-accent);
+  }
+
+  .nav-cta {
+    background: var(--color-accent);
+    color: var(--color-primary) !important;
+    padding: 10px 24px;
+    border-radius: var(--radius-full);
+    text-decoration: none;
+    font-family: var(--font-body);
+    font-weight: 600;
+    transition: all 0.3s ease;
+  }
+
+  .nav-cta:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(186, 143, 90, 0.4);
+  }
+
+  /* HERO SECTION */
+  .hero {
+    position: relative;
+    min-height: 70vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: calc(var(--section-spacing) + 80px) var(--space-xl) var(--section-spacing);
+    background: linear-gradient(165deg, #00393f 0%, #004a52 40%, #003840 100%);
+    color: white;
+    overflow: hidden;
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at 30% 20%, rgba(10, 89, 97, 0.4) 0%, transparent 50%),
+      radial-gradient(ellipse at 70% 30%, rgba(186, 143, 90, 0.12) 0%, transparent 50%);
+    pointer-events: none;
+  }
+
+  .hero-content {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    max-width: 800px;
+  }
+
+  .accent {
+    color: var(--color-accent);
+  }
+
+  .hero-eyebrow {
+    font-size: 13px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #BA8F5A;
+    margin-bottom: 24px;
+    font-weight: 700;
+  }
+
+  .hero h1 {
+    font-size: clamp(48px, 8vw, 72px);
+    font-weight: 900;
+    line-height: 1.05;
+    margin-bottom: 32px;
+    letter-spacing: -0.03em;
+    text-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    color: white !important;
+  }
+
+  .hero-subtitle {
+    font-size: 22px;
+    line-height: 1.6;
+    color: rgba(255,255,255,0.9);
+    margin-bottom: 48px;
+    font-weight: 400;
+  }
+
+  .hero-ctas {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  /* SCROLL INDICATOR */
+  .scroll-indicator {
+    position: absolute;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: rgba(255,255,255,0.6);
+    cursor: pointer;
+    animation: bounce 2s infinite;
+    transition: all 0.3s ease;
+    padding: 12px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.05);
+    backdrop-filter: blur(8px);
+  }
+
+  .scroll-indicator:hover {
+    color: #BA8F5A;
+    background: rgba(186, 143, 90, 0.1);
+    box-shadow: 0 8px 24px rgba(186, 143, 90, 0.2);
+  }
+
+  @keyframes bounce {
+    0%, 20%, 50%, 80%, 100% {
+      transform: translateX(-50%) translateY(0);
+    }
+    40% { transform: translateX(-50%) translateY(-10px); }
+    60% { transform: translateX(-50%) translateY(-5px); }
+  }
+
+  /* PREMIUM BUTTONS */
+  .btn {
+    padding: 16px 32px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 16px;
+    text-decoration: none;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    position: relative;
+    overflow: hidden;
+    border: none;
+    cursor: pointer;
+  }
+
+  .btn-premium::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(120deg, transparent, rgba(255,255,255,0.3), transparent);
+    transform: translateX(-100%);
+    transition: transform 0.6s ease;
+  }
+
+  .btn-premium:hover::before {
+    transform: translateX(100%);
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, #BA8F5A 0%, #d4a66a 100%);
+    color: #00393f;
+    box-shadow:
+      0 4px 16px rgba(186, 143, 90, 0.4),
+      0 0 0 1px rgba(186, 143, 90, 0.2);
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow:
+      0 12px 32px rgba(186, 143, 90, 0.5),
+      0 0 0 1px rgba(186, 143, 90, 0.3),
+      0 0 60px rgba(186, 143, 90, 0.2);
+  }
+
+  .btn-secondary {
+    background: rgba(255,255,255,0.05);
+    color: white;
+    border: 2px solid rgba(255,255,255,0.2);
+    backdrop-filter: blur(8px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  }
+
+  .btn-secondary:hover {
+    border-color: #BA8F5A;
+    background: rgba(186, 143, 90, 0.1);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 32px rgba(186, 143, 90, 0.2);
+  }
+
+  /* SECTIONS */
+  .integrations-section,
+  .specs-section,
+  .api-preview-section,
+  .developers-section {
+    padding: clamp(4rem, 8vw, 6rem) 0;
+  }
+
+  .integrations-section {
+    background: var(--bg-light);
+  }
+
+  .specs-section {
+    background: white;
+  }
+
+  .api-preview-section {
+    background: var(--color-primary);
+    color: white;
+  }
+
+  .developers-section {
+    background: var(--bg-light);
+  }
+
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 max(1rem, 5%);
+  }
+
+  .section-header {
+    text-align: center;
+    margin-bottom: 4rem;
+  }
+
+  .section-label {
+    display: inline-block;
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--color-accent);
+    margin-bottom: 1rem;
+  }
+
+  .section-header h2 {
+    font-family: var(--font-heading);
+    font-size: clamp(2rem, 4vw, 2.75rem);
+    font-weight: 600;
+    font-style: normal;
+    color: var(--color-primary);
+    margin: 0 0 1rem 0;
+  }
+
+  .api-preview-section .section-header h2 {
+    color: white;
+  }
+
+  .section-subtitle {
+    font-family: var(--font-body);
+    font-size: 1.125rem;
+    color: var(--text-body);
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  .api-preview-section .section-subtitle {
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  /* INTEGRATION CARDS GRID */
+  .integrations-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
+  }
+
+  .integration-card {
+    background: white;
+    border: 1px solid var(--border-light);
+    border-radius: 16px;
+    padding: 2rem;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow:
+      0 0 0 1px rgba(0, 57, 63, 0.05),
+      0 4px 8px rgba(0, 57, 63, 0.04),
+      0 16px 32px rgba(0, 57, 63, 0.08);
+  }
+
+  .integration-card:hover {
+    border-color: var(--color-accent);
+    box-shadow:
+      0 0 0 1px rgba(186, 143, 90, 0.15),
+      0 8px 16px rgba(0, 57, 63, 0.08),
+      0 24px 48px rgba(0, 57, 63, 0.12),
+      0 0 60px rgba(186, 143, 90, 0.1);
+    transform: translateY(-8px);
+  }
+
+  .integration-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1.5rem;
+  }
+
+  .integration-logo {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    background: rgba(0, 57, 63, 0.05);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-primary);
+  }
+
+  .status-badge {
+    padding: 0.375rem 0.75rem;
+    border-radius: 500px;
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .status-production {
+    background: rgba(34, 197, 94, 0.1);
+    color: #16a34a;
+    border: 1px solid rgba(34, 197, 94, 0.2);
+  }
+
+  .status-coming {
+    background: rgba(234, 179, 8, 0.1);
+    color: #ca8a04;
+    border: 1px solid rgba(234, 179, 8, 0.2);
+  }
+
+  .status-internal {
+    background: rgba(59, 130, 246, 0.1);
+    color: #2563eb;
+    border: 1px solid rgba(59, 130, 246, 0.2);
+  }
+
+  .integration-card h3 {
+    font-family: var(--font-heading);
+    font-size: 1.5rem;
+    font-weight: 600;
+    font-style: normal;
+    color: var(--color-primary);
+    margin: 0 0 0.75rem 0;
+  }
+
+  .integration-description {
+    font-family: var(--font-body);
+    font-size: 0.9375rem;
+    color: var(--text-body);
+    line-height: 1.6;
+    margin: 0 0 1.5rem 0;
+  }
+
+  .feature-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .feature-list li {
+    font-family: var(--font-body);
+    font-size: 0.875rem;
+    color: var(--text-light);
+    padding-left: 1.5rem;
+    margin-bottom: 0.5rem;
+    position: relative;
+  }
+
+  .feature-list li::before {
+    content: '✓';
+    position: absolute;
+    left: 0;
+    color: var(--color-accent);
+    font-weight: 600;
+  }
+
+  /* SPECS GRID */
+  .specs-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 2rem;
+  }
+
+  .spec-card {
+    text-align: center;
+  }
+
+  .spec-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 12px;
+    background: rgba(0, 57, 63, 0.05);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1.5rem;
+    color: var(--color-primary);
+  }
+
+  .spec-card h3 {
+    font-family: var(--font-heading);
+    font-size: 1.125rem;
+    font-weight: 600;
+    font-style: normal;
+    color: var(--color-primary);
+    margin: 0 0 0.75rem 0;
+  }
+
+  .spec-card p {
+    font-family: var(--font-body);
+    font-size: 0.9375rem;
+    color: var(--text-body);
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  /* API PREVIEW */
+  .api-preview-container {
+    max-width: 800px;
+    margin: 0 auto;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    overflow: hidden;
+    backdrop-filter: blur(20px);
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.05),
+      0 8px 16px rgba(0, 0, 0, 0.2),
+      0 24px 48px rgba(0, 0, 0, 0.3);
+  }
+
+  .code-header {
+    background: rgba(0, 0, 0, 0.4);
+    padding: 1rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .code-dots {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .code-dots span {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  .code-title {
+    font-family: var(--font-body);
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.7);
+    font-weight: 500;
+  }
+
+  .code-block {
+    padding: 2rem 1.5rem;
+    margin: 0;
+    overflow-x: auto;
+  }
+
+  .code-block code {
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+    font-size: 0.875rem;
+    line-height: 1.7;
+    color: rgba(255, 255, 255, 0.9);
+  }
+
+  /* RESOURCES GRID */
+  .resources-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
+  }
+
+  .resource-card {
+    background: white;
+    border: 1px solid var(--border-light);
+    border-radius: 16px;
+    padding: 2rem;
+    text-decoration: none;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow:
+      0 0 0 1px rgba(0, 57, 63, 0.05),
+      0 4px 8px rgba(0, 57, 63, 0.04),
+      0 16px 32px rgba(0, 57, 63, 0.08);
+  }
+
+  .resource-card:hover {
+    border-color: var(--color-accent);
+    box-shadow:
+      0 0 0 1px rgba(186, 143, 90, 0.15),
+      0 8px 16px rgba(0, 57, 63, 0.08),
+      0 24px 48px rgba(0, 57, 63, 0.12),
+      0 0 60px rgba(186, 143, 90, 0.1);
+    transform: translateY(-8px);
+  }
+
+  .resource-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    background: rgba(0, 57, 63, 0.05);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+    color: var(--color-primary);
+  }
+
+  .resource-card h3 {
+    font-family: var(--font-heading);
+    font-size: 1.25rem;
+    font-weight: 600;
+    font-style: normal;
+    color: var(--color-primary);
+    margin: 0 0 0.75rem 0;
+  }
+
+  .resource-card p {
+    font-family: var(--font-body);
+    font-size: 0.9375rem;
+    color: var(--text-body);
+    line-height: 1.6;
+    margin: 0 0 1rem 0;
+  }
+
+  .resource-link {
+    font-family: var(--font-body);
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--color-accent);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    transition: all 0.2s ease;
+  }
+
+  .resource-card:hover .resource-link {
+    gap: 0.5rem;
+  }
+
+  /* CTA SECTION */
+  .cta-section {
+    position: relative;
+    padding: clamp(5rem, 10vw, 8rem) 0;
+    background: var(--bg-light);
+    overflow: hidden;
+  }
+
+  .cta-background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background:
+      radial-gradient(ellipse at 20% 50%, rgba(0, 57, 63, 0.03) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 50%, rgba(186, 143, 90, 0.05) 0%, transparent 50%);
+    pointer-events: none;
+  }
+
+  .cta-section .container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 0 max(1rem, 5%);
+    position: relative;
+    z-index: 1;
+  }
+
+  .cta-content {
+    text-align: center;
+  }
+
+  .cta-label {
+    display: inline-block;
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--color-accent);
+    margin-bottom: 1rem;
+  }
+
+  .cta-section h2 {
+    font-family: var(--font-heading);
+    font-size: clamp(2rem, 4vw, 3rem);
+    font-weight: 600;
+    font-style: normal;
+    color: var(--color-primary);
+    margin: 0 0 1rem 0;
+    line-height: 1.2;
+  }
+
+  .cta-content > p {
+    font-family: var(--font-body);
+    font-size: 1.125rem;
+    color: var(--text-body);
+    margin: 0 0 2rem 0;
+    max-width: 500px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .cta-section .cta-buttons {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+  }
+
+  .cta-section .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem 2rem;
+    font-family: var(--font-body);
+    font-size: 1rem;
+    font-weight: 600;
+    text-decoration: none;
+    border-radius: 500px;
+    transition: all 0.3s ease;
+    min-width: 180px;
+  }
+
+  .cta-section .btn-primary {
+    background: var(--color-primary);
+    color: white;
+    border: 2px solid var(--color-primary);
+  }
+
+  .cta-section .btn-primary:hover {
+    background: var(--color-accent);
+    border-color: var(--color-accent);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(186, 143, 90, 0.3);
+  }
+
+  .cta-section .btn-secondary {
+    background: transparent;
+    color: var(--color-primary);
+    border: 2px solid var(--color-primary);
+  }
+
+  .cta-section .btn-secondary:hover {
+    background: var(--color-primary);
+    color: white;
+    transform: translateY(-2px);
+  }
+
+  .cta-note {
+    font-family: var(--font-body);
+    font-size: 0.875rem;
+    color: var(--text-light);
+    margin: 0;
+  }
+
+  /* FOOTER */
+  .site-footer {
+    background: var(--color-primary);
+    color: white;
+    padding: 4rem 0 2rem;
+  }
+
+  .site-footer .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 max(1rem, 5%);
+  }
+
+  .footer-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    gap: 3rem;
+    margin-bottom: 3rem;
+  }
+
+  .site-footer .footer-brand {
+    padding-right: 2rem;
+  }
+
+  .footer-logo {
+    display: inline-block;
+    text-decoration: none;
+    margin-bottom: 1rem;
+  }
+
+  .footer-logo .logo-text {
+    font-family: var(--font-heading);
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--color-accent);
+  }
+
+  .footer-tagline {
+    font-family: var(--font-body);
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--color-accent);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin: 0 0 1rem 0;
+  }
+
+  .footer-description {
+    font-family: var(--font-body);
+    font-size: 0.9375rem;
+    color: rgba(255, 255, 255, 0.7);
+    line-height: 1.6;
+    margin: 0 0 1.5rem 0;
+  }
+
+  .footer-social {
+    display: flex;
+    gap: 1rem;
+  }
+
+  .footer-social a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    transition: all 0.3s ease;
+  }
+
+  .footer-social a:hover {
+    background: var(--color-accent);
+    color: var(--color-primary);
+    transform: translateY(-2px);
+  }
+
+  .footer-column h4 {
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--color-accent);
+    margin: 0 0 1.5rem 0;
+  }
+
+  .footer-column ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .footer-column li {
+    margin-bottom: 0.75rem;
+  }
+
+  .footer-column a {
+    font-family: var(--font-body);
+    font-size: 0.9375rem;
+    color: rgba(255, 255, 255, 0.7);
+    text-decoration: none;
+    transition: color 0.2s ease;
+  }
+
+  .footer-column a:hover {
+    color: white;
+  }
+
+  .site-footer .footer-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 2rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .footer-legal p {
+    font-family: var(--font-body);
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.5);
+    margin: 0 0 0.5rem 0;
+  }
+
+  .footer-legal-links {
+    display: flex;
+    gap: 1.5rem;
+  }
+
+  .footer-legal-links a {
+    font-family: var(--font-body);
+    font-size: 0.8125rem;
+    color: rgba(255, 255, 255, 0.5);
+    text-decoration: none;
+    transition: color 0.2s ease;
+  }
+
+  .footer-legal-links a:hover {
+    color: white;
+  }
+
+  .footer-certifications {
+    display: flex;
+    gap: 1rem;
+  }
+
+  .certification {
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.5);
+    padding: 0.5rem 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 500px;
+  }
+
+  /* ANIMATIONS */
+  .animate-on-scroll {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+
+  .animate-on-scroll.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-on-scroll {
+      opacity: 1;
+      transform: none;
+      transition: none;
+    }
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 1024px) {
+    .integrations-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .specs-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .resources-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .footer-grid {
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+    }
+
+    .site-footer .footer-brand {
+      grid-column: span 2;
+      padding-right: 0;
+      padding-bottom: 2rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+  }
+
+  @media (max-width: 768px) {
+    .hero {
+      min-height: auto;
+      padding: 120px 24px 60px;
+    }
+
+    .hero h1 {
+      font-size: 48px;
+    }
+
+    .hero-subtitle {
+      font-size: 18px;
+    }
+
+    .integrations-grid,
+    .specs-grid,
+    .resources-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .nav-links {
+      display: none;
+    }
+
+    .footer-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .site-footer .footer-brand {
+      grid-column: span 1;
+    }
+
+    .site-footer .footer-bottom {
+      flex-direction: column;
+      gap: 1.5rem;
+      text-align: center;
+    }
+
+    .footer-legal-links {
+      justify-content: center;
+    }
+
+    .footer-certifications {
+      justify-content: center;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .cta-section .cta-buttons {
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .cta-section .btn {
+      width: 100%;
+      max-width: 280px;
+    }
+  }
+
+  /* REDUCED MOTION */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+</style>
+
+<script>
+  // Nav scroll effect
+  window.addEventListener('scroll', () => {
+    const nav = document.querySelector('.nav');
+    if (nav) {
+      if (window.scrollY > 50) {
+        nav.classList.add('scrolled');
+      } else {
+        nav.classList.remove('scrolled');
+      }
+    }
+  });
+
+  // Intersection Observer for fade-in animations
+  const observerOptions = {
+    threshold: 0.1,
+    rootMargin: '0px 0px -50px 0px'
+  };
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+      }
+    });
+  }, observerOptions);
+
+  document.querySelectorAll('.animate-on-scroll').forEach(el => {
+    observer.observe(el);
+  });
+
+  // Scroll indicator click handler
+  const scrollIndicator = document.querySelector('.scroll-indicator');
+  if (scrollIndicator) {
+    scrollIndicator.addEventListener('click', () => {
+      const firstSection = document.querySelector('.integrations-section');
+      if (firstSection) {
+        firstSection.scrollIntoView({ behavior: 'smooth' });
+      }
+    });
+  }
+</script>

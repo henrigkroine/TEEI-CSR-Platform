@@ -1,0 +1,226 @@
+---
+// /en/portal/index.astro - Customer Portal (Tenant Selector)
+
+import BaseLayout from '@layouts/BaseLayout.astro';
+import TenantSelector from '@components/tenant/TenantSelector';
+
+// Get cookies directly to avoid middleware dependency issues
+const tenantId = Astro.cookies.get('tenantId')?.value;
+const sessionCookie = Astro.cookies.get('session')?.value;
+
+// Parse session to check user role (simpler than relying on middleware)
+let userRole = null;
+let userCompanyId = null;
+if (sessionCookie) {
+  try {
+    let session;
+    try {
+      session = JSON.parse(sessionCookie);
+    } catch {
+      session = JSON.parse(decodeURIComponent(sessionCookie));
+    }
+    userRole = session.role ?? session.r;
+    userCompanyId = session.companyId ?? session.cid;
+  } catch {
+    // Invalid session - clear both cookies
+    Astro.cookies.delete('session', { path: '/' });
+    Astro.cookies.delete('tenantId', { path: '/' });
+  }
+}
+
+// Debug logging (remove in production)
+console.log('[Portal] tenantId:', tenantId);
+console.log('[Portal] userRole:', userRole);
+console.log('[Portal] userCompanyId:', userCompanyId);
+
+// Check if user can access the tenantId in cookie
+const canAccess = userRole === 'SUPER_ADMIN' || userCompanyId === tenantId;
+const hasValidSession = sessionCookie && userRole;
+const hasTenantAccess = tenantId && hasValidSession && canAccess;
+
+// If tenantId exists but user can't access it, clear the stale cookie
+if (tenantId && (!hasValidSession || !canAccess)) {
+  console.log('[Portal] Clearing stale tenantId cookie');
+  Astro.cookies.delete('tenantId', { path: '/' });
+}
+
+// NOTE: We don't auto-redirect anymore to avoid browser redirect cache loops
+// Instead, we show a "Continue to Dashboard" link
+console.log('[Portal] Rendering tenant selector, hasTenantAccess:', hasTenantAccess);
+---
+
+<BaseLayout title="Customer Portal - TEEI CSR Platform" lang="en">
+  <div class="portal-page">
+    <div class="portal-container">
+      <div class="portal-header">
+        <a href="/en" class="back-link">← Back to TEEI.io</a>
+        <h1>Customer Portal</h1>
+        <p>Select your company to access the Corporate Cockpit</p>
+      </div>
+
+      {hasTenantAccess && tenantId && (
+        <div class="continue-section">
+          <p>You're signed in and ready to go!</p>
+          <a href={`/en/cockpit/${tenantId}`} class="continue-btn">
+            Continue to Dashboard →
+          </a>
+          <p class="or-text">Or select a different tenant below:</p>
+        </div>
+      )}
+
+      {!hasValidSession && (
+        <div class="login-prompt">
+          <p>Please sign in to access your dashboard</p>
+          <a href="/login?redirect=/en/portal" class="login-btn">Sign In</a>
+        </div>
+      )}
+
+      <div class="tenant-selector-wrapper">
+        <TenantSelector
+          lang="en"
+          compact={true}
+          heading={hasValidSession ? "Select a tenant" : "Available tenants"}
+          subheading={hasValidSession ? "Pick a tenant to continue" : "Sign in to access these workspaces"}
+          client:load
+        />
+      </div>
+
+      <div class="portal-footer">
+        <p>Don't have an account? <a href="/en/contact">Contact us</a> to get started.</p>
+      </div>
+    </div>
+  </div>
+</BaseLayout>
+
+<style>
+  .portal-page {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #00393f 0%, #01272a 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+  }
+
+  .portal-container {
+    width: 100%;
+    max-width: 600px;
+  }
+
+  .portal-header {
+    text-align: center;
+    color: white;
+    margin-bottom: 32px;
+  }
+
+  .back-link {
+    color: rgba(255,255,255,0.6);
+    text-decoration: none;
+    font-size: 14px;
+    display: inline-block;
+    margin-bottom: 24px;
+  }
+
+  .back-link:hover {
+    color: #BA8F5A;
+  }
+
+  .portal-header h1 {
+    font-size: 32px;
+    margin-bottom: 8px;
+  }
+
+  .portal-header p {
+    color: rgba(255,255,255,0.7);
+  }
+
+  .tenant-selector-wrapper {
+    background: white;
+    border-radius: 16px;
+    padding: 32px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  }
+
+  .portal-footer {
+    text-align: center;
+    margin-top: 24px;
+    color: rgba(255,255,255,0.6);
+    font-size: 14px;
+  }
+
+  .portal-footer a {
+    color: #BA8F5A;
+    text-decoration: none;
+  }
+
+  .portal-footer a:hover {
+    text-decoration: underline;
+  }
+
+  .continue-section {
+    background: rgba(186, 143, 90, 0.15);
+    border: 1px solid rgba(186, 143, 90, 0.4);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 24px;
+    text-align: center;
+    color: white;
+  }
+
+  .continue-section p {
+    margin: 0 0 16px;
+    color: rgba(255,255,255,0.9);
+  }
+
+  .continue-btn {
+    display: inline-block;
+    background: #BA8F5A;
+    color: white;
+    padding: 14px 32px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 16px;
+    transition: background 0.2s;
+  }
+
+  .continue-btn:hover {
+    background: #a67c4a;
+  }
+
+  .or-text {
+    margin-top: 16px !important;
+    font-size: 14px;
+    color: rgba(255,255,255,0.6) !important;
+  }
+
+  .login-prompt {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 24px;
+    text-align: center;
+    color: white;
+  }
+
+  .login-prompt p {
+    margin: 0 0 16px;
+    color: rgba(255,255,255,0.8);
+  }
+
+  .login-btn {
+    display: inline-block;
+    background: white;
+    color: #00393f;
+    padding: 12px 28px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+  }
+
+  .login-btn:hover {
+    background: rgba(255,255,255,0.9);
+  }
+</style>
+

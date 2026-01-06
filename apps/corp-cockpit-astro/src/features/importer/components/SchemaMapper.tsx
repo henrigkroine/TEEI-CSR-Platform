@@ -15,6 +15,8 @@ const EVENT_CONTRACTS: { value: EventContractTarget; label: string }[] = [
   { value: 'program.completion', label: 'Program Completion' },
   { value: 'buddy.event.logged', label: 'Buddy Event' },
   { value: 'kintell.session.completed', label: 'Kintell Session' },
+  { value: 'kintell.user.import', label: 'Kintell User Import (LFU/MFU)' },
+  { value: 'user.profile', label: 'User Profile' },
 ];
 
 export function SchemaMapper({ inferredSchema, onSave, onBack, loading }: SchemaMapperProps) {

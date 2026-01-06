@@ -28,7 +28,7 @@ The Impact-In scheduler automates delivery of company metrics to partner platfor
 ### Creating a Schedule
 
 ```bash
-curl -X POST http://localhost:3008/impact-in/schedules \
+curl -X POST http://localhost:3023/impact-in/schedules \
   -H "Content-Type: application/json" \
   -d '{
     "companyId": "c1111111-1111-1111-1111-111111111111",
@@ -67,7 +67,7 @@ curl -X POST http://localhost:3008/impact-in/schedules \
 Before a scheduled delivery runs, preview what will be sent:
 
 ```bash
-curl http://localhost:3008/impact-in/schedules/schedule-123/preview
+curl http://localhost:3023/impact-in/schedules/schedule-123/preview
 ```
 
 **Response:**
@@ -94,7 +94,7 @@ curl http://localhost:3008/impact-in/schedules/schedule-123/preview
 Trigger a scheduled delivery immediately:
 
 ```bash
-curl -X POST http://localhost:3008/impact-in/schedules/schedule-123/run-now
+curl -X POST http://localhost:3023/impact-in/schedules/schedule-123/run-now
 ```
 
 ### Monitor Delivery Status
@@ -102,7 +102,7 @@ curl -X POST http://localhost:3008/impact-in/schedules/schedule-123/run-now
 Check statistics for all scheduled deliveries:
 
 ```bash
-curl http://localhost:3008/impact-in/schedules/stats
+curl http://localhost:3023/impact-in/schedules/stats
 ```
 
 **Response:**
@@ -578,10 +578,10 @@ Automatically enforced:
 **Diagnosis:**
 ```bash
 # Check if scheduler is running
-curl http://localhost:3008/health
+curl http://localhost:3023/health
 
 # Check schedule details
-curl http://localhost:3008/impact-in/schedules/schedule-123
+curl http://localhost:3023/impact-in/schedules/schedule-123
 
 # Check logs
 docker logs impact-in-service

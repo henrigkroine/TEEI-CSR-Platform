@@ -6,7 +6,7 @@ import { setupSubscribers } from './subscribers/index.js';
 import { createHealthManager, setupHealthRoutes } from './health/index.js';
 
 const logger = createServiceLogger('unified-profile');
-const PORT = parseInt(process.env.PORT_UNIFIED_PROFILE || '3001');
+const PORT = parseInt(process.env.PORT_UNIFIED_PROFILE || '3018');
 
 async function start() {
   const app = Fastify({

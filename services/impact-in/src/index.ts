@@ -20,7 +20,7 @@ import { startScheduler } from '../scheduler/index.js';
 import { startSLAMonitoring } from '../sla-monitor/index.js';
 
 const logger = createServiceLogger('impact-in');
-const PORT = parseInt(process.env.PORT_IMPACT_IN || '3007');
+const PORT = parseInt(process.env.PORT_IMPACT_IN || '3025');
 
 async function start() {
   const app = Fastify({

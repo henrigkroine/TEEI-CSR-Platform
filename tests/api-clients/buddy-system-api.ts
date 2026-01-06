@@ -9,7 +9,7 @@ export class BuddySystemAPI {
   private baseUrl: string;
   private authToken: string | null = null;
 
-  constructor(baseUrl: string = process.env.BUDDY_SYSTEM_URL || 'http://localhost:3001') {
+  constructor(baseUrl: string = process.env.BUDDY_SYSTEM_URL || 'http://localhost:3018') {
     this.baseUrl = baseUrl;
   }
 

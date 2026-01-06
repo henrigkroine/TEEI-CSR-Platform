@@ -30,12 +30,12 @@ interface HealthCheckResponse {
  * Service definitions for health checks
  */
 const SERVICES = [
-  { name: 'unified-profile', url: process.env.UNIFIED_PROFILE_URL || 'http://localhost:3001' },
-  { name: 'kintell-connector', url: process.env.KINTELL_CONNECTOR_URL || 'http://localhost:3002' },
-  { name: 'buddy-service', url: process.env.BUDDY_SERVICE_URL || 'http://localhost:3003' },
-  { name: 'upskilling-connector', url: process.env.UPSKILLING_CONNECTOR_URL || 'http://localhost:3004' },
-  { name: 'q2q-ai', url: process.env.Q2Q_AI_URL || 'http://localhost:3005' },
-  { name: 'safety-moderation', url: process.env.SAFETY_MODERATION_URL || 'http://localhost:3006' }
+  { name: 'unified-profile', url: process.env.UNIFIED_PROFILE_URL || 'http://localhost:3018' },
+  { name: 'kintell-connector', url: process.env.KINTELL_CONNECTOR_URL || 'http://localhost:3027' },
+  { name: 'buddy-service', url: process.env.BUDDY_SERVICE_URL || 'http://localhost:3019' },
+  { name: 'upskilling-connector', url: process.env.UPSKILLING_CONNECTOR_URL || 'http://localhost:3028' },
+  { name: 'q2q-ai', url: process.env.Q2Q_AI_URL || 'http://localhost:3021' },
+  { name: 'safety-moderation', url: process.env.SAFETY_MODERATION_URL || 'http://localhost:3022' }
 ];
 
 /**

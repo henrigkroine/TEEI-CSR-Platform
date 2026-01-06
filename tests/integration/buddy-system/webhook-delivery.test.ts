@@ -19,7 +19,7 @@ import { webhookDeliveries, deadLetterQueue } from '@teei/shared-schema/schema';
 import { eq } from 'drizzle-orm';
 import { generateWebhookSignature } from '../../utils/webhook-helpers.js';
 
-const BUDDY_CONNECTOR_URL = process.env.BUDDY_CONNECTOR_URL || 'http://localhost:3010';
+const BUDDY_CONNECTOR_URL = process.env.BUDDY_CONNECTOR_URL || 'http://localhost:3025';
 const WEBHOOK_SECRET = process.env.BUDDY_WEBHOOK_SECRET || 'test-webhook-secret';
 
 describe('Integration: Webhook Delivery & Retry', () => {

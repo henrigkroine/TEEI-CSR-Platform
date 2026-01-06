@@ -57,21 +57,23 @@ This creates sample users, companies, enrollments, and test data.
 pnpm dev
 ```
 
-This starts all 7 services concurrently:
-- **API Gateway**: http://localhost:3000
-- **Unified Profile**: http://localhost:3001
-- **Kintell Connector**: http://localhost:3002
-- **Buddy Service**: http://localhost:3003
-- **Upskilling Connector**: http://localhost:3004
-- **Q2Q AI**: http://localhost:3005
-- **Safety Moderation**: http://localhost:3006
+This starts all 9 services concurrently (65xx port range):
+- **API Gateway**: http://localhost:6501
+- **Unified Profile**: http://localhost:6502
+- **Kintell Connector**: http://localhost:6503
+- **Buddy Service**: http://localhost:6504
+- **Buddy Connector**: http://localhost:6505
+- **Upskilling Connector**: http://localhost:6506
+- **Q2Q AI**: http://localhost:6507
+- **Safety Moderation**: http://localhost:6508
+- **Corp Cockpit (Frontend)**: http://localhost:6509
 
 ## Verify Installation
 
 ### Check All Services Health
 
 ```bash
-curl http://localhost:3000/health/all
+curl http://localhost:6501/health/all
 ```
 
 You should see all services reporting `healthy` status.
@@ -79,7 +81,7 @@ You should see all services reporting `healthy` status.
 ### Check Individual Service
 
 ```bash
-curl http://localhost:3001/health
+curl http://localhost:6502/health
 ```
 
 ## Test Data Ingestion
@@ -87,28 +89,28 @@ curl http://localhost:3001/health
 ### Import Kintell Sessions
 
 ```bash
-curl -X POST http://localhost:3002/import/kintell-sessions \
+curl -X POST http://localhost:6503/import/kintell-sessions \
   -F "file=@services/kintell-connector/src/sample-data/kintell-sessions.csv"
 ```
 
 ### Import Buddy Matches
 
 ```bash
-curl -X POST http://localhost:3003/import/matches \
+curl -X POST http://localhost:6504/import/matches \
   -F "file=@services/buddy-service/src/sample-data/buddy-matches.csv"
 ```
 
 ### Import Course Completions
 
 ```bash
-curl -X POST http://localhost:3004/import/course-completions \
+curl -X POST http://localhost:6506/import/course-completions \
   -F "file=@services/upskilling-connector/src/sample-data/course-completions.csv"
 ```
 
 ## Test Q2Q AI Classification
 
 ```bash
-curl -X POST http://localhost:3005/classify/text \
+curl -X POST http://localhost:6507/classify/text \
   -H "Content-Type: application/json" \
   -d '{
     "text": "I feel much more confident now and really belong in this community.",
@@ -120,7 +122,7 @@ curl -X POST http://localhost:3005/classify/text \
 ## Test Safety Moderation
 
 ```bash
-curl -X POST http://localhost:3006/screen/text \
+curl -X POST http://localhost:6508/screen/text \
   -H "Content-Type: application/json" \
   -d '{
     "text": "This is a test message for safety screening.",
@@ -187,7 +189,7 @@ This opens Drizzle Studio at http://localhost:4983
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                      API Gateway (3000)                      │
+│                      API Gateway (6501)                      │
 │              JWT Auth, RBAC, Rate Limiting                   │
 └─────────────────────────────────────────────────────────────┘
          │              │              │              │
@@ -195,7 +197,7 @@ This opens Drizzle Studio at http://localhost:4983
 ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
 │   Unified    │ │   Kintell    │ │    Buddy     │ │  Upskilling  │
 │   Profile    │ │  Connector   │ │   Service    │ │  Connector   │
-│    (3001)    │ │    (3002)    │ │    (3003)    │ │    (3004)    │
+│    (6502)    │ │    (6503)    │ │    (6504)    │ │    (6506)    │
 └──────────────┘ └──────────────┘ └──────────────┘ └──────────────┘
          │              │              │              │
          └──────────────┴──────────────┴──────────────┘
@@ -210,8 +212,8 @@ This opens Drizzle Studio at http://localhost:4983
          ▼                             ▼
 ┌──────────────┐              ┌──────────────┐
 │   Q2Q AI     │              │    Safety    │
-│   (3005)     │              │  Moderation  │
-│              │              │    (3006)    │
+│   (6507)     │              │  Moderation  │
+│              │              │    (6508)    │
 └──────────────┘              └──────────────┘
          │                             │
          └──────────────┬──────────────┘
@@ -259,12 +261,14 @@ curl http://localhost:8222/healthz
 
 ### Port Conflicts
 
-If ports 3000-3006 are in use, update port numbers in `.env`:
+If ports 6501-6509 are in use, update port numbers in the PM2 ecosystem config (`D:\Dev\docker\ecosystem.config.cjs`) or set PORT environment variables:
 ```
-PORT_API_GATEWAY=4000
-PORT_UNIFIED_PROFILE=4001
+PORT=6501  # API Gateway
+PORT=6502  # Unified Profile
 # etc.
 ```
+
+> **Note**: CSR Platform services use the 65xx port range and are managed by the global PM2 ecosystem. See [CLAUDE.md](./CLAUDE.md) for details.
 
 ## Next Steps
 

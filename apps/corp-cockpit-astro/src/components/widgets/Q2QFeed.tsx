@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, memo } from 'react';
 
 interface Q2QInsight {
   id: string;
@@ -14,7 +14,7 @@ interface Props {
   limit?: number;
 }
 
-export default function Q2QFeed({ companyId, limit = 10 }: Props) {
+function Q2QFeed({ companyId, limit = 10 }: Props) {
   const [insights, setInsights] = useState<Q2QInsight[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -23,8 +23,17 @@ export default function Q2QFeed({ companyId, limit = 10 }: Props) {
   }, [companyId, limit]);
 
   async function fetchData() {
+    // Validate companyId before making API call
+    if (!companyId || companyId === 'undefined') {
+      setLoading(false);
+      return;
+    }
+
     try {
-      const url = `http://localhost:3001/companies/${companyId}/q2q-feed?limit=${limit}`;
+      // Use proper API base URL from environment or fallback to window origin
+      const API_BASE_URL = import.meta.env.PUBLIC_REPORTING_API_URL ||
+        (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3001');
+      const url = `${API_BASE_URL}/companies/${companyId}/q2q-feed?limit=${limit}`;
       const response = await fetch(url);
       if (response.ok) {
         const data = await response.json();
@@ -216,3 +225,7 @@ export default function Q2QFeed({ companyId, limit = 10 }: Props) {
     </div>
   );
 }
+
+export default memo(Q2QFeed, (prev, next) => {
+  return prev.companyId === next.companyId && prev.limit === next.limit;
+});

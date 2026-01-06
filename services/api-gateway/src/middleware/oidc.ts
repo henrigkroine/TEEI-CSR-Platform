@@ -71,7 +71,7 @@ export function loadOIDCConfig(): OIDCConfig {
     config.google = {
       clientId: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      redirectUri: process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3000/auth/google/callback',
+      redirectUri: process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3017/auth/google/callback',
       hostedDomain: process.env.GOOGLE_HOSTED_DOMAIN  // Optional
     };
   }
@@ -82,7 +82,7 @@ export function loadOIDCConfig(): OIDCConfig {
       clientId: process.env.AZURE_CLIENT_ID,
       clientSecret: process.env.AZURE_CLIENT_SECRET,
       tenantId: process.env.AZURE_TENANT_ID,
-      redirectUri: process.env.AZURE_REDIRECT_URI || 'http://localhost:3000/auth/azure/callback'
+      redirectUri: process.env.AZURE_REDIRECT_URI || 'http://localhost:3017/auth/azure/callback'
     };
   }
 

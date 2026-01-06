@@ -6,7 +6,7 @@
  * Displays a 5-step progress indicator for the campaign creation wizard
  */
 import React from 'react';
-import { Check } from 'lucide-react';
+import { CheckIcon } from '../icons';
 
 interface Step {
   id: number;
@@ -37,7 +37,7 @@ export function WizardProgressBar({ currentStep, steps }: WizardProgressBarProps
               <div className="step-indicator">
                 <div className="step-circle">
                   {isCompleted ? (
-                    <Check className="check-icon" aria-hidden="true" />
+                    <CheckIcon className="check-icon" aria-hidden="true" />
                   ) : (
                     <span className="step-number">{step.id}</span>
                   )}

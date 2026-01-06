@@ -11,7 +11,7 @@ import { NLQDriver } from './inference/nlq-driver.js';
 import { registerQueryRoutes } from './routes/query.js';
 import { tenantScope } from './middleware/tenantScope.js';
 
-const PORT = parseInt(process.env.PORT || '3008', 10);
+const PORT = parseInt(process.env.PORT || '3024', 10);
 const HOST = process.env.HOST || '0.0.0.0';
 
 const fastify = Fastify({

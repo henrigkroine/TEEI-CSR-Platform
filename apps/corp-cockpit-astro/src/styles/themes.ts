@@ -35,17 +35,17 @@ export const DEFAULT_THEME: TenantTheme = {
   logoUrl: null,
   colors: {
     light: {
-      primary: '#0066CC',
-      secondary: '#1E40AF',
-      accent: '#10B981',
+      primary: '#00393f',
+      secondary: '#0f5255',
+      accent: '#ba8f5a',
       textOnPrimary: '#FFFFFF',
       textOnSecondary: '#FFFFFF',
-      textOnAccent: '#FFFFFF',
+      textOnAccent: '#0c2430',
     },
     dark: {
-      primary: '#3B82F6',
-      secondary: '#60A5FA',
-      accent: '#34D399',
+      primary: '#0f5255',
+      secondary: '#15808a',
+      accent: '#d7a86a',
     },
   },
 };

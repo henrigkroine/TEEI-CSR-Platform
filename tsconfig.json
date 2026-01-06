@@ -20,7 +20,16 @@
     "sourceMap": true,
     "incremental": true,
     "jsx": "react-jsx",
-    "types": ["node"]
+    "types": ["node"],
+    "baseUrl": ".",
+    "paths": {
+      "@teei/observability": ["./packages/observability/src/index.ts"],
+      "@teei/shared-utils": ["./packages/shared-utils/src/index.ts"],
+      "@teei/shared-schema": ["./packages/shared-schema/src/index.ts"],
+      "@teei/shared-types": ["./packages/shared-types/src/index.ts"],
+      "@teei/event-contracts": ["./packages/event-contracts/src/index.ts"],
+      "@teei/shared-auth": ["./packages/shared-auth/src/index.ts"]
+    }
   },
   "exclude": ["node_modules", "dist", "build", ".astro"]
 }

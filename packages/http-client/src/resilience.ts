@@ -210,7 +210,7 @@ export class ResilientHttpClient {
         : url;
 
       // Prepare request options
-      const requestOptions: Dispatcher.RequestOptions = {
+      const requestOptions: Partial<Dispatcher.RequestOptions> = {
         method: options.method || 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -236,7 +236,7 @@ export class ResilientHttpClient {
 
       // Parse response body
       const body = await response.body.text();
-      return body ? JSON.parse(body) : null;
+      return body ? JSON.parse(body) : (null as unknown as T);
     } catch (error) {
       clearTimeout(timeoutId);
 
@@ -359,7 +359,7 @@ export class ResilientHttpClient {
       const urlObj = new URL(url);
       return `${urlObj.protocol}//${urlObj.host}`;
     } catch {
-      return url.split('/')[0];
+      return url.split('/')[0] || url;
     }
   }
 

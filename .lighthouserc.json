@@ -6,10 +6,10 @@
       "startServerReadyPattern": "Local:.+(https?://[^\\s]+)",
       "startServerReadyTimeout": 30000,
       "url": [
-        "http://localhost:4321/en",
-        "http://localhost:4321/en/dashboard",
-        "http://localhost:4321/en/reports",
-        "http://localhost:4321/en/evidence"
+        "http://localhost:6509/en",
+        "http://localhost:6509/en/dashboard",
+        "http://localhost:6509/en/reports",
+        "http://localhost:6509/en/evidence"
       ],
       "settings": {
         "preset": "desktop",

@@ -109,19 +109,19 @@ export function ScenarioBuilder({
           </div>
         </div>
 
-        {/* Grant Amount Delta */}
+        {/* Campaign Budget Delta */}
         <div className="parameter-group">
-          <label htmlFor="grant-delta" className="block text-sm font-medium mb-2">
-            Grant Amount Change (USD)
+          <label htmlFor="budget-delta" className="block text-sm font-medium mb-2">
+            Campaign Budget Change (USD)
           </label>
           <input
-            id="grant-delta"
+            id="budget-delta"
             type="number"
-            value={params.grantAmountDelta || 0}
-            onChange={(e) => updateParam('grantAmountDelta', parseFloat(e.target.value) || 0)}
+            value={params.campaignBudgetDelta || 0}
+            onChange={(e) => updateParam('campaignBudgetDelta', parseFloat(e.target.value) || 0)}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
             placeholder="e.g., 5000 or -1000"
-            aria-label="Grant amount change in USD"
+            aria-label="Campaign budget change in USD"
           />
         </div>
 

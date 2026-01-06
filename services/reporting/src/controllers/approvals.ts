@@ -23,6 +23,7 @@ import {
   APPROVAL_TRANSITIONS,
 } from '../types/approvals.js';
 import { broadcastReportUpdate } from '../routes/sse.js';
+import { pool } from '../db/connection.js';
 
 /**
  * Get approval status for a report
@@ -38,17 +39,83 @@ export async function getApprovalStatus(
   const { id: companyId, reportId } = request.params;
 
   try {
-    // TODO: Fetch from database
-    const approval = getMockApprovalStatus(reportId, companyId);
+    // Fetch from database
+    const client = await pool.connect();
+    try {
+      // Get report with approval status
+      const reportResult = await client.query(
+        `SELECT 
+           id,
+           company_id,
+           approval_status,
+           created_at,
+           updated_at
+         FROM reports
+         WHERE id = $1 AND company_id = $2`,
+        [reportId, companyId]
+      );
 
-    if (!approval) {
-      return reply.status(404).send({
-        error: 'REPORT_NOT_FOUND',
-        message: 'Report not found',
-      });
+      if (reportResult.rows.length === 0) {
+        return reply.status(404).send({
+          error: 'REPORT_NOT_FOUND',
+          message: 'Report not found',
+        });
+      }
+
+      const report = reportResult.rows[0];
+      const currentStatus = report.approval_status || 'draft';
+
+      // Get approval events (history)
+      const eventsResult = await client.query(
+        `SELECT 
+           id,
+           user_id,
+           user_name,
+           user_role,
+           action,
+           from_status,
+           to_status,
+           comment,
+           metadata,
+           created_at
+         FROM approval_events
+         WHERE report_id = $1
+         ORDER BY created_at DESC
+         LIMIT 50`,
+        [reportId]
+      );
+
+      const events: ApprovalEvent[] = eventsResult.rows.map((row) => ({
+        id: row.id,
+        timestamp: row.created_at,
+        user_id: row.user_id,
+        user_name: row.user_name,
+        user_role: row.user_role,
+        action: row.action,
+        from_status: row.from_status,
+        to_status: row.to_status,
+        comment: row.comment,
+        metadata: row.metadata ? JSON.parse(row.metadata) : undefined,
+      }));
+
+      // Get auth user for next actions
+      const authUser = (request as any).user;
+      const userRole = authUser?.role || 'USER';
+
+      const approval = {
+        report_id: reportId,
+        company_id: companyId,
+        current_status: currentStatus,
+        history: events,
+        next_actions: getNextActions(currentStatus as ApprovalStatus, userRole),
+        created_at: report.created_at,
+        updated_at: report.updated_at,
+      };
+
+      return reply.send(approval);
+    } finally {
+      client.release();
     }
-
-    return reply.send(approval);
   } catch (error) {
     request.log.error(error);
     return reply.status(500).send({
@@ -74,13 +141,40 @@ export async function performApprovalAction(
   const { action, comment, metadata } = request.body;
 
   try {
-    // TODO: Get current user from auth context
-    const userId = 'user-123';
-    const userName = 'Jane Doe';
-    const userRole = 'ADMIN'; // TODO: Get from auth
+    // Get current user from auth context
+    const authUser = (request as any).user;
+    if (!authUser) {
+      return reply.status(401).send({
+        error: 'UNAUTHORIZED',
+        message: 'Authentication required',
+      });
+    }
 
-    // TODO: Fetch current report approval status from database
-    const currentStatus: ApprovalStatus = 'draft'; // Mock
+    const userId = authUser.userId || authUser.id;
+    const userName = authUser.name || authUser.userName || 'Unknown User';
+    const userRole = authUser.role || 'USER';
+
+    // Fetch current report approval status from database
+    const client = await pool.connect();
+    let currentStatus: ApprovalStatus = 'draft';
+    
+    try {
+      const reportResult = await client.query(
+        'SELECT approval_status FROM reports WHERE id = $1 AND company_id = $2',
+        [reportId, companyId]
+      );
+      
+      if (reportResult.rows.length > 0) {
+        currentStatus = reportResult.rows[0].approval_status || 'draft';
+      } else {
+        return reply.status(404).send({
+          error: 'REPORT_NOT_FOUND',
+          message: `Report ${reportId} not found for company ${companyId}`,
+        });
+      }
+    } finally {
+      client.release();
+    }
 
     // Validate action is allowed
     const nextActions = getNextActions(currentStatus, userRole);
@@ -116,9 +210,37 @@ export async function performApprovalAction(
       metadata,
     };
 
-    // TODO: Save to database
-    // await db.approval_events.insert(event);
-    // await db.reports.update({ id: reportId, approval_status: newStatus });
+    // Save to database
+    const client = await pool.connect();
+    try {
+      // Insert approval event
+      await client.query(
+        `INSERT INTO approval_events 
+         (id, report_id, user_id, user_name, user_role, action, from_status, to_status, comment, metadata, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+        [
+          event.id,
+          reportId,
+          userId,
+          userName,
+          userRole,
+          action,
+          currentStatus,
+          newStatus,
+          comment || null,
+          metadata ? JSON.stringify(metadata) : null,
+          event.timestamp,
+        ]
+      );
+
+      // Update report approval status
+      await client.query(
+        'UPDATE reports SET approval_status = $1, updated_at = $2 WHERE id = $3',
+        [newStatus, new Date(), reportId]
+      );
+    } finally {
+      client.release();
+    }
 
     // Handle special actions
     if (action === 'lock') {

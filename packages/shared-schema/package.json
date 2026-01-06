@@ -2,28 +2,29 @@
   "name": "@teei/shared-schema",
   "version": "1.0.0",
   "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
   "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
-    }
+    ".": "./src/index.ts",
+    "./schema/*": "./src/schema/*.ts",
+    "./schema/q2q": "./src/schema/q2q.ts",
+    "./schema/safety": "./src/schema/safety.ts",
+    "./schema/buddy": "./src/schema/buddy.ts",
+    "./schema/kintell": "./src/schema/kintell.ts",
+    "./schema/upskilling": "./src/schema/upskilling.ts"
   },
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
     "db:migrate": "tsx src/migrate.ts",
-    "db:seed": "tsx src/seed/index.ts",
-    "db:reset": "tsx src/reset.ts",
-    "db:studio": "drizzle-kit studio",
-    "db:generate": "drizzle-kit generate:pg",
-    "clean": "rm -rf dist"
+    "db:seed": "tsx src/seed/index.ts"
   },
   "dependencies": {
+    "@teei/shared-types": "workspace:*",
     "drizzle-orm": "^0.29.3",
     "postgres": "^3.4.3",
-    "zod": "^4.1.12"
+    "zod": "^4.1.12",
+    "bcryptjs": "^2.4.3"
   },
   "devDependencies": {
     "drizzle-kit": "^0.20.9",

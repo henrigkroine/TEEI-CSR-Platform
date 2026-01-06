@@ -94,7 +94,7 @@ Required permissions:
 DISCORD_BOT_TOKEN=your-bot-token-here
 DISCORD_CLIENT_ID=your-client-id-here
 DISCORD_GUILD_ID=your-server-id-here
-REPORTING_SERVICE_URL=http://localhost:3001
+REPORTING_SERVICE_URL=http://localhost:3018
 ENABLE_DISCORD_WEBHOOKS=true
 ```
 

@@ -1,0 +1,1389 @@
+---
+// /en/platform/sroi.astro - SROI Calculator Information Page
+
+import BaseLayout from '@layouts/BaseLayout.astro';
+import '@/styles/premium-cards.css';
+---
+
+<BaseLayout title="SROI Calculator - TEEI CSR Platform" lang="en">
+  <!-- FIXED NAVIGATION -->
+  <nav class="nav">
+    <div class="nav-container">
+      <a href="/en" class="nav-logo">TEEI</a>
+      <div class="nav-links">
+        <a href="/en#programs">Programs</a>
+        <a href="/en#platform">Platform</a>
+        <a href="/en#about">About</a>
+      </div>
+      <a href="/en/contact" class="nav-cta">Get a Demo</a>
+    </div>
+  </nav>
+
+  <!-- HERO SECTION -->
+  <section class="hero">
+    <div class="hero-content">
+      <span class="section-label">SROI CALCULATOR</span>
+      <h1>Calculate Your Social Return on Investment</h1>
+      <p class="hero-subtitle">
+        Turn volunteer hours into defensible dollar values. Transparent methodology, auditor-ready documentation.
+      </p>
+      <div class="hero-ctas">
+        <a href="/en/contact" class="btn btn-primary btn-premium">Get Started</a>
+        <a href="#methodology" class="btn btn-secondary btn-premium">View Methodology →</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHAT IS SROI SECTION -->
+  <section class="what-is-sroi">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-label">THE FORMULA</span>
+        <h2>What is SROI?</h2>
+      </div>
+
+      <div class="formula-display">
+        <div class="formula">
+          <span class="formula-text">SROI =</span>
+          <div class="fraction">
+            <span class="numerator">Total Social Value</span>
+            <span class="divider"></span>
+            <span class="denominator">Total Investment</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="example-calculation">
+        <div class="example-header">
+          <h3>Example Calculation</h3>
+          <p>A real-world SROI scenario from our platform</p>
+        </div>
+        <div class="example-grid">
+          <div class="example-card">
+            <span class="example-label">Social Value Created</span>
+            <span class="example-value">$52,500</span>
+            <p class="example-detail">150 outcomes × $350 avg value</p>
+          </div>
+          <div class="example-operator">÷</div>
+          <div class="example-card">
+            <span class="example-label">Investment Cost</span>
+            <span class="example-value">$15,000</span>
+            <p class="example-detail">500 hours × $29.95/hour</p>
+          </div>
+          <div class="example-operator">=</div>
+          <div class="example-card highlight">
+            <span class="example-label">SROI Result</span>
+            <span class="example-value accent">3.5:1</span>
+            <p class="example-detail">$3.50 returned per $1 invested</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="explanation">
+        <p>
+          Social Return on Investment (SROI) quantifies the social value created per dollar invested.
+          A 3.5:1 SROI means that for every $1 your organization invests in volunteer time,
+          $3.50 in measurable social value is generated for beneficiaries.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- METHODOLOGY SECTION -->
+  <section id="methodology" class="methodology-section">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-label">TRANSPARENT METHODOLOGY</span>
+        <h2>How We Calculate SROI</h2>
+        <p class="section-subtitle">Three core components drive our calculation</p>
+      </div>
+
+      <div class="methodology-grid">
+        <div class="methodology-card">
+          <div class="method-icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+            </svg>
+          </div>
+          <h3>Dimension Values</h3>
+          <p class="method-description">Each outcome type has a researched monetary value based on economic impact studies.</p>
+          <div class="value-list">
+            <div class="value-item">
+              <span class="value-name">Integration Outcomes</span>
+              <span class="value-amount">$150</span>
+            </div>
+            <div class="value-item">
+              <span class="value-name">Language Proficiency</span>
+              <span class="value-amount">$500</span>
+            </div>
+            <div class="value-item">
+              <span class="value-name">Job Readiness</span>
+              <span class="value-amount">$300</span>
+            </div>
+            <div class="value-item">
+              <span class="value-name">Mentorship Impact</span>
+              <span class="value-amount">$400</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="methodology-card">
+          <div class="method-icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M12 6v6l4 2"/>
+            </svg>
+          </div>
+          <h3>Investment Calculation</h3>
+          <p class="method-description">We value volunteer time using the Independent Sector rate, updated annually.</p>
+          <div class="investment-formula">
+            <div class="formula-line">
+              <span class="formula-part">Volunteer Hours</span>
+              <span class="formula-op">×</span>
+              <span class="formula-part">$29.95</span>
+            </div>
+            <div class="formula-explainer">
+              <p><strong>$29.95/hour</strong> - U.S. national average value of volunteer time (2024 rate from Independent Sector)</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="methodology-card">
+          <div class="method-icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+            </svg>
+          </div>
+          <h3>Confidence Adjustment</h3>
+          <p class="method-description">Each outcome receives a confidence score based on evidence quality and attribution strength.</p>
+          <div class="confidence-list">
+            <div class="confidence-item high">
+              <div class="confidence-header">
+                <span class="confidence-label">High Confidence</span>
+                <span class="confidence-score">1.0</span>
+              </div>
+              <p>Direct evidence, clear attribution, verified outcomes</p>
+            </div>
+            <div class="confidence-item medium">
+              <div class="confidence-header">
+                <span class="confidence-label">Medium Confidence</span>
+                <span class="confidence-score">0.7</span>
+              </div>
+              <p>Indirect evidence, partial attribution, likely outcomes</p>
+            </div>
+            <div class="confidence-item low">
+              <div class="confidence-header">
+                <span class="confidence-label">Low Confidence</span>
+                <span class="confidence-score">0.4</span>
+              </div>
+              <p>Weak evidence, unclear attribution, possible outcomes</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP-BY-STEP PROCESS -->
+  <section class="process-section">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-label">THE PROCESS</span>
+        <h2>How SROI Is Generated</h2>
+        <p class="section-subtitle">From raw data to board-ready metrics in eight automated steps</p>
+      </div>
+
+      <div class="steps-flow">
+        <div class="step">
+          <div class="step-number">1</div>
+          <h3>Collect Evidence</h3>
+          <p>Session notes, feedback surveys, skills assessments automatically captured</p>
+        </div>
+
+        <div class="step">
+          <div class="step-number">2</div>
+          <h3>AI Analysis</h3>
+          <p>Q2Q engine processes qualitative feedback into structured data</p>
+        </div>
+
+        <div class="step">
+          <div class="step-number">3</div>
+          <h3>Outcome Attribution</h3>
+          <p>Map feedback signals to specific dimension improvements</p>
+        </div>
+
+        <div class="step">
+          <div class="step-number">4</div>
+          <h3>Value Assignment</h3>
+          <p>Apply researched monetary values to each outcome type</p>
+        </div>
+
+        <div class="step">
+          <div class="step-number">5</div>
+          <h3>Investment Tally</h3>
+          <p>Sum all volunteer time costs at $29.95/hour</p>
+        </div>
+
+        <div class="step">
+          <div class="step-number">6</div>
+          <h3>SROI Calculation</h3>
+          <p>Divide total social value by total investment cost</p>
+        </div>
+
+        <div class="step">
+          <div class="step-number">7</div>
+          <h3>Confidence Scoring</h3>
+          <p>Apply certainty adjustments based on evidence quality</p>
+        </div>
+
+        <div class="step">
+          <div class="step-number">8</div>
+          <h3>Evidence Linking</h3>
+          <p>Attach full audit trail with source citations for every number</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- VALIDATION SECTION -->
+  <section class="validation-section">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-label">VALIDATION</span>
+        <h2>Methodology Validated by Experts</h2>
+        <p class="section-subtitle">Our SROI model has been tested against real outcomes and industry standards</p>
+      </div>
+
+      <div class="validation-grid">
+        <div class="validation-card">
+          <div class="validation-metric">
+            <span class="metric-value">0.15</span>
+            <span class="metric-label">MAE</span>
+          </div>
+          <p>Mean Absolute Error - Average prediction accuracy within 15%</p>
+        </div>
+
+        <div class="validation-card">
+          <div class="validation-metric">
+            <span class="metric-value">0.22</span>
+            <span class="metric-label">RMSE</span>
+          </div>
+          <p>Root Mean Square Error - Low variance in prediction quality</p>
+        </div>
+
+        <div class="validation-card">
+          <div class="validation-metric">
+            <span class="metric-value">0.78</span>
+            <span class="metric-label">R²</span>
+          </div>
+          <p>Coefficient of Determination - Strong correlation with actual outcomes</p>
+        </div>
+
+        <div class="validation-card">
+          <div class="validation-badge">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              <polyline points="9 12 11 14 15 10"/>
+            </svg>
+            <span>SROI Network</span>
+          </div>
+          <p>Aligned with international SROI methodology standards</p>
+        </div>
+
+        <div class="validation-card">
+          <div class="validation-badge">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+            </svg>
+            <span>CSRD Compliant</span>
+          </div>
+          <p>Meets Corporate Sustainability Reporting Directive requirements</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA SECTION -->
+  <section class="cta-section">
+    <div class="container">
+      <div class="cta-content">
+        <span class="section-label">GET STARTED</span>
+        <h2>Start Calculating Your SROI</h2>
+        <p>See your first SROI report within 30 days. Full evidence trails included.</p>
+        <div class="cta-buttons">
+          <a href="/en/contact" class="btn btn-primary">Schedule a Demo</a>
+          <a href="/en" class="btn btn-secondary">Learn More</a>
+        </div>
+        <p class="cta-note">Free pilot available for qualifying organizations</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <!-- Brand Column -->
+        <div class="footer-brand">
+          <a href="/en" class="footer-logo">
+            <span class="logo-text">TEEI</span>
+          </a>
+          <p class="footer-tagline">Equality Through Education</p>
+          <p class="footer-description">The Educational Equality Institute connects corporations with refugees through measurable volunteer programs.</p>
+          <div class="footer-social">
+            <a href="https://linkedin.com/company/teei" aria-label="LinkedIn">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+              </svg>
+            </a>
+            <a href="https://twitter.com/teikiorg" aria-label="Twitter">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+              </svg>
+            </a>
+          </div>
+        </div>
+
+        <!-- Programs Column -->
+        <div class="footer-column">
+          <h4>Programs</h4>
+          <ul>
+            <li><a href="/en/programs/buddy">Buddy Program</a></li>
+            <li><a href="/en/programs/language">Language Connect</a></li>
+            <li><a href="/en/programs/mentorship">Mentors for Ukraine</a></li>
+            <li><a href="/en/programs/upskilling">Upskilling Academy</a></li>
+          </ul>
+        </div>
+
+        <!-- Platform Column -->
+        <div class="footer-column">
+          <h4>Platform</h4>
+          <ul>
+            <li><a href="/en/platform/dashboard">Corporate Cockpit</a></li>
+            <li><a href="/en/platform/sroi">SROI Calculator</a></li>
+            <li><a href="/en/platform/vis">VIS Scoring</a></li>
+            <li><a href="/en/platform/evidence">Evidence Lineage</a></li>
+          </ul>
+        </div>
+
+        <!-- Company Column -->
+        <div class="footer-column">
+          <h4>Company</h4>
+          <ul>
+            <li><a href="/en/about">About TEEI</a></li>
+            <li><a href="/en/impact">Our Impact</a></li>
+            <li><a href="/en/partners">Partners</a></li>
+            <li><a href="/en/contact">Contact</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <div class="footer-legal">
+          <p>&copy; 2025 The Educational Equality Institute. All rights reserved.</p>
+          <nav class="footer-legal-links">
+            <a href="/en/privacy">Privacy Policy</a>
+            <a href="/en/terms">Terms of Service</a>
+            <a href="/en/cookies">Cookie Policy</a>
+          </nav>
+        </div>
+        <div class="footer-certifications">
+          <span class="certification">501(c)(3) Nonprofit</span>
+          <span class="certification">GDPR Compliant</span>
+        </div>
+      </div>
+    </div>
+  </footer>
+</BaseLayout>
+
+<style>
+  /* Import premium design tokens */
+  :root {
+    --space-xs: 0.25rem;
+    --space-sm: 0.5rem;
+    --space-md: 1rem;
+    --space-lg: 2rem;
+    --space-xl: 3rem;
+    --space-3xl: 5rem;
+    --font-heading: 'Lora', Georgia, serif;
+    --font-body: 'Roboto Flex', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --color-primary: #00393f;
+    --color-accent: #BA8F5A;
+    --radius-lg: 12px;
+    --radius-xl: 20px;
+    --radius-md: 8px;
+    --radius-full: 9999px;
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 20px 60px rgba(0, 57, 63, 0.15);
+    --text-primary: #00393f;
+    --text-body: #475569;
+    --text-light: #64748b;
+    --border-light: #e2e8f0;
+    --bg-light: #f8fafc;
+    --bg-white: #ffffff;
+    --section-spacing: 5rem;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  /* Force no italics on headings */
+  h1, h2, h3, h4, h5, h6 {
+    font-style: normal !important;
+  }
+
+  /* NAVIGATION */
+  .nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    padding: var(--space-sm) var(--space-xl);
+    background: rgba(0, 57, 63, 0.95);
+    backdrop-filter: blur(10px);
+    box-shadow: var(--shadow-md);
+  }
+
+  .nav-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .nav-logo {
+    font-family: var(--font-heading);
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--color-accent);
+    text-decoration: none;
+  }
+
+  .nav-links {
+    display: flex;
+    gap: var(--space-lg);
+  }
+
+  .nav-links a {
+    color: white;
+    text-decoration: none;
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    transition: color 0.2s;
+  }
+
+  .nav-links a:hover {
+    color: var(--color-accent);
+  }
+
+  .nav-cta {
+    background: var(--color-accent);
+    color: var(--color-primary) !important;
+    padding: 10px 24px;
+    border-radius: var(--radius-full);
+    text-decoration: none;
+    font-family: var(--font-body);
+    font-weight: 600;
+    transition: all 0.3s ease;
+  }
+
+  .nav-cta:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(186, 143, 90, 0.4);
+  }
+
+  /* HERO SECTION */
+  .hero {
+    padding: calc(80px + var(--space-3xl)) var(--space-xl) var(--space-3xl);
+    background: linear-gradient(165deg, #00393f 0%, #004a52 40%, #003840 100%);
+    color: white;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at 30% 20%, rgba(10, 89, 97, 0.4) 0%, transparent 50%),
+      radial-gradient(ellipse at 70% 30%, rgba(186, 143, 90, 0.12) 0%, transparent 50%);
+    pointer-events: none;
+  }
+
+  .hero-content {
+    max-width: 800px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+  }
+
+  .hero h1 {
+    font-family: var(--font-heading);
+    font-size: clamp(2.5rem, 5vw, 4rem);
+    font-weight: 700;
+    color: white;
+    margin-bottom: 1.5rem;
+    line-height: 1.1;
+  }
+
+  .hero-subtitle {
+    font-size: 1.25rem;
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 2rem;
+  }
+
+  .hero-ctas {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  /* BUTTONS */
+  .btn {
+    padding: 16px 32px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 16px;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    position: relative;
+    overflow: hidden;
+    border: none;
+    cursor: pointer;
+  }
+
+  .btn-premium::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(120deg, transparent, rgba(255,255,255,0.3), transparent);
+    transform: translateX(-100%);
+    transition: transform 0.6s ease;
+  }
+
+  .btn-premium:hover::before {
+    transform: translateX(100%);
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, #BA8F5A 0%, #d4a66a 100%);
+    color: #00393f;
+    box-shadow: 0 4px 16px rgba(186, 143, 90, 0.4);
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 32px rgba(186, 143, 90, 0.5);
+  }
+
+  .btn-secondary {
+    background: rgba(255,255,255,0.05);
+    color: white;
+    border: 2px solid rgba(255,255,255,0.2);
+    backdrop-filter: blur(8px);
+  }
+
+  .btn-secondary:hover {
+    border-color: #BA8F5A;
+    background: rgba(186, 143, 90, 0.1);
+    transform: translateY(-2px);
+  }
+
+  /* SECTION LABELS */
+  .section-label {
+    display: inline-block;
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--color-accent);
+    margin-bottom: 1rem;
+  }
+
+  /* WHAT IS SROI SECTION */
+  .what-is-sroi {
+    padding: var(--section-spacing) var(--space-xl);
+    background: var(--bg-light);
+  }
+
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .section-header {
+    text-align: center;
+    margin-bottom: 3rem;
+  }
+
+  .section-header h2 {
+    font-family: var(--font-heading);
+    font-size: clamp(2rem, 4vw, 2.75rem);
+    font-weight: 600;
+    color: var(--color-primary);
+    margin: 0 0 1rem 0;
+  }
+
+  .section-subtitle {
+    font-size: 1.125rem;
+    color: var(--text-body);
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  /* FORMULA DISPLAY */
+  .formula-display {
+    background: white;
+    border-radius: var(--radius-xl);
+    padding: 3rem;
+    margin-bottom: 3rem;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .formula {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2rem;
+    font-size: 2rem;
+  }
+
+  .formula-text {
+    font-family: var(--font-heading);
+    font-weight: 600;
+    color: var(--color-primary);
+  }
+
+  .fraction {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .numerator, .denominator {
+    font-family: var(--font-body);
+    font-size: 1.25rem;
+    color: var(--text-primary);
+    padding: 0 1rem;
+  }
+
+  .divider {
+    width: 100%;
+    height: 2px;
+    background: var(--color-accent);
+  }
+
+  /* EXAMPLE CALCULATION */
+  .example-calculation {
+    background: white;
+    border-radius: var(--radius-xl);
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: var(--shadow-md);
+  }
+
+  .example-header {
+    text-align: center;
+    margin-bottom: 2rem;
+  }
+
+  .example-header h3 {
+    font-family: var(--font-heading);
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--color-primary);
+    margin: 0 0 0.5rem 0;
+  }
+
+  .example-header p {
+    color: var(--text-body);
+    margin: 0;
+  }
+
+  .example-grid {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr auto 1fr;
+    gap: 1.5rem;
+    align-items: center;
+  }
+
+  .example-card {
+    background: var(--bg-light);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    text-align: center;
+  }
+
+  .example-card.highlight {
+    background: linear-gradient(135deg, rgba(186, 143, 90, 0.1), rgba(186, 143, 90, 0.05));
+    border-color: var(--color-accent);
+  }
+
+  .example-label {
+    display: block;
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-light);
+    margin-bottom: 0.5rem;
+  }
+
+  .example-value {
+    display: block;
+    font-family: var(--font-heading);
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--color-primary);
+    margin-bottom: 0.5rem;
+  }
+
+  .example-value.accent {
+    color: var(--color-accent);
+  }
+
+  .example-detail {
+    font-family: var(--font-body);
+    font-size: 0.875rem;
+    color: var(--text-body);
+    margin: 0;
+  }
+
+  .example-operator {
+    font-family: var(--font-heading);
+    font-size: 2rem;
+    font-weight: 600;
+    color: var(--color-accent);
+  }
+
+  .explanation {
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .explanation p {
+    font-size: 1.125rem;
+    line-height: 1.7;
+    color: var(--text-body);
+    text-align: center;
+  }
+
+  /* METHODOLOGY SECTION */
+  .methodology-section {
+    padding: var(--section-spacing) var(--space-xl);
+    background: var(--color-primary);
+    color: white;
+  }
+
+  .methodology-section .section-label {
+    color: var(--color-accent);
+  }
+
+  .methodology-section h2 {
+    color: white;
+  }
+
+  .methodology-section .section-subtitle {
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  .methodology-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
+  }
+
+  .methodology-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-xl);
+    padding: 2rem;
+    transition: all 0.3s ease;
+  }
+
+  .methodology-card:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: var(--color-accent);
+    transform: translateY(-4px);
+  }
+
+  .method-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: var(--radius-lg);
+    background: rgba(186, 143, 90, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-accent);
+    margin-bottom: 1.5rem;
+  }
+
+  .methodology-card h3 {
+    font-family: var(--font-heading);
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: white;
+    margin: 0 0 1rem 0;
+  }
+
+  .method-description {
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.7);
+    line-height: 1.6;
+    margin-bottom: 1.5rem;
+  }
+
+  /* Value List */
+  .value-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .value-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: var(--radius-md);
+  }
+
+  .value-name {
+    font-size: 0.9375rem;
+    color: rgba(255, 255, 255, 0.9);
+  }
+
+  .value-amount {
+    font-family: var(--font-heading);
+    font-weight: 600;
+    font-size: 1.125rem;
+    color: var(--color-accent);
+  }
+
+  /* Investment Formula */
+  .investment-formula {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: var(--radius-md);
+    padding: 1.5rem;
+  }
+
+  .formula-line {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    font-size: 1.25rem;
+  }
+
+  .formula-part {
+    font-family: var(--font-body);
+    font-weight: 600;
+    color: white;
+  }
+
+  .formula-op {
+    font-family: var(--font-heading);
+    font-weight: 600;
+    color: var(--color-accent);
+  }
+
+  .formula-explainer p {
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.7);
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  /* Confidence List */
+  .confidence-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .confidence-item {
+    padding: 1rem;
+    border-radius: var(--radius-md);
+    border-left: 3px solid;
+  }
+
+  .confidence-item.high {
+    background: rgba(34, 197, 94, 0.1);
+    border-color: #22c55e;
+  }
+
+  .confidence-item.medium {
+    background: rgba(251, 191, 36, 0.1);
+    border-color: #fbbf24;
+  }
+
+  .confidence-item.low {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: #ef4444;
+  }
+
+  .confidence-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+  }
+
+  .confidence-label {
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 0.9375rem;
+    color: white;
+  }
+
+  .confidence-score {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 1.25rem;
+    color: var(--color-accent);
+  }
+
+  .confidence-item p {
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.7);
+    margin: 0;
+  }
+
+  /* PROCESS SECTION */
+  .process-section {
+    padding: var(--section-spacing) var(--space-xl);
+    background: var(--bg-light);
+  }
+
+  .steps-flow {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 2rem;
+    position: relative;
+  }
+
+  .step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .step-number {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: transparent;
+    border: 2px solid var(--color-accent);
+    color: var(--color-accent);
+    font-family: var(--font-body);
+    font-size: 1.25rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1rem;
+    transition: all 0.3s ease;
+  }
+
+  .step:hover .step-number {
+    background: var(--color-accent);
+    color: white;
+    transform: scale(1.1);
+  }
+
+  .step h3 {
+    font-family: var(--font-heading);
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--color-primary);
+    margin: 0 0 0.5rem 0;
+  }
+
+  .step p {
+    font-size: 0.9375rem;
+    color: var(--text-body);
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  /* VALIDATION SECTION */
+  .validation-section {
+    padding: var(--section-spacing) var(--space-xl);
+    background: white;
+  }
+
+  .validation-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
+  }
+
+  .validation-card {
+    background: var(--bg-light);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-xl);
+    padding: 2rem;
+    text-align: center;
+    transition: all 0.3s ease;
+  }
+
+  .validation-card:hover {
+    border-color: var(--color-accent);
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-4px);
+  }
+
+  .validation-metric {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+
+  .validation-metric .metric-value {
+    font-family: var(--font-heading);
+    font-size: 3rem;
+    font-weight: 700;
+    color: var(--color-accent);
+    line-height: 1;
+    margin-bottom: 0.25rem;
+  }
+
+  .validation-metric .metric-label {
+    font-family: var(--font-body);
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-light);
+  }
+
+  .validation-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 1rem;
+    background: var(--color-primary);
+    color: white;
+    border-radius: var(--radius-lg);
+    margin-bottom: 1rem;
+  }
+
+  .validation-badge svg {
+    color: var(--color-accent);
+  }
+
+  .validation-badge span {
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 1rem;
+  }
+
+  .validation-card p {
+    font-size: 0.9375rem;
+    color: var(--text-body);
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  /* CTA SECTION */
+  .cta-section {
+    padding: var(--section-spacing) var(--space-xl);
+    background: var(--bg-light);
+    text-align: center;
+  }
+
+  .cta-content {
+    max-width: 700px;
+    margin: 0 auto;
+  }
+
+  .cta-content h2 {
+    font-family: var(--font-heading);
+    font-size: clamp(2rem, 4vw, 3rem);
+    font-weight: 600;
+    color: var(--color-primary);
+    margin: 0 0 1rem 0;
+  }
+
+  .cta-content > p {
+    font-size: 1.125rem;
+    color: var(--text-body);
+    margin: 0 0 2rem 0;
+  }
+
+  .cta-buttons {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+  }
+
+  .cta-note {
+    font-size: 0.875rem;
+    color: var(--text-light);
+    margin: 0;
+  }
+
+  /* FOOTER */
+  .site-footer {
+    background: var(--color-primary);
+    color: white;
+    padding: 4rem 0 2rem;
+  }
+
+  .footer-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    gap: 3rem;
+    margin-bottom: 3rem;
+  }
+
+  .footer-brand {
+    padding-right: 2rem;
+  }
+
+  .footer-logo {
+    display: inline-block;
+    text-decoration: none;
+    margin-bottom: 1rem;
+  }
+
+  .logo-text {
+    font-family: var(--font-heading);
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--color-accent);
+  }
+
+  .footer-tagline {
+    font-family: var(--font-body);
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--color-accent);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin: 0 0 1rem 0;
+  }
+
+  .footer-description {
+    font-size: 0.9375rem;
+    color: rgba(255, 255, 255, 0.7);
+    line-height: 1.6;
+    margin: 0 0 1.5rem 0;
+  }
+
+  .footer-social {
+    display: flex;
+    gap: 1rem;
+  }
+
+  .footer-social a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    transition: all 0.3s ease;
+  }
+
+  .footer-social a:hover {
+    background: var(--color-accent);
+    color: var(--color-primary);
+    transform: translateY(-2px);
+  }
+
+  .footer-column h4 {
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--color-accent);
+    margin: 0 0 1.5rem 0;
+  }
+
+  .footer-column ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .footer-column li {
+    margin-bottom: 0.75rem;
+  }
+
+  .footer-column a {
+    font-size: 0.9375rem;
+    color: rgba(255, 255, 255, 0.7);
+    text-decoration: none;
+    transition: color 0.2s ease;
+  }
+
+  .footer-column a:hover {
+    color: white;
+  }
+
+  .footer-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 2rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .footer-legal p {
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.5);
+    margin: 0 0 0.5rem 0;
+  }
+
+  .footer-legal-links {
+    display: flex;
+    gap: 1.5rem;
+  }
+
+  .footer-legal-links a {
+    font-size: 0.8125rem;
+    color: rgba(255, 255, 255, 0.5);
+    text-decoration: none;
+    transition: color 0.2s ease;
+  }
+
+  .footer-legal-links a:hover {
+    color: white;
+  }
+
+  .footer-certifications {
+    display: flex;
+    gap: 1rem;
+  }
+
+  .certification {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.5);
+    padding: 0.5rem 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 500px;
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 1024px) {
+    .methodology-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .validation-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .steps-flow {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .footer-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .footer-brand {
+      grid-column: span 2;
+      padding-right: 0;
+      padding-bottom: 2rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+  }
+
+  @media (max-width: 768px) {
+    .example-grid {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+
+    .example-operator {
+      display: none;
+    }
+
+    .validation-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .steps-flow {
+      grid-template-columns: 1fr;
+    }
+
+    .nav-links {
+      display: none;
+    }
+
+    .footer-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .footer-brand {
+      grid-column: span 1;
+    }
+
+    .footer-bottom {
+      flex-direction: column;
+      gap: 1.5rem;
+      text-align: center;
+    }
+
+    .footer-legal-links {
+      justify-content: center;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+</style>
+
+<script>
+  // Nav scroll effect
+  window.addEventListener('scroll', () => {
+    const nav = document.querySelector('.nav');
+    if (nav && window.scrollY > 50) {
+      nav.classList.add('scrolled');
+    } else if (nav) {
+      nav.classList.remove('scrolled');
+    }
+  });
+
+  // Smooth scroll for anchor links
+  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+      e.preventDefault();
+      const target = document.querySelector(this.getAttribute('href') || '');
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth' });
+      }
+    });
+  });
+</script>

@@ -2,8 +2,22 @@
 import CockpitLayout from '@layouts/CockpitLayout.astro';
 import MetricCard from '@components/shared/MetricCard';
 import DashboardActions from '@components/dashboard/DashboardActions';
+import ActionableItems from '@components/dashboard/ActionableItems';
+import CampaignPipeline from '@components/dashboard/CampaignPipeline';
+import AIInsights from '@components/dashboard/AIInsights';
+import ComplianceAlerts from '@components/dashboard/ComplianceAlerts';
 
-const { companyId } = Astro.params;
+const { companyId: companyIdFromParams } = Astro.params;
+const tenantContext = Astro.locals.tenantContext;
+
+// Use companyId from tenantContext as fallback if params is undefined
+const companyId = companyIdFromParams || tenantContext?.companyId;
+
+// Validate companyId exists
+if (!companyId || companyId === 'undefined') {
+  console.error('[Dashboard] Invalid companyId:', { companyIdFromParams, tenantContext });
+  return Astro.redirect('/login');
+}
 
 // TODO: Fetch company data and verify access
 // const company = await fetchCompany(companyId);
@@ -22,24 +36,29 @@ const company = {
   companyId={companyId}
   companyName={company.name}
 >
-  <div class="mx-auto max-w-7xl p-6">
-    <!-- Header -->
-    <div class="mb-8">
-      <h1 class="mb-2 text-3xl font-bold">CSR Dashboard</h1>
-      <p class="text-foreground/60">
-        Welcome to your Corporate Social Responsibility dashboard
-      </p>
-    </div>
+  <div class="mx-auto max-w-[1600px] space-y-8 px-6 py-10">
+    <header class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-[0.4em] text-text-tertiary">Executive cockpit</p>
+        <h1 class="text-3xl font-semibold text-text-primary">Experience Blueprint Snapshot</h1>
+        <p class="text-sm text-text-secondary">Teal scaffolding, gold accents, and actionable insights for {company.name}.</p>
+      </div>
+      <div class="w-full max-w-sm">
+        <DashboardActions companyId={companyId!} client:load />
+      </div>
+    </header>
 
-    <!-- Quick stats grid with "Why this metric?" buttons -->
-    <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
+    <div class="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
       <MetricCard
         metricId="sroi"
         label="SROI"
         value="3.2x"
-        change="+12% from last quarter"
+        change="+12% QoQ"
         changePositive={true}
         showLineage={true}
+        badge="Core KPI"
+        subtitle="Social Return on Investment"
+        trend={[58, 61, 64, 70, 76, 82]}
         client:load
       />
 
@@ -50,6 +69,9 @@ const company = {
         change="+5 pts from last quarter"
         changePositive={true}
         showLineage={true}
+        badge="Engagement"
+        subtitle="Volunteer Impact Score"
+        trend={[72, 74, 75, 78, 80, 85]}
         client:load
       />
 
@@ -57,8 +79,12 @@ const company = {
         metricId="participants"
         label="Active Participants"
         value={247}
-        change="Across all programs"
+        change="+38 net new"
+        changePositive={true}
         showLineage={false}
+        badge="People"
+        subtitle="Across programs"
+        trend={[210, 218, 223, 232, 247, 247]}
         client:load
       />
 
@@ -66,57 +92,25 @@ const company = {
         metricId="integration_score"
         label="Integration Score"
         value={0.78}
-        change="+8% from last quarter"
+        change="+8% QoQ"
         changePositive={true}
         showLineage={true}
+        badge="Composite"
+        subtitle="Integration confidence"
+        trend={[0.62, 0.66, 0.7, 0.73, 0.78, 0.78].map((value) => value * 100)}
         client:load
       />
     </div>
 
-    <!-- Main content area -->
-    <div class="grid gap-6 lg:grid-cols-3">
-      <!-- Program Overview -->
-      <div class="card lg:col-span-2">
-        <h2 class="mb-4 text-xl font-semibold">Program Overview</h2>
-        <div class="space-y-4">
-          <div class="flex items-center justify-between">
-            <div>
-              <div class="font-medium">Buddy Program</div>
-              <div class="text-sm text-foreground/60">89% completion rate</div>
-            </div>
-            <div class="text-2xl font-bold text-primary">142</div>
-          </div>
-          <div class="h-px bg-border"></div>
-          <div class="flex items-center justify-between">
-            <div>
-              <div class="font-medium">Language Connect</div>
-              <div class="text-sm text-foreground/60">67 sessions completed</div>
-            </div>
-            <div class="text-2xl font-bold text-primary">67</div>
-          </div>
-          <div class="h-px bg-border"></div>
-          <div class="flex items-center justify-between">
-            <div>
-              <div class="font-medium">Upskilling</div>
-              <div class="text-sm text-foreground/60">38 courses in progress</div>
-            </div>
-            <div class="text-2xl font-bold text-primary">38</div>
-          </div>
-        </div>
+    <div class="grid gap-6 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
+      <div class="space-y-6">
+        <ActionableItems client:load companyId={companyId} />
+        <CampaignPipeline client:load companyId={companyId} />
       </div>
-
-      <!-- Quick Actions -->
-      <div class="card">
-        <h2 class="mb-4 text-xl font-semibold">Quick Actions</h2>
-        <DashboardActions companyId={companyId!} client:load />
+      <div class="space-y-6">
+        <AIInsights client:load companyId={companyId} />
+        <ComplianceAlerts client:load companyId={companyId} />
       </div>
-    </div>
-
-    <!-- Phase C Notice -->
-    <div class="mt-8 rounded-lg bg-primary/10 p-4 text-center">
-      <p class="text-sm font-medium">
-        🎉 Phase C pilot features are now live: Evidence Explorer, AI-powered reporting with mandatory citations, and lineage tracing!
-      </p>
     </div>
   </div>
 </CockpitLayout>

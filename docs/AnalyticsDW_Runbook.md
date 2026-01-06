@@ -148,7 +148,7 @@ Backfill loads historical data from PostgreSQL to ClickHouse.
 
 **Trigger Backfill:**
 ```bash
-curl -X POST http://localhost:3008/v1/analytics/sync/backfill \
+curl -X POST http://localhost:3023/v1/analytics/sync/backfill \
   -H "Content-Type: application/json" \
   -d '{
     "startDate": "2024-01-01",
@@ -160,7 +160,7 @@ curl -X POST http://localhost:3008/v1/analytics/sync/backfill \
 **Monitor Progress:**
 ```bash
 # Check sync status
-curl http://localhost:3008/v1/analytics/sync/status
+curl http://localhost:3023/v1/analytics/sync/status
 
 # Expected response
 {
@@ -196,7 +196,7 @@ Incremental sync runs every 60 seconds to replicate new/updated data.
 **Monitor Incremental Sync:**
 ```bash
 # Check sync stats
-curl http://localhost:3008/v1/analytics/sync/stats
+curl http://localhost:3023/v1/analytics/sync/stats
 
 # Expected response
 {
@@ -211,7 +211,7 @@ curl http://localhost:3008/v1/analytics/sync/stats
 
 **Manual Trigger:**
 ```bash
-curl -X POST http://localhost:3008/v1/analytics/sync/incremental
+curl -X POST http://localhost:3023/v1/analytics/sync/incremental
 ```
 
 ---
@@ -282,7 +282,7 @@ groups:
 **Diagnosis:**
 ```bash
 # Check sync status
-curl http://localhost:3008/v1/analytics/sync/stats | jq '.replicationLag'
+curl http://localhost:3023/v1/analytics/sync/stats | jq '.replicationLag'
 
 # Check ClickHouse load
 clickhouse-client -q "SELECT * FROM system.metrics WHERE metric LIKE '%Insert%';"

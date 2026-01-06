@@ -17,7 +17,7 @@ const ScreenTextSchema = z.object({
 
 export async function screenRoutes(app: FastifyInstance) {
   // POST /screen/text - Screen text content for safety violations
-  app.post<{ Body: unknown }>('/screen/text', async (request, reply) => {
+  app.post<{ Body: unknown }>('/screen/text', async (request, _reply) => {
     const parsed = ScreenTextSchema.safeParse(request.body);
 
     if (!parsed.success) {
@@ -40,7 +40,7 @@ export async function screenRoutes(app: FastifyInstance) {
       const requiresHumanReview = screeningResult.requiresReview || confidence < 0.9;
 
       // Create safety flag in database
-      const [flag] = await db
+      const insertResult = await db
         .insert(safetyFlags)
         .values({
           contentId,
@@ -51,6 +51,11 @@ export async function screenRoutes(app: FastifyInstance) {
           reviewStatus: 'pending',
         })
         .returning();
+
+      const flag = insertResult[0];
+      if (!flag) {
+        throw new Error('Failed to create safety flag');
+      }
 
       // Add to review queue if human review is required
       if (requiresHumanReview) {
@@ -99,7 +104,7 @@ export async function screenRoutes(app: FastifyInstance) {
   });
 
   // GET /review-queue - Get pending review items
-  app.get('/review-queue', async (request, reply) => {
+  app.get('/review-queue', async (_request, _reply) => {
     const pendingReviews = await db
       .select({
         queueItem: safetyReviewQueue,
@@ -138,7 +143,7 @@ export async function screenRoutes(app: FastifyInstance) {
         });
       }
 
-      const [updated] = await db
+      const updateResult = await db
         .update(safetyReviewQueue)
         .set({
           status: 'reviewed',
@@ -146,6 +151,13 @@ export async function screenRoutes(app: FastifyInstance) {
         })
         .where(eq(safetyReviewQueue.id, id))
         .returning();
+
+      const updated = updateResult[0];
+      if (!updated) {
+        return reply.status(500).send({
+          error: 'Failed to update review item',
+        });
+      }
 
       return {
         id: updated.id,

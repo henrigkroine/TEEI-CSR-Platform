@@ -6,6 +6,7 @@ import SROIPanel from '../components/widgets/SROIPanel';
 import VISPanel from '../components/widgets/VISPanel';
 import Q2QFeed from '../components/widgets/Q2QFeed';
 import ExportButtons from '../components/widgets/ExportButtons';
+import SavedViewsIntegration from '../components/dashboard/SavedViewsIntegration';
 
 const user = Astro.locals.user;
 
@@ -23,6 +24,7 @@ const canExport = hasPermission(user.role, 'EXPORT_DATA');
       <p class="welcome">Welcome back, {user.name}</p>
     </div>
     <div class="header-actions">
+      <SavedViewsIntegration companyId={user.company_id} client:load />
       <span class="role-badge">{user.role}</span>
       <form method="POST" action="/api/logout">
         <button type="submit" class="btn btn-secondary">Sign Out</button>

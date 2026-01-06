@@ -10,9 +10,9 @@
  * - AI prompt records
  */
 
-import type { AuditEvent, AuditActor, AuditResource, AuditOrigin, ActionCategory, AuditAction } from '@teei/shared-types';
+import type { AuditEvent, ActionCategory } from '@teei/shared-types';
 import type { Pool } from 'pg';
-import { auditLogs } from './schema/audits.js';
+import { auditLogs as _auditLogs } from './schema/audits.js';
 
 /**
  * Base mapper interface

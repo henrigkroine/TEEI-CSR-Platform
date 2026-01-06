@@ -2,6 +2,7 @@
 import BaseLayout from '../../../../layouts/BaseLayout.astro';
 import { hasPermission } from '../../../../utils/rbac';
 import EvidenceList from '../../../../components/evidence/EvidenceList';
+import PageHeader from '../../../../components/ui/PageHeader';
 
 // Extract route parameters
 const { lang, companyId } = Astro.params;
@@ -27,20 +28,19 @@ if (!canViewEvidence) {
 
 <BaseLayout title="Evidence Explorer - TEEI Corporate Cockpit" lang={lang}>
   <div class="evidence-page">
-    <div class="page-header">
-      <div>
-        <a href={`/${lang}/cockpit/${companyId}`} class="back-link">
-          ← Back to Dashboard
-        </a>
-        <h1>Evidence Explorer</h1>
-        <p class="page-description">
-          Explore and trace the data sources behind your impact metrics. View evidence lineage,
-          verification status, and confidence scores.
-        </p>
-      </div>
-    </div>
+    <PageHeader
+      title="Evidence Explorer"
+      subtitle="Explore and trace the data sources behind your impact metrics. View evidence lineage, verification status, and confidence scores."
+      breadcrumbs={[
+        { label: 'Dashboard', href: `/${lang}/cockpit/${companyId}` },
+        { label: 'Evidence Explorer' },
+      ]}
+      client:load
+    />
 
-    <EvidenceList companyId={companyId} role={user.role} client:load />
+    <div class="evidence-container">
+      <EvidenceList companyId={companyId} role={user.role} client:load />
+    </div>
   </div>
 </BaseLayout>
 
@@ -48,44 +48,43 @@ if (!canViewEvidence) {
   .evidence-page {
     max-width: 1400px;
     margin: 0 auto;
-    padding: calc(var(--spacing-unit) * 4);
+    padding: var(--space-24);
   }
 
-  .page-header {
-    margin-bottom: calc(var(--spacing-unit) * 4);
+  .evidence-container {
+    background-color: var(--color-surface);
+    border-radius: var(--card-radius);
+    box-shadow: var(--shadow-card);
+    border: 1px solid var(--color-border);
+    padding: var(--space-24);
+    animation: pageEnter 0.3s var(--ease-out) backwards;
+    animation-delay: 50ms;
   }
 
-  .back-link {
-    display: inline-block;
-    color: var(--color-primary);
-    text-decoration: none;
-    font-size: 0.9375rem;
-    margin-bottom: calc(var(--spacing-unit) * 2);
-  }
-
-  .back-link:hover {
-    text-decoration: underline;
-  }
-
-  h1 {
-    font-size: 2rem;
-    margin-bottom: calc(var(--spacing-unit) * 1);
-  }
-
-  .page-description {
-    color: var(--color-text-secondary);
-    font-size: 1rem;
-    line-height: 1.5;
-    max-width: 800px;
+  @keyframes pageEnter {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
   @media (max-width: 768px) {
     .evidence-page {
-      padding: calc(var(--spacing-unit) * 2);
+      padding: var(--space-16);
     }
 
-    h1 {
-      font-size: 1.5rem;
+    .evidence-container {
+      padding: var(--space-16);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .evidence-container {
+      animation: none;
     }
   }
 </style>

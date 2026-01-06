@@ -10,6 +10,11 @@ function cspIntegration() {
     hooks: {
       'astro:server:setup': ({ server }) => {
         server.middlewares.use((req, res, next) => {
+          // Skip CSP headers for Vite internal routes (breaks hydration if headers are added)
+          if (req.url?.startsWith('/@') || req.url?.startsWith('/node_modules/')) {
+            return next();
+          }
+
           // Generate nonce for CSP
           const nonce = Buffer.from(Math.random().toString()).toString('base64').substring(0, 16);
 
@@ -17,7 +22,26 @@ function cspIntegration() {
           res.locals = res.locals || {};
           res.locals.cspNonce = nonce;
 
-          // Set CSP header with nonce
+          // Check if we're in development mode
+          const isDev = process.env.NODE_ENV !== 'production';
+
+          // In dev mode, use permissive CSP to allow Vite HMR and React hydration
+          // In production, use strict CSP with nonces
+          if (isDev) {
+            res.setHeader('Content-Security-Policy', [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:*",
+              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+              "img-src 'self' data: blob: https:",
+              "font-src 'self' data: https://fonts.gstatic.com",
+              "connect-src 'self' ws://localhost:* http://localhost:* https://fonts.googleapis.com https://fonts.gstatic.com",
+              "frame-src 'none'",
+              "object-src 'none'",
+            ].join('; '));
+            return next();
+          }
+
+          // Production: Set CSP header with nonce
           const cspDirectives = [
             "default-src 'self'",
             `script-src 'nonce-${nonce}' 'strict-dynamic' https:`,
@@ -43,9 +67,11 @@ function cspIntegration() {
           res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
           res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
 
-          // Trusted Types enforcement
-          res.setHeader('Require-Trusted-Types-For', "'script'");
-          res.setHeader('Trusted-Types', 'default dompurify');
+          // Trusted Types enforcement (production only - breaks React hydration in dev)
+          if (!isDev) {
+            res.setHeader('Require-Trusted-Types-For', "'script'");
+            res.setHeader('Trusted-Types', 'default dompurify');
+          }
 
           next();
         });
@@ -56,7 +82,9 @@ function cspIntegration() {
 
 // https://astro.build/config
 export default defineConfig({
+  site: undefined, // Don't set site URL to prevent automatic redirects
   output: 'server',
+  server: { port: 4327 },
   adapter: node({
     mode: 'standalone',
   }),
@@ -71,7 +99,7 @@ export default defineConfig({
     defaultLocale: 'en',
     locales: ['en', 'no', 'uk'],
     routing: {
-      prefixDefaultLocale: true,
+      prefixDefaultLocale: false, // Disable prefix to prevent /home redirect loop
     },
   },
   vite: {
@@ -85,6 +113,8 @@ export default defineConfig({
         '@a11y': '/src/a11y',
         '@telemetry': '/src/telemetry',
       },
+      // Prevent duplicate React copies (fixes "Invalid hook call" + dead buttons)
+      dedupe: ['react', 'react-dom'],
     },
     build: {
       // Ensure CSP-compatible builds

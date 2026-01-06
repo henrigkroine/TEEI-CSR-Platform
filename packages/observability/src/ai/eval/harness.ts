@@ -4,8 +4,6 @@
  */
 
 import { EvalFixture, EvalResult, EvalSuiteResult } from '@teei/shared-types';
-import { readFileSync } from 'fs';
-import { join } from 'path';
 
 export class EvalHarness {
   async runFixture(fixture: EvalFixture, generator: any): Promise<EvalResult> {

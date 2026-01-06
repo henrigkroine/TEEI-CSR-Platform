@@ -6,7 +6,7 @@
  * Displays beneficiary group information as a selectable card
  */
 import React from 'react';
-import { MapPin, Users, AlertCircle, CheckCircle } from 'lucide-react';
+import { MapPinIcon, UsersIcon, AlertCircleIcon, CheckCircleIcon } from '../icons';
 
 export interface BeneficiaryGroup {
   id: string;
@@ -48,13 +48,13 @@ export function BeneficiaryGroupCard({
         <h3 className="beneficiary-name">{group.name}</h3>
         {!isCompatible && (
           <div className="compatibility-badge incompatible">
-            <AlertCircle className="badge-icon" aria-hidden="true" />
+            <AlertCircleIcon className="badge-icon" aria-hidden="true" />
             <span className="badge-text">Incompatible</span>
           </div>
         )}
         {isCompatible && (
           <div className="compatibility-badge compatible">
-            <CheckCircle className="badge-icon" aria-hidden="true" />
+            <CheckCircleIcon className="badge-icon" aria-hidden="true" />
             <span className="badge-text">Compatible</span>
           </div>
         )}
@@ -62,14 +62,14 @@ export function BeneficiaryGroupCard({
 
       <div className="beneficiary-body">
         <div className="beneficiary-meta">
-          <MapPin className="meta-icon" aria-hidden="true" />
+          <MapPinIcon className="meta-icon" aria-hidden="true" />
           <span className="meta-text">
             {group.location.city ? `${group.location.city}, ` : ''}{group.location.country}
           </span>
         </div>
 
         <div className="beneficiary-meta">
-          <Users className="meta-icon" aria-hidden="true" />
+          <UsersIcon className="meta-icon" aria-hidden="true" />
           <span className="meta-text">
             {group.demographics.size} members
           </span>

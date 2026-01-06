@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, memo } from 'react';
 
 interface Volunteer {
   volunteer_id: string;
@@ -20,7 +20,7 @@ interface Props {
   top?: number;
 }
 
-export default function VISPanel({ companyId, period, top = 10 }: Props) {
+function VISPanel({ companyId, period, top = 10 }: Props) {
   const [data, setData] = useState<VISData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -213,3 +213,7 @@ export default function VISPanel({ companyId, period, top = 10 }: Props) {
     </div>
   );
 }
+
+export default memo(VISPanel, (prev, next) => {
+  return prev.companyId === next.companyId && prev.period === next.period && prev.top === next.top;
+});

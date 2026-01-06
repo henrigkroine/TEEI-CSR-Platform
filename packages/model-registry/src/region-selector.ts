@@ -71,6 +71,10 @@ export function selectRegionalEndpoint(
 
   // Determine target region
   const targetRegion = requestRegion || policy.preferredRegion || policy.allowedRegions[0];
+  
+  if (!targetRegion) {
+    throw new Error('No target region could be determined from request or policy');
+  }
 
   // Check if target region is allowed
   if (policy.enforceStrict && !policy.allowedRegions.includes(targetRegion) && !policy.allowedRegions.includes('global')) {

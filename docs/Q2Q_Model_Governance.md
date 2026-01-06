@@ -147,7 +147,7 @@ models:
 
 ```bash
 # Via API
-curl -X POST http://localhost:3005/q2q/registry/sync
+curl -X POST http://localhost:3021/q2q/registry/sync
 
 # Or via command line (if implemented)
 pnpm --filter @teei/q2q-ai sync-models
@@ -157,10 +157,10 @@ pnpm --filter @teei/q2q-ai sync-models
 
 ```bash
 # List all models
-curl http://localhost:3005/q2q/registry/models
+curl http://localhost:3021/q2q/registry/models
 
 # Get specific model
-curl http://localhost:3005/q2q/registry/models/q2q-claude-v3-enhanced
+curl http://localhost:3021/q2q/registry/models/q2q-claude-v3-enhanced
 ```
 
 ### Step 4: Evaluate Performance
@@ -169,17 +169,17 @@ Run evaluation on test dataset to ensure acceptable performance:
 
 ```bash
 # Upload test dataset
-curl -X POST http://localhost:3005/q2q/eval/upload \
+curl -X POST http://localhost:3021/q2q/eval/upload \
   -F "file=@test_dataset.csv" \
   -F "name=v3_evaluation"
 
 # Run evaluation
-curl -X POST http://localhost:3005/q2q/eval/run \
+curl -X POST http://localhost:3021/q2q/eval/run \
   -H "Content-Type: application/json" \
   -d '{"datasetId": "dataset-id", "modelId": "q2q-claude-v3-enhanced"}'
 
 # Get results
-curl http://localhost:3005/q2q/eval/results/run-id
+curl http://localhost:3021/q2q/eval/results/run-id
 ```
 
 ### Step 5: Activate for Production
@@ -187,7 +187,7 @@ curl http://localhost:3005/q2q/eval/results/run-id
 Once evaluation is satisfactory:
 
 ```bash
-curl -X POST http://localhost:3005/q2q/registry/models/q2q-claude-v3-enhanced/activate
+curl -X POST http://localhost:3021/q2q/registry/models/q2q-claude-v3-enhanced/activate
 ```
 
 ---
@@ -204,7 +204,7 @@ curl -X POST http://localhost:3005/q2q/registry/models/q2q-claude-v3-enhanced/ac
 
 ```bash
 # Activate model (deactivates other claude models)
-curl -X POST http://localhost:3005/q2q/registry/models/q2q-claude-v2-multilingual/activate
+curl -X POST http://localhost:3021/q2q/registry/models/q2q-claude-v2-multilingual/activate
 ```
 
 Response:
@@ -224,14 +224,14 @@ Response:
 ### Deactivate a Model
 
 ```bash
-curl -X POST http://localhost:3005/q2q/registry/models/q2q-claude-v1/deactivate
+curl -X POST http://localhost:3021/q2q/registry/models/q2q-claude-v1/deactivate
 ```
 
 ### Get Active Model
 
 ```bash
 # Get active model for specific provider
-curl http://localhost:3005/q2q/registry/models/active/claude
+curl http://localhost:3021/q2q/registry/models/active/claude
 ```
 
 ### Rollback Workflow
@@ -245,10 +245,10 @@ To rollback to a previous model version:
 
 ```bash
 # Example: Rollback from v2 to v1
-curl -X POST http://localhost:3005/q2q/registry/models/q2q-claude-v1/activate
+curl -X POST http://localhost:3021/q2q/registry/models/q2q-claude-v1/activate
 
 # Verify rollback
-curl http://localhost:3005/q2q/registry/models/active/claude
+curl http://localhost:3021/q2q/registry/models/active/claude
 ```
 
 ---
@@ -333,10 +333,10 @@ if (result.alertTriggered) {
 
 ```bash
 # Get recent drift checks
-curl http://localhost:3005/q2q/drift/checks?limit=50
+curl http://localhost:3021/q2q/drift/checks?limit=50
 
 # Get only alerts
-curl http://localhost:3005/q2q/drift/alerts?limit=20
+curl http://localhost:3021/q2q/drift/alerts?limit=20
 ```
 
 ### Responding to Drift Alerts

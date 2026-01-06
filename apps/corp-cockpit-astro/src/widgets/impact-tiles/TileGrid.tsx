@@ -5,10 +5,10 @@
 
 import { useState, useEffect } from 'react';
 import type { ImpactTile } from '@teei/shared-types';
-import { LanguageTileWidget } from './LanguageTileWidget';
-import { MentorshipTileWidget } from './MentorshipTileWidget';
-import { UpskillingTileWidget } from './UpskillingTileWidget';
-import { WEEITileWidget } from './WEEITileWidget';
+import LanguageTileWidget from './LanguageTileWidget';
+import MentorshipTileWidget from './MentorshipTileWidget';
+import UpskillingTileWidget from './UpskillingTileWidget';
+import WEEITileWidget from './WEEITileWidget';
 
 export interface TileGridProps {
   companyId: string;
@@ -94,11 +94,24 @@ export function TileGrid({
       role="region"
       aria-label="Impact metrics dashboard"
     >
+      <style>{`
+        .tile-grid-container .tile-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+          gap: 1.5rem;
+        }
+
+        @media (max-width: 1024px) {
+          .tile-grid-container .tile-grid {
+            grid-template-columns: 1fr;
+          }
+        }
+      `}</style>
       <div className="tile-grid">
         {tiles.language && (
           <LanguageTileWidget
             tile={tiles.language}
-            isLoading={loading.language}
+            loading={loading.language}
             error={errors.language}
           />
         )}
@@ -106,7 +119,7 @@ export function TileGrid({
         {tiles.mentorship && (
           <MentorshipTileWidget
             tile={tiles.mentorship}
-            isLoading={loading.mentorship}
+            loading={loading.mentorship}
             error={errors.mentorship}
           />
         )}

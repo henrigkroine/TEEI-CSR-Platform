@@ -1,12 +1,29 @@
 import React from 'react';
 import TileCard, { MetricRow, ProgressBar } from './TileCard';
 import type { LanguageTile } from '@teei/shared-types';
+import EmptyState from '../../components/EmptyState';
 
 interface LanguageTileWidgetProps {
   tile: LanguageTile;
   loading?: boolean;
   error?: string | null;
   onExport?: () => void;
+}
+
+/**
+ * Check if language tile data is empty or has zero values
+ * World-class empty state detection that considers all meaningful metrics
+ */
+function isEmptyLanguageData(data: LanguageTile['data']): boolean {
+  return (
+    data.sessionsPerWeek === 0 &&
+    data.cohortDurationWeeks === 0 &&
+    data.volunteerHours.total === 0 &&
+    data.volunteerHours.uniqueVolunteers === 0 &&
+    data.retention.enrollments === 0 &&
+    data.retention.activeParticipants === 0 &&
+    data.retention.completions === 0
+  );
 }
 
 /**
@@ -21,18 +38,37 @@ export default function LanguageTileWidget({
 }: LanguageTileWidgetProps) {
   const { data } = tile;
 
+  // Check for empty/zero data state
+  const isEmpty = !loading && !error && isEmptyLanguageData(data);
+
   return (
     <TileCard
-      title="Language Learning"
+      title="Language Connect for Ukraine"
       subtitle={`${tile.metadata.period.start} to ${tile.metadata.period.end}`}
       icon="🗣️"
       loading={loading}
       error={error}
       onExport={onExport}
-      ariaLabel="Language learning program metrics"
+      ariaLabel="Language Connect for Ukraine program metrics"
     >
-      {/* Sessions Per Week */}
-      <div className="mb-4">
+      {isEmpty ? (
+        <EmptyState
+          title="No Language Learning Data"
+          message="No language learning sessions found for this period. Data will appear once sessions are recorded and imported via CSV."
+          icon="data"
+          action={{
+            label: 'View Import Guide',
+            onClick: () => {
+              // Open documentation or help modal
+              const url = window.location.origin + '/docs/kintell/KINTELL_CSV_FORMATS.md';
+              window.open(url, '_blank', 'noopener,noreferrer');
+            },
+          }}
+        />
+      ) : (
+        <>
+          {/* Sessions Per Week */}
+          <div className="mb-4">
         <ProgressBar
           label="Sessions per Week"
           current={data.sessionsPerWeek}
@@ -112,13 +148,15 @@ export default function LanguageTileWidget({
         </div>
       )}
 
-      {/* Data Freshness */}
-      <div className="border-t border-gray-200 pt-3 mt-3">
-        <p className="text-xs text-gray-500">
-          Data: {tile.metadata.dataFreshness.replace('_', ' ')} •
-          Calculated: {new Date(tile.metadata.calculatedAt).toLocaleString()}
-        </p>
-      </div>
+          {/* Data Freshness */}
+          <div className="border-t border-gray-200 pt-3 mt-3">
+            <p className="text-xs text-gray-500">
+              Data: {tile.metadata.dataFreshness.replace('_', ' ')} •
+              Calculated: {new Date(tile.metadata.calculatedAt).toLocaleString()}
+            </p>
+          </div>
+        </>
+      )}
     </TileCard>
   );
 }

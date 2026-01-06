@@ -220,7 +220,7 @@ kubectl exec -it -n teei-csr <reporting-pod> -- nc -zv postgresql.teei-csr.svc.c
 ```typescript
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = process.env.BASE_URL || 'http://localhost:4321';
+const BASE_URL = process.env.BASE_URL || 'http://localhost:6509';
 
 test.describe('Smoke: New Feature', () => {
   test.setTimeout(30000); // 30 seconds max

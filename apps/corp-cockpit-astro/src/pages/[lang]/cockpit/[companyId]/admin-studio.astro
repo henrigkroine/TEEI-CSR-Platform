@@ -10,7 +10,7 @@
  * All operations enforce RBAC and audit logging.
  */
 import BaseLayout from '../../../../layouts/BaseLayout.astro';
-import { hasPermission } from '../../../../types/roles';
+import { hasPermission } from '../../../../utils/rbac';
 
 // Extract route parameters
 const { lang, companyId } = Astro.params;
@@ -131,6 +131,7 @@ if (!ADMIN_STUDIO_ENABLED) {
 
   <!-- Import React components -->
   <script>
+    import { createElement } from 'react';
     import { createRoot } from 'react-dom/client';
     import DataResidencySelector from '../../../../components/admin-studio/DataResidencySelector';
     import EmbedTokenManager from '../../../../components/admin-studio/EmbedTokenManager';
@@ -142,7 +143,7 @@ if (!ADMIN_STUDIO_ENABLED) {
     if (residencyContainer) {
       const companyId = residencyContainer.dataset.companyId;
       createRoot(residencyContainer).render(
-        <DataResidencySelector companyId={companyId} />
+        createElement(DataResidencySelector, { companyId })
       );
     }
 
@@ -151,7 +152,7 @@ if (!ADMIN_STUDIO_ENABLED) {
     if (embedContainer) {
       const companyId = embedContainer.dataset.companyId;
       createRoot(embedContainer).render(
-        <EmbedTokenManager companyId={companyId} />
+        createElement(EmbedTokenManager, { companyId })
       );
     }
 
@@ -160,7 +161,7 @@ if (!ADMIN_STUDIO_ENABLED) {
     if (domainContainer) {
       const companyId = domainContainer.dataset.companyId;
       createRoot(domainContainer).render(
-        <DomainAllowListManager companyId={companyId} />
+        createElement(DomainAllowListManager, { companyId })
       );
     }
 
@@ -169,7 +170,7 @@ if (!ADMIN_STUDIO_ENABLED) {
     if (activityContainer) {
       const companyId = activityContainer.dataset.companyId;
       createRoot(activityContainer).render(
-        <ActivityStream companyId={companyId} />
+        createElement(ActivityStream, { companyId })
       );
     }
   </script>

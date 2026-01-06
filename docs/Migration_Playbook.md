@@ -174,8 +174,8 @@ WHERE connamespace = 'public'::regnamespace;
 npm run test:integration
 
 # Check health endpoints
-curl http://localhost:3000/health/liveness
-curl http://localhost:3001/health/liveness
+curl http://localhost:3017/health/liveness
+curl http://localhost:3018/health/liveness
 ```
 
 #### Step 5: Restart Application

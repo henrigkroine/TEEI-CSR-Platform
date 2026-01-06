@@ -8,7 +8,7 @@ import { initializeScheduler, stopAllCronJobs } from './lib/scheduler.js';
 import { initializeEventListeners } from './events/listeners.js';
 
 const logger = createServiceLogger('notifications');
-const PORT = parseInt(process.env.PORT_NOTIFICATIONS || '3008');
+const PORT = parseInt(process.env.PORT_NOTIFICATIONS || '3024');
 
 async function start() {
   const app = Fastify({

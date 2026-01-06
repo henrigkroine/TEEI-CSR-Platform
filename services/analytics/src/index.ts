@@ -12,7 +12,7 @@ import { closeClient as closeClickHouse } from './lib/clickhouse-client.js';
 import { closeRedis } from './lib/cache.js';
 
 const logger = createServiceLogger('analytics');
-const PORT = parseInt(process.env.PORT_ANALYTICS || '3008');
+const PORT = parseInt(process.env.PORT_ANALYTICS || '3023');
 
 let syncTimer: NodeJS.Timeout | null = null;
 

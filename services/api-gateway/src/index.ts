@@ -3,7 +3,7 @@ import fastifyJwt from '@fastify/jwt';
 import fastifyRateLimit from '@fastify/rate-limit';
 import { config } from 'dotenv';
 import { registerProxyRoutes } from './routes/proxy.js';
-import { registerHealthRoutes } from './routes/health.js';
+// Note: registerHealthRoutes from './routes/health.js' removed - using health/index.js instead
 import { registerPrivacyRoutes } from './routes/privacy.js';
 import { trustRoutes } from './routes/trust.js';
 import { registerStatusRoutes } from './routes/status.js';
@@ -13,7 +13,7 @@ import { createHealthManager, setupHealthRoutes } from './health/index.js';
 config();
 
 // Environment configuration
-const PORT = parseInt(process.env.PORT_API_GATEWAY || '3000', 10);
+const PORT = parseInt(process.env.PORT_API_GATEWAY || '3017', 10);
 const HOST = process.env.HOST || '0.0.0.0';
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 const NODE_ENV = process.env.NODE_ENV || 'development';
@@ -62,15 +62,12 @@ async function initializeGateway() {
     fastify.log.info('JWT plugin registered');
 
     // Register rate limiting plugin
+    // Note: Redis support disabled in dev - would need ioredis client instance
     await fastify.register(fastifyRateLimit, {
       max: 100, // Maximum 100 requests
       timeWindow: '1 minute', // Per minute
       cache: 10000, // Cache size
       allowList: ['127.0.0.1'], // Whitelist localhost
-      redis: process.env.REDIS_URL ? {
-        // Redis configuration for distributed rate limiting
-        url: process.env.REDIS_URL
-      } : undefined,
       skipOnError: true, // Skip rate limiting on errors
       keyGenerator: (request) => {
         // Use user ID if authenticated, otherwise IP address
@@ -180,8 +177,7 @@ async function initializeGateway() {
       };
     });
 
-    // Register health check routes
-    await registerHealthRoutes(fastify);
+    // Note: Health routes already registered via setupHealthRoutes above
 
     // Register GDPR privacy routes
     await registerPrivacyRoutes(fastify);
@@ -192,10 +188,11 @@ async function initializeGateway() {
     // Register Status API routes (public, no auth)
     await registerStatusRoutes(fastify);
 
-    // Register Admin Studio v2 routes
-    const { adminRoutes } = await import('./routes/admin/index.js');
-    await fastify.register(adminRoutes);
-    fastify.log.info('Admin Studio v2 routes registered');
+    // Admin Studio v2 routes disabled - @teei/entitlements package has build errors
+    // TODO: Fix entitlements package TypeScript errors then re-enable
+    // const { adminRoutes } = await import('./routes/admin/index.js');
+    // await fastify.register(adminRoutes);
+    fastify.log.info('Admin Studio v2 routes SKIPPED (entitlements package not built)');
 
     // Register proxy routes (must be last to avoid conflicts)
     await registerProxyRoutes(fastify);
@@ -203,7 +200,7 @@ async function initializeGateway() {
     fastify.log.info('All routes and plugins registered successfully');
 
   } catch (error) {
-    fastify.log.error({ error }, 'Failed to initialize gateway');
+    fastify.log.error({ error: error instanceof Error ? { message: error.message, stack: error.stack, name: error.name } : error }, 'Failed to initialize gateway');
     throw error;
   }
 }

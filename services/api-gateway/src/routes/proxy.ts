@@ -5,13 +5,13 @@ import fastifyHttpProxy from '@fastify/http-proxy';
  * Service endpoints mapping
  */
 const SERVICE_ENDPOINTS = {
-  UNIFIED_PROFILE: process.env.UNIFIED_PROFILE_URL || 'http://localhost:3001',
-  KINTELL_CONNECTOR: process.env.KINTELL_CONNECTOR_URL || 'http://localhost:3002',
-  BUDDY_SERVICE: process.env.BUDDY_SERVICE_URL || 'http://localhost:3003',
-  UPSKILLING_CONNECTOR: process.env.UPSKILLING_CONNECTOR_URL || 'http://localhost:3004',
-  Q2Q_AI: process.env.Q2Q_AI_URL || 'http://localhost:3005',
-  SAFETY_MODERATION: process.env.SAFETY_MODERATION_URL || 'http://localhost:3006',
-  IMPACT_IN: process.env.IMPACT_IN_URL || 'http://localhost:3007'
+  UNIFIED_PROFILE: process.env.UNIFIED_PROFILE_URL || 'http://localhost:3018',
+  KINTELL_CONNECTOR: process.env.KINTELL_CONNECTOR_URL || 'http://localhost:3027',
+  BUDDY_SERVICE: process.env.BUDDY_SERVICE_URL || 'http://localhost:3019',
+  UPSKILLING_CONNECTOR: process.env.UPSKILLING_CONNECTOR_URL || 'http://localhost:3028',
+  Q2Q_AI: process.env.Q2Q_AI_URL || 'http://localhost:3021',
+  SAFETY_MODERATION: process.env.SAFETY_MODERATION_URL || 'http://localhost:3022',
+  IMPACT_IN: process.env.IMPACT_IN_URL || 'http://localhost:3025'
 };
 
 /**

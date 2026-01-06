@@ -244,19 +244,13 @@ export const WEEITileSchema = z.object({
 export type WEEITile = z.infer<typeof WEEITileSchema>;
 
 // Union type for all tile types
-export const TileResultSchema = z.discriminatedUnion('metadata.programType', [
-  LanguageTileSchema.extend({
-    metadata: TileMetadataSchema.extend({ programType: z.literal('language') }),
-  }),
-  MentorshipTileSchema.extend({
-    metadata: TileMetadataSchema.extend({ programType: z.literal('mentorship') }),
-  }),
-  UpskillingTileSchema.extend({
-    metadata: TileMetadataSchema.extend({ programType: z.literal('upskilling') }),
-  }),
-  WEEITileSchema.extend({
-    metadata: TileMetadataSchema.extend({ programType: z.literal('weei') }),
-  }),
+// Note: z.discriminatedUnion requires top-level discriminator, not nested path
+// Using z.union with refinement for runtime discrimination
+export const TileResultSchema = z.union([
+  LanguageTileSchema,
+  MentorshipTileSchema,
+  UpskillingTileSchema,
+  WEEITileSchema,
 ]);
 
 export type TileResult = z.infer<typeof TileResultSchema>;

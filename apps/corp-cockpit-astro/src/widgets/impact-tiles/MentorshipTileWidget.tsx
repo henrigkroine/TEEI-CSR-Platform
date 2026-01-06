@@ -1,12 +1,29 @@
 import React from 'react';
 import TileCard, { MetricRow, ProgressBar } from './TileCard';
 import type { MentorshipTile } from '@teei/shared-types';
+import EmptyState from '../../components/EmptyState';
 
 interface MentorshipTileWidgetProps {
   tile: MentorshipTile;
   loading?: boolean;
   error?: string | null;
   onExport?: () => void;
+}
+
+/**
+ * Check if mentorship tile data is empty or has zero values
+ * World-class empty state detection that considers all meaningful metrics
+ */
+function isEmptyMentorshipData(data: MentorshipTile['data']): boolean {
+  return (
+    data.bookings.total === 0 &&
+    data.bookings.scheduled === 0 &&
+    data.bookings.completed === 0 &&
+    data.attendance.totalSessions === 0 &&
+    data.repeatMentoring.uniqueMentors === 0 &&
+    data.repeatMentoring.uniqueMentees === 0 &&
+    data.repeatMentoring.mentorsWithMultipleSessions === 0
+  );
 }
 
 /**
@@ -21,18 +38,37 @@ export default function MentorshipTileWidget({
 }: MentorshipTileWidgetProps) {
   const { data } = tile;
 
+  // Check for empty/zero data state
+  const isEmpty = !loading && !error && isEmptyMentorshipData(data);
+
   return (
     <TileCard
-      title="Mentorship"
+      title="Mentors for Ukraine"
       subtitle={`${tile.metadata.period.start} to ${tile.metadata.period.end}`}
       icon="🤝"
       loading={loading}
       error={error}
       onExport={onExport}
-      ariaLabel="Mentorship program metrics"
+      ariaLabel="Mentors for Ukraine program metrics"
     >
-      {/* Bookings */}
-      <div className="mb-4">
+      {isEmpty ? (
+        <EmptyState
+          title="No Mentorship Data"
+          message="No mentorship sessions found for this period. Data will appear once sessions are booked, completed, and imported via CSV."
+          icon="data"
+          action={{
+            label: 'View Import Guide',
+            onClick: () => {
+              // Open documentation or help modal
+              const url = window.location.origin + '/docs/kintell/KINTELL_CSV_FORMATS.md';
+              window.open(url, '_blank', 'noopener,noreferrer');
+            },
+          }}
+        />
+      ) : (
+        <>
+          {/* Bookings */}
+          <div className="mb-4">
         <h4 className="text-sm font-medium text-gray-900 mb-2">Bookings</h4>
         <MetricRow label="Total" value={data.bookings.total} />
         <MetricRow label="Scheduled" value={data.bookings.scheduled} />
@@ -128,13 +164,15 @@ export default function MentorshipTileWidget({
         </div>
       )}
 
-      {/* Data Freshness */}
-      <div className="border-t border-gray-200 pt-3 mt-3">
-        <p className="text-xs text-gray-500">
-          Data: {tile.metadata.dataFreshness.replace('_', ' ')} •
-          Calculated: {new Date(tile.metadata.calculatedAt).toLocaleString()}
-        </p>
-      </div>
+          {/* Data Freshness */}
+          <div className="border-t border-gray-200 pt-3 mt-3">
+            <p className="text-xs text-gray-500">
+              Data: {tile.metadata.dataFreshness.replace('_', ' ')} •
+              Calculated: {new Date(tile.metadata.calculatedAt).toLocaleString()}
+            </p>
+          </div>
+        </>
+      )}
     </TileCard>
   );
 }

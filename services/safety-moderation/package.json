@@ -12,7 +12,7 @@
     }
   },
   "scripts": {
-    "dev": "tsc --watch",
+    "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "clean": "rm -rf dist",
     "typecheck": "tsc --noEmit",
@@ -21,7 +21,11 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@teei/shared-schema": "workspace:*",
     "@teei/shared-types": "workspace:*",
+    "@teei/shared-utils": "workspace:*",
+    "drizzle-orm": "^0.29.3",
+    "fastify": "^4.25.2",
     "openai": "^4.20.1",
     "pg": "^8.11.3",
     "zod": "^3.22.4"
@@ -29,6 +33,7 @@
   "devDependencies": {
     "@types/node": "^20.11.5",
     "@types/pg": "^8.10.9",
+    "tsx": "^4.7.0",
     "typescript": "^5.3.3",
     "vitest": "^1.2.1"
   }

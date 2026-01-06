@@ -15,7 +15,7 @@ export interface PolicyViolation {
  * Check for profanity in text content
  * STUB: Always returns no violation
  */
-export function checkProfanity(text: string): PolicyViolation {
+export function checkProfanity(_text: string): PolicyViolation {
   // TODO: Implement actual profanity detection
   return {
     violated: false,
@@ -26,7 +26,7 @@ export function checkProfanity(text: string): PolicyViolation {
  * Check for PII (Personally Identifiable Information) leakage
  * STUB: Always returns no violation
  */
-export function checkPIILeakage(text: string): PolicyViolation {
+export function checkPIILeakage(_text: string): PolicyViolation {
   // TODO: Implement actual PII detection (emails, phone numbers, SSN, etc.)
   return {
     violated: false,
@@ -37,7 +37,7 @@ export function checkPIILeakage(text: string): PolicyViolation {
  * Check for hate speech in text content
  * STUB: Always returns no violation
  */
-export function checkHateSpeech(text: string): PolicyViolation {
+export function checkHateSpeech(_text: string): PolicyViolation {
   // TODO: Implement actual hate speech detection
   return {
     violated: false,

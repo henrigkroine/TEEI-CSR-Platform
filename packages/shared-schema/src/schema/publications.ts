@@ -15,7 +15,6 @@
  */
 
 import { pgTable, uuid, varchar, text, timestamp, jsonb, integer, boolean, index, pgEnum } from 'drizzle-orm/pg-core';
-import { sql } from 'drizzle-orm';
 
 // Publication status enum
 export const publicationStatusEnum = pgEnum('publication_status', ['DRAFT', 'LIVE', 'ARCHIVED']);

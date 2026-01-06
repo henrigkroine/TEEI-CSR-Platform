@@ -8,8 +8,8 @@ import { createHash } from 'crypto';
 import {
   CreatePromptRecord,
   PromptRecord,
-  AuditQueryFilters,
 } from '@teei/shared-types';
+import type { AuditQueryFilters as _AuditQueryFilters } from '@teei/shared-types';
 
 export class AuditPersister {
   constructor(private pgPool: Pool) {}

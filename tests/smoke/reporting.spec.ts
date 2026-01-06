@@ -12,7 +12,7 @@ import { test, expect } from '@playwright/test';
  * Run: pnpm exec playwright test tests/smoke/reporting.spec.ts
  */
 
-const BASE_URL = process.env.BASE_URL || 'http://localhost:4321';
+const BASE_URL = process.env.BASE_URL || 'http://localhost:6509';
 const API_URL = `${BASE_URL}/api/reporting`;
 const TEST_TOKEN = process.env.TEST_TOKEN || ''; // Auth token for API
 

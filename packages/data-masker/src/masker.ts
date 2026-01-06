@@ -13,27 +13,32 @@ import {
   type MaskingStats,
   type SupportedLocale,
 } from './types';
-import {
-  deterministicHash,
-  hashToSeed,
-  hashToUuid,
-  createDeterministicMapper,
-} from './hash';
+import { createDeterministicMapper } from './hash';
 
 /**
  * Data Masker class
  * Provides deterministic pseudonymization with locale-aware fake data
  */
+interface InternalConfig {
+  tenantId: string;
+  locale: SupportedLocale;
+  salt?: string;
+  masterSalt: string;
+  preserveEmailDomain: boolean;
+}
+
 export class DataMasker {
-  private config: Required<MaskerConfig>;
+  private config: InternalConfig;
   private mapper: ReturnType<typeof createDeterministicMapper>;
   private stats: MaskingStats;
 
   constructor(config: MaskerConfig) {
     this.config = {
-      locale: 'en',
-      preserveEmailDomain: false,
-      ...config,
+      tenantId: config.tenantId,
+      locale: config.locale || 'en',
+      salt: config.salt,
+      masterSalt: config.masterSalt || config.salt || 'default-salt',
+      preserveEmailDomain: config.preserveEmailDomain || false,
     };
 
     // Set faker locale
@@ -66,19 +71,24 @@ export class DataMasker {
   private setFakerLocale(locale: SupportedLocale): void {
     switch (locale) {
       case 'en':
-        faker.locale = 'en';
+        // @ts-expect-error - faker v8+ uses setDefaultRefDate but we need locale
+        if (typeof faker.setLocale === 'function') faker.setLocale('en');
         break;
       case 'es':
-        faker.locale = 'es';
+        // @ts-expect-error - faker v8+ uses setDefaultRefDate but we need locale
+        if (typeof faker.setLocale === 'function') faker.setLocale('es');
         break;
       case 'fr':
-        faker.locale = 'fr';
+        // @ts-expect-error - faker v8+ uses setDefaultRefDate but we need locale
+        if (typeof faker.setLocale === 'function') faker.setLocale('fr');
         break;
       case 'uk':
-        faker.locale = 'en_GB';
+        // @ts-expect-error - faker v8+ uses setDefaultRefDate but we need locale
+        if (typeof faker.setLocale === 'function') faker.setLocale('en_GB');
         break;
       case 'no':
-        faker.locale = 'nb_NO';
+        // @ts-expect-error - faker v8+ uses setDefaultRefDate but we need locale
+        if (typeof faker.setLocale === 'function') faker.setLocale('nb_NO');
         break;
     }
   }
@@ -228,7 +238,7 @@ export class DataMasker {
    * @param subjectKey - Unique identifier
    * @returns Masked result
    */
-  maskIBAN(originalIban: string, subjectKey: string): MaskResult {
+  maskIBAN(_originalIban: string, subjectKey: string): MaskResult {
     const { hash, seed } = this.mapper(subjectKey);
 
     faker.seed(seed);

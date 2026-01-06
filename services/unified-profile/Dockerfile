@@ -73,18 +73,18 @@ COPY --from=deps --chown=nodejs:nodejs /app/services/unified-profile/node_module
 
 # Set environment variables
 ENV NODE_ENV=production \
-    PORT=3001 \
+    PORT=3018 \
     HOST=0.0.0.0
 
 # Switch to non-root user
 USER nodejs
 
 # Expose port
-EXPOSE 3001
+EXPOSE 3018
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3001/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+  CMD node -e "require('http').get('http://localhost:3018/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
 # Use dumb-init to handle signals properly
 ENTRYPOINT ["dumb-init", "--"]

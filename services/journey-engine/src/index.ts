@@ -7,7 +7,7 @@ import { rulesRoutes } from './routes/rules.js';
 import { setupSubscribers } from './subscribers/index.js';
 
 const logger = createServiceLogger('journey-engine');
-const PORT = parseInt(process.env.PORT_JOURNEY_ENGINE || '3009');
+const PORT = parseInt(process.env.PORT_JOURNEY_ENGINE || '3024');
 
 async function start() {
   const app = Fastify({

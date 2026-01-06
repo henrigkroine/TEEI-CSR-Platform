@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { db, sql } from '../db.js';
 import { users, companies, companyUsers, programEnrollments, externalIdMappings } from '../schema/users.js';
 import { kintellSessions } from '../schema/kintell.js';
@@ -23,12 +24,12 @@ async function seed() {
     const [_adminUser, participant1, participant2, volunteer1, volunteer2, companyUser1] = await db
       .insert(users)
       .values([
-        { email: 'admin@teei.org', role: 'admin', firstName: 'Admin', lastName: 'User' },
-        { email: 'alice@example.com', role: 'participant', firstName: 'Alice', lastName: 'Johnson' },
-        { email: 'bob@example.com', role: 'participant', firstName: 'Bob', lastName: 'Smith' },
-        { email: 'charlie@volunteer.org', role: 'volunteer', firstName: 'Charlie', lastName: 'Brown' },
-        { email: 'diana@volunteer.org', role: 'volunteer', firstName: 'Diana', lastName: 'Wilson' },
-        { email: 'manager@acmecorp.com', role: 'company_user', firstName: 'Eva', lastName: 'Manager' },
+        { email: 'admin@teei.org', role: 'admin', firstName: 'Admin', lastName: 'User', passwordHash: crypto.createHash('sha256').update('admin123').digest('hex') },
+        { email: 'alice@example.com', role: 'participant', firstName: 'Alice', lastName: 'Johnson', passwordHash: crypto.createHash('sha256').update('alice123').digest('hex') },
+        { email: 'bob@example.com', role: 'participant', firstName: 'Bob', lastName: 'Smith', passwordHash: crypto.createHash('sha256').update('bob123').digest('hex') },
+        { email: 'charlie@volunteer.org', role: 'volunteer', firstName: 'Charlie', lastName: 'Brown', passwordHash: crypto.createHash('sha256').update('charlie123').digest('hex') },
+        { email: 'diana@volunteer.org', role: 'volunteer', firstName: 'Diana', lastName: 'Wilson', passwordHash: crypto.createHash('sha256').update('diana123').digest('hex') },
+        { email: 'manager@acmecorp.com', role: 'company_user', firstName: 'Eva', lastName: 'Manager', passwordHash: crypto.createHash('sha256').update('manager123').digest('hex') },
       ])
       .returning();
 

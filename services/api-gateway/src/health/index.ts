@@ -19,12 +19,12 @@ import {
 } from '@teei/observability';
 
 const SERVICES = {
-  PROFILE: process.env.SERVICE_URL_PROFILE || 'http://localhost:3001',
-  KINTELL: process.env.SERVICE_URL_KINTELL || 'http://localhost:3002',
-  BUDDY: process.env.SERVICE_URL_BUDDY || 'http://localhost:3003',
-  UPSKILLING: process.env.SERVICE_URL_UPSKILLING || 'http://localhost:3004',
-  Q2Q: process.env.SERVICE_URL_Q2Q || 'http://localhost:3005',
-  SAFETY: process.env.SERVICE_URL_SAFETY || 'http://localhost:3006',
+  PROFILE: process.env.SERVICE_URL_PROFILE || 'http://localhost:3018',
+  KINTELL: process.env.SERVICE_URL_KINTELL || 'http://localhost:3027',
+  BUDDY: process.env.SERVICE_URL_BUDDY || 'http://localhost:3019',
+  UPSKILLING: process.env.SERVICE_URL_UPSKILLING || 'http://localhost:3028',
+  Q2Q: process.env.SERVICE_URL_Q2Q || 'http://localhost:3021',
+  SAFETY: process.env.SERVICE_URL_SAFETY || 'http://localhost:3022',
 };
 
 export function createHealthManager(): HealthCheckManager {

@@ -22,6 +22,86 @@ interface SSEQueryParams {
  */
 export async function sseRoutes(fastify: FastifyInstance) {
   /**
+   * SSE Dashboard Endpoint (convenience endpoint)
+   *
+   * Establishes SSE connection for dashboard updates.
+   * Automatically uses 'dashboard-updates' channel.
+   *
+   * Query Parameters:
+   * - companyId: Company identifier for tenant isolation
+   * - lastEventId: (Optional) Resume from this event ID
+   *
+   * @example
+   * GET /api/sse/dashboard?companyId=acme-corp
+   */
+  fastify.get<{ Querystring: { companyId: string; lastEventId?: string } }>(
+    '/sse/dashboard',
+    {
+      schema: {
+        description: 'Establish SSE connection for dashboard updates',
+        tags: ['SSE'],
+        querystring: {
+          type: 'object',
+          required: ['companyId'],
+          properties: {
+            companyId: {
+              type: 'string',
+              description: 'Company identifier',
+            },
+            lastEventId: {
+              type: 'string',
+              description: 'Resume from this event ID',
+            },
+          },
+        },
+      },
+    },
+    async (request: FastifyRequest<{ Querystring: { companyId: string; lastEventId?: string } }>, reply: FastifyReply) => {
+      const { companyId, lastEventId } = request.query;
+
+      // Validate company ID format
+      if (!companyId) {
+        return reply.status(400).send({
+          error: 'INVALID_COMPANY_ID',
+          message: 'Company ID is required',
+        });
+      }
+
+      // Set SSE headers
+      reply.raw.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache, no-transform',
+        'Connection': 'keep-alive',
+        'X-Accel-Buffering': 'no',
+      });
+
+      // Generate connection ID
+      const connectionId = `${companyId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+      // Add connection to manager with dashboard-updates channel
+      sseManager.addConnection(
+        connectionId,
+        companyId,
+        'dashboard-updates',
+        reply,
+        lastEventId || null
+      );
+
+      // Handle client disconnect
+      request.raw.on('close', () => {
+        fastify.log.info(`[SSE] Client disconnected: ${connectionId}`);
+        sseManager.removeConnection(connectionId);
+      });
+
+      // Handle connection errors
+      reply.raw.on('error', (error) => {
+        fastify.log.error(`[SSE] Connection error for ${connectionId}:`, error);
+        sseManager.removeConnection(connectionId);
+      });
+    }
+  );
+
+  /**
    * SSE Stream Endpoint
    *
    * Establishes Server-Sent Events connection for real-time updates.
@@ -264,6 +344,14 @@ export async function sseRoutes(fastify: FastifyInstance) {
  */
 export function broadcastDashboardUpdate(companyId: string, data: unknown): void {
   sseManager.broadcast(companyId, 'dashboard-updates', 'dashboard-update', data);
+
+  // Invalidate cache when broadcasting dashboard updates (async, don't block)
+  // Use dynamic import to avoid circular dependency
+  import('../middleware/cache.js').then(({ invalidateDashboardCache }) => {
+    invalidateDashboardCache(companyId);
+  }).catch((err: Error) => {
+    console.error('[SSE] Failed to invalidate cache:', err);
+  });
 }
 
 /**

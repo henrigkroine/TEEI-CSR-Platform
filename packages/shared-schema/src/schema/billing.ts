@@ -261,7 +261,6 @@ export const billingPlanFeatures = pgTable('billing_plan_features', {
     sso: boolean;
     customBranding: boolean;
     prioritySupport: boolean;
-    multiRegion: boolean;
     scimProvisioning: boolean;
   }>(),
 

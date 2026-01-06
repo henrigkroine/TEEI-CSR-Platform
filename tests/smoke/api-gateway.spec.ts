@@ -12,7 +12,7 @@ import { test, expect } from '@playwright/test';
  * Run: pnpm exec playwright test tests/smoke/api-gateway.spec.ts
  */
 
-const BASE_URL = process.env.BASE_URL || 'http://localhost:4321';
+const BASE_URL = process.env.BASE_URL || 'http://localhost:6509';
 const API_URL = `${BASE_URL}/api`;
 const TEST_EMAIL = process.env.TEST_EMAIL || 'smoke-test@example.com';
 const TEST_PASSWORD = process.env.TEST_PASSWORD || 'smoke-test-password';

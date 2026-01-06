@@ -48,7 +48,7 @@ export default function ImpactTilesContainer({
       }
 
       // Fetch tiles from analytics API
-      const analyticsUrl = import.meta.env.PUBLIC_ANALYTICS_URL || 'http://localhost:3008';
+      const analyticsUrl = import.meta.env.PUBLIC_ANALYTICS_URL || 'http://localhost:3023';
       const response = await fetch(`${analyticsUrl}/v1/analytics/tiles?${params.toString()}`);
 
       if (!response.ok) {

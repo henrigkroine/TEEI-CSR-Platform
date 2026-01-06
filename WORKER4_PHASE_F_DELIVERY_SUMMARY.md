@@ -645,7 +645,7 @@ CREATE INDEX idx_impact_deliveries_schedule ON impact_deliveries(schedule_id);
    ```
 
 6. **Access UI:**
-   Navigate to: `http://localhost:4321/{lang}/cockpit/{companyId}/deliveries`
+   Navigate to: `http://localhost:6509/{lang}/cockpit/{companyId}/deliveries`
 
 ---
 

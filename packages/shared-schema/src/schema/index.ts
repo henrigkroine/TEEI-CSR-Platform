@@ -24,3 +24,9 @@ export * from './partner-apps.js';
 // NEW: Kintell ingestion layer schemas (Swarm 1)
 export * from './program-instances.js';
 export * from './ingestion-batches.js';
+
+// NEW: Program hierarchy schemas (required by unified-profile)
+export * from './programs.js';
+export * from './program-campaigns.js';
+export * from './beneficiary-groups.js';
+export * from './program-templates.js';

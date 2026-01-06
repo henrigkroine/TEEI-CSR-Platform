@@ -66,7 +66,12 @@ function LineageDrawer({ companyId, evidenceId, onClose }: LineageDrawerProps) {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-    fetchLineage();
+    // Only fetch if both companyId and evidenceId are valid
+    if (companyId && companyId !== 'undefined' && evidenceId && evidenceId !== 'undefined') {
+      fetchLineage();
+    } else {
+      setLoading(false);
+    }
   }, [companyId, evidenceId]);
 
   // Handle Escape key to close drawer
@@ -90,9 +95,19 @@ function LineageDrawer({ companyId, evidenceId, onClose }: LineageDrawerProps) {
   }, []);
 
   async function fetchLineage() {
+    // Validate companyId and evidenceId
+    if (!companyId || companyId === 'undefined' || !evidenceId || evidenceId === 'undefined') {
+      console.error('[LineageDrawer] Invalid companyId or evidenceId:', { companyId, evidenceId });
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
-      const url = `http://localhost:3001/companies/${companyId}/evidence/${evidenceId}/lineage`;
+      // Use proper API base URL from environment or fallback to window origin
+      const API_BASE_URL = import.meta.env.PUBLIC_REPORTING_API_URL ||
+        (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3001');
+      const url = `${API_BASE_URL}/companies/${companyId}/evidence/${evidenceId}/lineage`;
       const response = await fetch(url);
 
       if (response.ok) {

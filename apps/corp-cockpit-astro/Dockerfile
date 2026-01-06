@@ -74,17 +74,17 @@ COPY --from=deps --chown=nodejs:nodejs /app/apps/corp-cockpit-astro/node_modules
 # Set environment variables
 ENV NODE_ENV=production \
     HOST=0.0.0.0 \
-    PORT=4321
+    PORT=6509
 
 # Switch to non-root user
 USER nodejs
 
 # Expose port
-EXPOSE 4321
+EXPOSE 6509
 
 # Health check (Astro serves on /health if configured, otherwise root)
 HEALTHCHECK --interval=30s --timeout=3s --start-period=15s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:4321/', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+  CMD node -e "require('http').get('http://localhost:6509/', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
 # Use dumb-init to handle signals properly
 ENTRYPOINT ["dumb-init", "--"]

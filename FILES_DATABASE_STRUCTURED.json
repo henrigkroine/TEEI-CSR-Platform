@@ -1,0 +1,1009 @@
+{
+  "metadata": {
+    "generated": "2025-01-27",
+    "repository": "TEEI_CSR_Platform",
+    "totalFiles": "~2800+",
+    "version": "1.0"
+  },
+  "structure": {
+    "services": {
+      "api-gateway": {
+        "path": "services/api-gateway",
+        "files": [
+          "src/index.ts",
+          "src/routes/*.ts (48 files)",
+          "Dockerfile",
+          "package.json",
+          "tsconfig.json"
+        ],
+        "fileCount": 49,
+        "primaryLanguage": "TypeScript"
+      },
+      "analytics": {
+        "path": "services/analytics",
+        "files": [
+          "src/index.ts",
+          "src/**/*.ts (82 files)",
+          "src/**/*.sql (3 files)",
+          "Dockerfile",
+          "package.json",
+          "tsconfig.json",
+          "vitest.config.ts"
+        ],
+        "fileCount": 85,
+        "primaryLanguage": "TypeScript"
+      },
+      "reporting": {
+        "path": "services/reporting",
+        "files": [
+          "src/index.ts",
+          "src/calculators/sroi.ts",
+          "src/calculators/vis.ts",
+          "src/templates/*.hbs (19 files)",
+          "src/routes/gen-reports.ts",
+          "src/routes/campaign-dashboard.ts",
+          "src/routes/evidence.ts",
+          "src/lib/evidenceLineageMapper.ts",
+          "src/lib/citations.ts",
+          "src/cache/campaign-cache.ts",
+          "src/srs/registry/*.json (3 files)",
+          "tests/**/*.ts",
+          "src/openapi.json"
+        ],
+        "fileCount": 254,
+        "primaryLanguage": "TypeScript",
+        "templates": 19
+      },
+      "impact-in": {
+        "path": "services/impact-in",
+        "files": [
+          "src/index.ts",
+          "src/routes/*.ts",
+          "src/connectors/*.ts",
+          "scheduler/*.ts",
+          "sla-monitor/*.ts",
+          "__tests__/*.ts (2 files)",
+          "Dockerfile"
+        ],
+        "fileCount": 74,
+        "primaryLanguage": "TypeScript"
+      },
+      "q2q-ai": {
+        "path": "services/q2q-ai",
+        "files": [
+          "src/index.ts",
+          "src/lib/*.ts",
+          "src/safety/*.ts",
+          "src/labeling/*.ts",
+          "src/slo/*.ts",
+          "golden-sets/*.jsonl (3 files)",
+          "golden-sets/*.md (1 file)",
+          "Dockerfile"
+        ],
+        "fileCount": 82,
+        "primaryLanguage": "TypeScript"
+      },
+      "insights-nlq": {
+        "path": "services/insights-nlq",
+        "files": [
+          "src/index.ts",
+          "src/routes/*.ts",
+          "src/lib/*.ts",
+          "src/cache/*.ts",
+          "src/events/*.ts",
+          "src/**/*.hbs (5 files)",
+          "scripts/*.ts"
+        ],
+        "fileCount": 89,
+        "primaryLanguage": "TypeScript",
+        "status": "⚠️ Has merge conflicts"
+      },
+      "campaigns": {
+        "path": "services/campaigns",
+        "files": [
+          "src/index.ts",
+          "src/routes/campaigns.ts",
+          "src/routes/beneficiary-groups.ts",
+          "src/routes/program-templates.ts",
+          "src/routes/pricing-insights.ts",
+          "src/routes/upsell-opportunities.ts",
+          "src/lib/campaign-instantiator.ts",
+          "src/lib/lifecycle-manager.ts",
+          "src/lib/capacity-tracker.ts",
+          "src/lib/pricing-signals.ts",
+          "src/lib/upsell-analyzer.ts",
+          "src/lib/metrics-aggregator.ts",
+          "src/lib/seat-tracker.ts",
+          "src/lib/credit-tracker.ts",
+          "src/lib/commercial-terms.ts",
+          "src/lib/evidence-selector.ts",
+          "src/lib/activity-associator.ts",
+          "src/lib/backfill-associations.ts",
+          "src/lib/billing-integrator.ts",
+          "src/lib/campaign-validator.ts",
+          "src/lib/config-merger.ts",
+          "src/lib/state-transitions.ts",
+          "src/middleware/auth.ts",
+          "tests/**/*.ts (14 files)",
+          "openapi.yaml"
+        ],
+        "fileCount": 37,
+        "primaryLanguage": "TypeScript"
+      },
+      "unified-profile": {
+        "path": "services/unified-profile",
+        "files": [
+          "src/index.ts",
+          "src/routes/*.ts",
+          "src/lib/*.ts",
+          "src/subscribers/*.ts",
+          "openapi-profile-linking.yaml",
+          "Dockerfile"
+        ],
+        "fileCount": 12,
+        "primaryLanguage": "TypeScript"
+      },
+      "buddy-service": {
+        "path": "services/buddy-service",
+        "files": [
+          "src/index.ts",
+          "src/routes/*.ts",
+          "src/lib/*.ts",
+          "Dockerfile"
+        ],
+        "fileCount": 6,
+        "primaryLanguage": "TypeScript"
+      },
+      "buddy-connector": {
+        "path": "services/buddy-connector",
+        "files": [
+          "src/index.ts",
+          "src/routes/*.ts",
+          "src/lib/*.ts",
+          "Dockerfile"
+        ],
+        "fileCount": 35,
+        "primaryLanguage": "TypeScript"
+      },
+      "kintell-connector": {
+        "path": "services/kintell-connector",
+        "files": [
+          "src/index.ts",
+          "src/routes/import.ts",
+          "src/lib/campaign-association.ts",
+          "src/identity/*.ts",
+          "Dockerfile"
+        ],
+        "fileCount": 18,
+        "primaryLanguage": "TypeScript"
+      },
+      "upskilling-connector": {
+        "path": "services/upskilling-connector",
+        "files": [
+          "src/index.ts",
+          "src/routes/import.ts",
+          "src/lib/*.ts",
+          "Dockerfile"
+        ],
+        "fileCount": 8,
+        "primaryLanguage": "TypeScript"
+      },
+      "program-service": {
+        "path": "services/program-service",
+        "files": [
+          "src/index.ts",
+          "src/routes/programs.ts",
+          "src/routes/templates.ts",
+          "src/routes/campaigns.ts",
+          "src/lib/template-registry.ts",
+          "src/lib/instantiator.ts",
+          "src/lib/config-resolver.ts",
+          "migrations/*.ts (1 file)",
+          "openapi.yaml"
+        ],
+        "fileCount": 10,
+        "primaryLanguage": "TypeScript"
+      },
+      "notifications": {
+        "path": "services/notifications",
+        "files": [
+          "src/index.ts",
+          "src/routes/*.ts",
+          "src/lib/*.ts",
+          "src/templates/*.mjml (4 files)",
+          "migrations/*.sql (1 file)",
+          "INTEGRATION_SCHEMA.sql",
+          "Dockerfile"
+        ],
+        "fileCount": 28,
+        "primaryLanguage": "TypeScript"
+      },
+      "safety-moderation": {
+        "path": "services/safety-moderation",
+        "files": [
+          "src/index.ts",
+          "src/routes/*.ts",
+          "src/lib/*.ts",
+          "Dockerfile"
+        ],
+        "fileCount": 7,
+        "primaryLanguage": "TypeScript"
+      },
+      "journey-engine": {
+        "path": "services/journey-engine",
+        "files": [
+          "src/index.ts",
+          "src/routes/*.ts",
+          "src/lib/*.ts",
+          "__tests__/*.ts (2 files)",
+          "Dockerfile"
+        ],
+        "fileCount": 15,
+        "primaryLanguage": "TypeScript"
+      },
+      "forecast": {
+        "path": "services/forecast",
+        "files": [
+          "src/index.ts",
+          "src/routes/*.ts",
+          "src/lib/*.ts",
+          "vitest.config.ts"
+        ],
+        "fileCount": 18,
+        "primaryLanguage": "TypeScript"
+      },
+      "impact-calculator": {
+        "path": "services/impact-calculator",
+        "files": [
+          "src/index.ts",
+          "src/lib/*.ts",
+          "tests/*.ts (1 file)",
+          "Dockerfile"
+        ],
+        "fileCount": 4,
+        "primaryLanguage": "TypeScript"
+      },
+      "billing": {
+        "path": "services/billing",
+        "files": [
+          "src/index.ts",
+          "src/routes/*.ts",
+          "src/lib/*.ts"
+        ],
+        "fileCount": 15,
+        "primaryLanguage": "TypeScript"
+      },
+      "data-residency": {
+        "path": "services/data-residency",
+        "files": [
+          "src/index.ts",
+          "src/routes/*.ts",
+          "src/lib/*.ts"
+        ],
+        "fileCount": 15,
+        "primaryLanguage": "TypeScript"
+      },
+      "ai-budget": {
+        "path": "services/ai-budget",
+        "files": [
+          "src/index.ts",
+          "src/budget-enforcer.ts",
+          "src/routes/*.ts (2 files)",
+          "src/db/*.ts (2 files)",
+          "src/db/*.sql (2 files)",
+          "src/types/*.ts (1 file)",
+          "Dockerfile"
+        ],
+        "fileCount": 8,
+        "primaryLanguage": "TypeScript"
+      },
+      "privacy-orchestrator": {
+        "path": "services/privacy-orchestrator",
+        "files": [
+          "src/index.ts",
+          "src/routes/*.ts",
+          "src/lib/*.ts"
+        ],
+        "fileCount": 6,
+        "primaryLanguage": "TypeScript"
+      },
+      "gdpr-service": {
+        "path": "services/gdpr-service",
+        "files": [
+          "src/routes/*.ts (3 files - stub only)"
+        ],
+        "fileCount": 3,
+        "primaryLanguage": "TypeScript",
+        "status": "🔴 BROKEN - Stub only"
+      },
+      "builder-runtime": {
+        "path": "services/builder-runtime",
+        "files": [
+          "src/index.ts",
+          "src/lib/*.ts"
+        ],
+        "fileCount": 12,
+        "primaryLanguage": "TypeScript"
+      },
+      "synthetics": {
+        "path": "services/synthetics",
+        "files": [
+          "src/index.ts",
+          "pilot-routes/*.ts (10 files)",
+          "schemas/*.sql (1 file)"
+        ],
+        "fileCount": 13,
+        "primaryLanguage": "TypeScript"
+      },
+      "discord-bot": {
+        "path": "services/discord-bot",
+        "files": [
+          "src/index.ts",
+          "src/lib/*.ts",
+          "Dockerfile"
+        ],
+        "fileCount": 9,
+        "primaryLanguage": "TypeScript"
+      }
+    },
+    "packages": {
+      "shared-schema": {
+        "path": "packages/shared-schema",
+        "files": [
+          "src/schema/users.ts",
+          "src/schema/companies.ts",
+          "src/schema/programs.ts",
+          "src/schema/kintell.ts",
+          "src/schema/buddy.ts",
+          "src/schema/metrics.ts",
+          "src/schema/evidence_ledger.ts",
+          "src/schema/lineage.ts",
+          "src/schema/program-instances.ts",
+          "src/schema/ingestion-batches.ts",
+          "src/schema/program-templates.ts",
+          "src/schema/beneficiary-groups.ts",
+          "src/schema/program-campaigns.ts",
+          "src/schema/index.ts",
+          "migrations/*.sql (51 files)",
+          "seeds/*.sql (1 file)",
+          "drizzle.config.ts"
+        ],
+        "fileCount": 54,
+        "primaryLanguage": "TypeScript",
+        "migrations": 51
+      },
+      "shared-types": {
+        "path": "packages/shared-types",
+        "files": [
+          "src/**/*.ts (27 files)",
+          "collab/*.ts",
+          "demo/*.ts"
+        ],
+        "fileCount": 27,
+        "primaryLanguage": "TypeScript"
+      },
+      "event-contracts": {
+        "path": "packages/event-contracts",
+        "files": [
+          "src/**/*.ts (47 files)",
+          "src/index.ts"
+        ],
+        "fileCount": 47,
+        "primaryLanguage": "TypeScript"
+      },
+      "model-registry": {
+        "path": "packages/model-registry",
+        "files": [
+          "src/**/*.ts (5 files)",
+          "schema.yaml",
+          "tenant-overrides/*.yaml (1 file)"
+        ],
+        "fileCount": 6,
+        "primaryLanguage": "TypeScript"
+      },
+      "openapi": {
+        "path": "packages/openapi",
+        "files": [
+          "admin.yaml",
+          "ai-audit.yaml",
+          "api-gateway.yaml",
+          "audit.yaml",
+          "billing.yaml",
+          "branding.yaml",
+          "buddy-service.yaml",
+          "collab.yaml",
+          "deck.yaml",
+          "demo.yaml",
+          "hierarchies.yaml",
+          "imports.yaml",
+          "kintell-connector.yaml",
+          "publications.yaml",
+          "q2q-ai.yaml",
+          "reporting.yaml",
+          "safety-moderation.yaml",
+          "scenario.yaml",
+          "tiles.yaml",
+          "trust-catalog.yaml",
+          "unified-profile.yaml",
+          "upskilling-connector.yaml",
+          "schemas/*.yaml (1 file)",
+          "v1-final/*.yaml (7 files)",
+          "index.md"
+        ],
+        "fileCount": 25,
+        "primaryLanguage": "YAML"
+      },
+      "clients": {
+        "path": "packages/clients",
+        "files": [
+          "journey.ts",
+          "q2q.ts",
+          "reporting.ts",
+          "usage-analytics/client.ts",
+          "usage-analytics/stuck-detector.ts",
+          "usage-analytics/taxonomy.ts"
+        ],
+        "fileCount": 6,
+        "primaryLanguage": "TypeScript"
+      },
+      "compliance": {
+        "path": "packages/compliance",
+        "files": [
+          "src/audit-logger.ts",
+          "src/dsr-orchestrator.ts",
+          "src/pii-encryption.ts",
+          "src/tenant-isolation.ts",
+          "src/index.ts"
+        ],
+        "fileCount": 5,
+        "primaryLanguage": "TypeScript"
+      },
+      "data-masker": {
+        "path": "packages/data-masker",
+        "files": [
+          "src/**/*.ts (12 files)"
+        ],
+        "fileCount": 12,
+        "primaryLanguage": "TypeScript"
+      },
+      "entitlements": {
+        "path": "packages/entitlements",
+        "files": [
+          "src/engine/*.ts",
+          "src/cache/*.ts",
+          "src/types/*.ts",
+          "src/index.ts",
+          "src/__tests__/*.ts (1 file)"
+        ],
+        "fileCount": 5,
+        "primaryLanguage": "TypeScript"
+      },
+      "observability": {
+        "path": "packages/observability",
+        "files": [
+          "src/**/*.ts (17 files)",
+          "collab/*.ts (1 file)"
+        ],
+        "fileCount": 18,
+        "primaryLanguage": "TypeScript"
+      },
+      "metrics": {
+        "path": "packages/metrics",
+        "files": [
+          "src/**/*.ts (9 files)"
+        ],
+        "fileCount": 9,
+        "primaryLanguage": "TypeScript"
+      },
+      "shared-auth": {
+        "path": "packages/shared-auth",
+        "files": [
+          "src/**/*.ts (5 files)"
+        ],
+        "fileCount": 5,
+        "primaryLanguage": "TypeScript"
+      },
+      "shared-utils": {
+        "path": "packages/shared-utils",
+        "files": [
+          "src/**/*.ts (8 files)"
+        ],
+        "fileCount": 8,
+        "primaryLanguage": "TypeScript"
+      },
+      "events": {
+        "path": "packages/events",
+        "files": [
+          "src/dlq.ts",
+          "src/index.ts"
+        ],
+        "fileCount": 2,
+        "primaryLanguage": "TypeScript"
+      },
+      "http-client": {
+        "path": "packages/http-client",
+        "files": [
+          "src/**/*.ts (2 files)"
+        ],
+        "fileCount": 2,
+        "primaryLanguage": "TypeScript"
+      },
+      "ingestion-buddy": {
+        "path": "packages/ingestion-buddy",
+        "files": [
+          "src/**/*.ts (17 files)"
+        ],
+        "fileCount": 17,
+        "primaryLanguage": "TypeScript"
+      },
+      "program-templates": {
+        "path": "packages/program-templates",
+        "files": [
+          "src/schemas/buddy-template.ts",
+          "src/schemas/language-template.ts",
+          "src/schemas/mentorship-template.ts",
+          "src/schemas/index.ts",
+          "src/index.ts"
+        ],
+        "fileCount": 5,
+        "primaryLanguage": "TypeScript"
+      },
+      "contracts": {
+        "path": "packages/contracts",
+        "files": [
+          "pact-tests/*.test.ts (10 files)",
+          "vitest.pact.config.ts"
+        ],
+        "fileCount": 11,
+        "primaryLanguage": "TypeScript"
+      },
+      "sdk": {
+        "path": "packages/sdk",
+        "files": [
+          "embeds/**/*.js (2 files)",
+          "embeds/**/*.json (2 files)",
+          "typescript/**/*.ts (7 files)"
+        ],
+        "fileCount": 11,
+        "primaryLanguage": "TypeScript"
+      },
+      "auth": {
+        "path": "packages/auth",
+        "files": [
+          "src/config-loader.ts",
+          "src/service-auth.ts"
+        ],
+        "fileCount": 2,
+        "primaryLanguage": "TypeScript"
+      },
+      "db": {
+        "path": "packages/db",
+        "files": [
+          "src/backup.ts",
+          "src/optimizer.ts"
+        ],
+        "fileCount": 2,
+        "primaryLanguage": "TypeScript"
+      }
+    },
+    "apps": {
+      "corp-cockpit-astro": {
+        "path": "apps/corp-cockpit-astro",
+        "files": {
+          "pages": [
+            "src/pages/**/*.astro (70 files)",
+            "src/pages/**/*.ts (4 files)"
+          ],
+          "components": [
+            "src/components/DashboardWithSSE.tsx",
+            "src/components/Chart.tsx",
+            "src/components/ChartOptimized.tsx",
+            "src/components/KPICard.tsx",
+            "src/components/EvidenceDrawer.tsx",
+            "src/components/nlq/**/*.tsx (18 files)",
+            "src/components/admin/**/*.tsx (17 files)",
+            "src/components/analytics/**/*.tsx (7 files)",
+            "src/components/benchmarks/**/*.tsx (13 files)",
+            "src/components/boardroom/**/*.tsx (9 files)",
+            "src/components/campaigns/**/*.tsx (8 files)",
+            "src/components/deck/**/*.tsx (17 files)",
+            "src/components/evidence/**/*.tsx (9 files)",
+            "src/components/reports/**/*.tsx (18 files)",
+            "src/components/widgets/**/*.tsx (13 files)"
+          ],
+          "lib": [
+            "src/lib/**/*.ts (27 files)",
+            "src/lib/**/*.tsx (1 file)"
+          ],
+          "utils": [
+            "src/utils/**/*.ts (21 files)",
+            "src/utils/**/*.tsx (1 file)"
+          ],
+          "hooks": [
+            "src/hooks/**/*.ts (6 files)"
+          ],
+          "api": [
+            "src/api/identity.ts",
+            "src/api/reporting.ts",
+            "src/api/tenantPreferences.ts"
+          ],
+          "i18n": [
+            "src/i18n/en.json",
+            "src/i18n/uk.json",
+            "src/i18n/no.json",
+            "src/i18n/ar.json",
+            "src/i18n/he.json",
+            "src/i18n/en/*.json (2 files)",
+            "src/i18n/uk/*.json (2 files)",
+            "src/i18n/no/*.json (2 files)"
+          ],
+          "styles": [
+            "src/styles/**/*.css (5 files)",
+            "src/styles/**/*.ts (1 file)"
+          ],
+          "public": [
+            "public/manifest.json",
+            "public/manifest.webmanifest",
+            "public/sw.js",
+            "public/offline.html",
+            "public/icons/**/*.png (multiple sizes)"
+          ]
+        },
+        "fileCount": 581,
+        "primaryLanguage": "TypeScript/TSX",
+        "astroFiles": 76,
+        "tsxFiles": 262,
+        "tsFiles": 150
+      },
+      "trust-center": {
+        "path": "apps/trust-center",
+        "files": [
+          "src/pages/**/*.astro (9 files)",
+          "src/pages/**/*.ts (1 file)",
+          "src/components/**/*.astro (5 files)",
+          "src/components/**/*.tsx (1 file)",
+          "src/layouts/**/*.astro (3 files)",
+          "src/lib/**/*.ts (1 file)",
+          "src/styles/**/*.css (1 file)",
+          "public/index.html",
+          "public/robots.txt",
+          "public/status.json"
+        ],
+        "fileCount": 35,
+        "primaryLanguage": "Astro/TypeScript"
+      }
+    },
+    "infrastructure": {
+      "k8s": {
+        "path": "k8s",
+        "files": [
+          "base/**/*.yaml (181 files)",
+          "overlays/**/*.yaml (53 files)",
+          "rollouts/**/*.yaml (20 files)",
+          "policies/**/*.yaml (12 files)",
+          "policies/**/*.rego (2 files)",
+          "jobs/**/*.yaml (4 files)",
+          "services/**/*.yaml (1 file)"
+        ],
+        "fileCount": 190,
+        "primaryLanguage": "YAML"
+      },
+      "observability": {
+        "path": "observability",
+        "files": [
+          "grafana/dashboards/**/*.json (37 files)",
+          "grafana/provisioning/**/*.yaml (4 files)",
+          "prometheus/rules/**/*.yaml (6 files)",
+          "prometheus/recording-rules/**/*.yaml (1 file)",
+          "loki/rules/**/*.yaml (1 file)",
+          "slo/**/*.yaml (5 files)",
+          "siem/**/*.yaml (3 files)",
+          "sentry/**/*.yaml (1 file)"
+        ],
+        "fileCount": 41,
+        "primaryLanguage": "JSON/YAML"
+      },
+      "terraform": {
+        "path": "infrastructure/terraform",
+        "files": [
+          "route53-multiregion.tf",
+          "waf.tf"
+        ],
+        "fileCount": 2,
+        "primaryLanguage": "HCL"
+      }
+    },
+    "documentation": {
+      "docs": {
+        "path": "docs",
+        "fileCount": 253,
+        "primaryLanguage": "Markdown",
+        "categories": [
+          "Architecture (6 files)",
+          "Features & Services (20+ files)",
+          "Compliance & Security (10+ files)",
+          "Operations (15+ files)",
+          "Accessibility (5+ files)",
+          "Commercial & Pricing (4 files)",
+          "Programs & Campaigns (7 files)",
+          "Integrations (3 files)",
+          "Feature Documentation (100+ files in subdirectories)"
+        ]
+      },
+      "reports": {
+        "path": "reports",
+        "fileCount": 203,
+        "primaryLanguage": "Markdown",
+        "categories": [
+          "Worker reports",
+          "Phase reports",
+          "Agent deliverables",
+          "Quality reports",
+          "Evidence"
+        ]
+      }
+    },
+    "scripts": {
+      "path": "scripts",
+      "fileCount": 104,
+      "categories": {
+        "infra": {
+          "count": 20,
+          "files": [
+            "infra/bootstrap-vault.sh",
+            "infra/clickhouse-backup.sh",
+            "infra/postgres-failover.sh",
+            "infra/nats-failover.sh",
+            "infra/enable-mtls.sh",
+            "infra/rotate-aws-secrets.sh"
+          ]
+        },
+        "backup": {
+          "count": 4,
+          "files": [
+            "backup/restore-test-db.sh",
+            "backup/verify-clickhouse-backup.sh",
+            "backup/verify-postgres-backup.sh",
+            "backup/verify-s3-backup.sh"
+          ]
+        },
+        "soc2": {
+          "count": 9,
+          "files": [
+            "soc2/collect-quarterly-evidence.sh",
+            "soc2/generate-access-review.sh",
+            "soc2/generate-sbom.sh"
+          ]
+        },
+        "seed": {
+          "count": 10,
+          "files": [
+            "seed/pilot/*.sql (4 files)",
+            "seed/swarm6/*.sql (4 files)",
+            "seed/templates/*.sql (4 files)"
+          ]
+        }
+      },
+      "primaryLanguage": "Shell/TypeScript/SQL"
+    },
+    "tests": {
+      "path": "tests",
+      "fileCount": 97,
+      "categories": {
+        "e2e": {
+          "count": 41,
+          "files": [
+            "e2e/01-login.spec.ts",
+            "e2e/02-dashboard.spec.ts",
+            "e2e/03-reports.spec.ts",
+            "e2e/11-nlq-canonical-questions.spec.ts"
+          ]
+        },
+        "integration": {
+          "count": 10,
+          "files": [
+            "integration/buddy-system/**/*.test.ts (5 files)",
+            "integration/circuit-breaker.test.ts",
+            "integration/e2e-cockpit.test.ts"
+          ]
+        },
+        "security": {
+          "count": 7,
+          "files": [
+            "security/nlq-dos.test.ts",
+            "security/nlq-injection.test.ts",
+            "security/nlq-pii-protection.test.ts"
+          ]
+        },
+        "load": {
+          "count": 15,
+          "files": [
+            "load/analytics.js",
+            "load/dashboard-load.js",
+            "k6/nlq-performance.js"
+          ]
+        }
+      },
+      "primaryLanguage": "TypeScript/JavaScript"
+    }
+  },
+  "fileTypes": {
+    "typescript": {
+      "count": "~1300+",
+      "extensions": [".ts", ".tsx"],
+      "locations": [
+        "services/**/*.ts",
+        "packages/**/*.ts",
+        "apps/**/*.ts",
+        "apps/**/*.tsx"
+      ]
+    },
+    "markdown": {
+      "count": "~600+",
+      "extensions": [".md"],
+      "locations": [
+        "docs/**/*.md",
+        "reports/**/*.md",
+        "README.md files"
+      ]
+    },
+    "yaml": {
+      "count": "~359+",
+      "extensions": [".yaml", ".yml"],
+      "locations": [
+        "k8s/**/*.yaml",
+        "packages/openapi/**/*.yaml",
+        "observability/**/*.yaml"
+      ]
+    },
+    "json": {
+      "count": "~178+",
+      "extensions": [".json"],
+      "locations": [
+        "package.json files",
+        "observability/grafana/dashboards/**/*.json",
+        "tests/fixtures/**/*.json"
+      ]
+    },
+    "sql": {
+      "count": "~55+",
+      "extensions": [".sql"],
+      "locations": [
+        "packages/shared-schema/migrations/**/*.sql",
+        "scripts/seed/**/*.sql",
+        "scripts/infra/**/*.sql"
+      ]
+    },
+    "shell": {
+      "count": "~63+",
+      "extensions": [".sh"],
+      "locations": [
+        "scripts/**/*.sh"
+      ]
+    },
+    "handlebars": {
+      "count": "~24+",
+      "extensions": [".hbs"],
+      "locations": [
+        "services/reporting/src/templates/**/*.hbs",
+        "services/insights-nlq/src/**/*.hbs"
+      ]
+    },
+    "astro": {
+      "count": "~76+",
+      "extensions": [".astro"],
+      "locations": [
+        "apps/corp-cockpit-astro/src/pages/**/*.astro",
+        "apps/trust-center/src/**/*.astro"
+      ]
+    },
+    "css": {
+      "count": "~20+",
+      "extensions": [".css"],
+      "locations": [
+        "apps/corp-cockpit-astro/src/styles/**/*.css",
+        "apps/corp-cockpit-astro/src/components/**/*.css"
+      ]
+    }
+  },
+  "features": {
+    "sroi-calculation": {
+      "files": [
+        "services/reporting/src/calculators/sroi.ts",
+        "services/reporting/src/calculators/sroi.test.ts",
+        "services/impact-calculator/src/**/*.ts"
+      ]
+    },
+    "vis-calculation": {
+      "files": [
+        "services/reporting/src/calculators/vis.ts",
+        "services/reporting/src/calculators/vis.test.ts",
+        "services/reporting/src/calculators/campaign-vis.test.ts"
+      ]
+    },
+    "q2q-ai": {
+      "files": [
+        "services/q2q-ai/src/**/*.ts",
+        "packages/model-registry/src/**/*.ts",
+        "apps/corp-cockpit-astro/src/components/q2q/**/*.tsx"
+      ]
+    },
+    "nlq": {
+      "files": [
+        "services/insights-nlq/src/**/*.ts",
+        "apps/corp-cockpit-astro/src/components/nlq/**/*.tsx",
+        "docs/insights/**/*.md"
+      ]
+    },
+    "report-generation": {
+      "files": [
+        "services/reporting/src/templates/**/*.hbs",
+        "services/reporting/src/routes/gen-reports.ts",
+        "apps/corp-cockpit-astro/src/components/reports/**/*.tsx"
+      ]
+    },
+    "campaign-management": {
+      "files": [
+        "services/campaigns/src/**/*.ts",
+        "apps/corp-cockpit-astro/src/components/campaigns/**/*.tsx",
+        "docs/CAMPAIGN_LIFECYCLE.md"
+      ]
+    },
+    "dashboard": {
+      "files": [
+        "apps/corp-cockpit-astro/src/components/dashboard/**/*.tsx",
+        "apps/corp-cockpit-astro/src/components/DashboardWithSSE.tsx",
+        "apps/corp-cockpit-astro/src/components/widgets/**/*.tsx"
+      ]
+    },
+    "boardroom-mode": {
+      "files": [
+        "apps/corp-cockpit-astro/src/components/boardroom/**/*.tsx",
+        "apps/corp-cockpit-astro/BOARDROOM_IMPLEMENTATION_SUMMARY.md"
+      ]
+    },
+    "pwa": {
+      "files": [
+        "apps/corp-cockpit-astro/public/sw.js",
+        "apps/corp-cockpit-astro/public/manifest.json",
+        "apps/corp-cockpit-astro/src/components/pwa/**/*.tsx",
+        "apps/corp-cockpit-astro/src/features/offline/**/*.ts"
+      ]
+    },
+    "dark-mode": {
+      "files": [
+        "apps/corp-cockpit-astro/src/components/theme/**/*.tsx",
+        "apps/corp-cockpit-astro/src/theme/**/*.ts",
+        "apps/corp-cockpit-astro/DARK_MODE_IMPLEMENTATION.md"
+      ]
+    },
+    "accessibility": {
+      "files": [
+        "apps/corp-cockpit-astro/src/a11y/**/*.ts",
+        "apps/corp-cockpit-astro/src/components/a11y/**/*.tsx",
+        "apps/corp-cockpit-astro/tests/a11y/**/*.ts",
+        "docs/accessibility.md"
+      ]
+    },
+    "i18n": {
+      "files": [
+        "apps/corp-cockpit-astro/src/i18n/**/*.json",
+        "apps/corp-cockpit-astro/src/components/LanguageSwitcher.tsx",
+        "docs/i18n/**/*.md"
+      ]
+    }
+  },
+  "statistics": {
+    "totalFiles": "~2800+",
+    "services": 26,
+    "packages": 26,
+    "apps": 2,
+    "testFiles": 97,
+    "documentationFiles": 456,
+    "configurationFiles": 359,
+    "scriptFiles": 104
+  }
+}
+
+
+

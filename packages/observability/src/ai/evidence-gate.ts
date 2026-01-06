@@ -38,7 +38,7 @@ export class EvidenceGate {
     const text = request.generatedText;
     const citationPattern = /\[([a-f0-9-]+)\]/g;
     const citations = Array.from(text.matchAll(citationPattern));
-    const citationIds = citations.map(m => m[1]);
+    const citationIds = citations.map(m => m[1]).filter((id): id is string => typeof id === 'string');
     const paragraphs = text.split(/\n\n+|<\/p>/).filter(p => p.trim().length > 20);
     const words = text.split(/\s+/).filter(w => w.length > 0).length;
     const citationCount = citations.length;

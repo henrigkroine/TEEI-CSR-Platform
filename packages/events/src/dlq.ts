@@ -8,7 +8,7 @@
  * - Monitoring and alerting hooks
  */
 
-import { NatsConnection, JetStreamClient, consumerOpts, AckPolicy } from 'nats';
+import { NatsConnection, JetStreamClient, RetentionPolicy, StorageType } from 'nats';
 import pino from 'pino';
 
 const logger = pino({ name: 'dlq' });
@@ -105,10 +105,10 @@ export class DLQManager {
         await jsm.streams.add({
           name: this.config.deadLetterStream,
           subjects: [`${this.config.deadLetterStream}.*`],
-          retention: 'limits',
+          retention: RetentionPolicy.Limits,
           max_age: 7 * 24 * 60 * 60 * 1_000_000_000, // 7 days in nanoseconds
           max_msgs: 10000,
-          storage: 'file',
+          storage: StorageType.File,
         });
         logger.info({ stream: this.config.deadLetterStream }, 'Created DLQ stream');
       }
@@ -337,7 +337,7 @@ export class DLQManager {
       return {
         messageCount: stream.state.messages,
         streamName: this.config.deadLetterStream,
-        consumers: stream.state.consumers,
+        consumers: stream.state.consumer_count,
       };
     } catch (error) {
       logger.error({ error }, 'Failed to get DLQ stats');

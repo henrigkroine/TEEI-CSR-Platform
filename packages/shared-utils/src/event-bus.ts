@@ -48,6 +48,10 @@ export class EventBus {
     }
   }
 
+  isConnected(): boolean {
+    return this.nc !== null && !this.nc.isClosed();
+  }
+
   /**
    * Publish an event to the event bus
    */
@@ -75,6 +79,31 @@ export class EventBus {
       logger.debug({ subject, eventId: event.id }, 'Event published');
     } catch (error) {
       logger.error({ error, subject, eventId: event.id }, 'Failed to publish event');
+      throw error;
+    }
+  }
+
+  async emit(event: { type: string; data: unknown; timestamp: string; source: string }): Promise<void> {
+    if (!this.nc) {
+      throw new Error('Event bus not connected');
+    }
+
+    const subject = event.type;
+    const envelope = {
+      type: event.type,
+      data: event.data,
+      metadata: {
+        id: randomUUID(),
+        timestamp: event.timestamp,
+        source: event.source,
+      },
+    };
+
+    try {
+      this.nc.publish(subject, sc.encode(JSON.stringify(envelope)));
+      logger.debug({ subject }, 'Event emitted');
+    } catch (error) {
+      logger.error({ error, subject }, 'Failed to emit event');
       throw error;
     }
   }

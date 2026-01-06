@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<!-- ClickHouse Configuration for High-End Development Workstation -->
+<!-- Hardware: AMD Ryzen 9 9950X (16c/32t), 128GB RAM, NVMe SSD -->
+<yandex>
+    <!-- Memory settings optimized for 32GB allocation -->
+    <max_server_memory_usage_to_ram_ratio>0.9</max_server_memory_usage_to_ram_ratio>
+    <max_memory_usage>30000000000</max_memory_usage> <!-- 30GB -->
+    
+    <!-- Query settings -->
+    <max_threads>16</max_threads> <!-- Use 16 threads (half of 32) -->
+    <max_concurrent_queries>100</max_concurrent_queries>
+    
+    <!-- Background processing -->
+    <background_pool_size>16</background_pool_size>
+    <background_merges_mutations_concurrency_ratio>4</background_merges_mutations_concurrency_ratio>
+    
+    <!-- Merge tree settings (for analytics) -->
+    <merge_tree>
+        <max_bytes_to_merge_at_max_space_in_pool>161061273600</max_bytes_to_merge_at_max_space_in_pool> <!-- 150GB -->
+        <max_bytes_to_merge_at_min_space_in_pool>10737418240</max_bytes_to_merge_at_min_space_in_pool> <!-- 10GB -->
+    </merge_tree>
+    
+    <!-- Logging -->
+    <logger>
+        <level>information</level>
+        <log>/var/log/clickhouse-server/clickhouse-server.log</log>
+        <errorlog>/var/log/clickhouse-server/clickhouse-server.err.log</errorlog>
+        <size>1000M</size>
+        <count>10</count>
+    </logger>
+</yandex>
+
+
+
+

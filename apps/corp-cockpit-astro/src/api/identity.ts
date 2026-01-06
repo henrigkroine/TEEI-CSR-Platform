@@ -10,7 +10,7 @@
 const IDENTITY_SERVICE_URL =
   import.meta.env.IDENTITY_SERVICE_URL ||
   import.meta.env.PUBLIC_IDENTITY_SERVICE_URL ||
-  'http://localhost:3000/v1/identity';
+  'http://localhost:3017/v1/identity';
 
 // Feature flag to toggle between mock and real API
 const USE_REAL_IDENTITY_API =

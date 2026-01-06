@@ -25,8 +25,8 @@ User Request → Cloudflare Worker → Route Decision
 - **Cookie Domain**: `.teei.no`
 
 ### Local Development
-- **Main Site**: `http://localhost:3000`
-- **Dashboard**: `http://localhost:4321`
+- **Main Site**: `http://localhost:3017`
+- **Dashboard**: `http://localhost:6509`
 - **Cookie Domain**: `localhost`
 
 ## Routing Strategy
@@ -256,21 +256,21 @@ This allows authentication to work seamlessly across both apps in each environme
 ```bash
 cd "D:\Dev\VS Projects\TEEI\TEEI - Website"
 npm run dev
-# Runs on http://localhost:3000
+# Runs on http://localhost:3017
 ```
 
 ### Terminal 2: Run Corp Cockpit
 ```bash
 cd "D:\Dev\VS Projects\TEEI\TEEI_CSR_Platform\apps\corp-cockpit-astro"
 pnpm dev
-# Runs on http://localhost:4321
+# Runs on http://localhost:6509
 ```
 
 ### Terminal 3: Run Local Router (Optional)
 ```bash
 # Create simple proxy for local testing
-# Forwards /dashboard/* to localhost:4321
-# Forwards /* to localhost:3000
+# Forwards /dashboard/* to localhost:6509
+# Forwards /* to localhost:3017
 ```
 
 ## Security Considerations

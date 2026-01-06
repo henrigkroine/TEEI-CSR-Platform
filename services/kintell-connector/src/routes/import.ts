@@ -1,10 +1,10 @@
 import type { FastifyInstance } from 'fastify';
 import { parse } from 'csv-parse';
-import { db, kintellSessions, users } from '@teei/shared-schema';
+import { db, kintellSessions, users, userExternalIds } from '@teei/shared-schema';
 import { mapCSVRowToSession } from '../mappers/session-mapper.js';
 import { getEventBus, createServiceLogger } from '@teei/shared-utils';
 import type { KintellSessionCompleted } from '@teei/event-contracts';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import {
   createBackfillJob,
   processBackfill,
@@ -14,6 +14,49 @@ import {
 } from '../utils/backfill.js';
 
 const logger = createServiceLogger('kintell-connector:import');
+
+/**
+ * Map Kintell role to platform role
+ */
+function mapKintellRole(roleWhenJoined: string | null): string {
+  if (!roleWhenJoined) return 'participant';
+  const role = roleWhenJoined.toLowerCase().replace(/"/g, '');
+  if (role.includes('advisor') || role.includes('mentor') || role.includes('tutor')) {
+    return 'volunteer';
+  }
+  if (role.includes('learner') || role.includes('mentee') || role.includes('student')) {
+    return 'participant';
+  }
+  return 'participant';
+}
+
+/**
+ * Parse name into first and last name
+ */
+function parseName(fullName: string): { firstName: string; lastName: string } {
+  if (!fullName) return { firstName: '', lastName: '' };
+  const parts = fullName.trim().split(/\s+/);
+  if (parts.length === 1) {
+    return { firstName: parts[0], lastName: '' };
+  }
+  return {
+    firstName: parts[0],
+    lastName: parts.slice(1).join(' '),
+  };
+}
+
+/**
+ * Parse date from Kintell format (e.g., "Dec 14, 2025")
+ */
+function parseKintellDate(dateStr: string | null): Date | null {
+  if (!dateStr) return null;
+  try {
+    const date = new Date(dateStr);
+    return isNaN(date.getTime()) ? null : date;
+  } catch {
+    return null;
+  }
+}
 
 export async function importRoutes(app: FastifyInstance) {
   // POST /import/kintell-sessions - Bulk CSV import
@@ -274,5 +317,193 @@ export async function importRoutes(app: FastifyInstance) {
         message: error.message,
       });
     }
+  });
+
+  /**
+   * POST /import/kintell-users - Import Kintell user CSV (LFU/MFU exports)
+   *
+   * Expected CSV columns:
+   * - Email (required)
+   * - Name (optional)
+   * - Linkedin_URL (optional)
+   * - Verification_status (optional)
+   * - Role when joined (optional) - maps to volunteer/participant
+   * - grant_access (optional)
+   * - Joined_kg_at (optional) - join date
+   */
+  app.post('/kintell-users', async (request, reply) => {
+    const data = await request.file();
+
+    if (!data) {
+      return reply.status(400).send({ error: 'No file uploaded' });
+    }
+
+    const records: Record<string, string>[] = [];
+    const parser = data.file.pipe(
+      parse({
+        columns: true,
+        skip_empty_lines: true,
+        trim: true,
+        relax_column_count: true,
+      })
+    );
+
+    for await (const record of parser) {
+      records.push(record as Record<string, string>);
+    }
+
+    logger.info({ count: records.length }, 'Processing Kintell user CSV records');
+
+    const results = {
+      processed: 0,
+      created: 0,
+      updated: 0,
+      skipped: 0,
+      errors: [] as Array<{ row: number; email: string; error: string }>,
+    };
+
+    for (let i = 0; i < records.length; i++) {
+      const row = records[i];
+
+      try {
+        // Extract email - handle different column name variations
+        const email = (row.Email || row.email || row.EMAIL || '').trim().toLowerCase();
+
+        if (!email || !email.includes('@')) {
+          results.errors.push({
+            row: i + 1,
+            email: email || '(empty)',
+            error: 'Invalid or missing email address',
+          });
+          results.skipped++;
+          continue;
+        }
+
+        // Parse name
+        const fullName = row.Name || row.name || row.NAME || '';
+        const { firstName, lastName } = parseName(fullName);
+
+        // Determine role
+        const roleWhenJoined = row['Role when joined'] || row.role_when_joined || null;
+        const role = mapKintellRole(roleWhenJoined);
+
+        // Build journey flags from CSV data
+        const journeyFlags: Record<string, any> = {
+          kintell_source: true,
+          verification_status: row.Verification_status || row.verification_status || null,
+          linkedin_url: row.Linkedin_URL || row.linkedin_url || null,
+          grant_access: row.grant_access === 'true',
+          role_when_joined: roleWhenJoined,
+          imported_at: new Date().toISOString(),
+        };
+
+        // Parse join date
+        const joinedAt = parseKintellDate(row.Joined_kg_at || row.joined_kg_at || null);
+
+        // Check if user already exists
+        const [existingUser] = await db
+          .select()
+          .from(users)
+          .where(eq(users.email, email))
+          .limit(1);
+
+        if (existingUser) {
+          // Update existing user with Kintell data
+          await db
+            .update(users)
+            .set({
+              firstName: firstName || existingUser.firstName,
+              lastName: lastName || existingUser.lastName,
+              journeyFlags: {
+                ...(existingUser.journeyFlags as Record<string, any> || {}),
+                ...journeyFlags,
+              },
+              updatedAt: new Date(),
+            })
+            .where(eq(users.id, existingUser.id));
+
+          // Ensure external ID mapping exists
+          const [existingMapping] = await db
+            .select()
+            .from(userExternalIds)
+            .where(
+              and(
+                eq(userExternalIds.profileId, existingUser.id),
+                eq(userExternalIds.provider, 'kintell')
+              )
+            )
+            .limit(1);
+
+          if (!existingMapping) {
+            await db.insert(userExternalIds).values({
+              profileId: existingUser.id,
+              provider: 'kintell',
+              externalId: email, // Use email as external ID for Kintell
+              metadata: journeyFlags,
+            });
+          }
+
+          results.updated++;
+          logger.debug({ email, userId: existingUser.id }, 'Updated existing user');
+        } else {
+          // Create new user
+          const [newUser] = await db
+            .insert(users)
+            .values({
+              email,
+              firstName,
+              lastName,
+              role,
+              journeyFlags,
+              createdAt: joinedAt || new Date(),
+              updatedAt: new Date(),
+            })
+            .returning();
+
+          // Create external ID mapping
+          await db.insert(userExternalIds).values({
+            profileId: newUser.id,
+            provider: 'kintell',
+            externalId: email,
+            metadata: journeyFlags,
+          });
+
+          results.created++;
+          logger.debug({ email, userId: newUser.id, role }, 'Created new user');
+        }
+      } catch (error: any) {
+        logger.error({ error, row: i + 1 }, 'Error processing user row');
+        results.errors.push({
+          row: i + 1,
+          email: row.Email || row.email || '(unknown)',
+          error: error.message,
+        });
+      } finally {
+        results.processed++;
+      }
+    }
+
+    logger.info(
+      {
+        processed: results.processed,
+        created: results.created,
+        updated: results.updated,
+        skipped: results.skipped,
+        errors: results.errors.length
+      },
+      'Kintell user import completed'
+    );
+
+    return {
+      success: true,
+      summary: {
+        totalProcessed: results.processed,
+        created: results.created,
+        updated: results.updated,
+        skipped: results.skipped,
+        errorCount: results.errors.length,
+      },
+      errors: results.errors.slice(0, 100), // Return first 100 errors
+    };
   });
 }

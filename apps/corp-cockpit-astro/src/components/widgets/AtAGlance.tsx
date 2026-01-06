@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, memo } from 'react';
 
 interface AtAGlanceData {
   period: string;
@@ -20,7 +20,7 @@ interface Props {
   period?: string;
 }
 
-export default function AtAGlance({ companyId, period }: Props) {
+function AtAGlance({ companyId, period }: Props) {
   const [data, setData] = useState<AtAGlanceData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -180,3 +180,7 @@ export default function AtAGlance({ companyId, period }: Props) {
     </section>
   );
 }
+
+export default memo(AtAGlance, (prev, next) => {
+  return prev.companyId === next.companyId && prev.period === next.period;
+});

@@ -1,0 +1,10 @@
+---
+import CockpitLayout from '../../../../../layouts/CockpitLayout.astro';
+import { LFUDashboardV2 } from '../../../../../components/programmes/lfu';
+
+const { lang, companyId } = Astro.params;
+---
+
+<CockpitLayout title="Language for Ukraine" lang={lang} companyId={companyId} companyName="Acme Corp">
+  <LFUDashboardV2 client:load companyId={companyId} />
+</CockpitLayout>

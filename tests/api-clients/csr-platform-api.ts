@@ -21,7 +21,7 @@ export class CSRPlatformAPI {
   private baseUrl: string;
   private authToken: string | null = null;
 
-  constructor(baseUrl: string = process.env.API_GATEWAY_URL || 'http://localhost:3000') {
+  constructor(baseUrl: string = process.env.API_GATEWAY_URL || 'http://localhost:3017') {
     this.baseUrl = baseUrl;
   }
 

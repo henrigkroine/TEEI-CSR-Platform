@@ -1,15 +1,21 @@
 ---
-import BaseLayout from '../../../../layouts/BaseLayout.astro';
-import { hasPermission } from '../../../../utils/rbac';
-import AtAGlance from '../../../../components/widgets/AtAGlance';
-import SROIPanel from '../../../../components/widgets/SROIPanel';
-import VISPanel from '../../../../components/widgets/VISPanel';
-import Q2QFeed from '../../../../components/widgets/Q2QFeed';
-import ExportButtons from '../../../../components/widgets/ExportButtons';
-import DashboardActions from '../../../../components/DashboardActions';
+import CockpitExperienceLayout from '../../../../layouts/CockpitExperienceLayout.astro';
+import ActionableItems from '../../../../components/dashboard/ActionableItems';
+import { CampaignPipelineWithLanes } from '../../../../components/dashboard/CampaignPipeline';
+import AIInsights from '../../../../components/dashboard/AIInsights';
+import ComplianceAlerts from '../../../../components/dashboard/ComplianceAlerts';
+import ProgrammeTiles from '../../../../components/dashboard/ProgrammeTiles';
+import KPICard from '../../../../components/dashboard/KPICard';
+import DashboardWithSSE from '../../../../components/DashboardWithSSE';
+import DemoModeBanner from '../../../../components/demo/DemoModeBanner';
+import DemoEmptyState from '../../../../components/demo/DemoEmptyState';
+import DemoErrorState from '../../../../components/demo/DemoErrorState';
+import ProgrammeTabs from '../../../../components/demo/ProgrammeTabs';
+import DashboardDiagnostics from '../../../../components/dashboard/DashboardDiagnostics';
+import { isDemoModeEnabled } from '../../../../lib/demo/demoConfig';
 
 // Extract route parameters
-const { lang, companyId } = Astro.params;
+const { lang, companyId: companyIdFromParams } = Astro.params;
 const user = Astro.locals.user;
 const tenantContext = Astro.locals.tenantContext;
 
@@ -18,156 +24,555 @@ if (!user || !tenantContext) {
   return Astro.redirect('/login');
 }
 
+// Use companyId from tenantContext as fallback if params is undefined
+const companyId = companyIdFromParams || tenantContext?.companyId;
+
+// Validate companyId exists
+if (!companyId || companyId === 'undefined') {
+  console.error('[Dashboard] Invalid companyId:', { companyIdFromParams, tenantContext });
+  return Astro.redirect('/login');
+}
+
 // Verify the tenant context matches the route
 if (tenantContext.companyId !== companyId || tenantContext.lang !== lang) {
   return Astro.redirect(`/${lang}/cockpit/401`);
 }
 
-const canExport = hasPermission(user.role, 'EXPORT_DATA');
-const canViewAdmin = hasPermission(user.role, 'ADMIN_CONSOLE');
-const canGenerateReports = hasPermission(user.role, 'GENERATE_REPORTS');
-const canViewEvidence = hasPermission(user.role, 'VIEW_EVIDENCE');
+const breadcrumbs = [
+  { label: 'Cockpit', href: `/${lang}/cockpit/${companyId}` },
+  { label: 'Dashboard' },
+];
+
+// Note: All hardcoded data has been removed. Components now fetch from APIs.
+// KPI cards, ActionableItems, CampaignPipeline, AIInsights, and ComplianceAlerts
+// all accept companyId and fetch data from their respective services.
 ---
 
-<BaseLayout title={`Dashboard - TEEI Corporate Cockpit`} lang={lang}>
-  <header class="dashboard-header">
-    <div>
-      <h1>Corporate Impact Dashboard</h1>
-      <p class="welcome">Welcome back, {user.name}</p>
-      <p class="tenant-indicator">Company ID: <code>{companyId}</code></p>
-    </div>
-    <nav class="header-actions" aria-label="User actions">
-      <span class="role-badge" aria-label={`Your role: ${user.role}`}>{user.role}</span>
-      {canViewAdmin && (
-        <a href={`/${lang}/cockpit/${companyId}/admin`} class="btn btn-admin">
-          Admin Console
+<CockpitExperienceLayout
+  title="Corporate Cockpit Overview"
+  lang={lang}
+  companyId={companyId}
+  user={user}
+  breadcrumbs={breadcrumbs}
+>
+  <div class="dashboard">
+    <!-- Demo Mode Banner -->
+    {isDemoModeEnabled() && (
+      <DemoModeBanner client:load />
+    )}
+
+    <!-- Dashboard Diagnostics (Development Only) -->
+    <DashboardDiagnostics client:load companyId={companyId} />
+
+    <!-- Page Header -->
+    <header class="dashboard-header">
+      <div class="header-content">
+        <h1 class="header-title">Executive Overview</h1>
+        <p class="header-subtitle">
+          Social impact metrics for your CSR initiatives
+        </p>
+      </div>
+      <div class="header-actions">
+        <button
+          class="btn btn-secondary"
+          id="refresh-dashboard-btn"
+          aria-label="Refresh dashboard data"
+          title="Refresh dashboard (Ctrl/Cmd + R)"
+          type="button"
+        >
+          <svg viewBox="0 0 20 20" aria-hidden="true" class="refresh-icon">
+            <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span class="refresh-text">Refresh</span>
+        </button>
+        <button class="btn btn-primary">
+          <svg viewBox="0 0 20 20" aria-hidden="true">
+            <path d="M10 3v14M3 10h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          New Report
+        </button>
+      </div>
+    </header>
+
+    <!-- KPI Grid - Now using live API components with SSE -->
+    <section class="kpi-section" aria-label="Key Performance Indicators">
+      <DashboardWithSSE companyId={companyId}>
+        <div class="kpi-grid">
+          <KPICard client:load companyId={companyId} metricId="sroi" />
+          <KPICard client:load companyId={companyId} metricId="vis" />
+          <KPICard client:load companyId={companyId} metricId="coverage" />
+          <KPICard client:load companyId={companyId} metricId="compliance" />
+        </div>
+      </DashboardWithSSE>
+    </section>
+
+    <!-- Programme Impact Tiles -->
+    <section class="programme-tiles-section" aria-label="Programme Impact Metrics">
+      <div class="section-header flex justify-between items-end">
+        <div>
+          <h2 class="section-title">Programme Impact</h2>
+          <p class="section-subtitle">Metrics for Language Connect and Mentors for Ukraine</p>
+        </div>
+        <a href={`/${lang}/cockpit/${companyId}/programmes/language-for-ukraine`} class="text-sm font-medium text-accent hover:text-accent-dark flex items-center gap-1">
+          View LFU Dashboard
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
+            <path fill-rule="evenodd" d="M3 10a.75.75 0 01.75-.75h10.638L10.23 5.29a.75.75 0 111.04-1.08l5.5 5.25a.75.75 0 010 1.08l-5.5 5.25a.75.75 0 11-1.04-1.08l4.158-3.96H3.75A.75.75 0 013 10z" clip-rule="evenodd" />
+          </svg>
         </a>
-      )}
-      <form method="POST" action="/api/logout">
-        <button type="submit" class="btn btn-secondary">Sign Out</button>
-      </form>
-    </nav>
-  </header>
+      </div>
+      <ProgrammeTiles
+        client:load
+        companyId={companyId}
+        period="quarter"
+        programmeFilter="all"
+        enableAutoRefresh={true}
+        autoRefreshInterval={300000}
+      />
+    </section>
 
-  <section class="dashboard-grid" aria-label="Dashboard metrics and data">
-    <AtAGlance companyId={companyId} client:load />
-    <SROIPanel companyId={companyId} client:load />
-    <VISPanel companyId={companyId} client:load />
-    <Q2QFeed companyId={companyId} limit={10} client:load />
-    {canExport && <ExportButtons companyId={companyId} client:load />}
-  </section>
-
-  <aside aria-label="Dashboard actions">
-    <DashboardActions
-      companyId={companyId}
-      canGenerateReports={canGenerateReports}
-      canViewEvidence={canViewEvidence}
-      canExport={canExport}
-      client:load
-    />
-  </aside>
-</BaseLayout>
+    <!-- Main Content Grid - Now using live API components -->
+    <DashboardWithSSE companyId={companyId}>
+      <div class="dashboard-grid">
+        <div class="dashboard-primary">
+          <ActionableItems client:load companyId={companyId} />
+          <CampaignPipelineWithLanes client:load companyId={companyId} />
+        </div>
+        <div class="dashboard-secondary">
+          <AIInsights client:load companyId={companyId} />
+          <ComplianceAlerts client:load companyId={companyId} />
+        </div>
+      </div>
+    </DashboardWithSSE>
+  </div>
+</CockpitExperienceLayout>
 
 <style>
+  /* Dashboard Container */
+  .dashboard {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-8);
+  }
+
+  /* Page Header */
   .dashboard-header {
     display: flex;
+    align-items: flex-start;
     justify-content: space-between;
-    align-items: center;
-    margin-bottom: calc(var(--spacing-unit) * 4);
-    flex-wrap: wrap;
-    gap: calc(var(--spacing-unit) * 2);
+    gap: var(--space-6);
+    padding-bottom: var(--space-6);
+    border-bottom: 1px solid var(--color-border-subtle);
   }
 
-  h1 {
-    font-size: 2rem;
-    margin-bottom: calc(var(--spacing-unit) * 0.5);
+  .header-content {
+    flex: 1;
   }
 
-  .welcome {
+  .header-title {
+    font-size: var(--text-3xl);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-text-primary);
+    letter-spacing: var(--tracking-tight);
+    margin-bottom: var(--space-1);
+  }
+
+  .header-subtitle {
+    font-size: var(--text-base);
     color: var(--color-text-secondary);
-    font-size: 1rem;
-    margin-bottom: calc(var(--spacing-unit) * 0.5);
-  }
-
-  .tenant-indicator {
-    font-size: 0.875rem;
-    color: var(--color-text-secondary);
-  }
-
-  .tenant-indicator code {
-    background-color: var(--color-bg-secondary);
-    padding: calc(var(--spacing-unit) * 0.5) calc(var(--spacing-unit) * 1);
-    border-radius: calc(var(--border-radius) / 2);
-    font-family: 'Courier New', monospace;
-    font-size: 0.8125rem;
+    line-height: var(--leading-relaxed);
   }
 
   .header-actions {
     display: flex;
+    gap: var(--space-3);
+    flex-shrink: 0;
+  }
+
+  .header-actions .btn {
+    display: inline-flex;
     align-items: center;
-    gap: calc(var(--spacing-unit) * 2);
+    gap: var(--space-2);
   }
 
-  .role-badge {
-    padding: calc(var(--spacing-unit) * 1) calc(var(--spacing-unit) * 2);
-    background-color: var(--color-primary);
-    color: white;
-    border-radius: calc(var(--border-radius) / 2);
+  .header-actions .btn svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .header-actions .btn .refresh-icon {
+    transition: transform 0.3s ease;
+  }
+
+  .header-actions .btn:not(:disabled):hover .refresh-icon {
+    transform: rotate(90deg);
+  }
+
+  .header-actions .btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .header-actions .btn .refresh-text {
+    margin-left: 0.5rem;
+  }
+
+  /* Programme Selector */
+  .programme-selector-header {
+    display: flex;
+    align-items: center;
+  }
+
+  .programme-filter-select {
+    padding: 0.5rem 2.5rem 0.5rem 0.75rem;
     font-size: 0.875rem;
-    font-weight: 600;
-    text-transform: uppercase;
-  }
-
-  .btn {
-    padding: calc(var(--spacing-unit) * 1.5) calc(var(--spacing-unit) * 2);
-    border: none;
-    border-radius: var(--border-radius);
-    font-size: 0.9375rem;
-    font-weight: 600;
+    border: 1px solid var(--color-border, #e5e7eb);
+    border-radius: 0.375rem;
+    background-color: var(--color-surface, #ffffff);
+    color: var(--color-text-primary, #111827);
     cursor: pointer;
-    transition: all 0.2s;
-    text-decoration: none;
-    display: inline-block;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.5rem center;
+    background-size: 1rem;
+    transition: border-color var(--duration-normal) var(--ease-out);
   }
 
-  .btn-admin {
-    background-color: var(--color-primary);
-    color: white;
+  .programme-filter-select:hover {
+    border-color: var(--color-border-strong, #d1d5db);
   }
 
-  .btn-admin:hover {
-    background-color: var(--color-primary-dark);
+  .programme-filter-select:focus {
+    outline: none;
+    border-color: var(--color-primary, #0066cc);
+    box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
   }
 
-  .btn-secondary {
-    background-color: var(--color-bg-secondary);
-    color: var(--color-text);
+  .programme-filter-select:focus-visible {
+    outline: 2px solid var(--color-primary, #0066cc);
+    outline-offset: 2px;
+  }
+
+  /* KPI Section */
+  .kpi-section {
+    margin-bottom: var(--space-2);
+  }
+
+  /* Programme Tiles Section */
+  .programme-tiles-section {
+    margin-bottom: var(--space-6);
+  }
+
+  .section-header {
+    margin-bottom: var(--space-5);
+  }
+
+  .section-title {
+    font-size: var(--text-xl);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text-primary);
+    margin-bottom: var(--space-1);
+  }
+
+  .section-subtitle {
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+  }
+
+  /* Programme Tiles Grid */
+  .programme-tiles-section :global(.programme-tiles) {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-6);
+  }
+
+  .programme-tiles-section :global(.tile-container) {
+    min-height: 300px;
+    transition: transform var(--duration-normal) var(--ease-out);
+  }
+
+  .programme-tiles-section :global(.tile-container:hover) {
+    transform: translateY(-2px);
+  }
+
+  /* Loading and Error States */
+  .programme-tiles-section :global(.animate-pulse) {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
+
+  /* Responsive */
+  @media (max-width: 1024px) {
+    .programme-tiles-section :global(.programme-tiles) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .section-title {
+      font-size: var(--text-lg);
+    }
+
+    .section-subtitle {
+      font-size: var(--text-xs);
+    }
+  }
+
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-5);
+  }
+
+  .kpi-card {
+    position: relative;
+    background: var(--color-surface);
     border: 1px solid var(--color-border);
+    border-radius: var(--card-radius);
+    padding: var(--space-5);
+    box-shadow: var(--shadow-card);
+    overflow: hidden;
+    transition:
+      transform var(--duration-normal) var(--ease-out),
+      box-shadow var(--duration-normal) var(--ease-out),
+      border-color var(--duration-normal) var(--ease-out);
   }
 
-  .btn-secondary:hover {
-    background-color: var(--color-border);
+  .kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--color-primary), var(--color-primary-light));
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform var(--duration-normal) var(--ease-out);
   }
 
+  .kpi-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-card-hover);
+    border-color: var(--color-border-strong);
+  }
+
+  .kpi-card:hover::before {
+    transform: scaleX(1);
+  }
+
+  .kpi-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    margin-bottom: var(--space-3);
+  }
+
+  .kpi-label {
+    font-size: var(--text-xs);
+    font-weight: var(--font-weight-semibold);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-caps);
+    color: var(--color-text-tertiary);
+  }
+
+  .kpi-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: var(--radius-pill);
+    background: var(--color-success-light);
+    color: var(--color-success);
+    font-size: var(--text-xs);
+    font-weight: var(--font-weight-semibold);
+  }
+
+  .kpi-card:has(.kpi-badge svg path[d*="M8 4v8"]) .kpi-badge {
+    background: var(--color-error-light);
+    color: var(--color-error);
+  }
+
+  .kpi-badge svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .kpi-value-row {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--space-4);
+    margin-bottom: var(--space-4);
+  }
+
+  .kpi-value {
+    font-size: var(--text-4xl);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-text-primary);
+    line-height: 1;
+    letter-spacing: var(--tracking-tight);
+  }
+
+  .kpi-sparkline {
+    flex: 1;
+    max-width: 120px;
+    height: 40px;
+  }
+
+  .kpi-sparkline svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .kpi-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--color-border-subtle);
+  }
+
+  .kpi-full-label {
+    font-size: var(--text-xs);
+    color: var(--color-text-secondary);
+  }
+
+  .kpi-target {
+    font-size: var(--text-xs);
+    color: var(--color-text-tertiary);
+    font-weight: var(--font-weight-medium);
+  }
+
+  /* Main Grid */
   .dashboard-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-    gap: calc(var(--spacing-unit) * 3);
+    grid-template-columns: 1.25fr 1fr;
+    gap: var(--space-6);
+    align-items: start;
   }
 
-  @media (max-width: 768px) {
+  .dashboard-primary,
+  .dashboard-secondary {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+  }
+
+  /* Animation */
+  .animate-in {
+    opacity: 0;
+    animation: fadeSlideIn var(--duration-normal) var(--ease-out) forwards;
+  }
+
+  @keyframes fadeSlideIn {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Responsive */
+  @media (max-width: 1279px) {
     .dashboard-grid {
       grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 1024px) {
+    .kpi-grid {
+      grid-template-columns: repeat(2, 1fr);
     }
 
     .dashboard-header {
       flex-direction: column;
-      align-items: flex-start;
+      align-items: stretch;
     }
 
     .header-actions {
-      width: 100%;
-      flex-wrap: wrap;
+      justify-content: flex-start;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .kpi-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .kpi-value {
+      font-size: var(--text-3xl);
+    }
+
+    .header-title {
+      font-size: var(--text-2xl);
     }
   }
 </style>
+
+<script>
+  // World-class dashboard refresh functionality
+  document.addEventListener('DOMContentLoaded', () => {
+    const refreshBtn = document.getElementById('refresh-dashboard-btn');
+    if (!refreshBtn) return;
+
+    let isRefreshing = false;
+
+    refreshBtn.addEventListener('click', async (e) => {
+      e.preventDefault();
+
+      if (isRefreshing) return; // Prevent double-clicks
+      isRefreshing = true;
+
+      // Visual feedback
+      const originalContent = refreshBtn.innerHTML;
+      refreshBtn.disabled = true;
+      refreshBtn.innerHTML = `
+        <svg class="animate-spin h-4 w-4 inline-block mr-2" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <span class="refresh-text">Refreshing...</span>
+      `;
+
+      try {
+        // Dispatch refresh event that widgets can listen to for granular refresh
+        window.dispatchEvent(new CustomEvent('dashboard-refresh', {
+          detail: { timestamp: Date.now() }
+        }));
+
+        // Small delay to allow event listeners to process
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Trigger page reload to refresh all data
+        window.location.reload();
+      } catch (error) {
+        console.error('[Dashboard] Refresh error:', error);
+        // Restore button state on error
+        refreshBtn.disabled = false;
+        refreshBtn.innerHTML = originalContent;
+        isRefreshing = false;
+      }
+    });
+
+    // Keyboard shortcut: Ctrl/Cmd + R (but allow browser default, just log)
+    document.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'r') {
+        console.log('[Dashboard] Refresh shortcut detected - browser will handle');
+      }
+    });
+  });
+</script>

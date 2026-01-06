@@ -4,7 +4,7 @@
  * Central hub for tenant lifecycle, SCIM, SSO, entitlements, and residency management
  */
 
-import MainLayout from '../../../layouts/MainLayout.astro';
+import Layout from '../../../layouts/Layout.astro';
 
 const { lang } = Astro.params;
 const validLangs = ['en', 'uk', 'no'];
@@ -22,7 +22,7 @@ const adminUser = {
 const pageTitle = 'Admin Studio v2';
 ---
 
-<MainLayout title={pageTitle} lang={lang as 'en' | 'uk' | 'no'}>
+<Layout title={pageTitle} description="TEEI Admin Studio v2">
   <div class="admin-studio-container">
     <!-- Header -->
     <header class="admin-header">
@@ -450,4 +450,4 @@ const pageTitle = 'Admin Studio v2';
       }
     });
   </script>
-</MainLayout>
+</Layout>

@@ -12,7 +12,7 @@
  * time-range/tenant/program filters, CSV export
  */
 import BaseLayout from '../../../../layouts/BaseLayout.astro';
-import { hasPermission } from '../../../../types/roles';
+import { hasPermission } from '../../../../utils/rbac';
 
 // Extract route parameters
 const { lang, companyId } = Astro.params;
@@ -112,6 +112,7 @@ if (!USAGE_ANALYTICS_ENABLED) {
 
   <!-- Import React components -->
   <script>
+    import { createElement } from 'react';
     import { createRoot } from 'react-dom/client';
     import UsageFilters from '../../../../components/usage/UsageFilters';
     import ConversionFunnel from '../../../../components/usage/ConversionFunnel';
@@ -124,31 +125,31 @@ if (!USAGE_ANALYTICS_ENABLED) {
     // Mount filters
     const filtersContainer = document.getElementById('usage-filters');
     if (filtersContainer) {
-      createRoot(filtersContainer).render(<UsageFilters companyId={companyId} />);
+      createRoot(filtersContainer).render(createElement(UsageFilters, { companyId }));
     }
 
     // Mount conversion funnel
     const funnelContainer = document.getElementById('conversion-funnel');
     if (funnelContainer) {
-      createRoot(funnelContainer).render(<ConversionFunnel companyId={companyId} />);
+      createRoot(funnelContainer).render(createElement(ConversionFunnel, { companyId }));
     }
 
     // Mount retention heatmap
     const retentionContainer = document.getElementById('retention-heatmap');
     if (retentionContainer) {
-      createRoot(retentionContainer).render(<RetentionHeatmap companyId={companyId} />);
+      createRoot(retentionContainer).render(createElement(RetentionHeatmap, { companyId }));
     }
 
     // Mount NPS widget
     const npsContainer = document.getElementById('nps-widget');
     if (npsContainer) {
-      createRoot(npsContainer).render(<NPSWidget companyId={companyId} />);
+      createRoot(npsContainer).render(createElement(NPSWidget, { companyId }));
     }
 
     // Mount stuck detector
     const stuckContainer = document.getElementById('stuck-detector');
     if (stuckContainer) {
-      createRoot(stuckContainer).render(<StuckDetector companyId={companyId} />);
+      createRoot(stuckContainer).render(createElement(StuckDetector, { companyId }));
     }
 
     // CSV Export handler

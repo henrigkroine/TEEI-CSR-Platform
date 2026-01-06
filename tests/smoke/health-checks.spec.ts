@@ -9,7 +9,7 @@ import { test, expect } from '@playwright/test';
  * Run: pnpm exec playwright test tests/smoke/health-checks.spec.ts
  */
 
-const BASE_URL = process.env.BASE_URL || 'http://localhost:4321';
+const BASE_URL = process.env.BASE_URL || 'http://localhost:6509';
 const TIMEOUT = 5000; // 5 seconds per check
 
 interface ServiceEndpoint {

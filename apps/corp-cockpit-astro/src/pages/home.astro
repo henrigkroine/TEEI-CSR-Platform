@@ -1,0 +1,9 @@
+---
+// Redirect /home to /en or /en/portal based on tenant cookie
+const savedTenantId = Astro.cookies.get('tenantId')?.value;
+if (savedTenantId) {
+  return Astro.redirect('/en/portal', 301);
+}
+return Astro.redirect('/en', 301);
+---
+

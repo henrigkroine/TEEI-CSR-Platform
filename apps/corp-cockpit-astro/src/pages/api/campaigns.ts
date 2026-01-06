@@ -21,8 +21,8 @@ export const GET: APIRoute = async ({ request, url }) => {
     // Extract query parameters
     const queryParams = url.searchParams;
 
-    // Build backend URL
-    const backendUrl = new URL('/campaigns', CAMPAIGNS_SERVICE_URL);
+    // Build backend URL - campaigns service uses /api/campaigns prefix
+    const backendUrl = new URL('/api/campaigns', CAMPAIGNS_SERVICE_URL);
 
     // Forward all query parameters
     queryParams.forEach((value, key) => {

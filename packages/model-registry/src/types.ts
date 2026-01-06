@@ -9,17 +9,52 @@ import { z } from 'zod';
 // Regional Policy Configuration
 // ============================================================================
 
-export type DataRegion = 'us' | 'eu' | 'uk' | 'ap' | 'global';
+/**
+ * Supported data residency regions
+ * Supports both simple codes and AWS-style region identifiers
+ */
+export const RegionSchema = z.enum([
+  // Simple region codes
+  'us',
+  'eu',
+  'uk',
+  'ap',
+  'global',
+  // AWS-style region identifiers
+  'eu-central-1',  // Frankfurt, Germany
+  'eu-west-1',     // Ireland
+  'us-east-1',     // Virginia, USA
+  'us-west-2',     // Oregon, USA
+  'ap-southeast-1', // Singapore
+]);
 
+export type Region = z.infer<typeof RegionSchema>;
+
+/** Alias for backwards compatibility */
+export type DataRegion = Region;
+
+/**
+ * Regional policy enforcement mode
+ */
+export const RegionEnforcementModeSchema = z.enum([
+  'strict',   // Block requests to disallowed regions (GDPR)
+  'advisory', // Log warnings but allow
+  'disabled', // No enforcement
+]);
+
+export type RegionEnforcementMode = z.infer<typeof RegionEnforcementModeSchema>;
+
+/**
+ * Regional policy for model selection
+ */
 export const RegionPolicySchema = z.object({
-  /** Allowed regions for model inference */
-  allowedRegions: z.array(z.enum(['us', 'eu', 'uk', 'ap', 'global'])).min(1),
-  /** Preferred region for this tenant */
-  preferredRegion: z.enum(['us', 'eu', 'uk', 'ap', 'global']).optional(),
-  /** Whether to enforce strict region boundaries (block cross-region calls) */
+  allowedRegions: z.array(RegionSchema),
+  primaryRegion: RegionSchema.optional(),
+  preferredRegion: RegionSchema.optional(),
+  enforcementMode: RegionEnforcementModeSchema.default('strict'),
   enforceStrict: z.boolean().default(true),
-  /** Fallback region if preferred unavailable */
-  fallbackRegion: z.enum(['us', 'eu', 'uk', 'ap', 'global']).optional(),
+  fallbackBehavior: z.enum(['use_primary', 'fail']).default('use_primary'),
+  fallbackRegion: RegionSchema.optional(),
 });
 
 export type RegionPolicy = z.infer<typeof RegionPolicySchema>;
@@ -102,46 +137,6 @@ export type VISWeights = z.infer<typeof VISWeightsSchema>;
 export type VISConfig = z.infer<typeof VISConfigSchema>;
 
 // ============================================================================
-// Regional Policy (Worker 8 - Regional AI Controls)
-// ============================================================================
-
-/**
- * Supported data residency regions
- */
-export const RegionSchema = z.enum([
-  'eu-central-1',  // Frankfurt, Germany
-  'eu-west-1',     // Ireland
-  'us-east-1',     // Virginia, USA
-  'us-west-2',     // Oregon, USA
-  'ap-southeast-1', // Singapore
-]);
-
-export type Region = z.infer<typeof RegionSchema>;
-
-/**
- * Regional policy enforcement mode
- */
-export const RegionEnforcementModeSchema = z.enum([
-  'strict',   // Block requests to disallowed regions (GDPR)
-  'advisory', // Log warnings but allow
-  'disabled', // No enforcement
-]);
-
-export type RegionEnforcementMode = z.infer<typeof RegionEnforcementModeSchema>;
-
-/**
- * Regional policy for model selection
- */
-export const RegionPolicySchema = z.object({
-  allowedRegions: z.array(RegionSchema),
-  primaryRegion: RegionSchema,
-  enforcementMode: RegionEnforcementModeSchema.default('strict'),
-  fallbackBehavior: z.enum(['use_primary', 'fail']).default('use_primary'),
-});
-
-export type RegionPolicy = z.infer<typeof RegionPolicySchema>;
-
-// ============================================================================
 // Guardrails
 // ============================================================================
 
@@ -196,7 +191,6 @@ export const TenantOverrideSchema = z.object({
   // Guardrails and Rollback
   guardrails: GuardrailsSchema.optional(),
   rollback: RollbackConfigSchema.optional(),
-  regionPolicy: RegionPolicySchema.optional(),
 });
 
 export type TenantOverride = z.infer<typeof TenantOverrideSchema>;
@@ -224,6 +218,12 @@ export const GLOBAL_DEFAULTS: Required<Omit<TenantOverride, 'tenantId' | 'versio
       job_readiness: 0.7,
       wellbeing: 0.7,
     },
+    regionPolicy: {
+      allowedRegions: ['global'],
+      enforceStrict: false,
+      enforcementMode: 'disabled',
+      fallbackBehavior: 'use_primary',
+    },
   },
   sroi: {
     deadweightFactor: 0.1,
@@ -240,19 +240,16 @@ export const GLOBAL_DEFAULTS: Required<Omit<TenantOverride, 'tenantId' | 'versio
     },
   },
   regionPolicy: {
-    allowedRegions: ['global'],
+    allowedRegions: ['eu-central-1', 'eu-west-1', 'us-east-1', 'us-west-2', 'ap-southeast-1'],
+    primaryRegion: 'us-east-1',
+    enforcementMode: 'advisory',
     enforceStrict: false,
+    fallbackBehavior: 'use_primary',
   },
   guardrails: {
     minFairnessThreshold: 0.9,
     minPrivacyRedaction: true,
     maxCostPerRequest: 0.5,
-  },
-  regionPolicy: {
-    allowedRegions: ['eu-central-1', 'eu-west-1', 'us-east-1', 'us-west-2', 'ap-southeast-1'],
-    primaryRegion: 'us-east-1',
-    enforcementMode: 'advisory',
-    fallbackBehavior: 'use_primary',
   },
 };
 

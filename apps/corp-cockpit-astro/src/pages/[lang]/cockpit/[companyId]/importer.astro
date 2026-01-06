@@ -1,0 +1,195 @@
+---
+import BaseLayout from '../../../../layouts/BaseLayout.astro';
+import { hasPermission } from '../../../../types/roles';
+import { MappingStudio } from '../../../../features/importer/MappingStudio';
+
+// Extract route parameters
+const { lang, companyId } = Astro.params;
+const user = Astro.locals.user;
+const tenantContext = Astro.locals.tenantContext;
+
+// Middleware handles auth/tenant validation, but double-check
+if (!user || !tenantContext) {
+  return Astro.redirect('/login');
+}
+
+// Verify user has data import access (admin or data_manager role)
+if (!hasPermission(user.role, 'ADMIN_CONSOLE') && !hasPermission(user.role, 'MANAGE_INTEGRATIONS')) {
+  return Astro.redirect(`/${lang}/cockpit/401?reason=insufficient_permissions`);
+}
+---
+
+<BaseLayout title="Data Importer - TEEI Corporate Cockpit" lang={lang}>
+  <div class="importer-header">
+    <div>
+      <h1>Data Importer</h1>
+      <p class="breadcrumb">
+        <a href={`/${lang}/cockpit/${companyId}`}>Dashboard</a>
+        <span class="separator">/</span>
+        <a href={`/${lang}/cockpit/${companyId}/admin`}>Admin</a>
+        <span class="separator">/</span>
+        <span>Importer</span>
+      </p>
+    </div>
+    <div class="role-indicator">
+      <span class="role-badge">{user.role}</span>
+    </div>
+  </div>
+
+  <div class="importer-info">
+    <div class="info-card">
+      <h3>Supported Formats</h3>
+      <ul>
+        <li><strong>Language Connect</strong> - Session data with CEFR levels</li>
+        <li><strong>Mentors for Ukraine</strong> - Mentorship sessions with focus areas</li>
+        <li><strong>Buddy Program</strong> - Match and check-in data</li>
+        <li><strong>Upskilling</strong> - Course completions and credentials</li>
+      </ul>
+    </div>
+    <div class="info-card">
+      <h3>Quick Links</h3>
+      <ul>
+        <li><a href="/docs/kintell/KINTELL_CSV_FORMATS.md" target="_blank">CSV Format Specification</a></li>
+        <li><a href={`/${lang}/cockpit/${companyId}/admin`}>Back to Admin Console</a></li>
+      </ul>
+    </div>
+  </div>
+
+  <MappingStudio client:load />
+
+  <a href={`/${lang}/cockpit/${companyId}/admin`} class="back-link">
+    Back to Admin Console
+  </a>
+</BaseLayout>
+
+<style>
+  .importer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: calc(var(--spacing-unit, 8px) * 4);
+    flex-wrap: wrap;
+    gap: calc(var(--spacing-unit, 8px) * 2);
+    padding-bottom: calc(var(--spacing-unit, 8px) * 3);
+    border-bottom: 2px solid var(--color-border, #e5e7eb);
+  }
+
+  h1 {
+    font-size: 2rem;
+    margin-bottom: calc(var(--spacing-unit, 8px) * 1);
+    color: var(--color-text, #111827);
+  }
+
+  .breadcrumb {
+    font-size: 0.875rem;
+    color: var(--color-text-secondary, #6b7280);
+  }
+
+  .breadcrumb a {
+    color: var(--color-primary, #2563eb);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+
+  .breadcrumb a:hover {
+    color: var(--color-primary-dark, #1d4ed8);
+    text-decoration: underline;
+  }
+
+  .separator {
+    margin: 0 calc(var(--spacing-unit, 8px) * 1);
+    color: var(--color-text-secondary, #6b7280);
+  }
+
+  .role-indicator {
+    display: flex;
+    align-items: center;
+    gap: calc(var(--spacing-unit, 8px) * 2);
+  }
+
+  .role-badge {
+    padding: calc(var(--spacing-unit, 8px) * 1) calc(var(--spacing-unit, 8px) * 2);
+    background-color: var(--color-primary, #2563eb);
+    color: white;
+    border-radius: calc(var(--border-radius, 8px) / 2);
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .importer-info {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: calc(var(--spacing-unit, 8px) * 3);
+    margin-bottom: calc(var(--spacing-unit, 8px) * 4);
+  }
+
+  .info-card {
+    background-color: var(--color-bg, #f9fafb);
+    padding: calc(var(--spacing-unit, 8px) * 3);
+    border-radius: var(--border-radius, 8px);
+    border: 1px solid var(--color-border, #e5e7eb);
+  }
+
+  .info-card h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: calc(var(--spacing-unit, 8px) * 2);
+    color: var(--color-text, #111827);
+  }
+
+  .info-card ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .info-card li {
+    padding: calc(var(--spacing-unit, 8px) * 1) 0;
+    font-size: 0.875rem;
+    color: var(--color-text-secondary, #6b7280);
+    border-bottom: 1px solid var(--color-border, #e5e7eb);
+  }
+
+  .info-card li:last-child {
+    border-bottom: none;
+  }
+
+  .info-card li strong {
+    color: var(--color-text, #111827);
+  }
+
+  .info-card a {
+    color: var(--color-primary, #2563eb);
+    text-decoration: none;
+  }
+
+  .info-card a:hover {
+    text-decoration: underline;
+  }
+
+  .back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: calc(var(--spacing-unit, 8px) * 4);
+    color: var(--color-primary, #2563eb);
+    text-decoration: none;
+    font-weight: 500;
+  }
+
+  .back-link:hover {
+    text-decoration: underline;
+  }
+
+  @media (max-width: 768px) {
+    .importer-header {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .importer-info {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

@@ -8,7 +8,8 @@
  */
 
 import { Gauge, Counter, Histogram, Registry } from 'prom-client';
-import { SLOManager, SLOStatus, ErrorBudget } from './slo.js';
+import { SLOManager, SLOStatus } from './slo.js';
+import type { ErrorBudget as _ErrorBudget } from './slo.js';
 
 /**
  * SLO Metrics Registry

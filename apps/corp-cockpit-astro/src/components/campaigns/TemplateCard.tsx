@@ -6,7 +6,7 @@
  * Displays program template information as a selectable card
  */
 import React from 'react';
-import { Users, BookOpen, MessageCircle, TrendingUp, Clock } from 'lucide-react';
+import { UsersIcon, BookOpenIcon, MessageIcon, TrendingUpIcon, ClockIcon } from '../icons';
 
 export interface ProgramTemplate {
   id: string;
@@ -24,10 +24,10 @@ interface TemplateCardProps {
 }
 
 const programTypeIcons = {
-  mentorship: Users,
-  language: BookOpen,
-  buddy: MessageCircle,
-  upskilling: TrendingUp
+  mentorship: UsersIcon,
+  language: BookOpenIcon,
+  buddy: MessageIcon,
+  upskilling: TrendingUpIcon
 };
 
 const programTypeLabels = {
@@ -63,13 +63,13 @@ export function TemplateCard({ template, isSelected, onSelect }: TemplateCardPro
 
       <div className="template-footer">
         <div className="template-meta">
-          <Clock className="meta-icon" aria-hidden="true" />
+          <ClockIcon className="meta-icon" aria-hidden="true" />
           <span className="meta-text">
             {template.estimatedHoursPerParticipant}h per participant
           </span>
         </div>
         <div className="template-meta">
-          <Users className="meta-icon" aria-hidden="true" />
+          <UsersIcon className="meta-icon" aria-hidden="true" />
           <span className="meta-text">
             {template.eligibleBeneficiaryTypes.length} eligible group types
           </span>

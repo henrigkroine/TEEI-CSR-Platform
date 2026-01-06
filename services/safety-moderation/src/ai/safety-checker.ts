@@ -118,7 +118,6 @@ export class SafetyChecker {
    */
   private checkPatterns(text: string, policy: AISafetyPolicy): SafetyViolation[] {
     const violations: SafetyViolation[] = [];
-    const lowerText = text.toLowerCase();
 
     // Hate speech patterns
     const hatePatterns = [
@@ -208,12 +207,12 @@ export class SafetyChecker {
         return [];
       }
 
-      const data = await response.json();
+      const data = await response.json() as { results: Array<{ flagged: boolean; categories: Record<string, boolean>; category_scores: Record<string, number> }> };
       const result = data.results[0];
 
       const violations: SafetyViolation[] = [];
 
-      if (result.flagged) {
+      if (result && result.flagged) {
         const categories = result.categories;
         const scores = result.category_scores;
 

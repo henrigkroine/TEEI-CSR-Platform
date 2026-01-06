@@ -5,7 +5,7 @@ import { initializeModelRegistry } from './registry/persist.js';
 import { createHealthManager, setupHealthRoutes } from './health/index.js';
 
 const logger = createServiceLogger('q2q-ai');
-const PORT = parseInt(process.env.PORT_Q2Q_AI || '3005');
+const PORT = parseInt(process.env.PORT_Q2Q_AI || '3021');
 
 async function start() {
   // Initialize model registry on startup

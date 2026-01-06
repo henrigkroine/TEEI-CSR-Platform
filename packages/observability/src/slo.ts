@@ -257,7 +257,7 @@ export interface BurnRateAlert {
 }
 
 export function calculateBurnRateAlerts(
-  slo: SLODefinition,
+  _slo: SLODefinition,
   errorBudget: ErrorBudget,
   windowHours: number = 24
 ): BurnRateAlert[] {

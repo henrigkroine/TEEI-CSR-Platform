@@ -27,14 +27,37 @@ export interface RegistryConfig {
   autoCreateDir?: boolean;
 }
 
+export interface MergedQ2QConfig {
+  model: NonNullable<Q2QConfig['model']>;
+  temperature: NonNullable<Q2QConfig['temperature']>;
+  maxTokens: NonNullable<Q2QConfig['maxTokens']>;
+  weights: NonNullable<Q2QConfig['weights']>;
+  thresholds: NonNullable<Q2QConfig['thresholds']>;
+}
+
+export interface MergedSROIConfig {
+  deadweightFactor: NonNullable<SROIConfig['deadweightFactor']>;
+  attributionFactor: NonNullable<SROIConfig['attributionFactor']>;
+  dropOffRate: NonNullable<SROIConfig['dropOffRate']>;
+  discountRate: NonNullable<SROIConfig['discountRate']>;
+  financialProxies?: SROIConfig['financialProxies'];
+}
+
+export interface MergedRegionPolicy {
+  allowedRegions: import('./types.js').Region[];
+  primaryRegion?: import('./types.js').Region;
+  enforcementMode: import('./types.js').RegionEnforcementMode;
+  fallbackBehavior: 'use_primary' | 'fail';
+}
+
 export interface MergedConfig {
   tenantId: string;
   version: string;
-  q2q: Required<Q2QConfig>;
-  sroi: Required<SROIConfig>;
+  q2q: MergedQ2QConfig;
+  sroi: MergedSROIConfig;
   vis: Required<VISConfig>;
   guardrails: Required<Guardrails>;
-  regionPolicy: Required<import('./types.js').RegionPolicy>;
+  regionPolicy: MergedRegionPolicy;
 }
 
 export class ModelRegistry {
@@ -194,7 +217,7 @@ export class ModelRegistry {
         if (policy.fallbackBehavior === 'use_primary') {
           return {
             model: config.q2q.model,
-            region: policy.primaryRegion,
+            region: policy.primaryRegion || policy.allowedRegions[0] || 'global',
             allowed: false,
             reason: `Region ${requestedRegion} not allowed. Using primary region ${policy.primaryRegion} (strict mode).`,
           };

@@ -2,15 +2,15 @@ version: '3.9'
 
 services:
   postgres:
-    image: postgres:15-alpine
-    container_name: teei-postgres
+    image: postgres:16-alpine
+    container_name: teei-csr-postgres
     restart: unless-stopped
     environment:
       POSTGRES_DB: teei_platform
       POSTGRES_USER: teei
       POSTGRES_PASSWORD: teei_dev_password
     ports:
-      - "5432:5432"
+      - "5434:5432"  # Using 5434 to avoid conflict with teei-buddy-db on 5432
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init.sql
@@ -22,12 +22,12 @@ services:
 
   nats:
     image: nats:2.10-alpine
-    container_name: teei-nats
+    container_name: teei-csr-nats
     restart: unless-stopped
     ports:
-      - "4222:4222"  # Client connections
-      - "8222:8222"  # HTTP monitoring
-      - "6222:6222"  # Cluster routing
+      - "4223:4222"  # Client connections (using 4223 to avoid conflicts)
+      - "8223:8222"  # HTTP monitoring (using 8223)
+      - "6223:6222"  # Cluster routing (using 6223)
     command:
       - "-js"        # Enable JetStream
       - "-m"
@@ -40,23 +40,23 @@ services:
 
   pgadmin:
     image: dpage/pgadmin4:latest
-    container_name: teei-pgadmin
+    container_name: teei-csr-pgadmin
     restart: unless-stopped
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@teei.local
       PGADMIN_DEFAULT_PASSWORD: admin
       PGADMIN_CONFIG_SERVER_MODE: 'False'
     ports:
-      - "5050:80"
+      - "5051:80"  # Using 5051 to avoid conflicts
     depends_on:
       - postgres
 
   redis:
     image: redis:7-alpine
-    container_name: teei-redis
+    container_name: teei-csr-redis
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "6381:6379"  # Using 6381 to avoid conflict with teei-buddy-redis on 6379
     command: redis-server --appendonly yes
     volumes:
       - redis_data:/data
@@ -68,11 +68,11 @@ services:
 
   clickhouse:
     image: clickhouse/clickhouse-server:24.1-alpine
-    container_name: teei-clickhouse
+    container_name: teei-csr-clickhouse
     restart: unless-stopped
     ports:
-      - "8123:8123"  # HTTP interface
-      - "9000:9000"  # Native protocol
+      - "8124:8123"  # HTTP interface (using 8124 to avoid conflicts)
+      - "9001:9000"  # Native protocol (using 9001)
     environment:
       CLICKHOUSE_USER: teei
       CLICKHOUSE_PASSWORD: teei_dev_password

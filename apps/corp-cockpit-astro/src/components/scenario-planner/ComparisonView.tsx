@@ -74,7 +74,7 @@ export default function ComparisonView({ result }: ComparisonViewProps) {
         {metrics.sroi && <DeltaIndicator delta={metrics.sroi} />}
         {metrics.totalVolunteerHours && <DeltaIndicator delta={metrics.totalVolunteerHours} />}
         {metrics.totalParticipants && <DeltaIndicator delta={metrics.totalParticipants} />}
-        {metrics.totalGrantAmount && <DeltaIndicator delta={metrics.totalGrantAmount} />}
+        {metrics.totalCampaignBudget && <DeltaIndicator delta={metrics.totalCampaignBudget} />}
       </div>
 
       {/* SDG Coverage Impact */}

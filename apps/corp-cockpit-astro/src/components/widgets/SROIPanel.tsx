@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, memo } from 'react';
 
 interface SROIData {
   sroi_ratio: number;
@@ -19,7 +19,7 @@ interface Props {
   period?: string;
 }
 
-export default function SROIPanel({ companyId, period }: Props) {
+function SROIPanel({ companyId, period }: Props) {
   const [data, setData] = useState<SROIData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -189,3 +189,7 @@ export default function SROIPanel({ companyId, period }: Props) {
     </div>
   );
 }
+
+export default memo(SROIPanel, (prev, next) => {
+  return prev.companyId === next.companyId && prev.period === next.period;
+});

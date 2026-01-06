@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ProgramTemplateConfigSchema, ProgramTemplateConfig } from './program-templates';
+import { ProgramTemplateConfigSchema } from './program-templates';
 
 /**
  * Program Instances Types & Validation

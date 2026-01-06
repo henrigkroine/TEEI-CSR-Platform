@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, timestamp, jsonb, pgEnum, integer, text, index, decimal, boolean, date } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, timestamp, jsonb, pgEnum, integer, text, index, decimal, boolean, date, type AnyPgColumn } from 'drizzle-orm/pg-core';
 import { companies, users } from './users.js';
 
 /**
@@ -27,7 +27,7 @@ export const orgs = pgTable('orgs', {
 export const orgUnits = pgTable('org_units', {
   id: uuid('id').defaultRandom().primaryKey(),
   orgId: uuid('org_id').notNull().references(() => orgs.id, { onDelete: 'cascade' }),
-  parentId: uuid('parent_id').references(() => orgUnits.id, { onDelete: 'restrict' }), // Self-referencing foreign key
+  parentId: uuid('parent_id').references((): AnyPgColumn => orgUnits.id, { onDelete: 'restrict' }), // Self-referencing foreign key
   name: varchar('name', { length: 255 }).notNull(),
   code: varchar('code', { length: 50 }).notNull(), // e.g., "ACME-UK", "ACME-FR-NORTH"
   description: text('description'),

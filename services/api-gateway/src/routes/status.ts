@@ -18,7 +18,7 @@ import { createServiceLogger } from '@teei/shared-utils';
 
 const logger = createServiceLogger('status-api');
 
-const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
+const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6381';
 const CACHE_TTL = 60; // 60 seconds
 const CACHE_KEY = 'status:current';
 const HISTORY_CACHE_PREFIX = 'status:history';
@@ -58,11 +58,11 @@ function getRedisClient(): Redis {
  * Service health check definitions
  */
 const SERVICES = [
-  { name: 'API Gateway', url: process.env.API_GATEWAY_URL || 'http://localhost:3000', path: '/health' },
-  { name: 'Reporting Service', url: process.env.REPORTING_SERVICE_URL || 'http://localhost:3010', path: '/health' },
-  { name: 'Analytics Service', url: process.env.ANALYTICS_SERVICE_URL || 'http://localhost:3011', path: '/health' },
-  { name: 'Impact-In Service', url: process.env.IMPACT_IN_URL || 'http://localhost:3012', path: '/health' },
-  { name: 'Q2Q AI Service', url: process.env.Q2Q_AI_URL || 'http://localhost:3013', path: '/health' },
+  { name: 'API Gateway', url: process.env.API_GATEWAY_URL || 'http://localhost:3017', path: '/health' },
+  { name: 'Reporting Service', url: process.env.REPORTING_SERVICE_URL || 'http://localhost:3020', path: '/health' },
+  { name: 'Analytics Service', url: process.env.ANALYTICS_SERVICE_URL || 'http://localhost:3023', path: '/health' },
+  { name: 'Impact-In Service', url: process.env.IMPACT_IN_URL || 'http://localhost:3025', path: '/health' },
+  { name: 'Q2Q AI Service', url: process.env.Q2Q_AI_URL || 'http://localhost:3021', path: '/health' },
 ];
 
 /**

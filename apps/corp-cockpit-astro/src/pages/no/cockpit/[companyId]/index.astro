@@ -3,7 +3,17 @@ import CockpitLayout from '@layouts/CockpitLayout.astro';
 import MetricCard from '@components/shared/MetricCard';
 import DashboardActions from '@components/dashboard/DashboardActions';
 
-const { companyId } = Astro.params;
+const { companyId: companyIdFromParams } = Astro.params;
+const tenantContext = Astro.locals.tenantContext;
+
+// Use companyId from tenantContext as fallback if params is undefined
+const companyId = companyIdFromParams || tenantContext?.companyId;
+
+// Validate companyId exists
+if (!companyId || companyId === 'undefined') {
+  console.error('[Dashboard] Invalid companyId:', { companyIdFromParams, tenantContext });
+  return Astro.redirect('/login');
+}
 
 // TODO: Fetch company data and verify access
 // const company = await fetchCompany(companyId);

@@ -13,7 +13,7 @@ const ReviewActionSchema = z.object({
 
 export async function queueRoutes(app: FastifyInstance) {
   // GET /queue - List pending reviews (paginated)
-  app.get('/queue', async (request, reply) => {
+  app.get('/queue', async (request, _reply) => {
     const { limit = 50, offset = 0, status = 'pending' } = request.query as {
       limit?: number;
       offset?: number;

@@ -1,0 +1,961 @@
+---
+import BaseLayout from './BaseLayout.astro';
+import '@/styles/premium-cards.css';
+
+interface Props {
+  title: string;
+  description?: string;
+  lang?: string;
+}
+
+const { title, description, lang = 'en' } = Astro.props;
+---
+
+<BaseLayout title={title} description={description} lang={lang}>
+  <!-- FIXED NAVIGATION -->
+  <nav class="nav">
+    <div class="nav-container">
+      <a href="/" class="nav-logo">TEEI</a>
+      <div class="nav-links">
+        <a href="#programs">Programs</a>
+        <a href="#platform">Platform</a>
+        <a href="#about">About</a>
+      </div>
+      <a href="/en/contact" class="nav-cta">Get a Demo</a>
+    </div>
+  </nav>
+
+  <!-- PAGE CONTENT SLOT -->
+  <slot />
+
+  <!-- TRUST BADGES -->
+  <div class="trust-badges">
+    <div class="trust-badge">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+      </svg>
+      <span>GDPR Compliant</span>
+    </div>
+    <div class="trust-badge">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        <polyline points="9 12 11 14 15 10"/>
+      </svg>
+      <span>SOC 2 Certified</span>
+    </div>
+    <div class="trust-badge">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/>
+        <path d="M12 6v6l4 2"/>
+      </svg>
+      <span>501(c)(3) Nonprofit</span>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <!-- Brand Column -->
+        <div class="footer-brand">
+          <a href="/en" class="footer-logo">
+            <span class="logo-text">TEEI</span>
+          </a>
+          <p class="footer-tagline">Equality Through Education</p>
+          <p class="footer-description">The Educational Equality Institute connects corporations with refugees through measurable volunteer programs.</p>
+          <div class="footer-social">
+            <a href="https://linkedin.com/company/teei" aria-label="LinkedIn">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+              </svg>
+            </a>
+            <a href="https://twitter.com/teikiorg" aria-label="Twitter">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+              </svg>
+            </a>
+          </div>
+        </div>
+
+        <!-- Programs Column -->
+        <div class="footer-column">
+          <h4>Programs</h4>
+          <ul>
+            <li><a href="/en/programs/buddy">Buddy Program</a></li>
+            <li><a href="/en/programs/language">Language Connect</a></li>
+            <li><a href="/en/programs/mentorship">Mentors for Ukraine</a></li>
+            <li><a href="/en/programs/upskilling">Upskilling Academy</a></li>
+            <li><a href="/en/programs/weei">Women's Entrepreneurship</a></li>
+          </ul>
+        </div>
+
+        <!-- Platform Column -->
+        <div class="footer-column">
+          <h4>Platform</h4>
+          <ul>
+            <li><a href="/en/platform/dashboard">Corporate Cockpit</a></li>
+            <li><a href="/en/platform/sroi">SROI Calculator</a></li>
+            <li><a href="/en/platform/reports">Impact Reports</a></li>
+            <li><a href="/en/platform/integrations">Integrations</a></li>
+            <li><a href="/en/docs">Documentation</a></li>
+          </ul>
+        </div>
+
+        <!-- Company Column -->
+        <div class="footer-column">
+          <h4>Company</h4>
+          <ul>
+            <li><a href="/en/about">About TEEI</a></li>
+            <li><a href="/en/impact">Our Impact</a></li>
+            <li><a href="/en/partners">Partners</a></li>
+            <li><a href="/en/careers">Careers</a></li>
+            <li><a href="/en/contact">Contact</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <div class="footer-legal">
+          <p>&copy; 2025 The Educational Equality Institute. All rights reserved.</p>
+          <nav class="footer-legal-links">
+            <a href="/en/privacy">Privacy Policy</a>
+            <a href="/en/terms">Terms of Service</a>
+            <a href="/en/cookies">Cookie Policy</a>
+          </nav>
+        </div>
+        <div class="footer-certifications">
+          <span class="certification">501(c)(3) Nonprofit</span>
+          <span class="certification">GDPR Compliant</span>
+        </div>
+      </div>
+    </div>
+  </footer>
+</BaseLayout>
+
+<style>
+  /* =================================================================
+     PLATFORM LAYOUT - SHARED STYLES FOR ALL PLATFORM PAGES
+     Includes ALL premium styling utilities from landing page
+     ================================================================= */
+
+  /* Smooth scrolling */
+  html { scroll-behavior: smooth; }
+
+  /* DESIGN TOKENS */
+  :root {
+    /* Spacing */
+    --space-xs: 0.25rem;
+    --space-sm: 0.5rem;
+    --space-md: 1rem;
+    --space-lg: 2rem;
+    --space-xl: 3rem;
+    --space-3xl: 5rem;
+    --section-spacing: 5rem;
+
+    /* Typography */
+    --font-heading: 'Lora', Georgia, serif;
+    --font-body: 'Roboto Flex', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --h2-size: 56px;
+    --h3-size: 24px;
+    --body-large: 20px;
+
+    /* Colors */
+    --color-primary: #00393f;
+    --color-accent: #BA8F5A;
+    --text-primary: #00393f;
+    --text-body: #475569;
+    --text-light: #64748b;
+    --border-light: #e2e8f0;
+    --bg-light: #f8fafc;
+    --bg-white: #ffffff;
+
+    /* Radii */
+    --radius-lg: 12px;
+    --radius-xl: 20px;
+    --radius-md: 8px;
+    --radius-full: 9999px;
+
+    /* Shadows */
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 20px 60px rgba(0, 57, 63, 0.15);
+  }
+
+  /* GLOBAL: FORCE NO ITALICS ON ANY HEADING */
+  h1, h2, h3, h4, h5, h6,
+  .section-title,
+  [class*="heading"],
+  [class*="headline"],
+  [class*="hero"] h1,
+  [class*="hero"] h1 span,
+  .cta h2,
+  .cta-section h2,
+  .cta-title,
+  [class*="cta"] h2 {
+    font-style: normal !important;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* =================================================================
+     NAVIGATION
+     ================================================================= */
+
+  .nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    padding: var(--space-sm) var(--space-xl);
+    background: transparent;
+    transition: all 0.3s ease;
+  }
+
+  .nav.scrolled {
+    background: rgba(0, 57, 63, 0.95);
+    backdrop-filter: blur(10px);
+    box-shadow: var(--shadow-md);
+  }
+
+  .nav-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .nav-logo {
+    font-family: var(--font-heading);
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--color-accent);
+    text-decoration: none;
+  }
+
+  .nav-links {
+    display: flex;
+    gap: var(--space-lg);
+  }
+
+  .nav-links a {
+    color: white;
+    text-decoration: none;
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    transition: color 0.2s;
+  }
+
+  .nav-links a:hover {
+    color: var(--color-accent);
+  }
+
+  .nav-cta {
+    background: var(--color-accent);
+    color: var(--color-primary) !important;
+    padding: 10px 24px;
+    border-radius: var(--radius-full);
+    text-decoration: none;
+    font-family: var(--font-body);
+    font-weight: 600;
+    transition: all 0.3s ease;
+  }
+
+  .nav-cta:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(186, 143, 90, 0.4);
+  }
+
+  @media (max-width: 768px) {
+    .nav-links {
+      display: none;
+    }
+  }
+
+  /* =================================================================
+     SHARED UTILITY CLASSES
+     ================================================================= */
+
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 max(1rem, 5%);
+  }
+
+  .section-label {
+    display: inline-block;
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--color-accent);
+    margin-bottom: 1rem;
+  }
+
+  .section-title {
+    font-family: var(--font-heading);
+    font-size: clamp(2rem, 4vw, 2.75rem);
+    font-weight: 600;
+    color: var(--color-primary);
+    margin: 0 0 1rem 0;
+  }
+
+  .section-subtitle {
+    font-family: var(--font-body);
+    font-size: 1.125rem;
+    color: var(--text-body);
+    line-height: 1.6;
+    max-width: 600px;
+  }
+
+  /* =================================================================
+     BUTTON STYLES
+     ================================================================= */
+
+  .btn {
+    padding: 16px 32px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 16px;
+    text-decoration: none;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    position: relative;
+    overflow: hidden;
+    border: none;
+    cursor: pointer;
+    font-family: var(--font-body);
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, #BA8F5A 0%, #d4a66a 100%);
+    color: #00393f;
+    box-shadow:
+      0 4px 16px rgba(186, 143, 90, 0.4),
+      0 0 0 1px rgba(186, 143, 90, 0.2);
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow:
+      0 12px 32px rgba(186, 143, 90, 0.5),
+      0 0 0 1px rgba(186, 143, 90, 0.3),
+      0 0 60px rgba(186, 143, 90, 0.2);
+  }
+
+  .btn-secondary {
+    background: rgba(255, 255, 255, 0.05);
+    color: white;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(8px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  }
+
+  .btn-secondary:hover {
+    border-color: #BA8F5A;
+    background: rgba(186, 143, 90, 0.1);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 32px rgba(186, 143, 90, 0.2);
+  }
+
+  .btn-small {
+    padding: 12px 24px;
+    font-size: 14px;
+    border-radius: 10px;
+  }
+
+  .btn-large {
+    padding: 22px 44px;
+    font-size: 18px;
+    border-radius: 14px;
+  }
+
+  /* PREMIUM BUTTON ENHANCEMENT: Shimmer effect */
+  .btn-premium {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-premium::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(120deg, transparent, rgba(255,255,255,0.3), transparent);
+    transform: translateX(-100%);
+    transition: transform 0.6s ease;
+  }
+
+  .btn-premium:hover::before {
+    transform: translateX(100%);
+  }
+
+  /* =================================================================
+     PREMIUM CARD UTILITIES
+     Available to all pages - just add the class names
+     ================================================================= */
+
+  /* PREMIUM WHITE CARDS (for light sections) */
+  .premium-card {
+    background: white;
+    border: 1px solid rgba(0, 57, 63, 0.08);
+    border-radius: 20px;
+    padding: 2.5rem;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow:
+      0 0 0 1px rgba(0, 57, 63, 0.05),
+      0 4px 8px rgba(0, 57, 63, 0.04),
+      0 16px 32px rgba(0, 57, 63, 0.08);
+  }
+
+  .premium-card:hover {
+    transform: translateY(-8px);
+    box-shadow:
+      0 0 0 1px rgba(0, 57, 63, 0.08),
+      0 8px 16px rgba(0, 57, 63, 0.08),
+      0 32px 64px rgba(0, 57, 63, 0.12);
+  }
+
+  /* GLASS CARDS (for dark sections) */
+  .glass-card {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 2.5rem;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .glass-card:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(186, 143, 90, 0.3);
+    box-shadow:
+      inset 0 1px 1px rgba(255, 255, 255, 0.15),
+      0 0 0 1px rgba(186, 143, 90, 0.2),
+      0 30px 80px rgba(0, 0, 0, 0.4);
+    transform: translateY(-8px);
+  }
+
+  /* =================================================================
+     PAGE SECTIONS
+     ================================================================= */
+
+  /* PREMIUM HERO SECTION */
+  .premium-hero {
+    background: linear-gradient(165deg, #00393f 0%, #004a52 40%, #003840 100%);
+    position: relative;
+    overflow: hidden;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    padding: var(--section-spacing) var(--space-xl);
+    color: white;
+  }
+
+  .premium-hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at 30% 20%, rgba(10, 89, 97, 0.4) 0%, transparent 50%),
+      radial-gradient(ellipse at 70% 30%, rgba(186, 143, 90, 0.12) 0%, transparent 50%);
+    pointer-events: none;
+  }
+
+  .page-hero {
+    position: relative;
+    min-height: 60vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: clamp(4rem, 8vw, 8rem) var(--space-xl);
+    background: linear-gradient(165deg, #00393f 0%, #004a52 40%, #003840 100%);
+    color: white;
+    overflow: hidden;
+  }
+
+  .page-hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at 30% 20%, rgba(10, 89, 97, 0.4) 0%, transparent 50%),
+      radial-gradient(ellipse at 70% 30%, rgba(186, 143, 90, 0.12) 0%, transparent 50%);
+    pointer-events: none;
+  }
+
+  .features-section {
+    padding: clamp(4rem, 8vw, 6rem) 0;
+    background: var(--bg-light);
+  }
+
+  /* SECTION DECORATIONS */
+  .section-light {
+    position: relative;
+  }
+
+  .section-light::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(rgba(0, 57, 63, 0.02) 1px, transparent 1px);
+    background-size: 24px 24px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .section-dark {
+    background: linear-gradient(135deg, #00393f 0%, #01272a 100%);
+    color: white;
+    position: relative;
+  }
+
+  .section-dark::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(rgba(186, 143, 90, 0.06) 1px, transparent 1px);
+    background-size: 20px 20px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .section-dark::after {
+    content: '';
+    position: absolute;
+    bottom: 20%;
+    left: 10%;
+    width: 500px;
+    height: 500px;
+    background: radial-gradient(circle, rgba(186, 143, 90, 0.08) 0%, transparent 70%);
+    filter: blur(80px);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .dark {
+    background: var(--color-primary);
+    color: white;
+  }
+
+  .dark .section-title,
+  .section-dark .section-title {
+    color: white;
+  }
+
+  .dark .section-subtitle,
+  .section-dark .section-subtitle {
+    color: rgba(255, 255, 255, 0.75);
+  }
+
+  /* =================================================================
+     CARD STYLES
+     ================================================================= */
+
+  .card {
+    background: white;
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-xl);
+    padding: var(--space-lg);
+    transition: all 0.3s ease;
+    box-shadow:
+      0 0 0 1px rgba(0, 57, 63, 0.05),
+      0 20px 60px rgba(0, 57, 63, 0.08);
+  }
+
+  .card:hover {
+    transform: translateY(-8px);
+    box-shadow:
+      0 0 0 1px rgba(0, 57, 63, 0.08),
+      0 30px 80px rgba(0, 57, 63, 0.12);
+  }
+
+  .dark .card {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: white;
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.05),
+      0 20px 60px rgba(0, 0, 0, 0.2);
+  }
+
+  .dark .card:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(186, 143, 90, 0.3);
+    box-shadow:
+      0 0 0 1px rgba(186, 143, 90, 0.2),
+      0 30px 80px rgba(0, 0, 0, 0.3);
+  }
+
+  /* =================================================================
+     TRUST BADGES
+     ================================================================= */
+
+  .trust-badges {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    padding: 2rem 0;
+    flex-wrap: wrap;
+    background: var(--bg-light);
+    border-top: 1px solid var(--border-light);
+  }
+
+  .trust-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: var(--font-body);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--text-light);
+  }
+
+  .trust-badge svg {
+    color: var(--color-accent);
+  }
+
+  /* =================================================================
+     FOOTER
+     ================================================================= */
+
+  .site-footer {
+    background: var(--color-primary);
+    color: white;
+    padding: 4rem 0 2rem;
+  }
+
+  .site-footer .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 max(1rem, 5%);
+  }
+
+  .footer-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    gap: 3rem;
+    margin-bottom: 3rem;
+  }
+
+  .site-footer .footer-brand {
+    padding-right: 2rem;
+  }
+
+  .footer-logo {
+    display: inline-block;
+    text-decoration: none;
+    margin-bottom: 1rem;
+  }
+
+  .footer-logo .logo-text {
+    font-family: var(--font-heading);
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--color-accent);
+  }
+
+  .footer-tagline {
+    font-family: var(--font-body);
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--color-accent);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin: 0 0 1rem 0;
+  }
+
+  .footer-description {
+    font-family: var(--font-body);
+    font-size: 0.9375rem;
+    color: rgba(255, 255, 255, 0.7);
+    line-height: 1.6;
+    margin: 0 0 1.5rem 0;
+  }
+
+  .footer-social {
+    display: flex;
+    gap: 1rem;
+  }
+
+  .footer-social a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    transition: all 0.3s ease;
+  }
+
+  .footer-social a:hover {
+    background: var(--color-accent);
+    color: var(--color-primary);
+    transform: translateY(-2px);
+  }
+
+  .footer-column h4 {
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--color-accent);
+    margin: 0 0 1.5rem 0;
+  }
+
+  .footer-column ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .footer-column li {
+    margin-bottom: 0.75rem;
+  }
+
+  .footer-column a {
+    font-family: var(--font-body);
+    font-size: 0.9375rem;
+    color: rgba(255, 255, 255, 0.7);
+    text-decoration: none;
+    transition: color 0.2s ease;
+  }
+
+  .footer-column a:hover {
+    color: white;
+  }
+
+  .site-footer .footer-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 2rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .footer-legal p {
+    font-family: var(--font-body);
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.5);
+    margin: 0 0 0.5rem 0;
+  }
+
+  .footer-legal-links {
+    display: flex;
+    gap: 1.5rem;
+  }
+
+  .footer-legal-links a {
+    font-family: var(--font-body);
+    font-size: 0.8125rem;
+    color: rgba(255, 255, 255, 0.5);
+    text-decoration: none;
+    transition: color 0.2s ease;
+  }
+
+  .footer-legal-links a:hover {
+    color: white;
+  }
+
+  .footer-certifications {
+    display: flex;
+    gap: 1rem;
+  }
+
+  .certification {
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.5);
+    padding: 0.5rem 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 500px;
+  }
+
+  /* =================================================================
+     RESPONSIVE BREAKPOINTS
+     ================================================================= */
+
+  @media (max-width: 1024px) {
+    .footer-grid {
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+    }
+
+    .site-footer .footer-brand {
+      grid-column: span 2;
+      padding-right: 0;
+      padding-bottom: 2rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+  }
+
+  @media (max-width: 768px) {
+    .page-hero {
+      min-height: 50vh;
+      padding: 100px 24px 60px;
+    }
+
+    .btn-large {
+      padding: 18px 36px;
+      font-size: 16px;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .footer-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .site-footer .footer-brand {
+      grid-column: span 1;
+    }
+
+    .site-footer .footer-bottom {
+      flex-direction: column;
+      gap: 1.5rem;
+      text-align: center;
+    }
+
+    .footer-legal-links {
+      justify-content: center;
+    }
+
+    .footer-certifications {
+      justify-content: center;
+    }
+  }
+
+  @media (min-width: 1440px) {
+    .nav-container,
+    .container {
+      max-width: 1400px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+  }
+
+  /* =================================================================
+     SCROLL ANIMATIONS
+     ================================================================= */
+
+  .animate-on-scroll {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+
+  .animate-on-scroll.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* Accent text styling */
+  .accent {
+    color: var(--color-accent);
+  }
+
+  /* Scroll indicator */
+  .scroll-indicator {
+    position: absolute;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: rgba(255, 255, 255, 0.6);
+    cursor: pointer;
+    animation: bounce 2s infinite;
+    transition: all 0.3s ease;
+    padding: 12px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(8px);
+  }
+
+  .scroll-indicator:hover {
+    color: var(--color-accent);
+    background: rgba(186, 143, 90, 0.1);
+    box-shadow: 0 8px 24px rgba(186, 143, 90, 0.2);
+  }
+
+  @keyframes bounce {
+    0%, 20%, 50%, 80%, 100% {
+      transform: translateX(-50%) translateY(0);
+    }
+    40% { transform: translateX(-50%) translateY(-10px); }
+    60% { transform: translateX(-50%) translateY(-5px); }
+  }
+
+  /* =================================================================
+     REDUCED MOTION
+     ================================================================= */
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+
+    .animate-on-scroll {
+      opacity: 1;
+      transform: none;
+      transition: none;
+    }
+
+    .scroll-indicator {
+      animation: none;
+    }
+  }
+</style>
+
+<script>
+  // Nav scroll effect
+  window.addEventListener('scroll', () => {
+    const nav = document.querySelector('.nav');
+    if (nav) {
+      if (window.scrollY > 50) {
+        nav.classList.add('scrolled');
+      } else {
+        nav.classList.remove('scrolled');
+      }
+    }
+  });
+
+  // Intersection Observer for fade-in animations
+  const observerOptions = {
+    threshold: 0.1,
+    rootMargin: '0px 0px -50px 0px'
+  };
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+      }
+    });
+  }, observerOptions);
+
+  // Observe all elements with animate-on-scroll class
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.animate-on-scroll').forEach(el => {
+      observer.observe(el);
+    });
+  });
+
+  // Scroll indicator click handler
+  const scrollIndicator = document.querySelector('.scroll-indicator');
+  if (scrollIndicator) {
+    scrollIndicator.addEventListener('click', () => {
+      const firstSection = document.querySelector('.section, .features-section');
+      if (firstSection) {
+        firstSection.scrollIntoView({ behavior: 'smooth' });
+      }
+    });
+  }
+</script>

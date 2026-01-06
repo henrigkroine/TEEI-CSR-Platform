@@ -207,14 +207,14 @@ BASE_URL=https://staging.example.com pnpm -w perf:check
 PERFORMANCE BUDGET RESULTS
 ================================================================================
 
-✅ PASSED - http://localhost:4321/
+✅ PASSED - http://localhost:6509/
   FCP: 1245ms (budget: 2000ms)
   LCP: 1890ms (budget: 2500ms)
   TBT: 125ms (budget: 300ms)
   CLS: 0.045 (budget: 0.100)
   Performance Score: 95/100 (budget: 90/100)
 
-❌ FAILED - http://localhost:4321/dashboard
+❌ FAILED - http://localhost:6509/dashboard
   FCP: 2345ms (budget: 2000ms)
   LCP: 3100ms (budget: 2500ms)
   TBT: 450ms (budget: 300ms)

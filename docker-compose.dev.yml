@@ -1,0 +1,205 @@
+
+# Optimized Docker Compose for High-End Development Workstation
+# Hardware: AMD Ryzen 9 9950X (16c/32t), 128GB RAM, NVMe SSD
+# This configuration leverages your powerful hardware for maximum performance
+
+services:
+  postgres:
+    image: postgres:16-alpine  # Upgraded from 15 to 16
+    container_name: teei-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: teei_platform
+      POSTGRES_USER: teei
+      POSTGRES_PASSWORD: teei_dev_password
+      # PostgreSQL performance tuning for 128GB RAM workstation
+      POSTGRES_INITDB_ARGS: "-E UTF8 --locale=C"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./config/postgres-performance-dev.conf:/etc/postgresql/postgresql.conf:ro
+    command: >
+      postgres
+      -c shared_buffers=32GB
+      -c effective_cache_size=96GB
+      -c maintenance_work_mem=4GB
+      -c work_mem=256MB
+      -c max_connections=500
+      -c max_parallel_workers_per_gather=8
+      -c max_parallel_workers=16
+      -c max_worker_processes=16
+      -c max_wal_size=16GB
+      -c min_wal_size=4GB
+      -c checkpoint_completion_target=0.9
+      -c wal_buffers=64MB
+      -c default_statistics_target=200
+      -c random_page_cost=1.1
+      -c effective_io_concurrency=200
+      -c jit=on
+      -c jit_above_cost=100000
+      -c log_min_duration_statement=500
+      -c log_checkpoints=on
+      -c log_connections=on
+      -c log_disconnections=on
+      -c log_lock_waits=on
+      -c log_temp_files=0
+      -c shared_preload_libraries=pg_stat_statements
+      -c pg_stat_statements.max=20000
+      -c pg_stat_statements.track=all
+    deploy:
+      resources:
+        limits:
+          cpus: '16'      # Use 16 cores (half of 32 threads)
+          memory: 64GB    # Use 64GB RAM (half of 128GB, leaves room for other services)
+        reservations:
+          cpus: '8'       # Reserve 8 cores minimum
+          memory: 32GB    # Reserve 32GB minimum
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U teei"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.1-alpine
+    container_name: teei-clickhouse
+    restart: unless-stopped
+    ports:
+      - "8123:8123"  # HTTP interface
+      - "9000:9000"  # Native protocol
+    environment:
+      CLICKHOUSE_USER: teei
+      CLICKHOUSE_PASSWORD: teei_dev_password
+      CLICKHOUSE_DB: teei_analytics
+      # ClickHouse performance tuning
+      CLICKHOUSE_CONFIG_FILE: /etc/clickhouse-server/config.xml
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - ./scripts/init-clickhouse.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./config/clickhouse-dev.xml:/etc/clickhouse-server/config.d/dev.xml:ro
+    deploy:
+      resources:
+        limits:
+          cpus: '8'       # Use 8 cores for analytics
+          memory: 32GB    # Use 32GB RAM for ClickHouse
+        reservations:
+          cpus: '4'
+          memory: 16GB
+    healthcheck:
+      test: ["CMD", "clickhouse-client", "--query", "SELECT 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: teei-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --maxmemory
+      - "8gb"
+      - --maxmemory-policy
+      - "allkeys-lru"
+      - --save
+      - ""
+      - --tcp-backlog
+      - "511"
+      - --timeout
+      - "0"
+      - --tcp-keepalive
+      - "300"
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 8GB
+        reservations:
+          cpus: '1'
+          memory: 4GB
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  nats:
+    image: nats:2.10-alpine
+    container_name: teei-nats
+    restart: unless-stopped
+    ports:
+      - "4222:4222"  # Client connections
+      - "8222:8222"  # HTTP monitoring
+      - "6222:6222"  # Cluster routing
+    command:
+      - "-js"        # Enable JetStream
+      - "-m"
+      - "8222"       # Enable monitoring
+      - "-sd"
+      - "/data"      # JetStream store directory
+      - "--store_dir"
+      - "/data/jetstream"
+      - "--max_mem_store"
+      - "4GB"        # Max memory for JetStream
+      - "--max_file_store"
+      - "50GB"       # Max disk for JetStream
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 8GB
+        reservations:
+          cpus: '2'
+          memory: 4GB
+    volumes:
+      - nats_data:/data
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8222/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: teei-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@teei.local
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 2GB
+        reservations:
+          cpus: '0.5'
+          memory: 1GB
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  clickhouse_data:
+    driver: local
+  nats_data:
+    driver: local
+
+networks:
+  default:
+    name: teei-network
+    driver: bridge
+

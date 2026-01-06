@@ -58,13 +58,13 @@ beforeEach(() => {
 
 // Export test utilities
 export const TEST_CONSTANTS = {
-  API_GATEWAY_URL: process.env.TEST_API_GATEWAY_URL || 'http://localhost:3000',
-  PROFILE_SERVICE_URL: process.env.TEST_PROFILE_SERVICE_URL || 'http://localhost:3001',
-  KINTELL_SERVICE_URL: process.env.TEST_KINTELL_SERVICE_URL || 'http://localhost:3002',
-  BUDDY_SERVICE_URL: process.env.TEST_BUDDY_SERVICE_URL || 'http://localhost:3003',
-  UPSKILLING_SERVICE_URL: process.env.TEST_UPSKILLING_SERVICE_URL || 'http://localhost:3004',
-  Q2Q_SERVICE_URL: process.env.TEST_Q2Q_SERVICE_URL || 'http://localhost:3005',
-  SAFETY_SERVICE_URL: process.env.TEST_SAFETY_SERVICE_URL || 'http://localhost:3006',
+  API_GATEWAY_URL: process.env.TEST_API_GATEWAY_URL || 'http://localhost:3017',
+  PROFILE_SERVICE_URL: process.env.TEST_PROFILE_SERVICE_URL || 'http://localhost:3018',
+  KINTELL_SERVICE_URL: process.env.TEST_KINTELL_SERVICE_URL || 'http://localhost:3027',
+  BUDDY_SERVICE_URL: process.env.TEST_BUDDY_SERVICE_URL || 'http://localhost:3019',
+  UPSKILLING_SERVICE_URL: process.env.TEST_UPSKILLING_SERVICE_URL || 'http://localhost:3028',
+  Q2Q_SERVICE_URL: process.env.TEST_Q2Q_SERVICE_URL || 'http://localhost:3021',
+  SAFETY_SERVICE_URL: process.env.TEST_SAFETY_SERVICE_URL || 'http://localhost:3022',
 
   TEST_JWT_SECRET: 'test_jwt_secret_for_integration_tests_only',
   TEST_WEBHOOK_SECRET: process.env.KINTELL_WEBHOOK_SECRET || 'test_webhook_secret_32_chars_long',

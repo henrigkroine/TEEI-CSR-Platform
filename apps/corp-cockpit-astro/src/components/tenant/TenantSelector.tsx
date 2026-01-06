@@ -12,10 +12,19 @@ type Company = z.infer<typeof CompanySchema>;
 
 interface TenantSelectorProps {
   lang: string;
-  onSelect: (companyId: string) => void;
+  onSelect?: (companyId: string) => void;
+  heading?: string;
+  subheading?: string;
+  compact?: boolean;
 }
 
-export default function TenantSelector({ lang, onSelect }: TenantSelectorProps) {
+export default function TenantSelector({
+  lang,
+  onSelect,
+  heading = 'Select a tenant workspace',
+  subheading = 'Choose the company you need to operate today',
+  compact = false,
+}: TenantSelectorProps) {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -60,7 +69,15 @@ export default function TenantSelector({ lang, onSelect }: TenantSelectorProps) 
   );
 
   const handleSelect = (companyId: string) => {
-    onSelect(companyId);
+    // Save tenant ID to cookie (1 year expiry)
+    document.cookie = `tenantId=${companyId}; path=/; max-age=31536000`;
+    
+    if (onSelect) {
+      onSelect(companyId);
+    } else {
+      // Default behavior: navigate to cockpit
+      window.location.href = `/${lang}/cockpit/${companyId}`;
+    }
   };
 
   const handleKeyDown = (event: React.KeyboardEvent, companyId: string) => {
@@ -72,9 +89,15 @@ export default function TenantSelector({ lang, onSelect }: TenantSelectorProps) 
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <div className="mb-4 h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto" role="status">
+      <div
+        className={
+          compact
+            ? 'rounded-2xl border border-border bg-surface p-6 text-center'
+            : 'flex min-h-screen items-center justify-center'
+        }
+      >
+        <div className={compact ? '' : 'text-center'}>
+          <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent" role="status">
             <span className="sr-only">Loading companies...</span>
           </div>
           <p className="text-foreground/60">Loading companies...</p>
@@ -85,8 +108,14 @@ export default function TenantSelector({ lang, onSelect }: TenantSelectorProps) 
 
   if (error) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="card max-w-md text-center">
+      <div
+        className={
+          compact
+            ? 'rounded-2xl border border-border bg-surface p-6 text-center'
+            : 'flex min-h-screen items-center justify-center'
+        }
+      >
+        <div className={compact ? '' : 'card max-w-md text-center'}>
           <svg
             className="mx-auto mb-4 h-12 w-12 text-red-500"
             fill="none"
@@ -102,10 +131,7 @@ export default function TenantSelector({ lang, onSelect }: TenantSelectorProps) 
           </svg>
           <h2 className="mb-2 text-lg font-semibold">Error Loading Companies</h2>
           <p className="text-foreground/60">{error}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="btn-primary mt-4"
-          >
+          <button onClick={() => window.location.reload()} className="btn-primary mt-4">
             Retry
           </button>
         </div>
@@ -113,23 +139,27 @@ export default function TenantSelector({ lang, onSelect }: TenantSelectorProps) 
     );
   }
 
-  return (
-    <div className="flex min-h-screen items-center justify-center p-4">
-      <div className="w-full max-w-2xl">
-        <div className="mb-8 text-center">
-          <h1 className="mb-2 text-3xl font-bold">Welcome to TEEI CSR Platform</h1>
-          <p className="text-foreground/60">
-            Select your company to continue
-          </p>
-        </div>
+  const containerClass = compact ? 'space-y-6' : 'flex min-h-screen items-center justify-center p-4';
+  const wrapperClass = compact ? 'w-full' : 'w-full max-w-2xl';
+  const headingWrapper = compact ? 'mb-4' : 'mb-8 text-center';
+  const gridCols = compact ? 'grid gap-4 sm:grid-cols-2' : 'grid gap-4 sm:grid-cols-2';
 
-        {/* Search input */}
+  return (
+    <div className={containerClass}>
+      <div className={wrapperClass}>
+        {(heading || subheading) && (
+          <div className={headingWrapper}>
+            <h1 className="mb-2 text-2xl font-semibold text-text-primary">{heading}</h1>
+            <p className="text-text-secondary">{subheading}</p>
+          </div>
+        )}
+
         <div className="mb-6">
-          <label htmlFor="company-search" className="sr-only">
+          <label htmlFor={`company-search-${lang}`} className="sr-only">
             Search companies
           </label>
           <input
-            id="company-search"
+            id={`company-search-${lang}`}
             type="text"
             placeholder="Search companies..."
             value={searchQuery}
@@ -139,50 +169,31 @@ export default function TenantSelector({ lang, onSelect }: TenantSelectorProps) 
           />
         </div>
 
-        {/* Company grid */}
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className={gridCols}>
           {filteredCompanies.length === 0 ? (
-            <div className="col-span-2 py-12 text-center text-foreground/60">
-              No companies found
-            </div>
+            <div className="col-span-2 py-12 text-center text-foreground/60">No companies found</div>
           ) : (
             filteredCompanies.map((company) => (
               <button
                 key={company.id}
                 onClick={() => handleSelect(company.id)}
                 onKeyDown={(e) => handleKeyDown(e, company.id)}
-                className="card group cursor-pointer text-left transition-all hover:border-primary hover:shadow-md focus:border-primary focus:shadow-md"
+                className="card group cursor-pointer text-left transition-all hover:border-primary hover:shadow-card-hover focus:border-primary focus:shadow-card-hover"
                 aria-label={`Select ${company.name}`}
               >
-                <h3 className="mb-2 text-lg font-semibold group-hover:text-primary">
-                  {company.name}
-                </h3>
+                <h3 className="mb-2 text-lg font-semibold group-hover:text-primary">{company.name}</h3>
                 <div className="flex flex-wrap gap-2 text-sm text-foreground/60">
                   {company.industry && (
-                    <span className="rounded-full bg-border/50 px-2 py-1">
-                      {company.industry}
-                    </span>
+                    <span className="rounded-full bg-border/50 px-2 py-1">{company.industry}</span>
                   )}
                   {company.country && (
-                    <span className="rounded-full bg-border/50 px-2 py-1">
-                      {company.country}
-                    </span>
+                    <span className="rounded-full bg-border/50 px-2 py-1">{company.country}</span>
                   )}
                 </div>
                 <div className="mt-4 flex items-center text-sm text-primary opacity-0 transition-opacity group-hover:opacity-100">
                   <span>Open dashboard</span>
-                  <svg
-                    className="ml-2 h-4 w-4"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 5l7 7-7 7"
-                    />
+                  <svg className="ml-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
                 </div>
               </button>

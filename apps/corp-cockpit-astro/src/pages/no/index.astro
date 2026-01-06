@@ -12,10 +12,6 @@ if (savedTenantId) {
 <BaseLayout title="Velg selskap" lang="no">
   <TenantSelector
     lang="no"
-    onSelect={(companyId) => {
-      document.cookie = `tenantId=${companyId}; path=/; max-age=31536000`;
-      window.location.href = `/no/cockpit/${companyId}`;
-    }}
     client:load
   />
 </BaseLayout>

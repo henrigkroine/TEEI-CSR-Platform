@@ -10,6 +10,7 @@ export const users = pgTable('users', {
   role: varchar('role', { length: 50 }).notNull(), // admin, company_user, participant, volunteer
   firstName: varchar('first_name', { length: 100 }),
   lastName: varchar('last_name', { length: 100 }),
+  passwordHash: varchar('password_hash', { length: 255 }), // Nullable for SSO users
   journeyFlags: jsonb('journey_flags').default({}), // Journey tracking flags: { is_buddy_participant, buddy_match_count, etc. }
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
