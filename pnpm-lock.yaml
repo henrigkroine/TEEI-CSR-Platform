@@ -113,13 +113,13 @@ importers:
     dependencies:
       '@astrojs/cloudflare':
         specifier: ^12.0.0
-        version: 12.6.12(@types/node@20.19.25)(astro@4.16.19(@types/node@20.19.25)(rollup@4.53.3)(terser@5.44.1)(typescript@5.9.3))(jiti@1.21.7)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2)
+        version: 12.6.12(@types/node@20.19.25)(astro@5.16.3(@types/node@20.19.25)(ioredis@5.8.2)(jiti@1.21.7)(rollup@4.53.3)(terser@5.44.1)(tsx@4.20.6)(typescript@5.9.3)(yaml@2.8.2))(jiti@1.21.7)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2)
       '@astrojs/react':
-        specifier: ^3.0.0
-        version: 3.6.3(@types/node@20.19.25)(@types/react-dom@18.3.7(@types/react@18.3.27))(@types/react@18.3.27)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(terser@5.44.1)
+        specifier: ^4.0.0
+        version: 4.4.2(@types/node@20.19.25)(@types/react-dom@18.3.7(@types/react@18.3.27))(@types/react@18.3.27)(jiti@1.21.7)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2)
       '@astrojs/tailwind':
-        specifier: ^5.0.0
-        version: 5.1.5(astro@4.16.19(@types/node@20.19.25)(rollup@4.53.3)(terser@5.44.1)(typescript@5.9.3))(tailwindcss@3.4.18(tsx@4.20.6)(yaml@2.8.2))
+        specifier: ^6.0.0
+        version: 6.0.2(astro@5.16.3(@types/node@20.19.25)(ioredis@5.8.2)(jiti@1.21.7)(rollup@4.53.3)(terser@5.44.1)(tsx@4.20.6)(typescript@5.9.3)(yaml@2.8.2))(tailwindcss@3.4.18(tsx@4.20.6)(yaml@2.8.2))
       '@tanstack/react-query':
         specifier: ^5.0.0
         version: 5.90.11(react@18.3.1)
@@ -130,8 +130,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/shared-types
       astro:
-        specifier: ^4.0.0
-        version: 4.16.19(@types/node@20.19.25)(rollup@4.53.3)(terser@5.44.1)(typescript@5.9.3)
+        specifier: ^5.7.0
+        version: 5.16.3(@types/node@20.19.25)(ioredis@5.8.2)(jiti@1.21.7)(rollup@4.53.3)(terser@5.44.1)(tsx@4.20.6)(typescript@5.9.3)(yaml@2.8.2)
       bcryptjs:
         specifier: ^2.4.3
         version: 2.4.3
@@ -173,7 +173,7 @@ importers:
         version: 4.5.7(@types/react@18.3.27)(immer@11.0.1)(react@18.3.1)
     devDependencies:
       '@astrojs/check':
-        specifier: ^0.9.5
+        specifier: ^0.9.6
         version: 0.9.6(prettier-plugin-astro@0.12.3)(prettier@3.7.3)(typescript@5.9.3)
       '@axe-core/playwright':
         specifier: ^4.11.0
@@ -2014,17 +2014,23 @@ packages:
     resolution: {integrity: sha512-q8VwfU/fDZNoDOf+r7jUnMC2//H2l0TuQ6FkGJL8vD8nw/q5KiL3DS1KKBI3QhI9UQhpJ5dc7AtqfbXWuOgLCQ==}
     engines: {node: 18.20.8 || ^20.3.0 || >=22.0.0}
 
-  '@astrojs/react@3.6.3':
-    resolution: {integrity: sha512-5ihLQDH5Runddug5AZYlnp/Q5T81QxhwnWJXA9rchBAdh11c6UhBbv9Kdk7b2PkXoEU70CGWBP9hSh0VCR58eA==}
-    engines: {node: ^18.17.1 || ^20.3.0 || >=21.0.0}
+  '@astrojs/react@4.4.2':
+    resolution: {integrity: sha512-1tl95bpGfuaDMDn8O3x/5Dxii1HPvzjvpL2YTuqOOrQehs60I2DKiDgh1jrKc7G8lv+LQT5H15V6QONQ+9waeQ==}
+    engines: {node: 18.20.8 || ^20.3.0 || >=22.0.0}
     peerDependencies:
-      '@types/react': ^17.0.50 || ^18.0.21
-      '@types/react-dom': ^17.0.17 || ^18.0.6
-      react: ^17.0.2 || ^18.0.0 || ^19.0.0-beta
-      react-dom: ^17.0.2 || ^18.0.0 || ^19.0.0-beta
+      '@types/react': ^17.0.50 || ^18.0.21 || ^19.0.0
+      '@types/react-dom': ^17.0.17 || ^18.0.6 || ^19.0.0
+      react: ^17.0.2 || ^18.0.0 || ^19.0.0
+      react-dom: ^17.0.2 || ^18.0.0 || ^19.0.0
 
   '@astrojs/tailwind@5.1.5':
     resolution: {integrity: sha512-1diguZEau7FZ9vIjzE4BwavGdhD3+JkdS8zmibl1ene+EHgIU5hI0NMgRYG3yea+Niaf7cyMwjeWeLvzq/maxg==}
+    peerDependencies:
+      astro: ^3.0.0 || ^4.0.0 || ^5.0.0
+      tailwindcss: ^3.0.24
+
+  '@astrojs/tailwind@6.0.2':
+    resolution: {integrity: sha512-j3mhLNeugZq6A8dMNXVarUa8K6X9AW+QHU9u3lKNrPLMHhOQ0S7VeWhHwEeJFpEK1BTKEUY1U78VQv2gN6hNGg==}
     peerDependencies:
       astro: ^3.0.0 || ^4.0.0 || ^5.0.0
       tailwindcss: ^3.0.24
@@ -13717,12 +13723,12 @@ snapshots:
       - prettier
       - prettier-plugin-astro
 
-  '@astrojs/cloudflare@12.6.12(@types/node@20.19.25)(astro@4.16.19(@types/node@20.19.25)(rollup@4.53.3)(terser@5.44.1)(typescript@5.9.3))(jiti@1.21.7)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2)':
+  '@astrojs/cloudflare@12.6.12(@types/node@20.19.25)(astro@5.16.3(@types/node@20.19.25)(ioredis@5.8.2)(jiti@1.21.7)(rollup@4.53.3)(terser@5.44.1)(tsx@4.20.6)(typescript@5.9.3)(yaml@2.8.2))(jiti@1.21.7)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2)':
     dependencies:
       '@astrojs/internal-helpers': 0.7.5
       '@astrojs/underscore-redirects': 1.0.0
       '@cloudflare/workers-types': 4.20260116.0
-      astro: 4.16.19(@types/node@20.19.25)(rollup@4.53.3)(terser@5.44.1)(typescript@5.9.3)
+      astro: 5.16.3(@types/node@20.19.25)(ioredis@5.8.2)(jiti@1.21.7)(rollup@4.53.3)(terser@5.44.1)(tsx@4.20.6)(typescript@5.9.3)(yaml@2.8.2)
       tinyglobby: 0.2.15
       vite: 6.4.1(@types/node@20.19.25)(jiti@1.21.7)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2)
       wrangler: 4.50.0(@cloudflare/workers-types@4.20260116.0)
@@ -13840,17 +13846,18 @@ snapshots:
     dependencies:
       prismjs: 1.30.0
 
-  '@astrojs/react@3.6.3(@types/node@20.19.25)(@types/react-dom@18.3.7(@types/react@18.3.27))(@types/react@18.3.27)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(terser@5.44.1)':
+  '@astrojs/react@4.4.2(@types/node@20.19.25)(@types/react-dom@18.3.7(@types/react@18.3.27))(@types/react@18.3.27)(jiti@1.21.7)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2)':
     dependencies:
       '@types/react': 18.3.27
       '@types/react-dom': 18.3.7(@types/react@18.3.27)
-      '@vitejs/plugin-react': 4.7.0(vite@5.4.21(@types/node@20.19.25)(terser@5.44.1))
+      '@vitejs/plugin-react': 4.7.0(vite@6.4.1(@types/node@20.19.25)(jiti@1.21.7)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2))
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
       ultrahtml: 1.6.0
-      vite: 5.4.21(@types/node@20.19.25)(terser@5.44.1)
+      vite: 6.4.1(@types/node@20.19.25)(jiti@1.21.7)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2)
     transitivePeerDependencies:
       - '@types/node'
+      - jiti
       - less
       - lightningcss
       - sass
@@ -13859,10 +13866,22 @@ snapshots:
       - sugarss
       - supports-color
       - terser
+      - tsx
+      - yaml
 
   '@astrojs/tailwind@5.1.5(astro@4.16.19(@types/node@20.19.25)(rollup@4.53.3)(terser@5.44.1)(typescript@5.9.3))(tailwindcss@3.4.18(tsx@4.20.6)(yaml@2.8.2))':
     dependencies:
       astro: 4.16.19(@types/node@20.19.25)(rollup@4.53.3)(terser@5.44.1)(typescript@5.9.3)
+      autoprefixer: 10.4.22(postcss@8.5.6)
+      postcss: 8.5.6
+      postcss-load-config: 4.0.2(postcss@8.5.6)
+      tailwindcss: 3.4.18(tsx@4.20.6)(yaml@2.8.2)
+    transitivePeerDependencies:
+      - ts-node
+
+  '@astrojs/tailwind@6.0.2(astro@5.16.3(@types/node@20.19.25)(ioredis@5.8.2)(jiti@1.21.7)(rollup@4.53.3)(terser@5.44.1)(tsx@4.20.6)(typescript@5.9.3)(yaml@2.8.2))(tailwindcss@3.4.18(tsx@4.20.6)(yaml@2.8.2))':
+    dependencies:
+      astro: 5.16.3(@types/node@20.19.25)(ioredis@5.8.2)(jiti@1.21.7)(rollup@4.53.3)(terser@5.44.1)(tsx@4.20.6)(typescript@5.9.3)(yaml@2.8.2)
       autoprefixer: 10.4.22(postcss@8.5.6)
       postcss: 8.5.6
       postcss-load-config: 4.0.2(postcss@8.5.6)
@@ -19320,7 +19339,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@vitejs/plugin-react@4.7.0(vite@5.4.21(@types/node@20.19.25)(terser@5.44.1))':
+  '@vitejs/plugin-react@4.7.0(vite@6.4.1(@types/node@20.19.25)(jiti@1.21.7)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2))':
     dependencies:
       '@babel/core': 7.28.5
       '@babel/plugin-transform-react-jsx-self': 7.27.1(@babel/core@7.28.5)
@@ -19328,7 +19347,7 @@ snapshots:
       '@rolldown/pluginutils': 1.0.0-beta.27
       '@types/babel__core': 7.20.5
       react-refresh: 0.17.0
-      vite: 5.4.21(@types/node@20.19.25)(terser@5.44.1)
+      vite: 6.4.1(@types/node@20.19.25)(jiti@1.21.7)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2)
     transitivePeerDependencies:
       - supports-color
 
@@ -22162,7 +22181,7 @@ snapshots:
     dependencies:
       basic-ftp: 5.0.5
       data-uri-to-buffer: 6.0.2
-      debug: 4.3.4
+      debug: 4.4.3
     transitivePeerDependencies:
       - supports-color
 
@@ -24623,7 +24642,7 @@ snapshots:
     dependencies:
       '@tootallnate/quickjs-emscripten': 0.23.0
       agent-base: 7.1.4
-      debug: 4.3.4
+      debug: 4.4.3
       get-uri: 6.0.5
       http-proxy-agent: 7.0.2
       https-proxy-agent: 7.0.6
@@ -25123,7 +25142,7 @@ snapshots:
   proxy-agent@6.3.1:
     dependencies:
       agent-base: 7.1.4
-      debug: 4.3.4
+      debug: 4.4.3
       http-proxy-agent: 7.0.2
       https-proxy-agent: 7.0.6
       lru-cache: 7.18.3

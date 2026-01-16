@@ -38,63 +38,57 @@ const MOCK_USERS = USE_MOCK_AUTH ? [
 ] : [];
 
 /**
- * Authenticate user against database
+ * Authenticate user against D1 database
  */
-async function authenticateUser(email: string, password: string) {
+async function authenticateUser(email: string, password: string, db: D1Database | undefined) {
+  if (!db) {
+    console.warn('[Auth] D1 database not available');
+    return null;
+  }
+
   try {
-    // Lazy-load DB deps so localhost/demo can run without them.
-    // If these packages aren't installed for this app, we just fall back to mock auth.
-    const [{ eq }, { db, users, companyUsers }, bcrypt] = await Promise.all([
-      import('drizzle-orm'),
-      import('@teei/shared-schema'),
-      import('bcryptjs'),
-    ]);
+    const bcrypt = await import('bcryptjs');
 
     // Lookup user by email
-    const userResult = await db
-      .select({
-        id: users.id,
-        email: users.email,
-        firstName: users.firstName,
-        lastName: users.lastName,
-        passwordHash: users.passwordHash,
-        role: users.role,
-      })
-      .from(users)
-      .where(eq(users.email, email.toLowerCase().trim()))
-      .limit(1);
+    const user = await db.prepare(`
+      SELECT id, email, first_name, last_name, password_hash, role
+      FROM users
+      WHERE email = ?
+      LIMIT 1
+    `).bind(email.toLowerCase().trim()).first<{
+      id: string;
+      email: string;
+      first_name: string;
+      last_name: string;
+      password_hash: string | null;
+      role: string;
+    }>();
 
-    if (userResult.length === 0) {
+    if (!user) {
       return null;
     }
 
-    const user = userResult[0];
-
     // Check if user has a password (SSO users may not have passwordHash)
-    if (!user.passwordHash) {
+    if (!user.password_hash) {
       console.warn(`[Auth] User ${email} has no password hash (SSO-only user?)`);
       return null;
     }
 
     // Verify password
-    const passwordValid = await bcrypt.compare(password, user.passwordHash);
+    const passwordValid = await bcrypt.compare(password, user.password_hash);
     if (!passwordValid) {
       return null;
     }
 
     // Lookup user's company (users can belong to multiple companies, take first)
-    const companyResult = await db
-      .select({
-        companyId: companyUsers.companyId,
-      })
-      .from(companyUsers)
-      .where(eq(companyUsers.userId, user.id))
-      .limit(1);
+    const companyResult = await db.prepare(`
+      SELECT company_id FROM company_users WHERE user_id = ? LIMIT 1
+    `).bind(user.id).first<{ company_id: string }>();
 
-    const companyId = companyResult.length > 0 ? companyResult[0].companyId : null;
+    const companyId = companyResult?.company_id || null;
 
     // Build user name from first/last name
-    const name = [user.firstName, user.lastName].filter(Boolean).join(' ') || email;
+    const name = [user.first_name, user.last_name].filter(Boolean).join(' ') || email;
 
     return {
       id: user.id,
@@ -109,7 +103,7 @@ async function authenticateUser(email: string, password: string) {
   }
 }
 
-export const POST: APIRoute = async ({ request, cookies }) => {
+export const POST: APIRoute = async ({ request, cookies, locals }) => {
   try {
     const body = await request.json() as LoginRequest;
     const { email, password } = body;
@@ -129,9 +123,10 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       role: string;
     } | null = null;
 
-    // Try database authentication first
+    // Try database authentication first (using D1)
     if (!USE_MOCK_AUTH) {
-      user = await authenticateUser(email, password);
+      const db = locals.runtime?.env?.DB;
+      user = await authenticateUser(email, password, db);
     }
 
     // Fallback to mock users if database auth fails or USE_MOCK_AUTH is enabled

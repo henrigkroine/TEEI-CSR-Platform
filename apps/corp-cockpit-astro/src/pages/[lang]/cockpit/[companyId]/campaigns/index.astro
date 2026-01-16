@@ -36,16 +36,9 @@ const canManageCampaigns = hasPermission(user.role, 'MANAGE_CAMPAIGNS');
       { label: 'Dashboard', href: `/${lang}/cockpit/${companyId}` },
       { label: 'Campaigns' },
     ]}
-    actions={
-      canManageCampaigns ? (
-        <a href={`/${lang}/cockpit/${companyId}/campaigns/new`} class="btn btn-primary">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="margin-right: 8px;">
-            <path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-          </svg>
-          Create Campaign
-        </a>
-      ) : undefined
-    }
+    showCreateButton={canManageCampaigns}
+    createButtonHref={`/${lang}/cockpit/${companyId}/campaigns/new`}
+    createButtonLabel="Create Campaign"
     client:load
   />
 

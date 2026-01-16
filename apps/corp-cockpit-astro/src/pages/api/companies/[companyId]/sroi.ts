@@ -4,7 +4,7 @@
  * GET /api/companies/:companyId/sroi?period=2024-Q1
  */
 import type { APIRoute } from 'astro';
-import { getSROIForCompany } from '../../../lib/calculators/sroi';
+import { getSROIForCompany } from '@lib/calculators/sroi';
 
 export const GET: APIRoute = async ({ params, url, locals }) => {
   const companyId = params.companyId;

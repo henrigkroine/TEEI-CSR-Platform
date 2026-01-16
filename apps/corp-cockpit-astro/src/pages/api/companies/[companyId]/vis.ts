@@ -4,7 +4,7 @@
  * GET /api/companies/:companyId/vis?period=2024-Q1&top=10
  */
 import type { APIRoute } from 'astro';
-import { getVISForCompany } from '../../../lib/calculators/vis';
+import { getVISForCompany } from '@lib/calculators/vis';
 
 export const GET: APIRoute = async ({ params, url, locals }) => {
   const companyId = params.companyId;

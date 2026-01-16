@@ -5,34 +5,27 @@ interface ForgotPasswordRequest {
 }
 
 /**
- * Check if user exists in database
+ * Check if user exists in D1 database
  */
-async function findUserByEmail(email: string) {
+async function findUserByEmail(email: string, db: D1Database | undefined) {
+  if (!db) {
+    console.warn('[ForgotPassword] D1 database not available');
+    return null;
+  }
+
   try {
-    // Lazy-load DB deps so localhost/demo can run without them
-    const [{ eq }, { db, users }] = await Promise.all([
-      import('drizzle-orm'),
-      import('@teei/shared-schema'),
-    ]);
+    const user = await db.prepare(`
+      SELECT id, email FROM users WHERE email = ? LIMIT 1
+    `).bind(email.toLowerCase().trim()).first<{ id: string; email: string }>();
 
-    // Lookup user by email
-    const userResult = await db
-      .select({
-        id: users.id,
-        email: users.email,
-      })
-      .from(users)
-      .where(eq(users.email, email.toLowerCase().trim()))
-      .limit(1);
-
-    return userResult.length > 0 ? userResult[0] : null;
+    return user || null;
   } catch (error) {
     console.error('[ForgotPassword] Database lookup error:', error);
     return null;
   }
 }
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
   try {
     const body = await request.json() as ForgotPasswordRequest;
     const { email } = body;
@@ -54,7 +47,8 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     // Check if user exists (but don't reveal if they don't - security best practice)
-    const user = await findUserByEmail(email);
+    const db = locals.runtime?.env?.DB;
+    const user = await findUserByEmail(email, db);
 
     // Always return success to prevent user enumeration attacks
     // In production, this would:
