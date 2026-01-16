@@ -1,0 +1,39 @@
+# CSR Cockpit - Cloudflare Pages Configuration
+# Deploy to: cockpit.theeducationalequalityinstitute.org
+
+name = "csr-cockpit"
+compatibility_date = "2024-12-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Environment variables
+[vars]
+ENVIRONMENT = "production"
+
+# D1 Database binding
+[[d1_databases]]
+binding = "DB"
+database_name = "csr-cockpit"
+database_id = "" # Fill after running: wrangler d1 create csr-cockpit
+
+# KV Namespace for sessions/cache (optional)
+# [[kv_namespaces]]
+# binding = "SESSIONS_KV"
+# id = "" # Fill after running: wrangler kv namespace create SESSIONS
+
+# R2 Bucket for file storage (optional)
+# [[r2_buckets]]
+# binding = "FILES"
+# bucket_name = "csr-cockpit-files"
+
+# Pages build configuration
+[site]
+bucket = "./dist"
+
+# Preview environment (staging)
+[env.preview]
+vars = { ENVIRONMENT = "staging" }
+
+[[env.preview.d1_databases]]
+binding = "DB"
+database_name = "csr-cockpit-staging"
+database_id = "" # Fill after running: wrangler d1 create csr-cockpit-staging

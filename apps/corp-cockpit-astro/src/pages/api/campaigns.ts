@@ -1,8 +1,7 @@
 /**
- * Campaigns API Proxy
- * SWARM 6: Agent 6.1, 6.4 - Campaign list UI and filter integration
- *
- * Proxies requests to the campaigns service backend.
+ * Campaigns API - Migrated from services/campaigns
+ * 
+ * Direct D1 implementation (no microservice proxy)
  * Supports:
  * - GET /api/campaigns - List campaigns with filters
  * - GET /api/campaigns/:id - Get campaign details
@@ -11,69 +10,90 @@
 
 import type { APIRoute } from 'astro';
 
-const CAMPAIGNS_SERVICE_URL =
-  import.meta.env.CAMPAIGNS_SERVICE_URL ||
-  process.env.CAMPAIGNS_SERVICE_URL ||
-  'http://localhost:3002';
-
-export const GET: APIRoute = async ({ request, url }) => {
+export const GET: APIRoute = async ({ url, locals }) => {
   try {
-    // Extract query parameters
-    const queryParams = url.searchParams;
-
-    // Build backend URL - campaigns service uses /api/campaigns prefix
-    const backendUrl = new URL('/api/campaigns', CAMPAIGNS_SERVICE_URL);
-
-    // Forward all query parameters
-    queryParams.forEach((value, key) => {
-      backendUrl.searchParams.append(key, value);
-    });
-
-    // Make request to campaigns service
-    const response = await fetch(backendUrl.toString(), {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        // Forward auth headers if present
-        ...(request.headers.get('Authorization') && {
-          'Authorization': request.headers.get('Authorization')!
-        }),
-      },
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('[API/Campaigns] Backend error:', response.status, errorText);
-
+    const db = locals.runtime?.env?.DB;
+    if (!db) {
       return new Response(
-        JSON.stringify({
-          success: false,
-          error: 'Failed to fetch campaigns from backend',
-          details: errorText,
-        }),
-        {
-          status: response.status,
-          headers: { 'Content-Type': 'application/json' }
-        }
+        JSON.stringify({ error: 'Database not available' }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
-    const data = await response.json();
+    // Extract query parameters
+    const companyId = url.searchParams.get('companyId');
+    const status = url.searchParams.get('status');
+    const limit = parseInt(url.searchParams.get('limit') || '50', 10);
+    const offset = parseInt(url.searchParams.get('offset') || '0', 10);
+
+    // Build WHERE clause
+    const conditions: string[] = [];
+    const params: any[] = [];
+
+    if (companyId) {
+      conditions.push('company_id = ?');
+      params.push(companyId);
+    }
+
+    if (status) {
+      conditions.push('status = ?');
+      params.push(status);
+    }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    // Query campaigns
+    const query = `
+      SELECT 
+        id,
+        name,
+        description,
+        company_id,
+        status,
+        start_date,
+        end_date,
+        quarter,
+        target_volunteers,
+        target_beneficiaries,
+        current_volunteers,
+        current_beneficiaries,
+        created_at,
+        updated_at
+      FROM campaigns
+      ${whereClause}
+      ORDER BY created_at DESC
+      LIMIT ? OFFSET ?
+    `;
+
+    params.push(limit, offset);
+    const campaigns = await db.prepare(query).bind(...params).all();
+
+    // Get total count
+    const countQuery = `SELECT COUNT(*) as total FROM campaigns ${whereClause}`;
+    const countParams = params.slice(0, -2); // Remove limit and offset
+    const countResult = await db.prepare(countQuery).bind(...countParams).first<{ total: number }>();
 
     return new Response(
-      JSON.stringify(data),
+      JSON.stringify({
+        success: true,
+        campaigns: campaigns.results || [],
+        pagination: {
+          total: countResult?.total || 0,
+          limit,
+          offset,
+        },
+      }),
       {
         status: 200,
         headers: { 'Content-Type': 'application/json' }
       }
     );
   } catch (error) {
-    console.error('[API/Campaigns] Proxy error:', error);
-
+    console.error('[API/Campaigns] Error:', error);
     return new Response(
       JSON.stringify({
         success: false,
-        error: 'Failed to connect to campaigns service',
+        error: 'Failed to fetch campaigns',
         message: error instanceof Error ? error.message : 'Unknown error',
       }),
       {

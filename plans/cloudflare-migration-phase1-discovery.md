@@ -1,6 +1,6 @@
 # Phase 1: Discovery & Assessment Report
 **Date:** 2025-01-27  
-**Project:** CSR Platform → Cloudflare Migration
+**Project:** CSR Platform - Cloudflare Migration
 
 ---
 
@@ -26,14 +26,14 @@
 ## 2. Package Dependencies
 
 ### 2.1 Current Dependencies (`package.json`)
-```json
+```jsonc
 {
-  "@astrojs/node": "^8.0.0",  // ⚠️ NEEDS REPLACEMENT
+  "@astrojs/node": "^8.0.0",  // NOTE: NEEDS REPLACEMENT
   "@astrojs/react": "^3.0.0",
   "@astrojs/tailwind": "^5.0.0",
   "@tanstack/react-query": "^5.0.0",
   "astro": "^4.0.0",
-  "bcryptjs": "^2.4.3",  // ⚠️ For password hashing
+  "bcryptjs": "^2.4.3",  // NOTE: For password hashing
   "chart.js": "^4.5.1",
   "react": "^18.2.0",
   "react-chartjs-2": "^5.3.1",
@@ -93,13 +93,13 @@ const [{ eq }, { db, users, companyUsers }, bcrypt] = await Promise.all([
 Found **75+ references** to environment variables:
 
 **Core Service URLs:**
-- `PUBLIC_REPORTING_API_URL` → Default: `http://localhost:3001`
-- `PUBLIC_ANALYTICS_SERVICE_URL` → Default: `http://localhost:3007`
-- `PUBLIC_CAMPAIGNS_SERVICE_URL` → Default: `http://localhost:3002`
-- `PUBLIC_Q2Q_AI_SERVICE_URL` → Default: `http://localhost:3005`
-- `PUBLIC_COMPLIANCE_SERVICE_URL` → Default: Same as REPORTING
-- `IDENTITY_SERVICE_URL` / `PUBLIC_IDENTITY_SERVICE_URL` → Default: `http://localhost:3017`
-- `NLQ_SERVICE_URL` → Default: `http://localhost:3011`
+- `PUBLIC_REPORTING_API_URL` -> Default: `http://localhost:3001`
+- `PUBLIC_ANALYTICS_SERVICE_URL` -> Default: `http://localhost:3007`
+- `PUBLIC_CAMPAIGNS_SERVICE_URL` -> Default: `http://localhost:3002`
+- `PUBLIC_Q2Q_AI_SERVICE_URL` -> Default: `http://localhost:3005`
+- `PUBLIC_COMPLIANCE_SERVICE_URL` -> Default: Same as REPORTING
+- `IDENTITY_SERVICE_URL` / `PUBLIC_IDENTITY_SERVICE_URL` -> Default: `http://localhost:3017`
+- `NLQ_SERVICE_URL` -> Default: `http://localhost:3011`
 
 **Other Environment Variables:**
 - `USE_MOCK_AUTH` - Enable mock authentication
@@ -111,7 +111,7 @@ Found **75+ references** to environment variables:
 - `PUBLIC_REPORTING_DEBUG` - Debug mode
 - `VITE_SENTRY_DSN` - Sentry error tracking
 - `VITE_ENVIRONMENT` - Environment name
-- `OTEL_EXPORTER_ENDPOINT` → Default: `http://localhost:4318/v1/metrics`
+- `OTEL_EXPORTER_ENDPOINT` -> Default: `http://localhost:4318/v1/metrics`
 - `ENABLE_OTEL` - OpenTelemetry enablement
 - `DEMO_MODE_ENABLED` - Demo mode toggle
 - `DEMO_CSV_PATH` - Demo data path
@@ -280,10 +280,10 @@ From code analysis, need these tables:
 ## 9. Cloudflare-Specific Considerations
 
 ### 9.1 Features to Replace
-- **Redis** → Cloudflare KV or D1
-- **ClickHouse** → D1 (for analytics, may need to simplify)
-- **NATS** → Remove (use Cloudflare Queues if needed)
-- **PostgreSQL** → D1 (SQLite)
+- **Redis** -> Cloudflare KV or D1
+- **ClickHouse** -> D1 (for analytics, may need to simplify)
+- **NATS** -> Remove (use Cloudflare Queues if needed)
+- **PostgreSQL** -> D1 (SQLite)
 
 ### 9.2 Features to Keep
 - **SSE** - Can work with Cloudflare Pages (with limitations)
@@ -333,7 +333,7 @@ From code analysis, need these tables:
 | Component | Complexity | Effort | Notes |
 |-----------|-----------|--------|-------|
 | Astro Config | Low | 1 hour | Simple adapter swap |
-| D1 Schema | Medium | 4 hours | Need to convert PostgreSQL → SQLite |
+| D1 Schema | Medium | 4 hours | Need to convert PostgreSQL -> SQLite |
 | Auth Migration | Medium | 6 hours | Replace Drizzle with D1 queries |
 | SROI/VIS Inline | High | 16 hours | Complex calculations, need to port logic |
 | Campaigns Inline | Medium | 8 hours | Move to Astro API routes |
@@ -373,4 +373,4 @@ From code analysis, need these tables:
 ---
 
 **Report Generated:** 2025-01-27  
-**Status:** ✅ Phase 1 Complete - Ready for Phase 2
+**Status:** Phase 1 Complete - Ready for Phase 2

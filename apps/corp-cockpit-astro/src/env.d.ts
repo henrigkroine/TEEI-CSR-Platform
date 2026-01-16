@@ -1,5 +1,17 @@
 /// <reference path="../.astro/types.d.ts" />
 /// <reference types="astro/client" />
+/// <reference types="@cloudflare/workers-types" />
+
+// Cloudflare runtime environment
+type CloudflareEnv = {
+  DB: D1Database;
+  ENVIRONMENT: string;
+  // Add other bindings as needed:
+  // SESSIONS_KV?: KVNamespace;
+  // FILES?: R2Bucket;
+};
+
+type Runtime = import('@astrojs/cloudflare').Runtime<CloudflareEnv>;
 
 interface ImportMetaEnv {
   readonly REPORTING_SERVICE_URL: string;
@@ -14,7 +26,7 @@ interface ImportMeta {
 }
 
 declare namespace App {
-  interface Locals {
+  interface Locals extends Runtime {
     user?: {
       id: string;
       email: string;

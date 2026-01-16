@@ -5,13 +5,11 @@
  * retry logic, and environment-aware service URLs.
  */
 
-// Service URLs - can be overridden via environment variables
-const REPORTING_SERVICE_URL = import.meta.env.PUBLIC_REPORTING_API_URL ||
-  (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3001');
-const ANALYTICS_SERVICE_URL = import.meta.env.PUBLIC_ANALYTICS_SERVICE_URL || 'http://localhost:3007';
-const CAMPAIGNS_SERVICE_URL = import.meta.env.PUBLIC_CAMPAIGNS_SERVICE_URL || 'http://localhost:3002';
+// Use Astro API routes instead of microservice URLs
+// All routes are now inlined in the Astro app
+const API_BASE = typeof window !== 'undefined' ? window.location.origin : '';
 const Q2Q_AI_SERVICE_URL = import.meta.env.PUBLIC_Q2Q_AI_SERVICE_URL || 'http://localhost:3005';
-const COMPLIANCE_SERVICE_URL = import.meta.env.PUBLIC_COMPLIANCE_SERVICE_URL || REPORTING_SERVICE_URL;
+const COMPLIANCE_SERVICE_URL = import.meta.env.PUBLIC_COMPLIANCE_SERVICE_URL || API_BASE;
 
 interface FetchOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
@@ -69,7 +67,8 @@ export async function fetchSROI(companyId: string, period?: string): Promise<{
   };
   sparkline?: number[];
 }> {
-  const url = `${REPORTING_SERVICE_URL}/companies/${companyId}/sroi${period ? `?period=${period}` : ''}`;
+  // Use new Astro API route
+  const url = `${API_BASE}/api/companies/${companyId}/sroi${period ? `?period=${period}` : ''}`;
   return apiFetch(url);
 }
 
@@ -93,7 +92,8 @@ export async function fetchVIS(companyId: string, period?: string, top?: number)
   };
   sparkline?: number[];
 }> {
-  const url = `${REPORTING_SERVICE_URL}/companies/${companyId}/vis?top=${top || 10}${period ? `&period=${period}` : ''}`;
+  // Use new Astro API route
+  const url = `${API_BASE}/api/companies/${companyId}/vis?top=${top || 10}${period ? `&period=${period}` : ''}`;
   return apiFetch(url);
 }
 
@@ -111,20 +111,27 @@ export async function fetchAICoverage(companyId: string, period?: string): Promi
   };
   sparkline?: number[];
 }> {
-  // Use analytics service metrics endpoint
+  // Use new Astro API route
   const periodParam = period || 'current';
-  const url = `${ANALYTICS_SERVICE_URL}/metrics/company/${companyId}/period/${periodParam}`;
-  const data = await apiFetch<{ metrics: Array<{ ai_coverage?: number }> }>(url);
-
-  // Calculate coverage from metrics or use evidence API
-  const coverage = data.metrics[0]?.ai_coverage || 0;
-
-  return {
-    coverage_percentage: coverage,
-    total_evidence: 0, // Would need separate endpoint
-    processed_evidence: 0,
-    sparkline: [],
-  };
+  const url = `${API_BASE}/api/analytics/metrics/company/${companyId}/period/${periodParam}`;
+  try {
+    const data = await apiFetch<{ metrics: Array<{ ai_coverage?: number }> }>(url);
+    const coverage = data.metrics[0]?.ai_coverage || 0;
+    return {
+      coverage_percentage: coverage,
+      total_evidence: 0, // Would need separate endpoint
+      processed_evidence: 0,
+      sparkline: [],
+    };
+  } catch (error) {
+    // Fallback if endpoint not available
+    return {
+      coverage_percentage: 0,
+      total_evidence: 0,
+      processed_evidence: 0,
+      sparkline: [],
+    };
+  }
 }
 
 /**
@@ -335,20 +342,20 @@ export async function fetchMetricsWithTrend(
   } | null;
   sparkline: number[];
 }> {
-  // Fetch current and previous period metrics
+  // Use new Astro API route
   const currentPeriod = period || 'current';
-  const url = `${ANALYTICS_SERVICE_URL}/metrics/company/${companyId}/period/${currentPeriod}`;
+  const url = `${API_BASE}/api/analytics/metrics/company/${companyId}/period/${currentPeriod}`;
 
   try {
     const data = await apiFetch<{
       metrics: Array<{
-        sroiRatio?: number;
-        visScore?: number;
+        sroi_ratio?: number;
+        avg_vis_score?: number;
         [key: string]: any;
       }>;
     }>(url);
 
-    const current = data.metrics[0]?.[metricName === 'sroi' ? 'sroiRatio' : metricName === 'vis' ? 'visScore' : 0] || 0;
+    const current = data.metrics[0]?.[metricName === 'sroi' ? 'sroi_ratio' : metricName === 'vis' ? 'avg_vis_score' : 0] || 0;
 
     // For sparkline, we'd need historical data - simplified for now
     const sparkline = Array.from({ length: 7 }, () => current * (0.9 + Math.random() * 0.2));

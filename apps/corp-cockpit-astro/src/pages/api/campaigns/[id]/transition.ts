@@ -1,86 +1,108 @@
 /**
- * Campaign Transition API Proxy
- * SWARM 6: Agent 6.1 - Campaign list UI
- *
- * Proxies campaign state transition requests to the campaigns service.
+ * Campaign State Transition API - Migrated from services/campaigns
+ * 
+ * POST /api/campaigns/:id/transition
  */
-
 import type { APIRoute } from 'astro';
 
-const CAMPAIGNS_SERVICE_URL =
-  import.meta.env.CAMPAIGNS_SERVICE_URL ||
-  process.env.CAMPAIGNS_SERVICE_URL ||
-  'http://localhost:3002';
+const VALID_STATUSES = ['draft', 'planned', 'recruiting', 'active', 'paused', 'completed', 'closed'];
+const VALID_TRANSITIONS: Record<string, string[]> = {
+  draft: ['planned', 'closed'],
+  planned: ['recruiting', 'closed'],
+  recruiting: ['active', 'closed'],
+  active: ['paused', 'completed'],
+  paused: ['active', 'closed'],
+  completed: ['closed'],
+  closed: [], // Terminal state
+};
 
-export const POST: APIRoute = async ({ request, params }) => {
-  const { id } = params;
+export const POST: APIRoute = async ({ params, request, locals }) => {
+  const id = params.id;
 
   if (!id) {
     return new Response(
-      JSON.stringify({
-        success: false,
-        error: 'Campaign ID is required',
-      }),
-      {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      }
+      JSON.stringify({ success: false, error: 'Campaign ID is required' }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } }
     );
   }
 
   try {
-    // Parse request body
     const body = await request.json();
+    const { targetStatus, notes } = body;
 
-    // Build backend URL
-    const backendUrl = `${CAMPAIGNS_SERVICE_URL}/campaigns/${id}/transition`;
-
-    // Make request to campaigns service
-    const response = await fetch(backendUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        // Forward auth headers if present
-        ...(request.headers.get('Authorization') && {
-          'Authorization': request.headers.get('Authorization')!
-        }),
-      },
-      body: JSON.stringify(body),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('[API/Campaigns/Transition] Backend error:', response.status, errorText);
-
+    if (!targetStatus || !VALID_STATUSES.includes(targetStatus)) {
       return new Response(
-        JSON.stringify({
-          success: false,
-          error: 'Failed to transition campaign',
-          details: errorText,
-        }),
-        {
-          status: response.status,
-          headers: { 'Content-Type': 'application/json' }
-        }
+        JSON.stringify({ success: false, error: 'Invalid target status' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
-    const data = await response.json();
+    const db = locals.runtime?.env?.DB;
+    if (!db) {
+      return new Response(
+        JSON.stringify({ error: 'Database not available' }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Get current campaign
+    const campaign = await db.prepare(
+      'SELECT * FROM campaigns WHERE id = ?'
+    ).bind(id).first<{ status: string; internal_notes?: string }>();
+
+    if (!campaign) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Campaign not found' }),
+        { status: 404, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate transition
+    const currentStatus = campaign.status;
+    const allowedTargets = VALID_TRANSITIONS[currentStatus] || [];
+
+    if (!allowedTargets.includes(targetStatus)) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'Invalid state transition',
+          message: `Cannot transition from '${currentStatus}' to '${targetStatus}'`,
+          allowedTargets,
+        }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Update campaign status
+    const updatedNotes = notes
+      ? `${campaign.internal_notes || ''}\n[${new Date().toISOString()}] Transition to ${targetStatus}: ${notes}`
+      : campaign.internal_notes;
+
+    await db.prepare(
+      'UPDATE campaigns SET status = ?, internal_notes = ?, updated_at = datetime("now") WHERE id = ?'
+    ).bind(targetStatus, updatedNotes, id).run();
+
+    const updated = await db.prepare(
+      'SELECT * FROM campaigns WHERE id = ?'
+    ).bind(id).first();
 
     return new Response(
-      JSON.stringify(data),
+      JSON.stringify({
+        success: true,
+        message: `Campaign transitioned from '${currentStatus}' to '${targetStatus}'`,
+        campaign: updated,
+      }),
       {
         status: 200,
         headers: { 'Content-Type': 'application/json' }
       }
     );
   } catch (error) {
-    console.error('[API/Campaigns/Transition] Proxy error:', error);
-
+    console.error('[API/Campaigns] Error:', error);
     return new Response(
       JSON.stringify({
         success: false,
-        error: 'Failed to connect to campaigns service',
+        error: 'Failed to transition campaign state',
         message: error instanceof Error ? error.message : 'Unknown error',
       }),
       {

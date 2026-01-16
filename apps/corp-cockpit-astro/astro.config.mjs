@@ -1,99 +1,26 @@
 import { defineConfig } from 'astro/config';
 import react from '@astrojs/react';
 import tailwind from '@astrojs/tailwind';
-import node from '@astrojs/node';
+import cloudflare from '@astrojs/cloudflare';
 
-// CSP nonce injection middleware for Astro
-function cspIntegration() {
-  return {
-    name: 'csp-nonce-injection',
-    hooks: {
-      'astro:server:setup': ({ server }) => {
-        server.middlewares.use((req, res, next) => {
-          // Skip CSP headers for Vite internal routes (breaks hydration if headers are added)
-          if (req.url?.startsWith('/@') || req.url?.startsWith('/node_modules/')) {
-            return next();
-          }
-
-          // Generate nonce for CSP
-          const nonce = Buffer.from(Math.random().toString()).toString('base64').substring(0, 16);
-
-          // Store nonce in response locals for use in templates
-          res.locals = res.locals || {};
-          res.locals.cspNonce = nonce;
-
-          // Check if we're in development mode
-          const isDev = process.env.NODE_ENV !== 'production';
-
-          // In dev mode, use permissive CSP to allow Vite HMR and React hydration
-          // In production, use strict CSP with nonces
-          if (isDev) {
-            res.setHeader('Content-Security-Policy', [
-              "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:*",
-              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-              "img-src 'self' data: blob: https:",
-              "font-src 'self' data: https://fonts.gstatic.com",
-              "connect-src 'self' ws://localhost:* http://localhost:* https://fonts.googleapis.com https://fonts.gstatic.com",
-              "frame-src 'none'",
-              "object-src 'none'",
-            ].join('; '));
-            return next();
-          }
-
-          // Production: Set CSP header with nonce
-          const cspDirectives = [
-            "default-src 'self'",
-            `script-src 'nonce-${nonce}' 'strict-dynamic' https:`,
-            `style-src 'nonce-${nonce}' 'self'`,
-            "img-src 'self' data: blob: https:",
-            "font-src 'self' data:",
-            "connect-src 'self' https://api.teei-platform.com wss://api.teei-platform.com",
-            "frame-src 'none'",
-            "object-src 'none'",
-            "base-uri 'self'",
-            "form-action 'self'",
-            "frame-ancestors 'none'",
-            "upgrade-insecure-requests",
-            "block-all-mixed-content",
-          ];
-
-          res.setHeader('Content-Security-Policy', cspDirectives.join('; '));
-
-          // Additional security headers
-          res.setHeader('X-Content-Type-Options', 'nosniff');
-          res.setHeader('X-Frame-Options', 'DENY');
-          res.setHeader('X-XSS-Protection', '1; mode=block');
-          res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-          res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
-
-          // Trusted Types enforcement (production only - breaks React hydration in dev)
-          if (!isDev) {
-            res.setHeader('Require-Trusted-Types-For', "'script'");
-            res.setHeader('Trusted-Types', 'default dompurify');
-          }
-
-          next();
-        });
-      },
-    },
-  };
-}
+// Note: CSP headers are now handled via Cloudflare's _headers file
+// See public/_headers for production CSP configuration
 
 // https://astro.build/config
 export default defineConfig({
-  site: undefined, // Don't set site URL to prevent automatic redirects
+  site: 'https://cockpit.theeducationalequalityinstitute.org',
   output: 'server',
-  server: { port: 4327 },
-  adapter: node({
-    mode: 'standalone',
+  server: { port: 6410 },
+  adapter: cloudflare({
+    platformProxy: {
+      enabled: true, // Enable local D1/KV/R2 access during development
+    },
   }),
   integrations: [
     react(),
     tailwind({
       applyBaseStyles: false,
     }),
-    cspIntegration(),
   ],
   i18n: {
     defaultLocale: 'en',

@@ -13,30 +13,25 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import {
   SSEClient,
-  // PollingFallback, // TODO: Implement PollingFallback or remove references
   createSSEClient,
   type SSEEvent,
   type SSEError,
   type ConnectionState,
 } from '../utils/sseClient';
+import { PollingClient, createPollingClient, type PollingState } from '../utils/pollingClient';
 
-// Temporary stub for PollingFallback until implemented
-class PollingFallback {
-  constructor(options: any) {}
-  start() {}
-  stop() {}
-}
+import { PollingClient, createPollingClient, type PollingState } from '../utils/pollingClient';
 
 export interface UseSSEConnectionOptions {
   /** Company ID for tenant-scoped events */
   companyId: string;
   /** Event channel to subscribe to */
   channel: string;
-  /** SSE endpoint URL (default: /api/sse/dashboard) */
+  /** SSE endpoint URL (default: /api/sse/dashboard) - Note: Polling is used by default */
   url?: string;
   /** Enable automatic connection on mount (default: true) */
   autoConnect?: boolean;
-  /** Enable polling fallback on SSE failure (default: true) */
+  /** Use polling instead of SSE (default: true for Cloudflare compatibility) */
   enablePollingFallback?: boolean;
   /** Polling interval in ms (default: 5000) */
   pollingInterval?: number;
@@ -76,9 +71,9 @@ export function useSSEConnection(
   const {
     companyId,
     channel,
-    url = '/api/sse/dashboard',
+    url = '/api/polling/dashboard', // Default to polling endpoint
     autoConnect = true,
-    enablePollingFallback = true,
+    enablePollingFallback = true, // Default to true (use polling)
     pollingInterval = 5000,
     retryOptions = {},
   } = options;
@@ -91,7 +86,7 @@ export function useSSEConnection(
 
   // Refs
   const sseClientRef = useRef<SSEClient | null>(null);
-  const pollingFallbackRef = useRef<PollingFallback | null>(null);
+  const pollingClientRef = useRef<PollingClient | null>(null);
   const messageHandlersRef = useRef<Set<(event: SSEEvent) => void>>(new Set());
 
   /**
@@ -143,41 +138,71 @@ export function useSSEConnection(
    * Start polling fallback
    */
   const startPolling = useCallback(() => {
-    if (pollingFallbackRef.current) {
+    if (pollingClientRef.current) {
       return; // Already polling
     }
 
     setIsPolling(true);
+    setState('connected'); // Treat polling as connected
 
-    pollingFallbackRef.current = new PollingFallback({
+    // Use polling endpoint instead of SSE
+    const pollingUrl = url.replace('/sse/', '/polling/') || '/api/polling/dashboard';
+
+    pollingClientRef.current = createPollingClient({
+      url: pollingUrl,
       companyId,
-      channel,
       pollInterval: pollingInterval,
-      onMessage: handleMessage,
-      onError: handleError,
+      lastEventId: lastEventId,
+      onEvent: (event) => {
+        // Convert polling event to SSE event format
+        const sseEvent: SSEEvent = {
+          id: event.id,
+          type: event.type as any,
+          timestamp: event.timestamp,
+          companyId: event.companyId,
+          data: event.data,
+        };
+        handleMessage(sseEvent);
+      },
+      onError: (error) => {
+        const sseError: SSEError = {
+          message: error.message,
+          code: 'POLL_ERROR',
+          timestamp: Date.now(),
+          retryable: true,
+        };
+        handleError(sseError);
+      },
+      onStateChange: (pollingState: PollingState) => {
+        // Map polling states to SSE states
+        if (pollingState === 'polling') {
+          setState('connected');
+        } else if (pollingState === 'error') {
+          setState('error');
+        } else if (pollingState === 'disconnected') {
+          setState('disconnected');
+        }
+      },
     });
 
-    pollingFallbackRef.current.start();
-  }, [companyId, channel, pollingInterval, handleMessage, handleError]);
+    pollingClientRef.current.start();
+  }, [companyId, channel, pollingInterval, url, lastEventId, handleMessage, handleError]);
 
   /**
    * Stop polling fallback
    */
   const stopPolling = useCallback(() => {
-    if (pollingFallbackRef.current) {
-      pollingFallbackRef.current.stop();
-      pollingFallbackRef.current = null;
+    if (pollingClientRef.current) {
+      pollingClientRef.current.stop();
+      pollingClientRef.current = null;
       setIsPolling(false);
     }
   }, []);
 
   /**
-   * Connect to SSE
+   * Connect to SSE (or polling if enabled)
    */
   const connect = useCallback(() => {
-    // Stop polling if active
-    stopPolling();
-
     // Validate companyId before connecting
     if (!companyId || companyId === 'undefined') {
       console.error('[useSSEConnection] Invalid companyId:', companyId);
@@ -191,13 +216,29 @@ export function useSSEConnection(
       return;
     }
 
+    // Use polling by default (better for Cloudflare Pages)
+    // SSE can be enabled later if needed via Cloudflare Workers
+    if (enablePollingFallback) {
+      startPolling();
+      return;
+    }
+
+    // Fallback to SSE if polling is disabled
+    stopPolling();
+
     // Create SSE client if not exists
     if (!sseClientRef.current) {
       sseClientRef.current = createSSEClient({
         url,
         companyId,
         onEvent: handleMessage,
-        onError: handleError,
+        onError: (sseError) => {
+          handleError(sseError);
+          // Auto-fallback to polling on SSE error
+          if (enablePollingFallback && !sseError.retryable) {
+            startPolling();
+          }
+        },
         onStateChange: handleConnectionChange,
         onConnect: () => {
           setError(null);
@@ -217,14 +258,16 @@ export function useSSEConnection(
     channel,
     url,
     retryOptions,
+    enablePollingFallback,
     handleConnectionChange,
     handleMessage,
     handleError,
     stopPolling,
+    startPolling,
   ]);
 
   /**
-   * Disconnect from SSE
+   * Disconnect from SSE/Polling
    */
   const disconnect = useCallback(() => {
     if (sseClientRef.current) {
@@ -232,6 +275,7 @@ export function useSSEConnection(
       sseClientRef.current = null;
     }
     stopPolling();
+    setState('disconnected');
   }, [stopPolling]);
 
   /**

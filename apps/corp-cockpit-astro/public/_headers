@@ -1,0 +1,18 @@
+# CSR Cockpit - Security Headers
+# Applied by Cloudflare Pages to all responses
+
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  X-XSS-Protection: 1; mode=block
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: geolocation=(), microphone=(), camera=()
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://cockpit.theeducationalequalityinstitute.org https://*.cloudflare.com; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests
+
+# Static assets - long cache
+/_astro/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# API routes - no cache
+/api/*
+  Cache-Control: no-store, no-cache, must-revalidate
