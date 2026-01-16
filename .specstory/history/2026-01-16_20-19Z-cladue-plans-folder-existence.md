@@ -1302,3 +1302,1001 @@ Should I start Phase 1 (Discovery & Assessment) to understand the current codeba
 
 ---
 
+_**User (2026-01-16 15:35Z)**_
+
+Yes run phase 1
+
+---
+
+_**Agent (model default, mode Agent)**_
+
+
+
+---
+
+
+Running Phase 1: Discovery & Assessment. Exploring the codebase structure.
+
+
+---
+
+<tool-use data-tool-type="generic" data-tool-name="glob_file_search">
+<details>
+<summary>Tool use: **glob_file_search** • Searched codebase "**/astro.config.*" • **2** results in **1** directory</summary>
+
+Directory: **\\wsl.localhost\Ubuntu\home\ovehe\projects\VS Projects\TEEI\TEEI_CSR_Platform** (2 files)
+
+| File |
+|------|
+| `apps\corp-cockpit-astro\astro.config.mjs` |
+| `apps\trust-center\astro.config.mjs` |
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: apps/corp-cockpit-astro/astro.config.mjs</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: apps/corp-cockpit-astro/package.json</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="generic" data-tool-name="list_dir">
+<details>
+            <summary>Tool use: **list_dir** • Listed directory, 0 results</summary>
+        
+No results found
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Searching for database calls, environment variables, and microservice API calls:
+
+
+---
+
+<tool-use data-tool-type="search" data-tool-name="grep">
+<details>
+<summary>Tool use: **grep** • Grep for "postgres|pg\.|drizzle|prisma|\.sql|\.query\(|\.execute\(" in "apps/corp-cockpit-astro/src" • 3 matches</summary>
+
+Output mode: content
+
+
+| File | Content | Line |
+|------|------|------|
+| `apps/corp-cockpit-astro/src\pages\api\forgot-password.ts` | `import('drizzle-orm'),` | L14 |
+| `apps/corp-cockpit-astro/src\pages\api\login.ts` | `import('drizzle-orm'),` | L48 |
+| `apps/corp-cockpit-astro/src\components\status\StatusDisplay.tsx` | `description: 'PostgreSQL primary and replicas',` | L492 |
+
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="search" data-tool-name="grep">
+<details>
+<summary>Tool use: **grep** • Grep for "import\.meta\.env|process\.env" in "apps/corp-cockpit-astro/src" • 75 matches</summary>
+
+Output mode: content
+
+
+| File | Content | Line |
+|------|------|------|
+| `apps/corp-cockpit-astro/src\api\dashboard.ts` | `const REPORTING_SERVICE_URL = import.meta.env.PUBLIC_REPORTING_API_URL \|\|` | L9 |
+| `apps/corp-cockpit-astro/src\api\dashboard.ts` | `const ANALYTICS_SERVICE_URL = import.meta.env.PUBLIC_ANALYTICS_SERVICE_URL \|\| 'http://localhost:3007';` | L11 |
+| `apps/corp-cockpit-astro/src\api\dashboard.ts` | `const CAMPAIGNS_SERVICE_URL = import.meta.env.PUBLIC_CAMPAIGNS_SERVICE_URL \|\| 'http://localhost:3002';` | L12 |
+| `apps/corp-cockpit-astro/src\api\dashboard.ts` | `const Q2Q_AI_SERVICE_URL = import.meta.env.PUBLIC_Q2Q_AI_SERVICE_URL \|\| 'http://localhost:3005';` | L13 |
+| `apps/corp-cockpit-astro/src\api\dashboard.ts` | `const COMPLIANCE_SERVICE_URL = import.meta.env.PUBLIC_COMPLIANCE_SERVICE_URL \|\| REPORTING_SERVICE_URL;` | L14 |
+| `apps/corp-cockpit-astro/src\components\dashboard\DashboardDiagnostics.tsx` | `if (import.meta.env.PROD) \{` | L17 |
+| `apps/corp-cockpit-astro/src\components\widgets\Q2QFeed.tsx` | `const API_BASE_URL = import.meta.env.PUBLIC_REPORTING_API_URL \|\|` | L34 |
+| `apps/corp-cockpit-astro/src\components\evidence\EvidenceList.tsx` | `const API_BASE_URL = import.meta.env.PUBLIC_REPORTING_API_URL \|\|` | L88 |
+| `apps/corp-cockpit-astro/src\components\evidence\LineageDrawer.tsx` | `const API_BASE_URL = import.meta.env.PUBLIC_REPORTING_API_URL \|\|` | L108 |
+| `apps/corp-cockpit-astro/src\pages\api\login.ts` | `const USE_MOCK_AUTH = process.env.USE_MOCK_AUTH === 'true' \|\| import.meta.env.DEV;` | L10 |
+| `apps/corp-cockpit-astro/src\pages\api\login.ts` | `secure: import.meta.env.PROD,` | L192 |
+| `apps/corp-cockpit-astro/src\pages\api\login.ts` | `secure: import.meta.env.PROD,` | L202 |
+| `apps/corp-cockpit-astro/src\pages\api\sse\dashboard.ts` | `const REPORTING_SERVICE_URL = import.meta.env.PUBLIC_REPORTING_API_URL \|\|` | L10 |
+| `apps/corp-cockpit-astro/src\pages\api\sse\dashboard.ts` | `process.env.REPORTING_SERVICE_URL \|\|` | L11 |
+| `apps/corp-cockpit-astro/src\pages\api\campaigns.ts` | `import.meta.env.CAMPAIGNS_SERVICE_URL \|\|` | L15 |
+| `apps/corp-cockpit-astro/src\pages\api\campaigns.ts` | `process.env.CAMPAIGNS_SERVICE_URL \|\|` | L16 |
+| `apps/corp-cockpit-astro/src\pages\compliance\alerts.ts` | `const REPORTING_SERVICE_URL = import.meta.env.PUBLIC_REPORTING_API_URL \|\|` | L9 |
+| `apps/corp-cockpit-astro/src\pages\compliance\alerts.ts` | `process.env.REPORTING_SERVICE_URL \|\|` | L10 |
+| `apps/corp-cockpit-astro/src\pages\[lang]\cockpit\[companyId]\admin-studio.astro` | `const ADMIN_STUDIO_ENABLED = import.meta.env.PUBLIC_FEATURE_ADMIN_STUDIO_V1 !== 'false';` | L37 |
+| `apps/corp-cockpit-astro/src\pages\[lang]\cockpit\[companyId]\boardroom-live.astro` | `const featureFlagsRaw = import.meta.env.PUBLIC_FEATURE_FLAGS \|\| '';` | L45 |
+| `apps/corp-cockpit-astro/src\pages\[lang]\cockpit\[companyId]\boardroom-live.astro` | `const sseEndpoint = import.meta.env.PUBLIC_SSE_ENDPOINT \|\| '/api/sse/dashboard';` | L54 |
+| `apps/corp-cockpit-astro/src\pages\[lang]\cockpit\[companyId]\deliveries.astro` | `const apiBaseUrl = import.meta.env.PUBLIC_API_BASE_URL \|\| 'http://localhost:3000';` | L42 |
+| `apps/corp-cockpit-astro/src\pages\[lang]\cockpit\[companyId]\usage.astro` | `const USAGE_ANALYTICS_ENABLED = import.meta.env.PUBLIC_FEATURE_USAGE_ANALYTICS_V1 !== 'false';` | L35 |
+| `apps/corp-cockpit-astro/src\components\Q2QFeedList.tsx` | `const baseUrl = import.meta.env.PUBLIC_ANALYTICS_SERVICE_URL \|\| 'http://localhost:3007';` | L54 |
+| `apps/corp-cockpit-astro/src\layouts\BaseLayout.astro` | `const isDev = process.env.NODE_ENV !== 'production';` | L14 |
+| `apps/corp-cockpit-astro/src\components\dashboard\ProgrammeTiles.tsx` | `const analyticsUrl = import.meta.env.PUBLIC_ANALYTICS_URL \|\| '';` | L208 |
+| `apps/corp-cockpit-astro/src\lib\demo\demoConfig.ts` | `if (typeof process !== 'undefined' && process.env) \{` | L12 |
+| `apps/corp-cockpit-astro/src\lib\demo\demoConfig.ts` | `const envValue = process.env.DEMO_MODE_ENABLED;` | L13 |
+| `apps/corp-cockpit-astro/src\lib\demo\demoConfig.ts` | `if (typeof process !== 'undefined' && process.env) \{` | L44 |
+| `apps/corp-cockpit-astro/src\lib\demo\demoConfig.ts` | `return process.env.DEMO_CSV_PATH \|\| 'data/demo-metrics.csv';` | L45 |
+| `apps/corp-cockpit-astro/src\lib\api.ts` | `const ANALYTICS_SERVICE_URL = process.env.ANALYTICS_SERVICE_URL \|\| 'http://localhost:3023';` | L1 |
+| `apps/corp-cockpit-astro/src\api\identity.ts` | `import.meta.env.IDENTITY_SERVICE_URL \|\|` | L11 |
+| `apps/corp-cockpit-astro/src\api\identity.ts` | `import.meta.env.PUBLIC_IDENTITY_SERVICE_URL \|\|` | L12 |
+| `apps/corp-cockpit-astro/src\api\identity.ts` | `import.meta.env.USE_REAL_IDENTITY_API === 'true' \|\|` | L17 |
+| `apps/corp-cockpit-astro/src\api\identity.ts` | `import.meta.env.PUBLIC_USE_REAL_IDENTITY_API === 'true' \|\|` | L18 |
+| `apps/corp-cockpit-astro/src\widgets\impact-tiles\ImpactTilesContainer.tsx` | `const analyticsUrl = import.meta.env.PUBLIC_ANALYTICS_URL \|\| 'http://localhost:3023';` | L51 |
+| `apps/corp-cockpit-astro/src\lib\pdf.ts` | `const baseUrl = import.meta.env.PUBLIC_ANALYTICS_SERVICE_URL \|\| 'http://localhost:3007';` | L295 |
+| `apps/corp-cockpit-astro/src\lib\sentry.ts` | `const dsn = import.meta.env.VITE_SENTRY_DSN \|\| config?.dsn;` | L117 |
+| `apps/corp-cockpit-astro/src\lib\sentry.ts` | `const environment = import.meta.env.VITE_ENVIRONMENT \|\| config?.environment \|\| 'development';` | L118 |
+| `apps/corp-cockpit-astro/src\lib\webVitals.ts` | `* if (import.meta.env.PROD) \{` | L186 |
+| `apps/corp-cockpit-astro/src\lib\webVitals.ts` | `if (import.meta.env.DEV && !import.meta.env.PUBLIC_WEB_VITALS_DEV) \{` | L202 |
+| `apps/corp-cockpit-astro/src\lib\reporting\pptxBridge.ts` | `const API_BASE_URL = import.meta.env.PUBLIC_REPORTING_API_URL \|\| 'http://localhost:3001';` | L57 |
+| `apps/corp-cockpit-astro/src\lib\export.ts` | `const baseUrl = import.meta.env.PUBLIC_ANALYTICS_SERVICE_URL \|\| 'http://localhost:3007';` | L101 |
+| `apps/corp-cockpit-astro/src\lib\export.ts` | `const baseUrl = import.meta.env.PUBLIC_ANALYTICS_SERVICE_URL \|\| 'http://localhost:3007';` | L159 |
+| `apps/corp-cockpit-astro/src\lib\nlq-api.ts` | `const NLQ_SERVICE_URL = process.env.NLQ_SERVICE_URL \|\| 'http://localhost:3011';` | L10 |
+| `apps/corp-cockpit-astro/src\telemetry\web-vitals.ts` | `endpoint: process.env.OTEL_EXPORTER_ENDPOINT \|\| 'http://localhost:4318/v1/metrics',` | L86 |
+| `apps/corp-cockpit-astro/src\telemetry\web-vitals.ts` | `environment: process.env.NODE_ENV \|\| 'development',` | L88 |
+| `apps/corp-cockpit-astro/src\telemetry\web-vitals.ts` | `enabled: process.env.ENABLE_OTEL === 'true' \|\| process.env.NODE_ENV === 'production',` | L89 |
+| `apps/corp-cockpit-astro/src\telemetry\web-vitals.ts` | `analytics_trends: import.meta.env.VITE_FEATURE_ANALYTICS_TRENDS === 'true',` | L107 |
+| `apps/corp-cockpit-astro/src\telemetry\web-vitals.ts` | `analytics_engagement: import.meta.env.VITE_FEATURE_ANALYTICS_ENGAGEMENT === 'true',` | L108 |
+| `apps/corp-cockpit-astro/src\hooks\useAnalytics.ts` | `return import.meta.env.VITE_FEATURE_ANALYTICS_TRENDS === 'true';` | L33 |
+| `apps/corp-cockpit-astro/src\hooks\useAnalytics.ts` | `return import.meta.env.VITE_FEATURE_ANALYTICS_ENGAGEMENT === 'true';` | L40 |
+| `apps/corp-cockpit-astro/src\api\reporting.ts` | `* @default process.env.PUBLIC_USE_REAL_API === 'true'` | L42 |
+| `apps/corp-cockpit-astro/src\api\reporting.ts` | `useRealAPI: typeof process !== 'undefined' && process.env?.PUBLIC_USE_REAL_API === 'true',` | L67 |
+| `apps/corp-cockpit-astro/src\api\reporting.ts` | `useRealAPI: typeof process !== 'undefined' && process.env?.PUBLIC_USE_REAL_API === 'true',` | L548 |
+| `apps/corp-cockpit-astro/src\api\reporting.ts` | `debug: typeof process !== 'undefined' && process.env?.PUBLIC_REPORTING_DEBUG === 'true',` | L549 |
+| `apps/corp-cockpit-astro/src\api\README.md` | `- `PUBLIC_IDENTITY_SERVICE_URL` is used on the client side (Astro's `import.meta.env.PUBLIC_*` pattern)` | L44 |
+| `apps/corp-cockpit-astro/src\utils\webVitals.ts` | `if (import.meta.env.DEV) \{` | L552 |
+| `apps/corp-cockpit-astro/src\utils\webVitals.ts` | `if (import.meta.env.PROD) \{` | L557 |
+| `apps/corp-cockpit-astro/src\utils\chartPerformanceTracking.ts` | `'deployment.environment': import.meta.env.PROD ? 'production' : 'development',` | L126 |
+| `apps/corp-cockpit-astro/src\utils\chartPerformanceTracking.ts` | `if (import.meta.env.DEV) \{` | L354 |
+| `apps/corp-cockpit-astro/src\utils\chartPerformanceTracking.ts` | `if (import.meta.env.DEV) \{` | L369 |
+| `apps/corp-cockpit-astro/src\utils\adoption-tracker.ts` | `otlpEndpoint: import.meta.env.PUBLIC_OTEL_ENDPOINT \|\| 'http://localhost:4318/v1/traces',` | L124 |
+| `apps/corp-cockpit-astro/src\utils\adoption-tracker.ts` | `debug: import.meta.env.DEV \|\| false,` | L127 |
+| `apps/corp-cockpit-astro/src\pages\[lang]\cockpit\shared\[linkId].astro` | ``$\{import.meta.env.PUBLIC_REPORTING_API_URL \|\| 'http://localhost:3002'\}/share/$\{linkId\}`,` | L28 |
+| `apps/corp-cockpit-astro/src\pages\api\campaigns\[id]\transition.ts` | `import.meta.env.CAMPAIGNS_SERVICE_URL \|\|` | L11 |
+| `apps/corp-cockpit-astro/src\pages\api\campaigns\[id]\transition.ts` | `process.env.CAMPAIGNS_SERVICE_URL \|\|` | L12 |
+| `apps/corp-cockpit-astro/src\components\campaigns\CampaignDetailDashboard.tsx` | `const API_BASE = import.meta.env.PUBLIC_REPORTING_API_URL \|\| 'http://localhost:3001/api';` | L152 |
+| `apps/corp-cockpit-astro/src\components\EvidenceDrawer.tsx` | `const analyticsUrl = import.meta.env.PUBLIC_ANALYTICS_API_URL \|\| 'http://localhost:3007';` | L125 |
+| `apps/corp-cockpit-astro/src\components\identity\SyncTestButton.tsx` | `if (import.meta.env.DEV) \{` | L66 |
+| `apps/corp-cockpit-astro/src\components\identity\SSOSettings.tsx` | `if (import.meta.env.DEV) \{` | L45 |
+| `apps/corp-cockpit-astro/src\components\identity\SCIMStatus.tsx` | `if (import.meta.env.DEV) \{` | L100 |
+| `apps/corp-cockpit-astro/src\components\identity\SCIMStatus.tsx` | `if (import.meta.env.DEV) \{` | L110 |
+| `apps/corp-cockpit-astro/src\components\identity\SCIMRoleMappingEditor.tsx` | `if (import.meta.env.DEV) \{` | L92 |
+| `apps/corp-cockpit-astro/src\components\common\ErrorBoundary.tsx` | `\{process.env.NODE_ENV === 'development' && this.state.error && (` | L174 |
+
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="search" data-tool-name="grep">
+<details>
+<summary>Tool use: **grep** • Grep for "localhost:3|localhost:4|fetch.*api|http://localhost|https://localhost" in "apps/corp-cockpit-astro/src" • 256 matches</summary>
+
+Output mode: content
+
+
+| File | Content | Line |
+|------|------|------|
+| `apps/corp-cockpit-astro/src\components\dashboard\ActionableItems.tsx` | `import \{ fetchCampaigns \} from '../../api/dashboard';` | L4 |
+| `apps/corp-cockpit-astro/src\components\dashboard\SavedViewsIntegration.tsx` | `const response = await fetch(`/api/companies/$\{companyId\}/views?default=true`, \{` | L26 |
+| `apps/corp-cockpit-astro/src\pages\[lang]\cockpit\[companyId]\index.astro` | `// Note: All hardcoded data has been removed. Components now fetch from APIs.` | L46 |
+| `apps/corp-cockpit-astro/src\components\dashboard\KPICard.tsx` | `* Fetches live data from APIs and displays with sparklines, trends, and SSE updates.` | L4 |
+| `apps/corp-cockpit-astro/src\components\dashboard\KPICard.tsx` | `import \{ fetchSROI, fetchVIS, fetchAICoverage, fetchCompliance, fetchMetricsWithTrend \} from '../../api/dashboard';` | L9 |
+| `apps/corp-cockpit-astro/src\components\dashboard\AIInsights.tsx` | `import \{ fetchAIInsights \} from '../../api/dashboard';` | L6 |
+| `apps/corp-cockpit-astro/src\components\dashboard\ComplianceAlerts.tsx` | `import \{ fetchComplianceAlerts \} from '../../api/dashboard';` | L3 |
+| `apps/corp-cockpit-astro/src\api\dashboard.ts` | `(typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3001');` | L10 |
+| `apps/corp-cockpit-astro/src\api\dashboard.ts` | `const ANALYTICS_SERVICE_URL = import.meta.env.PUBLIC_ANALYTICS_SERVICE_URL \|\| 'http://localhost:3007';` | L11 |
+| `apps/corp-cockpit-astro/src\api\dashboard.ts` | `const CAMPAIGNS_SERVICE_URL = import.meta.env.PUBLIC_CAMPAIGNS_SERVICE_URL \|\| 'http://localhost:3002';` | L12 |
+| `apps/corp-cockpit-astro/src\api\dashboard.ts` | `const Q2Q_AI_SERVICE_URL = import.meta.env.PUBLIC_Q2Q_AI_SERVICE_URL \|\| 'http://localhost:3005';` | L13 |
+| `apps/corp-cockpit-astro/src\components\widgets\Q2QFeed.tsx` | `(typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3001');` | L35 |
+| `apps/corp-cockpit-astro/src\components\evidence\LineageDrawer.tsx` | `(typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3001');` | L109 |
+| `apps/corp-cockpit-astro/src\components\evidence\EvidenceList.tsx` | `(typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3001');` | L89 |
+| `apps/corp-cockpit-astro/src\pages\forgot-password.astro` | `const res = await fetch('/api/forgot-password', \{` | L131 |
+| `apps/corp-cockpit-astro/src\pages\login.astro` | `const res = await fetch('/api/login', \{` | L201 |
+| `apps/corp-cockpit-astro/src\pages\api\sse\dashboard.ts` | `'http://localhost:4017';` | L12 |
+| `apps/corp-cockpit-astro/src\pages\api\campaigns.ts` | `'http://localhost:3002';` | L17 |
+| `apps/corp-cockpit-astro/src\pages\compliance\alerts.ts` | `'http://localhost:4017';` | L11 |
+| `apps/corp-cockpit-astro/src\pages\[lang]\cockpit\[companyId]\deliveries.astro` | `const apiBaseUrl = import.meta.env.PUBLIC_API_BASE_URL \|\| 'http://localhost:3000';` | L42 |
+| `apps/corp-cockpit-astro/src\pages\[lang]\cockpit\[companyId]\deliveries.astro` | `const slaResponse = await fetch(`$\{apiBaseUrl\}/v1/impact-in/sla-status?companyId=$\{companyId\}`);` | L47 |
+| `apps/corp-cockpit-astro/src\pages\[lang]\cockpit\[companyId]\usage.astro` | `const response = await fetch(`/api/usage-analytics/$\{companyId\}/export`, \{` | L160 |
+| `apps/corp-cockpit-astro/src\components\evidence\EvidenceExplorer.tsx` | `const response = await fetch(`/api/campaigns?companyId=$\{companyId\}&limit=100`);` | L43 |
+| `apps/corp-cockpit-astro/src\components\evidence\EvidenceExplorer.tsx` | `const response = await fetch(`/api/evidence?$\{params.toString()\}`);` | L78 |
+| `apps/corp-cockpit-astro/src\components\Q2QFeedList.tsx` | `const baseUrl = import.meta.env.PUBLIC_ANALYTICS_SERVICE_URL \|\| 'http://localhost:3007';` | L54 |
+| `apps/corp-cockpit-astro/src\components\dashboard\CampaignPipeline.tsx` | `import \{ fetchCampaigns \} from '../../api/dashboard';` | L198 |
+| `apps/corp-cockpit-astro/src\layouts\BaseLayout.astro` | `<link rel="dns-prefetch" href="https://fonts.googleapis.com" />` | L58 |
+| `apps/corp-cockpit-astro/src\components\widgets\AtAGlanceWithDemo.tsx` | `// Production mode: fetch from API` | L39 |
+| `apps/corp-cockpit-astro/src\components\widgets\AtAGlanceWithDemo.tsx` | `const url = `http://localhost:3001/companies/$\{companyId\}/at-a-glance$\{period ? `?period=$\{period\}` : ''\}`;` | L43 |
+| `apps/corp-cockpit-astro/src\hooks\useDemoData.ts` | `const statusResponse = await fetch('/api/demo/status');` | L52 |
+| `apps/corp-cockpit-astro/src\hooks\useDemoData.ts` | `const metricsResponse = await fetch('/api/demo/metrics');` | L68 |
+| `apps/corp-cockpit-astro/src\components\widgets\SROIPanel.tsx` | `const url = `http://localhost:3001/companies/$\{companyId\}/sroi$\{period ? `?period=$\{period\}` : ''\}`;` | L32 |
+| `apps/corp-cockpit-astro/src\components\widgets\VISPanel.tsx` | `const url = `http://localhost:3001/companies/$\{companyId\}/vis?top=$\{top\}$\{period ? `&period=$\{period\}` : ''\}`;` | L33 |
+| `apps/corp-cockpit-astro/src\components\widgets\AtAGlance.tsx` | `const url = `http://localhost:3001/companies/$\{companyId\}/at-a-glance$\{period ? `?period=$\{period\}` : ''\}`;` | L35 |
+| `apps/corp-cockpit-astro/src\lib\api.ts` | `const ANALYTICS_SERVICE_URL = process.env.ANALYTICS_SERVICE_URL \|\| 'http://localhost:3023';` | L1 |
+| `apps/corp-cockpit-astro/src\api\identity.ts` | `'http://localhost:3017/v1/identity';` | L13 |
+| `apps/corp-cockpit-astro/src\widgets\impact-tiles\ImpactTilesContainer.tsx` | `// Fetch tiles from analytics API` | L50 |
+| `apps/corp-cockpit-astro/src\widgets\impact-tiles\ImpactTilesContainer.tsx` | `const analyticsUrl = import.meta.env.PUBLIC_ANALYTICS_URL \|\| 'http://localhost:3023';` | L51 |
+| `apps/corp-cockpit-astro/src\theme\engine.ts` | `* Fetch theme from API for a given tenant` | L191 |
+| `apps/corp-cockpit-astro/src\theme\engine.ts` | `const response = await fetch(`/api/branding/themes?tenantId=$\{tenantId\}`);` | L198 |
+| `apps/corp-cockpit-astro/src\theme\engine.ts` | `* Load theme from sessionStorage or fetch from API` | L224 |
+| `apps/corp-cockpit-astro/src\theme\engine.ts` | `// Fetch from API` | L251 |
+| `apps/corp-cockpit-astro/src\admin\branding\AssetUploader.tsx` | `const response = await fetch(`/api/branding/themes/$\{themeId\}/assets`, \{` | L27 |
+| `apps/corp-cockpit-astro/src\admin\branding\ThemeEditor.tsx` | `const response = await fetch(`/api/branding/themes/$\{themeId\}`);` | L52 |
+| `apps/corp-cockpit-astro/src\features\regulatory\RegulatoryPackBuilder.tsx` | `const response = await fetch('/api/regulatory/packs', \{` | L101 |
+| `apps/corp-cockpit-astro/src\features\regulatory\RegulatoryPackBuilder.tsx` | `const response = await fetch(`/api/regulatory/packs/$\{packId\}`);` | L130 |
+| `apps/corp-cockpit-astro/src\features\regulatory\RegulatoryPackBuilder.tsx` | `const response = await fetch(`/api/regulatory/packs/$\{packId\}`);` | L163 |
+| `apps/corp-cockpit-astro/src\features\regulatory\RegulatoryPackBuilder.tsx` | `const response = await fetch(`/api/regulatory/packs/$\{currentPack.id\}/pdf`);` | L200 |
+| `apps/corp-cockpit-astro/src\features\offline\prefetch.ts` | `const response = await fetch(`/api/reports/$\{reportId\}/board-pack`);` | L30 |
+| `apps/corp-cockpit-astro/src\features\offline\backgroundSync.ts` | `const response = await fetch('/api/exports', \{` | L109 |
+| `apps/corp-cockpit-astro/src\features\generators\GeneratorPage.tsx` | `const response = await fetch('/api/reporting/gen-reports/generate', \{` | L61 |
+| `apps/corp-cockpit-astro/src\features\generators\GeneratorPage.tsx` | `const response = await fetch(`/api/reporting/export/$\{format\}`, \{` | L109 |
+| `apps/corp-cockpit-astro/src\sw.ts` | `const response = await fetch('/api/exports', \{` | L461 |
+| `apps/corp-cockpit-astro/src\lib\pdf.ts` | `const baseUrl = import.meta.env.PUBLIC_ANALYTICS_SERVICE_URL \|\| 'http://localhost:3007';` | L295 |
+| `apps/corp-cockpit-astro/src\lib\boardroom\SnapshotManager.ts` | `// Try Level 3: Fetch from API (fallback)` | L197 |
+| `apps/corp-cockpit-astro/src\lib\boardroom\SnapshotManager.ts` | `snapshot = await this.fetchFromAPI();` | L199 |
+| `apps/corp-cockpit-astro/src\lib\boardroom\SnapshotManager.ts` | `* Fetches snapshot from API (Level 3 fallback)` | L343 |
+| `apps/corp-cockpit-astro/src\lib\boardroom\SnapshotManager.ts` | `private async fetchFromAPI(): Promise<Snapshot \| null> \{` | L346 |
+| `apps/corp-cockpit-astro/src\lib\boardroom\SnapshotManager.ts` | `const response = await fetch(`/api/v1/metrics/snapshot/$\{this.companyId\}`);` | L348 |
+| `apps/corp-cockpit-astro/src\lib\reporting\pptxBridge.ts` | `const API_BASE_URL = import.meta.env.PUBLIC_REPORTING_API_URL \|\| 'http://localhost:3001';` | L57 |
+| `apps/corp-cockpit-astro/src\lib\reporting\pptxBridge.ts` | `const response = await fetch(`$\{API_BASE_URL\}/exports/presentations`, \{` | L66 |
+| `apps/corp-cockpit-astro/src\lib\reporting\pptxBridge.ts` | `const response = await fetch(`$\{API_BASE_URL\}/exports/$\{jobId\}/status`, \{` | L89 |
+| `apps/corp-cockpit-astro/src\lib\reporting\pptxBridge.ts` | `const statusResponse = await fetch(`$\{API_BASE_URL\}/exports/$\{jobId\}/status`);` | L115 |
+| `apps/corp-cockpit-astro/src\lib\memoize.ts` | `*   const response = await fetch(`/api/data/$\{id\}`);` | L264 |
+| `apps/corp-cockpit-astro/src\lib\memoize.ts` | `* // First call: fetches from API` | L273 |
+| `apps/corp-cockpit-astro/src\lib\export.ts` | `const baseUrl = import.meta.env.PUBLIC_ANALYTICS_SERVICE_URL \|\| 'http://localhost:3007';` | L101 |
+| `apps/corp-cockpit-astro/src\lib\export.ts` | `const baseUrl = import.meta.env.PUBLIC_ANALYTICS_SERVICE_URL \|\| 'http://localhost:3007';` | L159 |
+| `apps/corp-cockpit-astro/src\lib\status\degradedMode.ts` | `// TODO: Fetch from Worker 1/2 API` | L158 |
+| `apps/corp-cockpit-astro/src\lib\status\degradedMode.ts` | `// const response = await fetch('/api/status/system');` | L159 |
+| `apps/corp-cockpit-astro/src\lib\api\identity.ts` | `async function fetchAPI<T>(url: string, options?: RequestInit): Promise<T> \{` | L33 |
+| `apps/corp-cockpit-astro/src\lib\api\identity.ts` | `return fetchAPI<GetSSOConfigResponse>(`$\{API_BASE\}/sso/$\{companyId\}`);` | L63 |
+| `apps/corp-cockpit-astro/src\lib\api\identity.ts` | `return fetchAPI<SAMLConfig>(`$\{API_BASE\}/sso/$\{companyId\}/saml`);` | L70 |
+| `apps/corp-cockpit-astro/src\lib\api\identity.ts` | `return fetchAPI<OIDCConfig>(`$\{API_BASE\}/sso/$\{companyId\}/oidc`);` | L77 |
+| `apps/corp-cockpit-astro/src\lib\api\identity.ts` | `return fetchAPI<SAMLConfig>(`$\{API_BASE\}/sso/$\{companyId\}/saml`, \{` | L87 |
+| `apps/corp-cockpit-astro/src\lib\api\identity.ts` | `return fetchAPI<OIDCConfig>(`$\{API_BASE\}/sso/$\{companyId\}/oidc`, \{` | L100 |
+| `apps/corp-cockpit-astro/src\lib\api\identity.ts` | `const response = await fetch(`$\{API_BASE\}/sso/$\{companyId\}/saml/metadata.xml`);` | L110 |
+| `apps/corp-cockpit-astro/src\lib\api\identity.ts` | `return fetchAPI<GetRoleMappingsResponse>(`$\{API_BASE\}/scim/$\{companyId\}/mappings`);` | L127 |
+| `apps/corp-cockpit-astro/src\lib\api\identity.ts` | `return fetchAPI<CreateRoleMappingResponse>(` | L137 |
+| `apps/corp-cockpit-astro/src\lib\api\identity.ts` | `return fetchAPI<CreateRoleMappingResponse>(`$\{API_BASE\}/scim/$\{companyId\}/mappings`, \{` | L149 |
+| `apps/corp-cockpit-astro/src\lib\api\identity.ts` | `return fetchAPI<UpdateRoleMappingResponse>(` | L163 |
+| `apps/corp-cockpit-astro/src\lib\api\identity.ts` | `return fetchAPI<DeleteRoleMappingResponse>(` | L179 |
+| `apps/corp-cockpit-astro/src\lib\api\identity.ts` | `return fetchAPI<GetSCIMStatusResponse>(`$\{API_BASE\}/scim/$\{companyId\}/status`);` | L195 |
+| `apps/corp-cockpit-astro/src\lib\api\identity.ts` | `return fetchAPI<TriggerSCIMTestResponse>(`$\{API_BASE\}/scim/$\{companyId\}/test`, \{` | L202 |
+| `apps/corp-cockpit-astro/src\lib\api\identity.ts` | `return fetchAPI<\{ success: boolean \}>(`$\{API_BASE\}/scim/$\{companyId\}/sync`, \{` | L211 |
+| `apps/corp-cockpit-astro/src\lib\api\identity.ts` | `const response = await fetchAPI<\{ errors: GetSCIMStatusResponse['errors'] \}>(` | L228 |
+| `apps/corp-cockpit-astro/src\lib\api\identity.ts` | `return fetchAPI<\{ success: boolean \}>(` | L242 |
+| `apps/corp-cockpit-astro/src\lib\nlq-api.ts` | `const NLQ_SERVICE_URL = process.env.NLQ_SERVICE_URL \|\| 'http://localhost:3011';` | L10 |
+| `apps/corp-cockpit-astro/src\telemetry\web-vitals.ts` | `endpoint: process.env.OTEL_EXPORTER_ENDPOINT \|\| 'http://localhost:4318/v1/metrics',` | L86 |
+| `apps/corp-cockpit-astro/src\contexts\TenantContext.tsx` | `// const response = await fetch(`/api/companies/$\{id\}`);` | L63 |
+| `apps/corp-cockpit-astro/src\api\tenantPreferences.ts` | `const response = await fetch('/api/v1/preferences/theme', \{` | L41 |
+| `apps/corp-cockpit-astro/src\api\tenantPreferences.ts` | `const response = await fetch(`/api/v1/preferences/theme?companyId=$\{encodeURIComponent(companyId)\}`, \{` | L78 |
+| `apps/corp-cockpit-astro/src\api\tenantPreferences.ts` | `const response = await fetch('/api/v1/preferences', \{` | L165 |
+| `apps/corp-cockpit-astro/src\api\tenantPreferences.ts` | `await fetch(`/api/v1/preferences/theme?companyId=$\{encodeURIComponent(companyId)\}`, \{` | L259 |
+| `apps/corp-cockpit-astro/src\api\README.md` | `IDENTITY_SERVICE_URL=http://localhost:3000/v1/identity` | L34 |
+| `apps/corp-cockpit-astro/src\api\README.md` | `PUBLIC_IDENTITY_SERVICE_URL=http://localhost:3000/v1/identity` | L35 |
+| `apps/corp-cockpit-astro/src\api\README.md` | `IDENTITY_SERVICE_URL=http://localhost:3000/v1/identity` | L256 |
+| `apps/corp-cockpit-astro/src\styles\themes.ts` | `* Fetch theme from API for a given company` | L79 |
+| `apps/corp-cockpit-astro/src\styles\themes.ts` | `const response = await fetch(`/api/companies/$\{companyId\}/theme`);` | L83 |
+| `apps/corp-cockpit-astro/src\styles\themes.ts` | `* Load theme from sessionStorage or fetch from API` | L120 |
+| `apps/corp-cockpit-astro/src\styles\themes.ts` | `// Fetch from API` | L136 |
+| `apps/corp-cockpit-astro/src\utils\webVitals.test.ts.skip` | `const otelUrl = 'http://localhost:4318/v1/metrics';` | L216 |
+| `apps/corp-cockpit-astro/src\utils\webVitals.test.ts.skip` | `const otelUrl = 'http://localhost:4318/v1/metrics';` | L297 |
+| `apps/corp-cockpit-astro/src\utils\webVitals.test.ts.skip` | `const otelUrl = 'http://localhost:4318/v1/metrics';` | L326 |
+| `apps/corp-cockpit-astro/src\utils\adoption-tracker.ts` | `otlpEndpoint: import.meta.env.PUBLIC_OTEL_ENDPOINT \|\| 'http://localhost:4318/v1/traces',` | L124 |
+| `apps/corp-cockpit-astro/src\pages\uk\cockpit\[companyId]\welcome.astro` | `// TODO: Fetch from auth context or API` | L19 |
+| `apps/corp-cockpit-astro/src\pages\no\cockpit\[companyId]\welcome.astro` | `// TODO: Fetch from auth context or API` | L19 |
+| `apps/corp-cockpit-astro/src\pages\en\test.astro` | `href=\{`http://localhost:$\{service.port\}/health`\}` | L74 |
+| `apps/corp-cockpit-astro/src\pages\en\test.astro` | `const response = await fetch(`http://localhost:$\{port\}/health`, \{` | L435 |
+| `apps/corp-cockpit-astro/src\pages\en\cockpit\[companyId]\welcome.astro` | `// TODO: Fetch from auth context or API` | L19 |
+| `apps/corp-cockpit-astro/src\pages\en\cockpit\[companyId]\boardroom.astro` | `<link rel="dns-prefetch" href="https://fonts.googleapis.com" />` | L38 |
+| `apps/corp-cockpit-astro/src\pages\en\partners\[partnerId]\tenants.astro` | `// TODO: Fetch partner and tenants data from API` | L7 |
+| `apps/corp-cockpit-astro/src\pages\en\partners\[partnerId]\index.astro` | `// TODO: Fetch partner data from API` | L9 |
+| `apps/corp-cockpit-astro/src\pages\trends.astro` | `fetch(`http://localhost:3007/metrics/company/$\{companyId\}/period/$\{range\}`)` | L295 |
+| `apps/corp-cockpit-astro/src\pages\[lang]\cockpit\shared\[linkId].astro` | `// Fetch share link data from API` | L22 |
+| `apps/corp-cockpit-astro/src\pages\[lang]\cockpit\shared\[linkId].astro` | ``$\{import.meta.env.PUBLIC_REPORTING_API_URL \|\| 'http://localhost:3002'\}/share/$\{linkId\}`,` | L28 |
+| `apps/corp-cockpit-astro/src\pages\[lang]\cockpit\[companyId]\benchmarks.astro` | `const response = await fetch(`http://localhost:3001/companies/$\{companyId\}/consent`);` | L171 |
+| `apps/corp-cockpit-astro/src\pages\[lang]\cockpit\[companyId]\benchmarks.astro` | `const response = await fetch(`http://localhost:3001/companies/$\{companyId\}/consent`, \{` | L191 |
+| `apps/corp-cockpit-astro/src\pages\[lang]\cockpit\[companyId]\benchmarks.astro` | `savedCohorts: [], // TODO: Fetch saved cohorts from API` | L226 |
+| `apps/corp-cockpit-astro/src\pages\[lang]\cockpit\[companyId]\benchmarks.astro` | ``http://localhost:3001/companies/$\{companyId\}/benchmarks?$\{params.toString()\}`` | L271 |
+| `apps/corp-cockpit-astro/src\pages\[lang]\cockpit\[companyId]\reports\[reportId]\approval.astro` | `// TODO: Fetch report details from API` | L27 |
+| `apps/corp-cockpit-astro/src\pages\[lang]\cockpit\[companyId]\benchmarks\index.astro` | `const url = `http://localhost:3001/companies/$\{companyId\}/benchmarks?$\{params.toString()\}`;` | L231 |
+| `apps/corp-cockpit-astro/src\pages\[lang]\cockpit\[companyId]\benchmarks\index.astro` | `const percentileUrl = `http://localhost:3001/benchmarks/percentiles?companyId=$\{companyId\}&metric=$\{currentFilters.metric\}`;` | L260 |
+| `apps/corp-cockpit-astro/src\pages\[lang]\cockpit\[companyId]\forecast.astro` | `const response = await fetch(`http://localhost:3001/forecasts/export/pdf?companyId=$\{companyId\}`);` | L151 |
+| `apps/corp-cockpit-astro/src\pages\[lang]\cockpit\[companyId]\forecast.astro` | `const response = await fetch(`http://localhost:3001/forecasts/export/csv?companyId=$\{companyId\}`);` | L183 |
+| `apps/corp-cockpit-astro/src\pages\api\campaigns\[id]\transition.ts` | `'http://localhost:3002';` | L13 |
+| `apps/corp-cockpit-astro/src\layouts\BaseLayout.updated.astro` | `<link rel="dns-prefetch" href="https://fonts.googleapis.com" />` | L63 |
+| `apps/corp-cockpit-astro/src\components\campaigns\CampaignCreationWizard.tsx` | `const templatesRes = await fetch('/api/program-templates');` | L126 |
+| `apps/corp-cockpit-astro/src\components\campaigns\CampaignCreationWizard.tsx` | `const groupsRes = await fetch('/api/beneficiary-groups');` | L132 |
+| `apps/corp-cockpit-astro/src\components\campaigns\CampaignCreationWizard.tsx` | `const adminsRes = await fetch(`/api/companies/$\{companyId\}/users?role=admin`);` | L138 |
+| `apps/corp-cockpit-astro/src\components\campaigns\CampaignCreationWizard.tsx` | `const response = await fetch('/api/campaigns', \{` | L289 |
+| `apps/corp-cockpit-astro/src\components\campaigns\CampaignList.tsx` | `const response = await fetch(`/api/campaigns?$\{params\}`);` | L262 |
+| `apps/corp-cockpit-astro/src\components\campaigns\CampaignList.tsx` | `const response = await fetch(`/api/campaigns/$\{campaignId\}/transition`, \{` | L362 |
+| `apps/corp-cockpit-astro/src\components\campaigns\CampaignDetailDashboard.tsx` | `* Data fetching via @tanstack/react-query with 6 API endpoints.` | L14 |
+| `apps/corp-cockpit-astro/src\components\campaigns\CampaignDetailDashboard.tsx` | `const API_BASE = import.meta.env.PUBLIC_REPORTING_API_URL \|\| 'http://localhost:3001/api';` | L152 |
+| `apps/corp-cockpit-astro/src\components\campaigns\CampaignDetailDashboard.tsx` | `const response = await fetch(`$\{API_BASE\}/campaigns/$\{campaignId\}/dashboard`);` | L155 |
+| `apps/corp-cockpit-astro/src\components\campaigns\CampaignDetailDashboard.tsx` | `const response = await fetch(`$\{API_BASE\}/campaigns/$\{campaignId\}/time-series?period=$\{period\}`);` | L164 |
+| `apps/corp-cockpit-astro/src\components\campaigns\CampaignDetailDashboard.tsx` | `const response = await fetch(`$\{API_BASE\}/campaigns/$\{campaignId\}/financials`);` | L170 |
+| `apps/corp-cockpit-astro/src\components\campaigns\CampaignDetailDashboard.tsx` | `const response = await fetch(`$\{API_BASE\}/campaigns/$\{campaignId\}/volunteers`);` | L176 |
+| `apps/corp-cockpit-astro/src\components\campaigns\CampaignDetailDashboard.tsx` | `const response = await fetch(`$\{API_BASE\}/campaigns/$\{campaignId\}/impact`);` | L182 |
+| `apps/corp-cockpit-astro/src\components\scenario-planner\ScenarioPlanner.tsx` | `const response = await fetch(`/api/scenarios/$\{savedScenarioId\}`, \{` | L69 |
+| `apps/corp-cockpit-astro/src\components\scenario-planner\ScenarioPlanner.tsx` | `const response = await fetch('/api/scenarios', \{` | L96 |
+| `apps/corp-cockpit-astro/src\components\publications\PublicationsList.tsx` | `const response = await fetch('/api/v1/publications', \{` | L16 |
+| `apps/corp-cockpit-astro/src\components\publications\PublicationsManager.tsx` | `const response = await fetch(`/api/publications?tenantId=$\{companyId\}`, \{` | L47 |
+| `apps/corp-cockpit-astro/src\components\publications\PublicationsManager.tsx` | `const response = await fetch(`/api/publications/$\{publicationId\}/live`, \{` | L97 |
+| `apps/corp-cockpit-astro/src\components\publications\PublicationsManager.tsx` | `const response = await fetch(`/api/publications/$\{publicationId\}`, \{` | L134 |
+| `apps/corp-cockpit-astro/src\components\publications\PublicationAnalytics.tsx` | `const response = await fetch(`/api/publications/$\{publication.id\}/stats`, \{` | L23 |
+| `apps/corp-cockpit-astro/src\components\generators\MethodsWhitepaperGenerator.tsx` | `const response = await fetch('/api/v1/gen-reports/generate', \{` | L74 |
+| `apps/corp-cockpit-astro/src\components\generators\MethodsWhitepaperGenerator.tsx` | `const response = await fetch('/api/v1/export/pdf', \{` | L123 |
+| `apps/corp-cockpit-astro/src\components\generators\CaseStudyGenerator.tsx` | `const response = await fetch('/api/v1/gen-reports/generate', \{` | L74 |
+| `apps/corp-cockpit-astro/src\components\generators\CaseStudyGenerator.tsx` | `const response = await fetch('/api/v1/export/pdf', \{` | L123 |
+| `apps/corp-cockpit-astro/src\components\deck\DeckExporter.tsx` | `const response = await fetch(`/api/v2/deck/export/$\{exportId\}/status`, \{` | L49 |
+| `apps/corp-cockpit-astro/src\components\deck\DeckExporter.tsx` | `const response = await fetch(`/api/v2/deck/$\{deckId\}/export`, \{` | L100 |
+| `apps/corp-cockpit-astro/src\components\deck\DeckComposer.tsx` | `const response = await fetch('/api/v2/deck/templates');` | L112 |
+| `apps/corp-cockpit-astro/src\components\deck\DeckComposer.tsx` | `const response = await fetch('/api/v2/deck/create', \{` | L131 |
+| `apps/corp-cockpit-astro/src\components\deck\README.md` | `const response = await fetch('/api/reports/export/pptx', \{` | L124 |
+| `apps/corp-cockpit-astro/src\components\EvidenceDrawer.tsx` | `const analyticsUrl = import.meta.env.PUBLIC_ANALYTICS_API_URL \|\| 'http://localhost:3007';` | L125 |
+| `apps/corp-cockpit-astro/src\components\governance\DSARStatus.tsx` | `// TODO: Fetch from Worker-1 DSAR API` | L64 |
+| `apps/corp-cockpit-astro/src\components\governance\RetentionPolicies.tsx` | `// TODO: Fetch from Worker-1 retention policy API` | L51 |
+| `apps/corp-cockpit-astro/src\components\governance\ConsentManager.tsx` | `// TODO: Fetch from Worker-1 consent API` | L48 |
+| `apps/corp-cockpit-astro/src\components\identity\SSOSettings.tsx` | `// Fetch from Worker-1 platform API` | L33 |
+| `apps/corp-cockpit-astro/src\components\identity\SCIMStatus.tsx` | `// Fetch SCIM config from Worker-1 platform API` | L72 |
+| `apps/corp-cockpit-astro/src\components\identity\SCIMRoleMappingEditor.tsx` | `const response = await fetch(`/api/identity/scim/$\{companyId\}/mappings`, \{` | L178 |
+| `apps/corp-cockpit-astro/src\components\identity\RoleMappingTable.tsx` | `// TODO: Fetch from Worker-1 platform API` | L39 |
+| `apps/corp-cockpit-astro/src\components\usage\StuckDetector.tsx` | `const response = await fetch(`/api/usage-analytics/$\{companyId\}/stuck-users`);` | L27 |
+| `apps/corp-cockpit-astro/src\components\usage\RetentionHeatmap.tsx` | `const response = await fetch(`/api/usage-analytics/$\{companyId\}/retention`);` | L24 |
+| `apps/corp-cockpit-astro/src\components\usage\NPSWidget.tsx` | `const response = await fetch(`/api/usage-analytics/$\{companyId\}/nps`);` | L25 |
+| `apps/corp-cockpit-astro/src\components\usage\ConversionFunnel.tsx` | `const response = await fetch(`/api/usage-analytics/$\{companyId\}/funnel`);` | L24 |
+| `apps/corp-cockpit-astro/src\components\admin-studio\EmbedTokenManager.tsx` | `const response = await fetch(`/api/admin-studio/embed-tokens/$\{companyId\}`);` | L38 |
+| `apps/corp-cockpit-astro/src\components\admin-studio\EmbedTokenManager.tsx` | `const response = await fetch(`/api/admin-studio/embed-tokens/$\{companyId\}`, \{` | L47 |
+| `apps/corp-cockpit-astro/src\components\admin-studio\EmbedTokenManager.tsx` | `const response = await fetch(`/api/admin-studio/embed-tokens/$\{companyId\}/$\{tokenId\}`, \{` | L66 |
+| `apps/corp-cockpit-astro/src\components\admin-studio\DomainAllowListManager.tsx` | `const response = await fetch(`/api/admin-studio/domain-allowlist/$\{companyId\}`);` | L32 |
+| `apps/corp-cockpit-astro/src\components\admin-studio\DomainAllowListManager.tsx` | `const response = await fetch(`/api/admin-studio/domain-allowlist/$\{companyId\}`, \{` | L41 |
+| `apps/corp-cockpit-astro/src\components\admin-studio\DomainAllowListManager.tsx` | `const response = await fetch(`/api/admin-studio/domain-allowlist/$\{companyId\}/$\{domainId\}`, \{` | L65 |
+| `apps/corp-cockpit-astro/src\components\admin-studio\DataResidencySelector.tsx` | `const response = await fetch('/api/admin-studio/residency/regions');` | L35 |
+| `apps/corp-cockpit-astro/src\components\admin-studio\DataResidencySelector.tsx` | `const response = await fetch(`/api/admin-studio/residency/$\{companyId\}`);` | L49 |
+| `apps/corp-cockpit-astro/src\components\admin-studio\DataResidencySelector.tsx` | `const response = await fetch(`/api/admin-studio/residency/$\{companyId\}`, \{` | L58 |
+| `apps/corp-cockpit-astro/src\components\admin-studio\ActivityStream.tsx` | `const response = await fetch(`/api/admin-studio/audit/$\{companyId\}?limit=50`);` | L35 |
+| `apps/corp-cockpit-astro/src\components\tenant\TenantSelector.tsx` | `// const response = await fetch('/api/companies');` | L37 |
+| `apps/corp-cockpit-astro/src\components\reports\ReportPreview.tsx` | `await fetch(`/api/companies/$\{companyId\}/gen-reports/$\{report.reportId\}`, \{` | L46 |
+| `apps/corp-cockpit-astro/src\components\reports\ReportPreview.tsx` | `await fetch(`/api/companies/$\{companyId\}/gen-reports/$\{report.reportId\}`, \{` | L70 |
+| `apps/corp-cockpit-astro/src\components\reports\ReportGenerationModal.tsx` | `const response = await fetch(`http://localhost:3001/companies/$\{companyId\}/reports`, \{` | L158 |
+| `apps/corp-cockpit-astro/src\components\reports\ReportGenerationModal.tsx` | ``http://localhost:3001/companies/$\{companyId\}/reports/$\{generatedReportId\}/download`,` | L207 |
+| `apps/corp-cockpit-astro/src\components\reports\ExportExecutivePack.tsx` | `const response = await fetch(`http://localhost:3001/exports/presentations`, \{` | L110 |
+| `apps/corp-cockpit-astro/src\components\reports\ExportExecutivePack.tsx` | `const response = await fetch(`http://localhost:3001/exports/$\{exportId\}/status`);` | L140 |
+| `apps/corp-cockpit-astro/src\components\evidence\LineageDrawer.test.tsx` | `// Mock the fetch API` | L6 |
+| `apps/corp-cockpit-astro/src\components\evidence\LineageDrawer.test.tsx` | `(global.fetch as any).mockRejectedValueOnce(new Error('API not available'));` | L30 |
+| `apps/corp-cockpit-astro/src\components\evidence\LineageDrawer.test.tsx` | `(global.fetch as any).mockRejectedValueOnce(new Error('API not available'));` | L38 |
+| `apps/corp-cockpit-astro/src\components\evidence\LineageDrawer.test.tsx` | `(global.fetch as any).mockRejectedValueOnce(new Error('API not available'));` | L49 |
+| `apps/corp-cockpit-astro/src\components\evidence\LineageDrawer.test.tsx` | `(global.fetch as any).mockRejectedValueOnce(new Error('API not available'));` | L62 |
+| `apps/corp-cockpit-astro/src\components\evidence\LineageDrawer.test.tsx` | `(global.fetch as any).mockRejectedValueOnce(new Error('API not available'));` | L75 |
+| `apps/corp-cockpit-astro/src\components\evidence\LineageDrawer.test.tsx` | `(global.fetch as any).mockRejectedValueOnce(new Error('API not available'));` | L89 |
+| `apps/corp-cockpit-astro/src\components\evidence\LineageDrawer.test.tsx` | `(global.fetch as any).mockRejectedValueOnce(new Error('API not available'));` | L102 |
+| `apps/corp-cockpit-astro/src\components\evidence\LineageDrawer.test.tsx` | `(global.fetch as any).mockRejectedValueOnce(new Error('API not available'));` | L115 |
+| `apps/corp-cockpit-astro/src\components\evidence\LineageDrawer.test.tsx` | `(global.fetch as any).mockRejectedValueOnce(new Error('API not available'));` | L127 |
+| `apps/corp-cockpit-astro/src\components\evidence\LineageDrawer.test.tsx` | `(global.fetch as any).mockRejectedValueOnce(new Error('API not available'));` | L138 |
+| `apps/corp-cockpit-astro/src\components\evidence\LineageDrawer.test.tsx` | `(global.fetch as any).mockRejectedValueOnce(new Error('API not available'));` | L152 |
+| `apps/corp-cockpit-astro/src\components\evidence\LineageDrawer.test.tsx` | `(global.fetch as any).mockRejectedValueOnce(new Error('API not available'));` | L197 |
+| `apps/corp-cockpit-astro/src\components\evidence\LineageDrawer.test.tsx` | `(global.fetch as any).mockRejectedValueOnce(new Error('API not available'));` | L208 |
+| `apps/corp-cockpit-astro/src\components\evidence\LineageDrawer.test.tsx` | `(global.fetch as any).mockRejectedValueOnce(new Error('API not available'));` | L220 |
+| `apps/corp-cockpit-astro/src\components\evidence\LineageDrawer.test.tsx` | `(global.fetch as any).mockRejectedValueOnce(new Error('API not available'));` | L232 |
+| `apps/corp-cockpit-astro/src\components\evidence\LineageDrawer.test.tsx` | `(global.fetch as any).mockRejectedValueOnce(new Error('API not available'));` | L243 |
+| `apps/corp-cockpit-astro/src\components\views\ShareLinkModal.tsx` | `const response = await fetch(`/api/companies/$\{companyId\}/share-links`, \{` | L40 |
+| `apps/corp-cockpit-astro/src\components\views\SavedViewsList.tsx` | `const response = await fetch(`/api/companies/$\{companyId\}/views`, \{` | L45 |
+| `apps/corp-cockpit-astro/src\components\views\SavedViewsList.tsx` | `const response = await fetch(`/api/companies/$\{companyId\}/views/$\{viewId\}`, \{` | L74 |
+| `apps/corp-cockpit-astro/src\components\views\SavedViewsList.tsx` | `const response = await fetch(`/api/companies/$\{companyId\}/views/$\{viewId\}`, \{` | L93 |
+| `apps/corp-cockpit-astro/src\components\views\SaveViewModal.tsx` | `const response = await fetch(`/api/companies/$\{companyId\}/views`, \{` | L48 |
+| `apps/corp-cockpit-astro/src\components\theme\WhitelabelPackExport.tsx` | `const response = await fetch(`/api/partners/$\{partnerId\}/whitelabel/export`, \{` | L74 |
+| `apps/corp-cockpit-astro/src\components\status\StatusDisplay.tsx` | `// TODO: Fetch from Worker-1 status API` | L46 |
+| `apps/corp-cockpit-astro/src\components\status\StatusBanner.tsx` | `// const response = await fetch('/api/status/system');` | L49 |
+| `apps/corp-cockpit-astro/src\components\status\StatusBanner.tsx` | `// In production, this would fetch from /api/status/system` | L422 |
+| `apps/corp-cockpit-astro/src\components\status\SLOMetrics.tsx` | `// TODO: Fetch from Worker-1 and Worker-2 APIs` | L38 |
+| `apps/corp-cockpit-astro/src\components\status\SLOIndicator.tsx` | `// const response = await fetch('/api/status/slo');` | L48 |
+| `apps/corp-cockpit-astro/src\components\status\IncidentShelf.tsx` | `// const response = await fetch('/api/status/incidents');` | L57 |
+| `apps/corp-cockpit-astro/src\components\status\IncidentHistory.tsx` | `// TODO: Fetch from Worker-1 incident management API` | L54 |
+| `apps/corp-cockpit-astro/src\components\schedules\SchedulesList.tsx` | `const response = await fetch(`/api/companies/$\{companyId\}/schedules/$\{scheduleId\}`, \{` | L56 |
+| `apps/corp-cockpit-astro/src\components\onboarding\WelcomeFlow.tsx` | `await fetch(`/api/companies/$\{companyId\}/settings`, \{` | L76 |
+| `apps/corp-cockpit-astro/src\components\common\ErrorBoundary.tsx` | `// fetch('/api/observability/errors', \{` | L95 |
+| `apps/corp-cockpit-astro/src\components\boardroom\CreateDeckButton.tsx` | `const response = await fetch('/api/reports/export/pptx', \{` | L42 |
+| `apps/corp-cockpit-astro/src\components\boardroom\BoardroomLiveApp.tsx` | `const response = await fetch(`/api/cockpit/$\{companyId\}/live-metrics`);` | L151 |
+| `apps/corp-cockpit-astro/src\components\benchmarks\ExportBenchmarks.tsx` | `const url = `http://localhost:3001/companies/$\{companyId\}/benchmarks/export?$\{params.toString()\}`;` | L37 |
+| `apps/corp-cockpit-astro/src\components\benchmarks\CohortSelector.tsx` | `const response = await fetch(`http://localhost:3001/companies/$\{companyId\}/cohorts`);` | L82 |
+| `apps/corp-cockpit-astro/src\components\benchmarks\CohortBuilder.tsx` | ``http://localhost:3001/companies/$\{companyId\}/cohorts/preview?$\{params.toString()\}`` | L111 |
+| `apps/corp-cockpit-astro/src\components\benchmarks\CohortBuilder.tsx` | `const response = await fetch(`http://localhost:3001/companies/$\{companyId\}/cohorts`, \{` | L154 |
+| `apps/corp-cockpit-astro/src\components\approvals\ApprovalWorkflowPanel.tsx` | `const response = await fetch(`/api/companies/$\{companyId\}/reports/$\{reportId\}/approval`);` | L110 |
+| `apps/corp-cockpit-astro/src\components\approvals\ApprovalWorkflowPanel.tsx` | `const response = await fetch(`/api/companies/$\{companyId\}/reports/$\{reportId\}/comments`);` | L132 |
+| `apps/corp-cockpit-astro/src\components\approvals\ApprovalWorkflowPanel.tsx` | `const response = await fetch(`/api/companies/$\{companyId\}/reports/$\{reportId\}/versions`);` | L142 |
+| `apps/corp-cockpit-astro/src\components\approvals\ApprovalWorkflowPanel.tsx` | `const response = await fetch(`/api/companies/$\{companyId\}/reports/$\{reportId\}/comments`, \{` | L187 |
+| `apps/corp-cockpit-astro/src\components\admin\hierarchies\OrgTreeEditor.tsx` | `const response = await fetch(`/api/hierarchies/orgs/$\{orgId\}/units`);` | L30 |
+| `apps/corp-cockpit-astro/src\components\admin\DemoFactoryManager.tsx` | `const response = await fetch('/api/v1/demo/tenants');` | L35 |
+| `apps/corp-cockpit-astro/src\components\admin\DemoFactoryManager.tsx` | `const response = await fetch('/api/v1/demo/tenants', \{` | L57 |
+| `apps/corp-cockpit-astro/src\components\admin\DemoFactoryManager.tsx` | `const response = await fetch(`/api/v1/demo/$\{tenantId\}`, \{` | L97 |
+| `apps/corp-cockpit-astro/src\components\admin\BrandingConfig.tsx` | `const response = await fetch(`/api/companies/$\{companyId\}/branding`);` | L144 |
+| `apps/corp-cockpit-astro/src\components\admin\BrandingConfig.tsx` | `const response = await fetch(`/api/companies/$\{companyId\}/branding`, \{` | L212 |
+| `apps/corp-cockpit-astro/src\components\admin\WeightOverrides.tsx` | `const response = await fetch(`/api/companies/$\{companyId\}/weights`);` | L89 |
+| `apps/corp-cockpit-astro/src\components\admin\WeightOverrides.tsx` | `const response = await fetch(`/api/companies/$\{companyId\}/weights/$\{category\}`, \{` | L105 |
+| `apps/corp-cockpit-astro/src\components\admin\ThemePresetLoader.tsx` | `const response = await fetch(`/api/companies/$\{companyId\}/settings`, \{` | L63 |
+| `apps/corp-cockpit-astro/src\components\admin\ThemeEditor.tsx` | `const response = await fetch(`/api/companies/$\{companyId\}/theme`);` | L67 |
+| `apps/corp-cockpit-astro/src\components\admin\ThemeEditor.tsx` | `const response = await fetch(`/api/companies/$\{companyId\}/theme`, \{` | L134 |
+| `apps/corp-cockpit-astro/src\components\admin\ImpactInToggles.tsx` | `const response = await fetch(`/api/companies/$\{companyId\}/integrations/impact-in`);` | L54 |
+| `apps/corp-cockpit-astro/src\components\admin\ImpactInToggles.tsx` | `const response = await fetch(`/api/companies/$\{companyId\}/integrations/impact-in/$\{platform\}`, \{` | L69 |
+| `apps/corp-cockpit-astro/src\components\admin\ImpactInToggles.tsx` | `const response = await fetch(`/api/companies/$\{companyId\}/integrations/impact-in/$\{platform\}/test`, \{` | L92 |
+| `apps/corp-cockpit-astro/src\components\admin\AuditLog.tsx` | `const response = await fetch(`/api/companies/$\{companyId\}/audit-log?$\{params\}`);` | L65 |
+| `apps/corp-cockpit-astro/src\components\admin\APIKeyManager.tsx` | `fetchAPIKeys();` | L30 |
+| `apps/corp-cockpit-astro/src\components\admin\APIKeyManager.tsx` | `async function fetchAPIKeys() \{` | L33 |
+| `apps/corp-cockpit-astro/src\components\admin\APIKeyManager.tsx` | `const response = await fetch(`/api/companies/$\{companyId\}/api-keys`);` | L36 |
+| `apps/corp-cockpit-astro/src\components\admin\APIKeyManager.tsx` | `console.error('Failed to fetch API keys:', error);` | L42 |
+| `apps/corp-cockpit-astro/src\components\admin\APIKeyManager.tsx` | `const response = await fetch(`/api/companies/$\{companyId\}/api-keys`, \{` | L50 |
+| `apps/corp-cockpit-astro/src\components\admin\APIKeyManager.tsx` | `const response = await fetch(`/api/companies/$\{companyId\}/api-keys/$\{keyId\}`, \{` | L73 |
+| `apps/corp-cockpit-astro/src\components\admin\DomainAllowList.tsx` | `domain: 'localhost:3000',` | L56 |
+| `apps/corp-cockpit-astro/src\components\admin\DomainAllowList.tsx` | `placeholder="app.example.com or localhost:3000"` | L191 |
+| `apps/corp-cockpit-astro/src\components\admin\DomainAllowList.tsx` | `Examples: app.example.com, staging.example.com, localhost:3000` | L195 |
+| `apps/corp-cockpit-astro/src\components\nlq\USAGE.md` | `// Fetch answer from API` | L162 |
+| `apps/corp-cockpit-astro/src\components\nlq\USAGE.md` | `const response = await fetch(`http://localhost:3001/api/nlq/queries/$\{id\}`);` | L163 |
+| `apps/corp-cockpit-astro/src\components\widgets\ExportButtons.tsx` | `const url = `http://localhost:3001/export/csrd?format=$\{format\}$\{period ? `&period=$\{period\}` : ''\}`;` | L14 |
+| `apps/corp-cockpit-astro/src\components\widgets\SROIPanelOptimized.tsx` | `const url = `http://localhost:3001/companies/$\{companyId\}/sroi$\{period ? `?period=$\{period\}` : ''\}`;` | L52 |
+| `apps/corp-cockpit-astro/src\components\widgets\SROIPanelEnhanced.tsx` | `const url = `http://localhost:3001/companies/$\{companyId\}/sroi$\{period ? `?period=$\{period\}` : ''\}`;` | L59 |
+
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="search" data-tool-name="codebase_search">
+<details>
+                <summary>Tool use: **codebase_search** • Searched codebase "How does the app connect to databases? What database libraries are used?" • **13** results</summary>
+            
+| File | Lines |
+|------|-------|
+| `apps/corp-cockpit-astro/src/pages/api/login.ts` | L11-229 |
+| `apps/corp-cockpit-astro/src/utils/sseClient.ts` | L52-578 |
+| `apps/corp-cockpit-astro/src/hooks/useSSEConnection.ts` | L48 |
+| `apps/corp-cockpit-astro/src/pages/api/forgot-password.ts` | L2-90 |
+| `apps/corp-cockpit-astro/src/utils/sseClient.ts` | L22 |
+| `apps/corp-cockpit-astro/src/pages/api/login.ts` | L42-229 |
+| `apps/corp-cockpit-astro/src/hooks/useSSEConnection.ts` | L67-272 |
+| `apps/corp-cockpit-astro/src/api/dashboard.ts` | L47 |
+| `apps/corp-cockpit-astro/src/utils/sseClient.ts` | L41-578 |
+| `apps/corp-cockpit-astro/src/lib/api.ts` | L2-79 |
+| `apps/corp-cockpit-astro/src/pages/index.astro` | L57 |
+| `apps/corp-cockpit-astro/src/pages/api/sse/dashboard.ts` | L87 |
+| `apps/corp-cockpit-astro/src/hooks/useSSEConnection.ts` | L50-272 |
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="search" data-tool-name="codebase_search">
+<details>
+                <summary>Tool use: **codebase_search** • Searched codebase "What microservices or API endpoints does the app call? Where are external API calls made?" • **15** results</summary>
+            
+| File | Lines |
+|------|-------|
+| `apps/corp-cockpit-astro/src/api/dashboard.ts` | L47 |
+| `apps/corp-cockpit-astro/src/lib/api.ts` | L2-79 |
+| `apps/corp-cockpit-astro/src/pages/api/campaigns.ts` | L84 |
+| `apps/corp-cockpit-astro/src/components/dashboard/ProgrammeTiles.tsx` | L88-665 |
+| `apps/corp-cockpit-astro/src/api/dashboard.ts` | L15-73 |
+| `apps/corp-cockpit-astro/src/components/evidence/EvidenceExplorer.tsx` | L12-421 |
+| `apps/corp-cockpit-astro/src/pages/api/sse/dashboard.ts` | L87 |
+| `apps/corp-cockpit-astro/src/components/evidence/LineageDrawer.tsx` | L56-376 |
+| `apps/corp-cockpit-astro/src/api/identity.ts` | L84-180 |
+| `apps/corp-cockpit-astro/src/components/widgets/AtAGlanceWithDemo.tsx` | L11-239 |
+| `apps/corp-cockpit-astro/src/widgets/impact-tiles/TileGrid.tsx` | L12-144 |
+| `apps/corp-cockpit-astro/src/pages/compliance/alerts.ts` | L83 |
+| `apps/corp-cockpit-astro/src/pages/index.astro` | L57 |
+| `apps/corp-cockpit-astro/src/api/dashboard.ts` | L132-284 |
+| `apps/corp-cockpit-astro/src/components/widgets/Q2QFeed.tsx` | L9-226 |
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Checking the services directory to understand the microservices architecture:
+
+
+---
+
+<tool-use data-tool-type="generic" data-tool-name="list_dir">
+<details>
+            <summary>Tool use: **list_dir** • Listed directory, 0 results</summary>
+        
+No results found
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: apps/corp-cockpit-astro/src/pages/api/login.ts</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: apps/corp-cockpit-astro/src/api/dashboard.ts</summary>
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Creating the Phase 1 Discovery & Assessment report:
+
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="write">
+
+<details><summary>Tool use: **write** • Edit file: plans/cloudflare-migration-phase1-discovery.md</summary>
+
+**Chunk 1**
+Lines added: 377, lines removed: 1
+
+```diff
+@@ -1,1 +1,377 @@
+- 
++ # Phase 1: Discovery &amp; Assessment Report
++ **Date:** 2025-01-27  
++ **Project:** CSR Platform → Cloudflare Migration
++ 
++ ---
++ 
++ ## 1. Current Astro Configuration
++ 
++ ### 1.1 Astro Config Location
++ - **File:** &#96;apps/corp-cockpit-astro/astro.config.mjs&#96;
++ - **Current Adapter:** &#96;@astrojs/node&#96; (standalone mode)
++ - **Port:** 4327
++ - **Output Mode:** &#96;server&#96; (SSR enabled)
++ 
++ ### 1.2 Key Configuration Details
++ - **Integrations:**
++   - &#96;@astrojs/react&#96;
++   - &#96;@astrojs/tailwind&#96;
++   - Custom CSP (Content Security Policy) integration
++ - **i18n:** Supports &#96;en&#96;, &#96;no&#96;, &#96;uk&#96; locales
++ - **Vite:** Custom chunking strategy, code splitting, performance optimizations
++ - **Security:** CSP headers, Trusted Types, security headers in production
++ 
++ ---
++ 
++ ## 2. Package Dependencies
++ 
++ ### 2.1 Current Dependencies (&#96;package.json&#96;)
++ &#96;&#96;&#96;json
++ {
++   "@astrojs/node": "^8.0.0",  // ⚠️ NEEDS REPLACEMENT
++   "@astrojs/react": "^3.0.0",
++   "@astrojs/tailwind": "^5.0.0",
++   "@tanstack/react-query": "^5.0.0",
++   "astro": "^4.0.0",
++   "bcryptjs": "^2.4.3",  // ⚠️ For password hashing
++   "chart.js": "^4.5.1",
++   "react": "^18.2.0",
++   "react-chartjs-2": "^5.3.1",
++   "recharts": "^3.5.1",
++   "web-vitals": "^3.5.0",
++   "zod": "^3.22.0",
++   "zustand": "^4.4.0"
++ }
++ &#96;&#96;&#96;
++ 
++ ### 2.2 Database Dependencies (Lazy-Loaded)
++ - **&#96;drizzle-orm&#96;** - Used in &#96;src/pages/api/login.ts&#96; and &#96;src/pages/api/forgot-password.ts&#96;
++ - **&#96;@teei/shared-schema&#96;** - Shared database schema package
++ - **&#96;bcryptjs&#96;** - Password hashing
++ 
++ **Note:** Database dependencies are lazy-loaded to allow demo mode without DB.
++ 
++ ---
++ 
++ ## 3. Database Usage Analysis
++ 
++ ### 3.1 Database Calls Found
++ **Files using database:**
++ 1. &#96;src/pages/api/login.ts&#96; - User authentication
++    - Uses &#96;drizzle-orm&#96; with &#96;@teei/shared-schema&#96;
++    - Queries: &#96;users&#96;, &#96;companyUsers&#96; tables
++    - Password verification with &#96;bcryptjs&#96;
++ 
++ 2. &#96;src/pages/api/forgot-password.ts&#96; - Password reset
++    - Uses &#96;drizzle-orm&#96; with &#96;@teei/shared-schema&#96;
++    - Queries: &#96;users&#96; table
++ 
++ ### 3.2 Database Schema (Inferred)
++ From code analysis:
++ - **&#96;users&#96;** table:
++   - &#96;id&#96;, &#96;email&#96;, &#96;firstName&#96;, &#96;lastName&#96;, &#96;passwordHash&#96;, &#96;role&#96;
++ - **&#96;companyUsers&#96;** table:
++   - &#96;userId&#96;, &#96;companyId&#96; (many-to-many relationship)
++ 
++ ### 3.3 Database Connection Pattern
++ &#96;&#96;&#96;typescript
++ // Lazy-load pattern used:
++ const [{ eq }, { db, users, companyUsers }, bcrypt] = await Promise.all([
++   import('drizzle-orm'),
++   import('@teei/shared-schema'),
++   import('bcryptjs'),
++ ]);
++ &#96;&#96;&#96;
++ 
++ **Migration Impact:** Need to replace Drizzle ORM with raw D1 queries or create D1-compatible schema.
++ 
++ ---
++ 
++ ## 4. Environment Variables Analysis
++ 
++ ### 4.1 Service URLs (Microservice Endpoints)
++ Found **75+ references** to environment variables:
++ 
++ **Core Service URLs:**
++ - &#96;PUBLIC_REPORTING_API_URL&#96; → Default: &#96;http://localhost:3001&#96;
++ - &#96;PUBLIC_ANALYTICS_SERVICE_URL&#96; → Default: &#96;http://localhost:3007&#96;
++ - &#96;PUBLIC_CAMPAIGNS_SERVICE_URL&#96; → Default: &#96;http://localhost:3002&#96;
++ - &#96;PUBLIC_Q2Q_AI_SERVICE_URL&#96; → Default: &#96;http://localhost:3005&#96;
++ - &#96;PUBLIC_COMPLIANCE_SERVICE_URL&#96; → Default: Same as REPORTING
++ - &#96;IDENTITY_SERVICE_URL&#96; / &#96;PUBLIC_IDENTITY_SERVICE_URL&#96; → Default: &#96;http://localhost:3017&#96;
++ - &#96;NLQ_SERVICE_URL&#96; → Default: &#96;http://localhost:3011&#96;
++ 
++ **Other Environment Variables:**
++ - &#96;USE_MOCK_AUTH&#96; - Enable mock authentication
++ - &#96;PUBLIC_FEATURE_ADMIN_STUDIO_V1&#96; - Feature flags
++ - &#96;PUBLIC_FEATURE_USAGE_ANALYTICS_V1&#96; - Feature flags
++ - &#96;PUBLIC_SSE_ENDPOINT&#96; - Server-Sent Events endpoint
++ - &#96;PUBLIC_API_BASE_URL&#96; - General API base URL
++ - &#96;PUBLIC_USE_REAL_API&#96; - Toggle real vs mock API
++ - &#96;PUBLIC_REPORTING_DEBUG&#96; - Debug mode
++ - &#96;VITE_SENTRY_DSN&#96; - Sentry error tracking
++ - &#96;VITE_ENVIRONMENT&#96; - Environment name
++ - &#96;OTEL_EXPORTER_ENDPOINT&#96; → Default: &#96;http://localhost:4318/v1/metrics&#96;
++ - &#96;ENABLE_OTEL&#96; - OpenTelemetry enablement
++ - &#96;DEMO_MODE_ENABLED&#96; - Demo mode toggle
++ - &#96;DEMO_CSV_PATH&#96; - Demo data path
++ 
++ ### 4.2 Environment Variable Usage Pattern
++ - **Client-side:** Uses &#96;import.meta.env.PUBLIC_*&#96; (Astro pattern)
++ - **Server-side:** Uses &#96;process.env.*&#96; or &#96;import.meta.env.*&#96;
++ - **Fallbacks:** Most have localhost defaults for development
++ 
++ ---
++ 
++ ## 5. Microservice Architecture Analysis
++ 
++ ### 5.1 Services Directory Structure
++ Found **26 microservices** in &#96;/services/&#96;:
++ 
++ 1. **ai-budget** - AI budget management
++ 2. **analytics** - Analytics calculations (port 3007)
++ 3. **api-gateway** - API gateway/router
++ 4. **billing** - Billing service
++ 5. **buddy-connector** - External connector
++ 6. **buddy-service** - Buddy matching service
++ 7. **builder-runtime** - Runtime builder
++ 8. **campaigns** - Campaign management (port 3002)
++ 9. **data-residency** - Data residency compliance
++ 10. **discord-bot** - Discord integration
++ 11. **forecast** - Forecasting service
++ 12. **gdpr-service** - GDPR compliance
++ 13. **impact-calculator** - Impact calculations
++ 14. **impact-in** - Impact data ingestion
++ 15. **insights-nlq** - Natural language queries (port 3011)
++ 16. **journey-engine** - User journey engine
++ 17. **kintell-connector** - External connector
++ 18. **notifications** - Notification service
++ 19. **privacy-orchestrator** - Privacy orchestration
++ 20. **program-service** - Program management
++ 21. **q2q-ai** - Qualitative to Quantitative AI (port 3005)
++ 22. **reporting** - Report generation (port 3001)
++ 23. **safety-moderation** - Content moderation
++ 24. **synthetics** - Synthetic monitoring
++ 25. **unified-profile** - User profile service
++ 26. **upskilling-connector** - External connector
++ 
++ ### 5.2 Microservice API Calls Found
++ 
++ **Direct localhost calls (256+ matches):**
++ - &#96;http://localhost:3001&#96; - Reporting service
++ - &#96;http://localhost:3002&#96; - Campaigns service
++ - &#96;http://localhost:3005&#96; - Q2Q AI service
++ - &#96;http://localhost:3007&#96; - Analytics service
++ - &#96;http://localhost:3011&#96; - NLQ service
++ - &#96;http://localhost:3017&#96; - Identity service
++ - &#96;http://localhost:3023&#96; - Analytics (alternative)
++ - &#96;http://localhost:4017&#96; - SSE/Compliance service
++ - &#96;http://localhost:4318&#96; - OpenTelemetry exporter
++ 
++ **API Routes in Astro App:**
++ - &#96;/api/login&#96; - Authentication
++ - &#96;/api/forgot-password&#96; - Password reset
++ - &#96;/api/campaigns&#96; - Campaigns proxy
++ - &#96;/api/sse/dashboard&#96; - Server-Sent Events
++ - &#96;/api/usage-analytics/*&#96; - Usage analytics
++ - &#96;/api/demo/*&#96; - Demo mode endpoints
++ - &#96;/api/branding/*&#96; - Branding/theming
++ - &#96;/api/regulatory/*&#96; - Regulatory packs
++ - &#96;/api/reporting/*&#96; - Report generation
++ - &#96;/api/exports&#96; - Export functionality
++ 
++ ### 5.3 Key API Client Files
++ 1. **&#96;src/api/dashboard.ts&#96;** - Main dashboard API client
++    - Fetches SROI, VIS, AI Coverage, Compliance, Campaigns
++    - Uses multiple service URLs
++ 
++ 2. **&#96;src/api/identity.ts&#96;** - Identity/SSO API client
++    - SSO config, SAML, OIDC, SCIM operations
++ 
++ 3. **&#96;src/lib/api.ts&#96;** - Generic API client
++    - Base API client class
++ 
++ 4. **&#96;src/lib/nlq-api.ts&#96;** - Natural Language Query API
++ 
++ ---
++ 
++ ## 6. Critical Features to Migrate
++ 
++ ### 6.1 Authentication &amp; Authorization
++ - **Current:** Database-backed with Drizzle ORM
++ - **Files:** &#96;src/pages/api/login.ts&#96;, &#96;src/pages/api/forgot-password.ts&#96;
++ - **Migration:** Replace with D1 queries, session management
++ 
++ ### 6.2 Dashboard Data
++ - **SROI Calculator** - Calls reporting service
++ - **VIS (Volunteer Impact Score)** - Calls reporting service
++ - **AI Coverage** - Calls analytics service
++ - **Compliance** - Calls compliance/reporting service
++ - **Campaigns** - Calls campaigns service
++ - **AI Insights** - Calls Q2Q AI service
++ 
++ ### 6.3 Real-Time Features
++ - **Server-Sent Events (SSE)** - &#96;/api/sse/dashboard&#96;
++ - **SSE Client** - &#96;src/utils/sseClient.ts&#96; (579 lines)
++ - **Connection management** - 6-state FSM, retry logic, offline storage
++ 
++ ### 6.4 Reporting &amp; Export
++ - **PDF Generation** - &#96;src/lib/pdf.ts&#96;
++ - **PPTX Export** - &#96;src/lib/reporting/pptxBridge.ts&#96;
++ - **Report Generation** - Gen-AI reporting features
++ 
++ ### 6.5 Identity &amp; SSO
++ - **SSO Configuration** - SAML, OIDC
++ - **SCIM Provisioning** - Role mapping, sync
++ - **Identity API Client** - &#96;src/api/identity.ts&#96;
++ 
++ ---
++ 
++ ## 7. Architecture Simplification Strategy
++ 
++ ### 7.1 Services to Inline (Move to Astro API Routes)
++ **High Priority:**
++ 1. **Reporting Service** (port 3001) - Core SROI/VIS calculations
++ 2. **Analytics Service** (port 3007) - Metrics calculations
++ 3. **Campaigns Service** (port 3002) - Campaign management
++ 
++ **Medium Priority:**
++ 4. **Q2Q AI Service** (port 3005) - Can be mocked initially
++ 5. **Identity Service** (port 3017) - SSO/SCIM (can use Cloudflare Workers)
++ 
++ **Low Priority (Remove/Mock for V1):**
++ 6. **NLQ Service** (port 3011) - Natural language queries
++ 7. **Compliance Service** (port 4017) - Can be simplified
++ 8. **OpenTelemetry** (port 4318) - Use Cloudflare Analytics instead
++ 
++ ### 7.2 Services to Remove (Not Needed for V1)
++ - Discord bot
++ - External connectors (buddy, kintell, upskilling)
++ - Billing service
++ - Journey engine
++ - Privacy orchestrator
++ - Safety moderation
++ - Synthetics monitoring
++ 
++ ---
++ 
++ ## 8. Database Migration Requirements
++ 
++ ### 8.1 Current Database Schema (PostgreSQL)
++ From code analysis, need these tables:
++ - &#96;users&#96; - User accounts
++ - &#96;companyUsers&#96; - User-company relationships
++ - &#96;companies&#96; - Tenant companies
++ - &#96;sessions&#96; - Auth sessions (implied)
++ - &#96;volunteers&#96; - Volunteer data
++ - &#96;programs&#96; - Program definitions
++ - &#96;volunteer_sessions&#96; - Volunteer activities
++ - &#96;sroi_snapshots&#96; - Calculated SROI metrics
++ - &#96;reports&#96; - Generated reports
++ 
++ ### 8.2 Migration Approach
++ 1. Create D1 schema matching PostgreSQL structure
++ 2. Convert Drizzle ORM queries to raw D1 SQL
++ 3. Handle SQLite differences (TEXT vs VARCHAR, datetime functions)
++ 4. Migrate seed data
++ 
++ ---
++ 
++ ## 9. Cloudflare-Specific Considerations
++ 
++ ### 9.1 Features to Replace
++ - **Redis** → Cloudflare KV or D1
++ - **ClickHouse** → D1 (for analytics, may need to simplify)
++ - **NATS** → Remove (use Cloudflare Queues if needed)
++ - **PostgreSQL** → D1 (SQLite)
++ 
++ ### 9.2 Features to Keep
++ - **SSE** - Can work with Cloudflare Pages (with limitations)
++ - **File Storage** - Use Cloudflare R2
++ - **CDN** - Built into Cloudflare Pages
++ - **SSL/TLS** - Automatic with Cloudflare
++ 
++ ### 9.3 Potential Limitations
++ - **SSE** - May need to use Cloudflare Workers for better SSE support
++ - **Long-running tasks** - Use Cloudflare Workers + Queues
++ - **File uploads** - Use R2 or Workers
++ - **Background jobs** - Use Cloudflare Cron Triggers
++ 
++ ---
++ 
++ ## 10. Migration Priority Matrix
++ 
++ ### Phase 1 (Critical - Must Have)
++ - [ ] Switch Astro adapter to Cloudflare
++ - [ ] Create D1 database and schema
++ - [ ] Migrate authentication (login, sessions)
++ - [ ] Inline SROI/VIS calculations
++ - [ ] Basic dashboard with metrics
++ 
++ ### Phase 2 (Important - Core Features)
++ - [ ] Campaign management
++ - [ ] Report generation (basic)
++ - [ ] Export functionality (CSV/PDF)
++ - [ ] SSE for real-time updates (if possible)
++ 
++ ### Phase 3 (Nice to Have - Can Mock)
++ - [ ] Q2Q AI insights
++ - [ ] Advanced analytics
++ - [ ] SSO/SCIM (can use Workers)
++ - [ ] Compliance features
++ 
++ ### Phase 4 (Future - Remove for V1)
++ - [ ] NLQ service
++ - [ ] External connectors
++ - [ ] Advanced monitoring
++ - [ ] Complex background jobs
++ 
++ ---
++ 
++ ## 11. Estimated Migration Complexity
++ 
++ | Component | Complexity | Effort | Notes |
++ |-----------|-----------|--------|-------|
++ | Astro Config | Low | 1 hour | Simple adapter swap |
++ | D1 Schema | Medium | 4 hours | Need to convert PostgreSQL → SQLite |
++ | Auth Migration | Medium | 6 hours | Replace Drizzle with D1 queries |
++ | SROI/VIS Inline | High | 16 hours | Complex calculations, need to port logic |
++ | Campaigns Inline | Medium | 8 hours | Move to Astro API routes |
++ | SSE Migration | High | 12 hours | May need Workers, complex state management |
++ | Report Generation | Medium | 8 hours | PDF/PPTX export |
++ | Testing | High | 16 hours | E2E tests, data validation |
++ | **Total** | - | **~71 hours** | ~2 weeks for 1 developer |
++ 
++ ---
++ 
++ ## 12. Next Steps
++ 
++ 1. **Review this report** with stakeholders
++ 2. **Create D1 database** and test schema
++ 3. **Start with Phase 1** (adapter + auth)
++ 4. **Incrementally migrate** services one by one
++ 5. **Test each phase** before proceeding
++ 
++ ---
++ 
++ ## 13. Files to Create/Modify (Summary)
++ 
++ ### Create:
++ - &#96;wrangler.toml&#96; - Cloudflare configuration
++ - &#96;migrations/001_core_schema.sql&#96; - D1 schema
++ - &#96;src/lib/db.ts&#96; - D1 database helper
++ - &#96;src/middleware.ts&#96; - Auth middleware (if not exists)
++ 
++ ### Modify:
++ - &#96;apps/corp-cockpit-astro/astro.config.mjs&#96; - Switch adapter
++ - &#96;apps/corp-cockpit-astro/package.json&#96; - Update scripts, dependencies
++ - &#96;src/pages/api/login.ts&#96; - Replace Drizzle with D1
++ - &#96;src/pages/api/forgot-password.ts&#96; - Replace Drizzle with D1
++ - &#96;src/api/dashboard.ts&#96; - Inline service calls
++ - All service URL references - Update to use Astro API routes
++ 
++ ---
++ 
++ **Report Generated:** 2025-01-27  
++ **Status:** ✅ Phase 1 Complete - Ready for Phase 2
++ 
+```
+
+</details>
+
+</tool-use>
+
+---
+
+
+
+---
+
+
+Completed Phase 1: Discovery & Assessment. Summary:
+
+## Findings
+
+### Current state
+- Astro app using `@astrojs/node` adapter (port 4327)
+- 26 microservices found in `/services/`
+- Database: PostgreSQL via Drizzle ORM (lazy-loaded)
+- 75+ environment variable references
+- 256+ microservice API calls (localhost:3001, 3002, 3005, 3007, etc.)
+
+### Database usage
+- Only 2 files use database directly:
+  - `src/pages/api/login.ts` - Authentication
+  - `src/pages/api/forgot-password.ts` - Password reset
+- Uses `drizzle-orm` + `@teei/shared-schema` package
+- Tables: `users`, `companyUsers` (likely more in shared schema)
+
+### Microservices to migrate
+High priority (inline to Astro API routes):
+1. Reporting Service (port 3001) - SROI/VIS calculations
+2. Analytics Service (port 3007) - Metrics
+3. Campaigns Service (port 3002) - Campaign management
+
+Medium priority:
+4. Q2Q AI Service (port 3005) - Can mock initially
+5. Identity Service (port 3017) - SSO/SCIM
+
+### Migration estimate
+- Total effort: ~71 hours (~2 weeks for 1 developer)
+- Highest complexity: SROI/VIS calculations (16 hours), SSE migration (12 hours)
+
+## Report saved
+Full report saved to: `plans/cloudflare-migration-phase1-discovery.md`
+
+The report includes:
+- Current configuration analysis
+- Database usage patterns
+- Environment variables inventory
+- Microservice architecture map
+- Migration priority matrix
+- Complexity estimates
+- Next steps
+
+Ready to proceed to Phase 2 (Create Cloudflare Configuration)?
+
+---
+
