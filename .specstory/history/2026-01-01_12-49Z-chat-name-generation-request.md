@@ -7681,3 +7681,112 @@ All files are created and ready. Start with `00-OVERVIEW.md` for the index and n
 
 ---
 
+_**User (2026-01-16 15:35Z)**_
+
+this is the project wiht the csr cockpit?
+
+---
+
+_**Agent (model default, mode Agent)**_
+
+
+
+---
+
+
+Yes. This is the TEEI CSR Platform project that includes the Corporate Cockpit. Verifying:
+
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: package.json</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="generic" data-tool-name="list_dir">
+<details>
+            <summary>Tool use: **list_dir** • Listed directory, 0 results</summary>
+        
+No results found
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: apps/corp-cockpit-astro/package.json</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_cmd">
+<details><summary>Tool use: **run_terminal_cmd** • Run command: Get-ChildItem apps/corp-cockpit-astro/src/pages | Select-Object -First 5 Name</summary>
+
+```bash
+Get-ChildItem apps/corp-cockpit-astro/src/pages | Select-Object -First 5 Name
+```
+
+```
+Ready
+Get-ChildItem: C:\Users\ovehe\AppData\Local\Temp\ps-script-04506553-de64-4286-b089-cc0c43a23bf4.ps1:196
+Line |
+ 196 |  Get-ChildItem apps/corp-cockpit-astro/src/pages | Select-Object -Firs .
+     |  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | Cannot find path 'C:\Users\ovehe\apps\corp-cockpit-astro\src\pages' because it does not exist.
+
+```
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Yes. This is the TEEI CSR Platform project that includes the Corporate Cockpit.
+
+## Confirmation
+
+1. Project name: `teei-csr-platform` (from `package.json`)
+2. Corporate Cockpit location: `apps/corp-cockpit-astro/`
+3. Dev script includes: `"pnpm --filter @teei/corp-cockpit-astro dev"` (runs on port 4327)
+
+## Project structure
+
+```
+TEEI_CSR_Platform/
+├── apps/
+│   ├── corp-cockpit-astro/    ← Corporate Cockpit (CSR Dashboard)
+│   └── trust-center/          ← Trust Center (Public Portal)
+├── services/                  ← 26 microservices
+├── packages/                  ← Shared libraries
+└── docs/
+    └── ecosystem/             ← All the documentation I just created
+```
+
+## Corporate Cockpit details
+
+- Location: `apps/corp-cockpit-astro/`
+- Port: `4327` (dev)
+- Tech: Astro 4 + React 18
+- Pages: 93+ Astro pages
+- Features:
+  - Multi-tenant routing (`/cockpit/[companyId]`)
+  - Evidence explorer
+  - Report generation
+  - Campaign management
+  - Admin configuration
+  - Real-time updates (SSE)
+
+All documentation in `docs/ecosystem/` covers this CSR Cockpit and the entire TEEI ecosystem.
+
+---
+
