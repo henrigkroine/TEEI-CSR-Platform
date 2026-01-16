@@ -94,16 +94,6 @@ export default function ActionableItems({ companyId, items: propItems, enableSSE
     autoConnect: enableSSE && !!companyId,
   });
 
-  // Subscribe to campaign updates
-  const handleCampaignUpdate = useCallback((updateData: any) => {
-    if (updateData.companyId === companyId) {
-      console.log('[ActionableItems] Refreshing due to SSE update');
-      fetchData(true);
-    }
-  }, [companyId, fetchData]);
-
-  useSSEMessage(sseConnection, 'campaign_updated', handleCampaignUpdate);
-
   const fetchData = useCallback(async (skipCache = false) => {
     // If items provided as prop, use them (backward compatibility)
     if (propItems) {
@@ -150,6 +140,16 @@ export default function ActionableItems({ companyId, items: propItems, enableSSE
       setLoading(false);
     }
   }, [companyId, propItems]);
+
+  // Subscribe to campaign updates via SSE
+  const handleCampaignUpdate = useCallback((updateData: any) => {
+    if (updateData.companyId === companyId) {
+      console.log('[ActionableItems] Refreshing due to SSE update');
+      fetchData(true);
+    }
+  }, [companyId, fetchData]);
+
+  useSSEMessage(sseConnection, 'campaign_updated', handleCampaignUpdate);
 
   useEffect(() => {
     // Only fetch if companyId is valid
