@@ -15,12 +15,12 @@ INSERT OR IGNORE INTO companies (id, name, slug, industry, employee_count, setti
 -- ============================================
 -- DEMO USERS (passwords hashed with bcrypt - "admin123")
 -- ============================================
--- bcrypt hash for "admin123" (10 rounds)
+-- bcrypt hash for "admin123" (10 rounds, bcryptjs $2a format)
 INSERT OR IGNORE INTO users (id, email, first_name, last_name, password_hash, role, email_verified) VALUES
-  ('user_admin', 'admin@acme.com', 'Admin', 'User', '$2b$10$dPzMercVBMBQXGFZk1GBauRLNsEbHHGGOq1EAKSmBahe1FMSXxVK2', 'admin', 1),
-  ('user_manager', 'manager@acme.com', 'Sarah', 'Johnson', '$2b$10$dPzMercVBMBQXGFZk1GBauRLNsEbHHGGOq1EAKSmBahe1FMSXxVK2', 'manager', 1),
-  ('user_viewer', 'viewer@acme.com', 'Tom', 'Smith', '$2b$10$dPzMercVBMBQXGFZk1GBauRLNsEbHHGGOq1EAKSmBahe1FMSXxVK2', 'viewer', 1),
-  ('user_nordic', 'admin@nordic.no', 'Kari', 'Nordmann', '$2b$10$dPzMercVBMBQXGFZk1GBauRLNsEbHHGGOq1EAKSmBahe1FMSXxVK2', 'admin', 1);
+  ('user_admin', 'admin@acme.com', 'Admin', 'User', '$2a$10$cHBOg/knCfpsFfuyx206tOXNgHwIHNnz211h2ua2Z5abvzl2ML0U6', 'admin', 1),
+  ('user_manager', 'manager@acme.com', 'Sarah', 'Johnson', '$2a$10$cHBOg/knCfpsFfuyx206tOXNgHwIHNnz211h2ua2Z5abvzl2ML0U6', 'manager', 1),
+  ('user_viewer', 'viewer@acme.com', 'Tom', 'Smith', '$2a$10$cHBOg/knCfpsFfuyx206tOXNgHwIHNnz211h2ua2Z5abvzl2ML0U6', 'viewer', 1),
+  ('user_nordic', 'admin@nordic.no', 'Kari', 'Nordmann', '$2a$10$cHBOg/knCfpsFfuyx206tOXNgHwIHNnz211h2ua2Z5abvzl2ML0U6', 'admin', 1);
 
 -- ============================================
 -- COMPANY-USER RELATIONSHIPS

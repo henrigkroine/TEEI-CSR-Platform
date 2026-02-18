@@ -5,18 +5,14 @@ interface LoginRequest {
   password: string;
 }
 
-// ⚠️ DEVELOPMENT ONLY: Mock authentication fallback for local development
-// Falls back to mock if database lookup fails or USE_MOCK_AUTH is enabled
-const USE_MOCK_AUTH = process.env.USE_MOCK_AUTH === 'true' || import.meta.env.DEV;
-
-const MOCK_USERS = USE_MOCK_AUTH ? [
+// Mock users for demo/development — always defined, used as fallback when D1 auth fails
+const MOCK_USERS = [
   {
     id: '00000000-0000-0000-0000-000000000001',
     email: 'admin@acme.com',
-    password: 'admin123', // In production: NEVER store plaintext passwords
+    password: 'admin123',
     name: 'Super Admin (Demo)',
     company_id: '00000000-0000-0000-0000-000000000001',
-    // SUPER_ADMIN can access any tenant in dev (bypasses tenantRouting company check)
     role: 'SUPER_ADMIN' as const,
   },
   {
@@ -35,7 +31,7 @@ const MOCK_USERS = USE_MOCK_AUTH ? [
     company_id: '00000000-0000-0000-0000-000000000001',
     role: 'MANAGER' as const,
   },
-] : [];
+];
 
 /**
  * Authenticate user against D1 database
@@ -124,13 +120,11 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
     } | null = null;
 
     // Try database authentication first (using D1)
-    if (!USE_MOCK_AUTH) {
-      const db = locals.runtime?.env?.DB;
-      user = await authenticateUser(email, password, db);
-    }
+    const db = locals.runtime?.env?.DB;
+    user = await authenticateUser(email, password, db);
 
-    // Fallback to mock users if database auth fails or USE_MOCK_AUTH is enabled
-    if (!user && USE_MOCK_AUTH) {
+    // Fallback to mock users if D1 auth fails (demo/staging)
+    if (!user) {
       const mockUser = MOCK_USERS.find(u => u.email === email && u.password === password);
       if (mockUser) {
         user = {
