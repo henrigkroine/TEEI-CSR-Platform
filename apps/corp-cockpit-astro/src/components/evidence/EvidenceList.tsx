@@ -86,7 +86,7 @@ function EvidenceList({ companyId, role }: EvidenceListProps) {
 
       // Use proper API base URL from environment or fallback to window origin
       const API_BASE_URL = import.meta.env.PUBLIC_REPORTING_API_URL ||
-        (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3001');
+        (typeof window !== 'undefined' ? window.location.origin : '');
       const url = `${API_BASE_URL}/companies/${companyId}/evidence?${params.toString()}`;
       const response = await fetch(url);
 

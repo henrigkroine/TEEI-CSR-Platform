@@ -106,7 +106,7 @@ function LineageDrawer({ companyId, evidenceId, onClose }: LineageDrawerProps) {
     try {
       // Use proper API base URL from environment or fallback to window origin
       const API_BASE_URL = import.meta.env.PUBLIC_REPORTING_API_URL ||
-        (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3001');
+        (typeof window !== 'undefined' ? window.location.origin : '');
       const url = `${API_BASE_URL}/companies/${companyId}/evidence/${evidenceId}/lineage`;
       const response = await fetch(url);
 

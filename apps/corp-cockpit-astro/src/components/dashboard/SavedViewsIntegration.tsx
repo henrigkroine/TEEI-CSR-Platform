@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import SavedViewsList from '../views/SavedViewsList';
+import { SavedViewsList } from '../views/SavedViewsList';
 import { SaveViewModal } from '../views/SaveViewModal';
 
 interface SavedViewsIntegrationProps {

@@ -228,7 +228,8 @@ if (!canViewBenchmarks) {
         if (currentFilters.geography) params.append('geography', currentFilters.geography);
         if (currentFilters.period) params.append('period', currentFilters.period);
 
-        const url = `http://localhost:3001/companies/${companyId}/benchmarks?${params.toString()}`;
+        const baseUrl = (window as any).__PUBLIC_REPORTING_API_URL || '';
+        const url = `${baseUrl}/api/companies/${companyId}/benchmarks?${params.toString()}`;
         const response = await fetch(url);
 
         if (response.ok) {
@@ -257,7 +258,7 @@ if (!canViewBenchmarks) {
             const percentileChartRoot = document.getElementById('percentile-chart-root');
             if (percentileChartRoot) {
               // Fetch percentile time-series data
-              const percentileUrl = `http://localhost:3001/benchmarks/percentiles?companyId=${companyId}&metric=${currentFilters.metric}`;
+              const percentileUrl = `${baseUrl}/api/benchmarks/percentiles?companyId=${companyId}&metric=${currentFilters.metric}`;
               const percentileResponse = await fetch(percentileUrl);
 
               if (percentileResponse.ok) {

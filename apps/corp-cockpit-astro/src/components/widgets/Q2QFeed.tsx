@@ -32,7 +32,7 @@ function Q2QFeed({ companyId, limit = 10 }: Props) {
     try {
       // Use proper API base URL from environment or fallback to window origin
       const API_BASE_URL = import.meta.env.PUBLIC_REPORTING_API_URL ||
-        (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3001');
+        (typeof window !== 'undefined' ? window.location.origin : '');
       const url = `${API_BASE_URL}/companies/${companyId}/q2q-feed?limit=${limit}`;
       const response = await fetch(url);
       if (response.ok) {

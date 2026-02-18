@@ -148,7 +148,8 @@ const isAdmin = hasPermission(user.role, 'ADMIN_CONSOLE');
             pdfBtn.textContent = 'Generating PDF...';
             pdfBtn.disabled = true;
 
-            const response = await fetch(`http://localhost:3001/forecasts/export/pdf?companyId=${companyId}`);
+            const baseUrl = (window as any).__PUBLIC_REPORTING_API_URL || '';
+            const response = await fetch(`${baseUrl}/api/forecasts/export/pdf?companyId=${companyId}`);
 
             if (response.ok) {
               const blob = await response.blob();
@@ -180,7 +181,8 @@ const isAdmin = hasPermission(user.role, 'ADMIN_CONSOLE');
             csvBtn.textContent = 'Generating CSV...';
             csvBtn.disabled = true;
 
-            const response = await fetch(`http://localhost:3001/forecasts/export/csv?companyId=${companyId}`);
+            const baseUrl2 = (window as any).__PUBLIC_REPORTING_API_URL || '';
+            const response = await fetch(`${baseUrl2}/api/forecasts/export/csv?companyId=${companyId}`);
 
             if (response.ok) {
               const blob = await response.blob();

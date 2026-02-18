@@ -11,7 +11,8 @@ export default function ExportButtons({ companyId, period }: Props) {
   async function handleExport(format: 'csv' | 'json') {
     setExporting(true);
     try {
-      const url = `http://localhost:3001/export/csrd?format=${format}${period ? `&period=${period}` : ''}`;
+      const baseUrl = import.meta.env.PUBLIC_REPORTING_API_URL || '';
+      const url = `${baseUrl}/api/export/csrd?format=${format}${period ? `&period=${period}` : ''}`;
       const response = await fetch(url);
 
       if (response.ok) {

@@ -29,7 +29,7 @@ function SROIPanel({ companyId, period }: Props) {
 
   async function fetchData() {
     try {
-      const url = `http://localhost:3001/companies/${companyId}/sroi${period ? `?period=${period}` : ''}`;
+      const url = `/api/companies/${companyId}/sroi${period ? `?period=${period}` : ''}`;
       const response = await fetch(url);
       if (response.ok) {
         setData(await response.json());

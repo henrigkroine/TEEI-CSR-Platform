@@ -49,7 +49,7 @@ function SROIPanelOptimized({ companyId, period }: Props) {
   // Stable fetch callback
   const fetchData = useStableCallback(async (skipCache = false) => {
     try {
-      const url = `http://localhost:3001/companies/${companyId}/sroi${period ? `?period=${period}` : ''}`;
+      const url = `/api/companies/${companyId}/sroi${period ? `?period=${period}` : ''}`;
 
       // Include ETag for conditional request (unless skipping cache)
       const headers: HeadersInit = {};

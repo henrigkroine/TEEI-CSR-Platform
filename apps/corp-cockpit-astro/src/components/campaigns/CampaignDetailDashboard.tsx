@@ -149,7 +149,7 @@ export interface CampaignDetailDashboardProps {
 // API CLIENT
 // ============================================================================
 
-const API_BASE = import.meta.env.PUBLIC_REPORTING_API_URL || 'http://localhost:3001/api';
+const API_BASE = import.meta.env.PUBLIC_REPORTING_API_URL || '/api';
 
 async function fetchDashboard(campaignId: string): Promise<CampaignDashboardData> {
   const response = await fetch(`${API_BASE}/campaigns/${campaignId}/dashboard`);

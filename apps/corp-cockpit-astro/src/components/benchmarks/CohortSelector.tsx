@@ -79,7 +79,8 @@ export default function CohortSelector({
 
   async function fetchSuggestedCohort() {
     try {
-      const response = await fetch(`http://localhost:3001/companies/${companyId}/cohorts`);
+      const baseUrl = import.meta.env.PUBLIC_REPORTING_API_URL || '';
+      const response = await fetch(`${baseUrl}/api/companies/${companyId}/cohorts`);
       if (response.ok) {
         const data = await response.json();
         setSuggestedCohort(data.suggested_cohort);

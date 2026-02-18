@@ -168,7 +168,8 @@ const isAdmin = hasPermission(user.role, 'ADMIN_CONSOLE');
     // Hydrate OptInConsent component (admin-only)
     async function hydrateConsentManager() {
       try {
-        const response = await fetch(`http://localhost:3001/companies/${companyId}/consent`);
+        const baseUrl = (window as any).__PUBLIC_REPORTING_API_URL || '';
+        const response = await fetch(`${baseUrl}/api/companies/${companyId}/consent`);
         if (response.ok) {
           consentData = await response.json();
         } else {
@@ -188,7 +189,7 @@ const isAdmin = hasPermission(user.role, 'ADMIN_CONSOLE');
               currentConsent: consentData.consent,
               consentDate: consentData.consentDate ? new Date(consentData.consentDate) : undefined,
               onConsentChange: async (consent: boolean) => {
-                const response = await fetch(`http://localhost:3001/companies/${companyId}/consent`, {
+                const response = await fetch(`${baseUrl}/api/companies/${companyId}/consent`, {
                   method: 'PUT',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ consent }),
@@ -267,8 +268,9 @@ const isAdmin = hasPermission(user.role, 'ADMIN_CONSOLE');
         if (employeeRange) params.append('employee_ranges', employeeRange.join(','));
         if (programType) params.append('program_types', programType.join(','));
 
+        const benchBaseUrl = (window as any).__PUBLIC_REPORTING_API_URL || '';
         const response = await fetch(
-          `http://localhost:3001/companies/${companyId}/benchmarks?${params.toString()}`
+          `${benchBaseUrl}/api/companies/${companyId}/benchmarks?${params.toString()}`
         );
 
         if (response.ok) {

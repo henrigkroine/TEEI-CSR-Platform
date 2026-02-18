@@ -155,7 +155,8 @@ function ReportGenerationModal({
 
     try {
       // Start report generation
-      const response = await fetch(`http://localhost:3001/companies/${companyId}/reports`, {
+      const baseUrl = import.meta.env.PUBLIC_REPORTING_API_URL || '';
+      const response = await fetch(`${baseUrl}/api/companies/${companyId}/reports`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -203,8 +204,9 @@ function ReportGenerationModal({
 
   const handleDownload = () => {
     if (generatedReportId) {
+      const baseUrl = import.meta.env.PUBLIC_REPORTING_API_URL || '';
       window.open(
-        `http://localhost:3001/companies/${companyId}/reports/${generatedReportId}/download`,
+        `${baseUrl}/api/companies/${companyId}/reports/${generatedReportId}/download`,
         '_blank'
       );
       onReportGenerated?.(generatedReportId);

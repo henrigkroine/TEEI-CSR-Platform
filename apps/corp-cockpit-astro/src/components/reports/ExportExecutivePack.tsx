@@ -107,7 +107,8 @@ export default function ExportExecutivePack({
       setProgressMessage('Initiating export...');
       setProgress(5);
 
-      const response = await fetch(`http://localhost:3001/exports/presentations`, {
+      const baseUrl = import.meta.env.PUBLIC_REPORTING_API_URL || '';
+      const response = await fetch(`${baseUrl}/api/exports/presentations`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(exportRequest),
@@ -137,7 +138,8 @@ export default function ExportExecutivePack({
       attempts++;
 
       try {
-        const response = await fetch(`http://localhost:3001/exports/${exportId}/status`);
+        const baseUrl = import.meta.env.PUBLIC_REPORTING_API_URL || '';
+        const response = await fetch(`${baseUrl}/api/exports/${exportId}/status`);
         if (!response.ok) throw new Error('Status check failed');
 
         const status = await response.json();

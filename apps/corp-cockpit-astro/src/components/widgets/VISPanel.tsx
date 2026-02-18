@@ -30,7 +30,7 @@ function VISPanel({ companyId, period, top = 10 }: Props) {
 
   async function fetchData() {
     try {
-      const url = `http://localhost:3001/companies/${companyId}/vis?top=${top}${period ? `&period=${period}` : ''}`;
+      const url = `/api/companies/${companyId}/vis?top=${top}${period ? `&period=${period}` : ''}`;
       const response = await fetch(url);
       if (response.ok) {
         setData(await response.json());

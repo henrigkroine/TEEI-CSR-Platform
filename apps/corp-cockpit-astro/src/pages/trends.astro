@@ -292,7 +292,8 @@ const performanceGrowth = calculateGrowth(
       const range = new URL(window.location.href).searchParams.get('range') || 'last-6-months';
 
       // Fetch and export
-      fetch(`http://localhost:3007/metrics/company/${companyId}/period/${range}`)
+      const metricsBaseUrl = (window as any).__PUBLIC_ANALYTICS_API_URL || '';
+      fetch(`${metricsBaseUrl}/api/metrics/company/${companyId}/period/${range}`)
         .then(res => res.json())
         .then(data => {
           const dataArray = Array.isArray(data) ? data : [data];

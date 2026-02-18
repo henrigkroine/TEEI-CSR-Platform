@@ -34,7 +34,8 @@ export default function ExportBenchmarks({ companyId, lang }: Props) {
         ...filters,
       });
 
-      const url = `http://localhost:3001/companies/${companyId}/benchmarks/export?${params.toString()}`;
+      const baseUrl = import.meta.env.PUBLIC_REPORTING_API_URL || '';
+      const url = `${baseUrl}/api/companies/${companyId}/benchmarks/export?${params.toString()}`;
 
       const response = await fetch(url);
 

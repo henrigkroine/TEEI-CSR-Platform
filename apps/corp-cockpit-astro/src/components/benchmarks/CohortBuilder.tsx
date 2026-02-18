@@ -107,8 +107,9 @@ export default function CohortBuilder({
       if (selectedEmployeeRanges.length) params.append('employee_ranges', selectedEmployeeRanges.join(','));
       if (selectedProgramTypes.length) params.append('program_types', selectedProgramTypes.join(','));
 
+      const baseUrl = import.meta.env.PUBLIC_REPORTING_API_URL || '';
       const response = await fetch(
-        `http://localhost:3001/companies/${companyId}/cohorts/preview?${params.toString()}`
+        `${baseUrl}/api/companies/${companyId}/cohorts/preview?${params.toString()}`
       );
 
       if (response.ok) {
@@ -151,7 +152,8 @@ export default function CohortBuilder({
 
     setIsSaving(true);
     try {
-      const response = await fetch(`http://localhost:3001/companies/${companyId}/cohorts`, {
+      const baseUrl = import.meta.env.PUBLIC_REPORTING_API_URL || '';
+      const response = await fetch(`${baseUrl}/api/companies/${companyId}/cohorts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

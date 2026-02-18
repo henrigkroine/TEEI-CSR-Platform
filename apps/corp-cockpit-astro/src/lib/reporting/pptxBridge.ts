@@ -54,7 +54,7 @@ export interface ExportJobResponse {
 /**
  * API base URL for exports
  */
-const API_BASE_URL = import.meta.env.PUBLIC_REPORTING_API_URL || 'http://localhost:3001';
+const API_BASE_URL = import.meta.env.PUBLIC_REPORTING_API_URL || '';
 
 /**
  * Submit PPTX export job
