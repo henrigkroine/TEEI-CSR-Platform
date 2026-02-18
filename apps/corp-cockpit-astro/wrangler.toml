@@ -3,7 +3,7 @@
 
 name = "csr-cockpit"
 compatibility_date = "2025-12-01"
-compatibility_flags = ["nodejs_compat"]
+compatibility_flags = ["nodejs_compat", "disable_nodejs_process_v2"]
 
 # Environment variables
 [vars]
