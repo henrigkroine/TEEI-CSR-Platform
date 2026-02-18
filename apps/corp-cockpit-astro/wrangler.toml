@@ -2,7 +2,7 @@
 # Deploy to: cockpit.theeducationalequalityinstitute.org
 
 name = "csr-cockpit"
-compatibility_date = "2024-12-01"
+compatibility_date = "2025-12-01"
 compatibility_flags = ["nodejs_compat"]
 
 # Environment variables
@@ -13,7 +13,7 @@ ENVIRONMENT = "production"
 [[d1_databases]]
 binding = "DB"
 database_name = "csr-cockpit"
-database_id = "" # Fill after running: wrangler d1 create csr-cockpit
+database_id = "0d58e98b-0c39-4128-ac86-5b673ef94faf"
 
 # KV Namespace for sessions/cache (optional)
 # [[kv_namespaces]]
