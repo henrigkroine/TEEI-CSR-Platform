@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "memory": {
+      "command": "/home/ovehe/.local/share/mcp-memory/venv/bin/memory",
+      "args": [
+        "server"
+      ],
+      "env": {
+        "MCP_MEMORY_DB_PATH": "/home/ovehe/.local/share/mcp-memory/sqlite_vec.db"
+      }
+    }
+  }
+}
